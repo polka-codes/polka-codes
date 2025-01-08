@@ -1,0 +1,35 @@
+// Bun Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`executeCommand should execute command successfully 1`] = `
+{
+  "message": 
+"<command>echo test</command>
+<command_exit_code>0</command_exit_code>
+<command_stdout>
+Command output
+</command_stdout>
+<command_stderr>
+stderr
+</command_stderr>"
+,
+  "type": "Reply",
+}
+`;
+
+exports[`executeCommand should handle command errors 1`] = `[Error: Command failed]`;
+
+exports[`executeCommand should handle command with non-zero exit code 1`] = `
+{
+  "message": 
+"<command>invalid-command</command>
+<command_exit_code>1</command_exit_code>
+<command_stdout>
+Command output
+</command_stdout>
+<command_stderr>
+stderr
+</command_stderr>"
+,
+  "type": "Error",
+}
+`;

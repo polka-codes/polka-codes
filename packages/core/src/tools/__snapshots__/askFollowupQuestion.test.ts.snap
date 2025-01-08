@@ -1,0 +1,13 @@
+// Bun Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`askFollowupQuestion should return the correct response 1`] = `
+{
+  "message": 
+"<ask_followup_question_question>Test question</ask_followup_question_question>
+<ask_followup_question_answer>Test response</ask_followup_question_answer>"
+,
+  "type": "Reply",
+}
+`;
+
+exports[`askFollowupQuestion should handle errors 1`] = `[Error: Test error]`;

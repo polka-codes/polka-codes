@@ -1,0 +1,17 @@
+// Bun Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`writeToFile should write file successfully 1`] = `
+{
+  "message": "<write_file_path>test.txt</write_file_path><status>Success</status>",
+  "type": "Reply",
+}
+`;
+
+exports[`writeToFile should handle directory creation 1`] = `
+{
+  "message": "<write_file_path>new-dir/test.txt</write_file_path><status>Success</status>",
+  "type": "Reply",
+}
+`;
+
+exports[`writeToFile should handle write errors 1`] = `[Error: Write error]`;

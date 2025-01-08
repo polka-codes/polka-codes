@@ -1,0 +1,20 @@
+// Bun Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`readFile should read single file 1`] = `
+{
+  "message": "<read_file_file_conten path="file.txt">file content</read_file_file_content>",
+  "type": "Reply",
+}
+`;
+
+exports[`readFile should read multiple files 1`] = `
+{
+  "message": 
+"<read_file_file_conten path="file1.txt">file1 content</read_file_file_content>
+<read_file_file_conten path="file2.txt">file2 content</read_file_file_content>"
+,
+  "type": "Reply",
+}
+`;
+
+exports[`readFile should handle file not found 1`] = `[Error: File not found]`;

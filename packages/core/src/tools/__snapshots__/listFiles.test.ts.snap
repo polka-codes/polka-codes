@@ -1,0 +1,58 @@
+// Bun Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`listFiles should return file list 1`] = `
+{
+  "message": 
+"<list_files_path>src</list_files_path>
+<list_files_files>
+file1.ts
+file2.ts
+</list_files_files>
+<list_files_truncated>false</list_files_truncated>"
+,
+  "type": "Reply",
+}
+`;
+
+exports[`listFiles should handle non recursive listing 1`] = `
+{
+  "message": 
+"<list_files_path>src</list_files_path>
+<list_files_files>
+file1.ts
+file2.ts
+</list_files_files>
+<list_files_truncated>false</list_files_truncated>"
+,
+  "type": "Reply",
+}
+`;
+
+exports[`listFiles should handle empty directory 1`] = `
+{
+  "message": 
+"<list_files_path>empty-dir</list_files_path>
+<list_files_files>
+
+</list_files_files>
+<list_files_truncated>true</list_files_truncated>"
+,
+  "type": "Reply",
+}
+`;
+
+exports[`listFiles should handle max count with truncation 1`] = `
+{
+  "message": 
+"<list_files_path>src</list_files_path>
+<list_files_files>
+file1.ts
+file2.ts
+</list_files_files>
+<list_files_truncated>true</list_files_truncated>"
+,
+  "type": "Reply",
+}
+`;
+
+exports[`listFiles should handle errors 1`] = `[Error: Directory not found]`;
