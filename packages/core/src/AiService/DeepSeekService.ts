@@ -2,12 +2,9 @@
 
 import OpenAI from 'openai'
 
-import { createServiceLogger } from '../logger'
 import { AiServiceBase, type AiServiceOptions, type ApiStream, type MessageParam } from './AiServiceBase'
 import { type DeepSeekModelId, type ModelInfo, deepSeekDefaultModelId, deepSeekModels } from './ModelInfo'
 import { convertToOpenAiMessages } from './utils'
-
-const logger = createServiceLogger('DeepSeekService')
 
 export class DeepSeekService extends AiServiceBase {
   #client: OpenAI
@@ -30,14 +27,10 @@ export class DeepSeekService extends AiServiceBase {
   }
 
   async *send(systemPrompt: string, messages: MessageParam[]): ApiStream {
-    logger.debug({ modelId: this.model.id, messagesCount: messages.length }, 'Starting message stream')
-
     const openAiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
       { role: 'system', content: systemPrompt },
       ...convertToOpenAiMessages(messages),
     ]
-
-    logger.trace({ modelId: this.model.id, messagesCount: messages.length }, 'Sending messages to Ollama')
 
     const stream = await this.#client.chat.completions.create({
       model: this.model.id,
@@ -70,7 +63,5 @@ export class DeepSeekService extends AiServiceBase {
         }
       }
     }
-
-    logger.debug('Stream ended')
   }
 }

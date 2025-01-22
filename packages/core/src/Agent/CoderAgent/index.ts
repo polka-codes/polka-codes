@@ -1,5 +1,4 @@
 import type { AiServiceBase } from '../../AiService'
-import { createServiceLogger } from '../../logger'
 import { type FullToolInfo, getAvailableTools } from '../../tool'
 import { type ToolProvider, allTools } from '../../tools'
 import { AgentBase } from '../AgentBase'
@@ -31,16 +30,12 @@ export class CoderAgent extends AgentBase {
       options.interactive,
     )
 
-    super(
-      options.ai,
-      {
-        systemPrompt,
-        tools,
-        toolNamePrefix,
-        provider: options.provider,
-        interactive: options.interactive,
-      },
-      createServiceLogger('CoderAgent'),
-    )
+    super(options.ai, {
+      systemPrompt,
+      tools,
+      toolNamePrefix,
+      provider: options.provider,
+      interactive: options.interactive,
+    })
   }
 }

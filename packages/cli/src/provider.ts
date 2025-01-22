@@ -2,10 +2,8 @@ import { spawn } from 'node:child_process'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
 
-import { type ToolProvider, createServiceLogger } from '@polka-codes/core'
+import type { ToolProvider } from '@polka-codes/core'
 import { listFiles } from './utils/listFiles'
-
-const logger = createServiceLogger('cli/provider')
 
 export type ProviderOptions = {
   command: {
@@ -40,7 +38,6 @@ export const getProvider = (options: ProviderOptions): ToolProvider => {
       return new Promise((resolve, reject) => {
         // spawn a shell to execute the command
 
-        logger.trace(`Executing command: ${command}`)
         options.command.onStarted(command)
 
         const child = spawn(command, [], {

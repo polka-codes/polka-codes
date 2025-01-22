@@ -1,13 +1,5 @@
 import os from 'node:os'
-import {
-  type AgentBase,
-  type AiServiceProvider,
-  CoderAgent,
-  type TaskEventCallback,
-  type TaskInfo,
-  createService,
-  createServiceLogger,
-} from '@polka-codes/core'
+import { type AgentBase, type AiServiceProvider, CoderAgent, type TaskEventCallback, type TaskInfo, createService } from '@polka-codes/core'
 import type { Config } from './config'
 import { getProvider } from './provider'
 import { listFiles } from './utils/listFiles'
@@ -21,8 +13,6 @@ export type RunnerOptions = {
   interactive: boolean
   eventCallback: TaskEventCallback
 }
-
-const logger = createServiceLogger('cli/runner')
 
 export class Runner {
   readonly #options: RunnerOptions
@@ -77,15 +67,6 @@ export class Runner {
   }
 
   async startTask(task: string) {
-    logger.trace(
-      {
-        provider: this.#options.provider,
-        model: this.#options.model,
-        task,
-      },
-      'Starting task',
-    )
-
     const cwd = process.cwd()
     const [fileList, limited] = await listFiles(cwd, true, 100, cwd)
     const fileContext = `<files>

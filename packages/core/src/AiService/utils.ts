@@ -3,10 +3,6 @@
 import type { Anthropic } from '@anthropic-ai/sdk'
 import type OpenAI from 'openai'
 
-import { createServiceLogger } from '../logger'
-
-const logger = createServiceLogger('utils')
-
 export function convertToOpenAiMessages(anthropicMessages: Anthropic.Messages.MessageParam[]): OpenAI.Chat.ChatCompletionMessageParam[] {
   const openAiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = []
 
@@ -195,9 +191,7 @@ export function convertToAnthropicMessage(completion: OpenAI.Chat.Completions.Ch
         let parsedInput = {}
         try {
           parsedInput = JSON.parse(toolCall.function.arguments || '{}')
-        } catch (error) {
-          logger.warn('Failed to parse tool arguments:', error)
-        }
+        } catch (_error) {}
         return {
           type: 'tool_use',
           id: toolCall.id,

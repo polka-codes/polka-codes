@@ -1,5 +1,4 @@
 import type { AiServiceBase, MessageParam } from '../AiService'
-import type { Logger } from '../logger'
 import { type FullToolInfo, type ToolResponse, ToolResponseType } from '../tool'
 import type { ToolProvider } from './../tools'
 import { type AssistantMessageContent, parseAssistantMessage } from './parseAssistantMessage'
@@ -45,13 +44,11 @@ export enum ExitReason {
 export abstract class AgentBase {
   protected readonly ai: AiServiceBase
   protected readonly config: Readonly<AgentBaseConfig>
-  protected readonly logger: Logger
   protected readonly handlers: Record<string, FullToolInfo>
 
-  constructor(ai: AiServiceBase, config: AgentBaseConfig, logger: Logger) {
+  constructor(ai: AiServiceBase, config: AgentBaseConfig) {
     this.ai = ai
     this.config = config
-    this.logger = logger
 
     const handlers: Record<string, FullToolInfo> = {}
     for (const tool of config.tools) {
@@ -118,7 +115,6 @@ export abstract class AgentBase {
       content: userMessage,
     })
 
-    this.logger.trace(info.messages, 'Sending messages to AI')
     // TODO: use a truncated messages if needed to avoid exceeding the token limit
     const stream = this.ai.send(this.config.systemPrompt, info.messages)
     let currentAssistantMessage = ''
@@ -222,7 +218,6 @@ export abstract class AgentBase {
       }
       return await handler(this.config.provider, args)
     } catch (error) {
-      this.logger.debug(error, 'Error invoking tool')
       return {
         type: ToolResponseType.Error,
         message: responsePrompts.errorInvokeTool(name, error),

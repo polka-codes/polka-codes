@@ -3,12 +3,10 @@ import { dirname } from 'node:path'
 import { input, password, select } from '@inquirer/prompts'
 import { stringify } from 'yaml'
 
-import { AiServiceProvider, anthropicDefaultModelId, anthropicModels, createServiceLogger, deepSeekDefaultModelId } from '@polka-codes/core'
+import { AiServiceProvider, anthropicDefaultModelId, anthropicModels, deepSeekDefaultModelId } from '@polka-codes/core'
 
 import { merge } from 'lodash'
 import { getGlobalConfigPath, loadConfigAtPath, localConfigFileName } from '../config'
-
-const logger = createServiceLogger('cli/config')
 
 const fetchOllamaModels = async () => {
   try {

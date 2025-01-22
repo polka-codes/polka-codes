@@ -3,11 +3,8 @@
 import { Anthropic } from '@anthropic-ai/sdk'
 import type { Stream as AnthropicStream } from '@anthropic-ai/sdk/streaming'
 
-import { createServiceLogger } from '../logger'
 import { AiServiceBase, type AiServiceOptions, type ApiStream, type MessageParam } from './AiServiceBase'
 import { type AnthropicModelId, type ModelInfo, anthropicDefaultModelId, anthropicModels } from './ModelInfo'
-
-const logger = createServiceLogger('AnthropicService')
 
 export class AnthropicService extends AiServiceBase {
   #options: AiServiceOptions
@@ -32,8 +29,6 @@ export class AnthropicService extends AiServiceBase {
   }
 
   async *send(systemPrompt: string, messages: MessageParam[]): ApiStream {
-    logger.debug({ modelId: this.model.id, messagesCount: messages.length }, 'Starting message stream')
-
     let stream: AnthropicStream<Anthropic.Messages.RawMessageStreamEvent>
     const modelId = this.model.id
     switch (modelId) {
@@ -135,7 +130,6 @@ export class AnthropicService extends AiServiceBase {
       }
     }
 
-    logger.debug('Stream created, processing chunks')
     for await (const chunk of stream) {
       switch (chunk.type) {
         case 'message_start': {
@@ -148,7 +142,6 @@ export class AnthropicService extends AiServiceBase {
             cacheWriteTokens: usage.cache_creation_input_tokens || undefined,
             cacheReadTokens: usage.cache_read_input_tokens || undefined,
           } as const
-          logger.trace({ usage: usageInfo }, 'Message start usage')
           yield usageInfo
           break
         }
@@ -160,12 +153,10 @@ export class AnthropicService extends AiServiceBase {
             inputTokens: 0,
             outputTokens: chunk.usage.output_tokens || 0,
           } as const
-          logger.trace({ usage: deltaUsage }, 'Message delta usage')
           yield deltaUsage
           break
         }
         case 'message_stop':
-          logger.debug('Message stream completed')
           break
         case 'content_block_start':
           switch (chunk.content_block.type) {
@@ -198,7 +189,5 @@ export class AnthropicService extends AiServiceBase {
           break
       }
     }
-
-    logger.debug('Stream ended')
   }
 }

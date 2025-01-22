@@ -5,10 +5,6 @@ import { merge } from 'lodash'
 import { parse } from 'yaml'
 import { ZodError, z } from 'zod'
 
-import { createServiceLogger } from '@polka-codes/core'
-
-const logger = createServiceLogger('cli/config')
-
 export const configSchema = z
   .object({
     provider: z.string().optional(),
@@ -44,7 +40,7 @@ export function loadConfig(path?: string, cwd: string = process.cwd(), home = ho
     try {
       globalConfig = readConfig(globalConfigPath)
     } catch (error) {
-      logger.warn(`Error loading global config file: ${globalConfigPath}\n${error}`)
+      console.warn(`Error loading global config file: ${globalConfigPath}\n${error}`)
     }
   }
 
@@ -54,7 +50,7 @@ export function loadConfig(path?: string, cwd: string = process.cwd(), home = ho
     try {
       projectConfig = readConfig(path)
     } catch (error) {
-      logger.error(`Error loading config file: ${path}\n${error}`)
+      console.error(`Error loading config file: ${path}\n${error}`)
       throw error
     }
   } else {
@@ -63,7 +59,7 @@ export function loadConfig(path?: string, cwd: string = process.cwd(), home = ho
       projectConfig = readConfig(configPath)
     } catch (error) {
       if (error instanceof ZodError) {
-        logger.error(`Error in config file: ${path}\n${error}`)
+        console.error(`Error in config file: ${path}\n${error}`)
         throw error
       }
     }
