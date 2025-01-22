@@ -24,7 +24,7 @@ done
 echo "Version bumped to $VERSION in all package.json files under packages directory"
 
 git add .
-git commit -m 'chore: release $VERSION'
+git commit -m "chore: release $VERSION"
 
 git tag v$VERSION
 bun run publish
