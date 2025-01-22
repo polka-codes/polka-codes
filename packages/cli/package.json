@@ -4,7 +4,7 @@
   "license": "AGPL-3.0",
   "type": "module",
   "bin": {
-    "polka-codes": "cli.cjs"
+    "polka-codes": "cli.mjs"
   },
   "exports": {
     ".": {
@@ -25,7 +25,7 @@
     "yaml": "^2.7.0",
     "zod": "^3.24.1"
   },
-  "files": ["dist", "cli.cjs"],
+  "files": ["dist", "cli.mjs"],
   "devDependencies": {
     "@types/lodash": "^4.17.14"
   }
