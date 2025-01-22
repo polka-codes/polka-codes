@@ -151,3 +151,12 @@ program.argument('[task]', 'The task to execute').action(async (taskArg, options
 addSharedOptions(program)
 
 program.parse()
+
+process.on('uncaughtException', (error) => {
+  if (error instanceof Error && error.name === 'ExitPromptError') {
+    // do nothing
+  } else {
+    // Rethrow unknown errors
+    throw error
+  }
+})
