@@ -1,7 +1,7 @@
 import 'dotenv/config'
 import { Command } from 'commander'
 
-import { ExitReason, type TaskInfo } from '@polka-codes/core'
+import { ExitReason, type TaskInfo, defaultModels } from '@polka-codes/core'
 import { version } from '../package.json'
 import { Chat } from './Chat'
 import { Runner } from './Runner'
@@ -13,25 +13,25 @@ const program = new Command()
 program.name('polka').description('Polka Codes CLI').version(version)
 
 const runChat = async (options: any) => {
-  let { provider, model, apiKey, config, maxIterations } = parseOptions(options)
+  let { provider, modelId, apiKey, config, maxIterations } = parseOptions(options)
 
-  if (!provider && !model && !apiKey && !config) {
+  if (!provider) {
     // new user? ask for config
-    const newConfig = await configPrompt({ global: false }, false)
+    const newConfig = await configPrompt({ provider, modelId, apiKey, ...config })
     provider = newConfig.provider
-    model = newConfig.modelId
+    modelId = newConfig.modelId
     apiKey = newConfig.apiKey
   }
 
   console.log('Starting chat session...')
   console.log('Provider:', provider)
-  console.log('Model:', model)
+  console.log('Model:', modelId)
   console.log('Type ".help" for more information.')
   console.log('What can I do for you?')
 
   const runner = new Runner({
     provider,
-    model,
+    modelId: modelId ?? defaultModels[provider],
     apiKey,
     config: config ?? {},
     maxIterations,
@@ -102,14 +102,22 @@ program.argument('[task]', 'The task to execute').action(async (taskArg, options
     return
   }
 
-  const { provider, model, apiKey, config, maxIterations } = parseOptions(options)
+  let { provider, modelId, apiKey, config, maxIterations } = parseOptions(options)
+
+  if (!provider) {
+    // new user? ask for config
+    const newConfig = await configPrompt({ provider, modelId, apiKey, ...config })
+    provider = newConfig.provider
+    modelId = newConfig.modelId
+    apiKey = newConfig.apiKey
+  }
 
   console.log('Provider:', provider)
-  console.log('Model:', model)
+  console.log('Model:', modelId)
 
   const runner = new Runner({
     provider,
-    model,
+    modelId: modelId ?? defaultModels[provider],
     apiKey,
     config: config ?? {},
     maxIterations,

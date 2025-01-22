@@ -6,7 +6,7 @@ import { stringify } from 'yaml'
 import { AiServiceProvider, anthropicDefaultModelId, anthropicModels, deepSeekDefaultModelId } from '@polka-codes/core'
 
 import { merge } from 'lodash'
-import { getGlobalConfigPath, loadConfigAtPath, localConfigFileName } from '../config'
+import { type Config, getGlobalConfigPath, loadConfigAtPath, localConfigFileName } from '../config'
 
 const fetchOllamaModels = async () => {
   try {
@@ -19,33 +19,7 @@ const fetchOllamaModels = async () => {
   }
 }
 
-export async function configPrompt(options: { global?: boolean }, save: boolean) {
-  const globalConfigPath = getGlobalConfigPath()
-  let configPath = options.global ? globalConfigPath : localConfigFileName
-  const existingConfig = existsSync(configPath) ? loadConfigAtPath(configPath) : undefined
-
-  if (!existingConfig && !options.global) {
-    const isGlobal = await select({
-      message: 'No config file found. Do you want to create one?',
-      choices: [
-        {
-          name: `Create a global config at ${globalConfigPath}`,
-          value: true,
-        },
-        {
-          name: `Create a local config at ${configPath}`,
-          value: false,
-        },
-      ],
-    })
-    if (isGlobal) {
-      configPath = globalConfigPath
-    } else {
-      configPath = localConfigFileName
-    }
-  }
-  console.log(`Config file path: ${configPath}`)
-
+export async function configPrompt(existingConfig?: Partial<Config>) {
   // select AI provider
   const provider = await select({
     message: 'Choose AI Provider:',
@@ -85,6 +59,57 @@ export async function configPrompt(options: { global?: boolean }, save: boolean)
   }
 
   const apiKey = await password({ message: 'Enter API Key:', mask: '*' })
+
+  return { provider, modelId, apiKey }
+}
+
+async function printConfig(configPath: string) {
+  const config = existsSync(configPath) ? loadConfigAtPath(configPath) : undefined
+  if (!config) {
+    console.log('No config found')
+    return
+  }
+  console.log(`Config file path: ${configPath}`)
+  if (config.apiKey) {
+    config.apiKey = '<redacted>'
+  }
+  console.log(stringify(config))
+}
+
+export async function configCommand(options: { global?: boolean; print?: boolean }) {
+  const globalConfigPath = getGlobalConfigPath()
+  let configPath = options.global ? globalConfigPath : localConfigFileName
+
+  if (options.print) {
+    await printConfig(configPath)
+    return
+  }
+
+  const existingConfig = existsSync(configPath) ? loadConfigAtPath(configPath) : undefined
+
+  if (!existingConfig && !options.global) {
+    const isGlobal = await select({
+      message: 'No config file found. Do you want to create one?',
+      choices: [
+        {
+          name: `Create a global config at ${globalConfigPath}`,
+          value: true,
+        },
+        {
+          name: `Create a local config at ${configPath}`,
+          value: false,
+        },
+      ],
+    })
+    if (isGlobal) {
+      configPath = globalConfigPath
+    } else {
+      configPath = localConfigFileName
+    }
+  }
+  console.log(`Config file path: ${configPath}`)
+
+  const { provider, modelId, apiKey } = await configPrompt(existingConfig)
 
   if (apiKey && configPath === localConfigFileName) {
     const option = await select({
@@ -133,35 +158,8 @@ export async function configPrompt(options: { global?: boolean }, save: boolean)
   }
 
   const newConfig = merge({}, existingConfig, { provider, modelId, apiKey })
-  if (save) {
-    mkdirSync(dirname(configPath), { recursive: true })
-    writeFileSync(configPath, stringify(newConfig))
-    console.log(`Config file saved at: ${configPath}`)
-  }
-  return newConfig
-}
-
-async function printConfig(configPath: string) {
-  const config = existsSync(configPath) ? loadConfigAtPath(configPath) : undefined
-  if (!config) {
-    console.log('No config found')
-    return
-  }
-  console.log(`Config file path: ${configPath}`)
-  if (config.apiKey) {
-    config.apiKey = '<redacted>'
-  }
-  console.log(stringify(config))
-}
-
-export async function configCommand(options: { global?: boolean; print?: boolean }) {
-  const globalConfigPath = getGlobalConfigPath()
-  const configPath = options.global ? globalConfigPath : localConfigFileName
-
-  if (options.print) {
-    await printConfig(configPath)
-    return
-  }
-
-  await configPrompt(options, true)
+  mkdirSync(dirname(configPath), { recursive: true })
+  writeFileSync(configPath, stringify(newConfig))
+  console.log(`Config file saved at: ${configPath}`)
+  return
 }
