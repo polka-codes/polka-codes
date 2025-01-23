@@ -70,7 +70,7 @@ export class Runner {
     const cwd = process.cwd()
     const [fileList, limited] = await listFiles(cwd, true, 100, cwd)
     const fileContext = `<files>
-    ${fileList.join('\n')}${limited ? '\n<files_truncated>true</files_truncated>' : ''}
+${fileList.join('\n')}${limited ? '\n<files_truncated>true</files_truncated>' : ''}
 </files>`
 
     return await this.#agent.startTask({
