@@ -9,13 +9,8 @@ export interface ApiStreamTextChunk {
   text: string
 }
 
-export interface ApiStreamUsageChunk {
+export interface ApiStreamUsageChunk extends ApiUsage {
   type: 'usage'
-  inputTokens: number
-  outputTokens: number
-  cacheWriteTokens?: number
-  cacheReadTokens?: number
-  totalCost?: number // openrouter
 }
 
 export type ApiStream = AsyncGenerator<ApiStreamChunk>
@@ -28,8 +23,49 @@ export interface AiServiceOptions {
 
 export type MessageParam = Anthropic.Messages.MessageParam
 
+export type ApiUsage = {
+  inputTokens: number
+  outputTokens: number
+  cacheWriteTokens: number
+  cacheReadTokens: number
+  totalCost: number | undefined // openrouter
+}
+
 export abstract class AiServiceBase {
   abstract get model(): { id: string; info: ModelInfo }
 
   abstract send(systemPrompt: string, messages: MessageParam[]): ApiStream
+
+  async request(systemPrompt: string, messages: MessageParam[]) {
+    const stream = this.send(systemPrompt, messages)
+    const usage: ApiUsage = {
+      inputTokens: 0,
+      outputTokens: 0,
+      cacheWriteTokens: 0,
+      cacheReadTokens: 0,
+      totalCost: 0,
+    }
+
+    let resp = ''
+
+    for await (const chunk of stream) {
+      switch (chunk.type) {
+        case 'usage':
+          usage.inputTokens = chunk.inputTokens
+          usage.outputTokens = chunk.outputTokens
+          usage.cacheWriteTokens = chunk.cacheWriteTokens ?? 0
+          usage.cacheReadTokens = chunk.cacheReadTokens ?? 0
+          usage.totalCost = chunk.totalCost
+          break
+        case 'text':
+          resp += chunk.text
+          break
+      }
+    }
+
+    return {
+      response: resp,
+      usage,
+    }
+  }
 }

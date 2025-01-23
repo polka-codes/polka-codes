@@ -1,4 +1,4 @@
-import type { AiServiceBase, MessageParam } from '../AiService'
+import type { AiServiceBase, ApiUsage, MessageParam } from '../AiService'
 import { type FullToolInfo, type ToolResponse, ToolResponseType } from '../tool'
 import type { ToolProvider } from './../tools'
 import { type AssistantMessageContent, parseAssistantMessage } from './parseAssistantMessage'
@@ -19,12 +19,7 @@ export type TaskInfo = {
     maxIterations: number
   }
   messages: MessageParam[]
-  inputTokens: number
-  outputTokens: number
-  cacheWriteTokens: number
-  cacheReadTokens: number
-  totalCost: number | undefined
-}
+} & ApiUsage
 
 export type AgentBaseConfig = {
   systemPrompt: string
