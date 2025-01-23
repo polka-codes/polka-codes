@@ -28,10 +28,26 @@ npx @polka-codes/cli
 polka
 
 # Run specific task
-polka task "improve readme"
+polka-codes task "improve readme"
 
 # Create config file
-polka config
+polka-codes config
+
+# Generate commit message
+polka-codes commit
+```
+
+### Commit Command
+
+The `commit` subcommand helps generate meaningful commit messages based on your staged changes:
+
+```bash
+# Generate commit message for staged changes
+polka-codes commit
+
+# Generate commit message with specific context
+polka-codes commit "closes issue #123"
+
 ```
 
 ### Configuration
