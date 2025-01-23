@@ -25,7 +25,7 @@ npx @polka-codes/cli
 
 ```bash
 # Run interactive session
-polka
+polka-codes
 
 # Run specific task
 polka-codes task "improve readme"

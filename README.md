@@ -33,7 +33,7 @@ npx @polka-codes/cli "your task description"
 polka-codes "improve README.md"
 
 # Start interactive chat session
-polka
+polka-codes
 
 # Get help
 polka-codes --help
