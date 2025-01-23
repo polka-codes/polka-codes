@@ -161,6 +161,7 @@ export function convertToAnthropicMessage(completion: OpenAI.Chat.Completions.Ch
       {
         type: 'text',
         text: openAiMessage.content || '',
+        citations: null,
       },
     ],
     model: completion.model,

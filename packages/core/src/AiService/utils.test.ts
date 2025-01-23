@@ -153,6 +153,7 @@ describe('convertToAnthropicMessage', () => {
         {
           type: 'text',
           text: 'Hello there!',
+          citations: null,
         },
       ],
       model: 'gpt-4',
@@ -212,6 +213,7 @@ describe('convertToAnthropicMessage', () => {
         {
           type: 'text',
           text: 'Let me search that for you.',
+          citations: null,
         },
         {
           type: 'tool_use',
