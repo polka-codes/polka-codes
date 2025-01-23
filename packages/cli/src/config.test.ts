@@ -44,6 +44,7 @@ modelId: claude-3-opus
       provider: 'anthropic',
       apiKey: 'test-key',
       modelId: 'claude-3-opus',
+      rules: [],
     })
   })
 
@@ -63,6 +64,7 @@ modelId: deepseek-chat
       provider: 'deepseek',
       apiKey: 'test-key-2',
       modelId: 'deepseek-chat',
+      rules: [],
     })
 
     // Clean up
