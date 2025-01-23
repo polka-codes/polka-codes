@@ -9,7 +9,7 @@ export interface ApiStreamTextChunk {
   text: string
 }
 
-export interface ApiStreamUsageChunk extends ApiUsage {
+export interface ApiStreamUsageChunk extends Partial<ApiUsage> {
   type: 'usage'
 }
 
@@ -28,7 +28,7 @@ export type ApiUsage = {
   outputTokens: number
   cacheWriteTokens: number
   cacheReadTokens: number
-  totalCost: number | undefined // openrouter
+  totalCost?: number // openrouter
 }
 
 export abstract class AiServiceBase {
@@ -51,8 +51,8 @@ export abstract class AiServiceBase {
     for await (const chunk of stream) {
       switch (chunk.type) {
         case 'usage':
-          usage.inputTokens = chunk.inputTokens
-          usage.outputTokens = chunk.outputTokens
+          usage.inputTokens = chunk.inputTokens ?? 0
+          usage.outputTokens = chunk.outputTokens ?? 0
           usage.cacheWriteTokens = chunk.cacheWriteTokens ?? 0
           usage.cacheReadTokens = chunk.cacheReadTokens ?? 0
           usage.totalCost = chunk.totalCost

@@ -117,8 +117,8 @@ export abstract class AgentBase {
     for await (const chunk of stream) {
       switch (chunk.type) {
         case 'usage':
-          info.inputTokens = chunk.inputTokens
-          info.outputTokens = chunk.outputTokens
+          info.inputTokens = chunk.inputTokens ?? 0
+          info.outputTokens = chunk.outputTokens ?? 0
           info.cacheWriteTokens = chunk.cacheWriteTokens ?? 0
           info.cacheReadTokens = chunk.cacheReadTokens ?? 0
           info.totalCost = chunk.totalCost

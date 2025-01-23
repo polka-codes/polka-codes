@@ -135,25 +135,23 @@ export class AnthropicService extends AiServiceBase {
         case 'message_start': {
           // tells us cache reads/writes/input/output
           const usage = chunk.message.usage
-          const usageInfo = {
+          yield {
             type: 'usage',
-            inputTokens: usage.input_tokens || 0,
-            outputTokens: usage.output_tokens || 0,
-            cacheWriteTokens: usage.cache_creation_input_tokens || undefined,
-            cacheReadTokens: usage.cache_read_input_tokens || undefined,
-          } as const
-          yield usageInfo
+            inputTokens: usage.input_tokens,
+            outputTokens: usage.output_tokens,
+            cacheWriteTokens: usage.cache_creation_input_tokens || 0,
+            cacheReadTokens: usage.cache_read_input_tokens || 0,
+          }
           break
         }
         case 'message_delta': {
           // tells us stop_reason, stop_sequence, and output tokens along the way and at the end of the message
 
-          const deltaUsage = {
+          yield {
             type: 'usage',
             inputTokens: 0,
-            outputTokens: chunk.usage.output_tokens || 0,
-          } as const
-          yield deltaUsage
+            outputTokens: chunk.usage.output_tokens,
+          }
           break
         }
         case 'message_stop':
