@@ -14,7 +14,7 @@
     "build": "bun build src/index.ts --outdir dist"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.33.1",
-    "openai": "^4.77.4"
+    "@anthropic-ai/sdk": "^0.36.2",
+    "openai": "^4.80.0"
   }
 }

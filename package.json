@@ -15,16 +15,16 @@
     "cli": "bun run --no-check packages/cli/src/index.ts"
   },
   "devDependencies": {
-    "@biomejs/biome": "1.9.4",
-    "bun-types": "^1.1.42",
+    "@biomejs/biome": "^1.9.4",
+    "bun-types": "^1.2.0",
     "husky": "^9.1.7",
-    "lint-staged": "^15.3.0",
+    "lint-staged": "^15.4.2",
     "ts-add-js-extension": "^1.6.5",
     "tslib": "^2.8.1",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.3"
   },
   "lint-staged": {
     "*.{js,ts,cjs,mjs,d.cts,d.mts,jsx,tsx,json,jsonc}": ["biome check --write --no-errors-on-unmatched"]
   },
-  "packageManager": "bun@1.1.43"
+  "packageManager": "bun@1.2.0"
 }
