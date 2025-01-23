@@ -2,6 +2,7 @@ import 'dotenv/config'
 import { Command } from 'commander'
 import { version } from '../package.json'
 import { runChat } from './commands/chat'
+import { commitCommand } from './commands/commit'
 import { configCommand } from './commands/config'
 import { runTask } from './commands/task'
 import { addSharedOptions } from './options'
@@ -23,6 +24,9 @@ program
 
 // Main command for executing tasks
 program.argument('[task]', 'The task to execute').action(runTask)
+
+// Commit command
+program.addCommand(commitCommand)
 
 addSharedOptions(program)
 

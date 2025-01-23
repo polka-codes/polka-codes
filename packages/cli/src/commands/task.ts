@@ -1,3 +1,5 @@
+import { defaultModels } from '@polka-codes/core'
+import { Runner } from '../Runner'
 import { parseOptions } from '../options'
 import { runChat } from './chat'
 import { configPrompt } from './config'
