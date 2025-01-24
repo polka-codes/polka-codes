@@ -1,4 +1,19 @@
+providers:
+  deepseek:
+    defaultModel: deepseek-reasoner
+defaultProvider: deepseek
+defaultModel: deepseek-reasoner
 commands:
+  pr:
+    provider: deepseek
+    model: deepseek-chat
+  commit:
+    provider: deepseek
+    model: deepseek-chat
+excludeFiles:
+  - .env
+  - packages/cli/cli.mjs
+scripts:
   test:
     command: bun test
     description: Run tests. Pass file path to run a specific test file.
@@ -12,9 +27,6 @@ commands:
     description: |
       Format the code and fix fixable linting issues.
       Run this command when linting issues are found.
-excludeFiles:
-  - .env
-  - packages/cli/cli.mjs
 rules: |
   Use `bun` as the package manager
   When adding new dependencies, cd to the package directory and run `bun add <dependency>`

@@ -10,7 +10,10 @@ export const commitCommand = new Command('commit')
   .option('-a, --all', 'Stage all files before committing')
   .argument('[message]', 'Optional context for the commit message generation')
   .action(async (message, options) => {
-    const { provider, modelId, apiKey, config } = parseOptions(options)
+    const { providerConfig, config } = parseOptions(options)
+
+    const { provider, model, apiKey } = providerConfig.getConfigForCommand('commit') ?? {}
+
     if (!provider) {
       console.error('Error: No provider specified. Please run "polka-codes config" to configure your AI provider.')
       process.exit(1)
@@ -18,7 +21,7 @@ export const commitCommand = new Command('commit')
 
     const ai = createService(provider, {
       apiKey,
-      modelId,
+      model,
     })
 
     try {

@@ -1,4 +1,4 @@
-import { defaultModels } from '@polka-codes/core'
+import { type AiServiceProvider, defaultModels } from '@polka-codes/core'
 import { Runner } from '../Runner'
 import { parseOptions } from '../options'
 import { runChat } from './chat'
@@ -10,22 +10,24 @@ export const runTask = async (taskArg: string, options: any) => {
     return
   }
 
-  let { provider, modelId, apiKey, config, maxIterations } = parseOptions(options)
+  const { providerConfig, config, maxIterations } = parseOptions(options)
+
+  let { provider, model, apiKey } = providerConfig.getConfigForAgent('coder') ?? {}
 
   if (!provider) {
     // new user? ask for config
-    const newConfig = await configPrompt({ provider, modelId, apiKey, ...config })
-    provider = newConfig.provider
-    modelId = newConfig.modelId
+    const newConfig = await configPrompt({ provider, model, apiKey })
+    provider = newConfig.provider as AiServiceProvider
+    model = newConfig.model
     apiKey = newConfig.apiKey
   }
 
   console.log('Provider:', provider)
-  console.log('Model:', modelId)
+  console.log('Model:', model)
 
   const runner = new Runner({
     provider,
-    modelId: modelId ?? defaultModels[provider],
+    model: model ?? defaultModels[provider],
     apiKey,
     config: config ?? {},
     maxIterations,

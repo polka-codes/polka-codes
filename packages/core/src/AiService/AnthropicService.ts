@@ -21,7 +21,7 @@ export class AnthropicService extends AiServiceBase {
       baseURL: options.baseUrl || undefined,
     })
 
-    const id = (this.#options.modelId ?? anthropicDefaultModelId) as AnthropicModelId
+    const id = (this.#options.model ?? anthropicDefaultModelId) as AnthropicModelId
     this.model = {
       id,
       info: anthropicModels[id] ?? anthropicModels[anthropicDefaultModelId],

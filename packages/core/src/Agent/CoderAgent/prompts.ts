@@ -143,7 +143,7 @@ The following additional instructions are provided by the user, and should be fo
 ${joined}`
 }
 
-export const customCommands = (commands: Record<string, string | { command: string; description: string }>) => {
+export const customScripts = (commands: Record<string, string | { command: string; description: string }>) => {
   const joined = Object.entries(commands)
     .map(([name, command]) => {
       if (typeof command === 'string') {
@@ -191,7 +191,7 @@ export const fullSystemPrompt = (
   tools: ToolInfo[],
   toolNamePrefix: string,
   instructions: string[],
-  commands: Record<string, string | { command: string; description: string }>,
+  scripts: Record<string, string | { command: string; description: string }>,
   interactive: boolean,
 ) => `
 ${basePrompt}
@@ -202,6 +202,6 @@ ${rules(toolNamePrefix)}
 ${objectives(toolNamePrefix)}
 ${systemInformation(info)}
 ${customInstructions(instructions)}
-${customCommands(commands)}
+${customScripts(scripts)}
 ${interactiveMode(interactive)}
 `

@@ -20,7 +20,7 @@ export class OllamaService extends AiServiceBase {
     })
 
     this.model = {
-      id: options.modelId || 'maryasov/qwen2.5-coder-cline:7b',
+      id: options.model || 'maryasov/qwen2.5-coder-cline:7b',
       info: openAiModelInfoSaneDefaults,
     }
   }
