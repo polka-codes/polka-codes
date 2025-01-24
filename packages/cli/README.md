@@ -50,6 +50,14 @@ polka-codes commit "closes issue #123"
 
 ```
 
+### PR Command
+
+Create a GitHub pull request with AI-generated details:
+
+```bash
+polka-codes pr "optional message. e.g. closes #123"
+```
+
 ### Configuration
 
 Create a `.polkacodes.yml` file in your project root:
