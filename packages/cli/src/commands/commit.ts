@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process'
+import { execSync } from 'node:child_process'
 import { confirm } from '@inquirer/prompts'
 import { Command } from 'commander'
 
@@ -23,20 +23,20 @@ export const commitCommand = new Command('commit')
 
     try {
       // Check if there are any staged files
-      const status = spawnSync('git', ['status', '--porcelain'], { encoding: 'utf-8' })
-      const stagedFiles = status.stdout.split('\n').filter((line) => line.match(/^[MADRC]/))
+      const status = execSync('git status --porcelain').toString()
+      const stagedFiles = status.split('\n').filter((line) => line.match(/^[MADRC]/))
 
       // Handle no staged files case
       if (stagedFiles.length === 0) {
         if (options.all) {
           // Stage all files
-          spawnSync('git', ['add', '.'], { stdio: 'inherit' })
+          execSync('git add .')
         } else {
           const addAll = await confirm({
             message: 'No staged files found. Do you want to stage all files?',
           })
           if (addAll) {
-            spawnSync('git', ['add', '.'], { stdio: 'inherit' })
+            execSync('git add .')
           } else {
             console.error('Error: No files to commit')
             process.exit(1)
@@ -45,15 +45,15 @@ export const commitCommand = new Command('commit')
       }
 
       // Get diff with 200 lines of context
-      const diff = spawnSync('git', ['diff', '--cached', '-U200'], { encoding: 'utf-8' }).stdout
+      const diff = execSync('git diff --cached -U200').toString()
 
       // Generate commit message
       const result = await generateGitCommitMessage(ai, { diff, context: message })
 
       // Make the commit
-      const commitResult = spawnSync('git', ['commit', '-m', result.response], { stdio: 'inherit' })
-
-      if (commitResult.status !== 0) {
+      try {
+        execSync(`git commit -m "${result.response}"`)
+      } catch {
         console.error('Error: Commit failed')
         process.exit(1)
       }
