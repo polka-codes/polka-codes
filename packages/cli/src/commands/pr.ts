@@ -1,14 +1,17 @@
-import { execSync } from 'node:child_process'
+import { execSync, spawnSync } from 'node:child_process'
 import { createService, generateGithubPullRequestDetails } from '@polka-codes/core'
 import { Command } from 'commander'
 
+import ora from 'ora'
 import { parseOptions } from '../options'
 
 export const prCommand = new Command('pr')
   .description('Create a GitHub pull request')
   .argument('[message]', 'Optional context for the commit message generation')
   .action(async (message, options) => {
-    const { provider, modelId, apiKey, config } = parseOptions(options)
+    const spinner = ora('Gathering information...').start()
+
+    const { provider, modelId, apiKey } = parseOptions(options)
     if (!provider) {
       console.error('Error: No provider specified. Please run "polka-codes config" to configure your AI provider.')
       process.exit(1)
@@ -26,19 +29,21 @@ export const prCommand = new Command('pr')
       // get branch name usnig git
       const branchName = execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf-8' }).trim()
 
-      // get default branch name
-      const originInfo = execSync('git remote show origin', { encoding: 'utf-8' })
-      let defaultBranch = originInfo.match(/HEAD branch: (.*)/)?.[1]
+      const defaultBranchNames = ['master', 'main', 'develop']
+
+      let defaultBranch: string | undefined
+
+      for (const branchName of defaultBranchNames) {
+        if (execSync(`git branch --list ${branchName}`, { encoding: 'utf-8' }).includes(branchName)) {
+          defaultBranch = branchName
+          break
+        }
+      }
 
       if (!defaultBranch) {
-        const defaultBranchNames = ['main', 'master']
-
-        for (const branchName of defaultBranchNames) {
-          if (execSync(`git branch --list ${branchName}`, { encoding: 'utf-8' }).includes(branchName)) {
-            defaultBranch = branchName
-            break
-          }
-        }
+        // git remote is slow as it needs to fetch the remote info
+        const originInfo = execSync('git remote show origin', { encoding: 'utf-8' })
+        defaultBranch = originInfo.match(/HEAD branch: (.*)/)?.[1]
       }
 
       if (!defaultBranch) {
@@ -46,7 +51,7 @@ export const prCommand = new Command('pr')
         process.exit(1)
       }
 
-      const commits = execSync(`git log --pretty=format:"%h %s" --no-merges --no-decorate ${defaultBranch}..HEAD`, {
+      const commits = execSync(`git --no-pager log --oneline --no-color --no-merges --no-decorate ${defaultBranch}..HEAD`, {
         encoding: 'utf-8',
       })
 
@@ -57,6 +62,8 @@ export const prCommand = new Command('pr')
         modelId,
       })
 
+      spinner.text = 'Generating pull request details...'
+
       const prDetails = await generateGithubPullRequestDetails(ai, {
         branchName: branchName,
         context: message,
@@ -64,8 +71,9 @@ export const prCommand = new Command('pr')
         commitDiff: diff,
       })
 
-      // Create PR using gh CLI
-      execSync(`gh pr create --title "${prDetails.response.title}" --body "${prDetails.response.description}"`, {
+      spinner.succeed('Pull request details generated')
+
+      spawnSync('gh', ['pr', 'create', '--title', prDetails.response.title, '--body', prDetails.response.description], {
         stdio: 'inherit',
       })
     } catch (error) {
