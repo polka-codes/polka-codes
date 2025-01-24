@@ -85,4 +85,14 @@ export const deepSeekModels = {
     cacheWritesPrice: 0.14,
     cacheReadsPrice: 0.014,
   },
+  'deepseek-reasoner': {
+    maxTokens: 8_000,
+    contextWindow: 64_000,
+    supportsImages: false,
+    supportsPromptCache: true,
+    inputPrice: 0,
+    outputPrice: 2.19,
+    cacheWritesPrice: 0.55,
+    cacheReadsPrice: 0.14,
+  },
 } as const satisfies Record<string, ModelInfo>
