@@ -28,7 +28,7 @@ describe('listFiles', () => {
   })
 
   it('should list files in directory', async () => {
-    const [files] = await listFiles(testDir, false, 10, testDir)
+    const [files] = await listFiles(testDir, false, 10, testDir, [])
     expect(files).toEqual(['.gitignore', 'file1.txt', 'file2.txt'])
   })
 

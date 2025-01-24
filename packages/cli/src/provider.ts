@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
+import ignore from 'ignore'
 
 import type { ToolProvider } from '@polka-codes/core'
 import { listFiles } from './utils/listFiles'
@@ -13,21 +14,29 @@ export type ProviderOptions = {
     onExit(code: number): void
     onError(error: unknown): void
   }
+  excludeFiles?: string[]
 }
 
 export const getProvider = (options: ProviderOptions): ToolProvider => {
+  const ig = ignore().add(options.excludeFiles ?? [])
   return {
     readFile: async (path: string): Promise<string> => {
+      if (ig.ignores(path)) {
+        throw new Error(`Not allow to access file ${path}`)
+      }
       return await readFile(path, 'utf8')
     },
     writeFile: async (path: string, content: string): Promise<void> => {
+      if (ig.ignores(path)) {
+        throw new Error(`Not allow to access file ${path}`)
+      }
       // generate parent directories if they don't exist
       await mkdir(dirname(path), { recursive: true })
 
       return await writeFile(path, content, 'utf8')
     },
     listFiles: async (path: string, recursive: boolean, maxCount: number): Promise<[string[], boolean]> => {
-      return await listFiles(path, recursive, maxCount, dirname(path))
+      return await listFiles(path, recursive, maxCount, dirname(path), options.excludeFiles)
     },
     // searchFiles: async (path: string, regex: string, filePattern: string) => Promise<string[]> {},
     // listCodeDefinitionNames: async (path: string) => Promise<string[]> {},

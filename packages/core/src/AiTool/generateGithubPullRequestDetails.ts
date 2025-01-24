@@ -53,8 +53,6 @@ to use the new validate_and_process method for improved maintainability.
 ---
 
 Use the above format whenever you receive \`<tool_input>\` that may include a branch name, an optional context, aggregated commit messages in a single tag, and a combined diff in a single tag. Provide your final output strictly in \`<tool_output>\` with \`<tool_output_pr_title>\` and \`<tool_output_pr_description>\`.
-
-Do not include unnecessary whitespaces in the description.
 `
 
 type Input = {

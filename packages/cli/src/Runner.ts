@@ -61,6 +61,7 @@ export class Runner {
             console.log(`$ <<<< $ Command error: ${error}`)
           },
         },
+        excludeFiles: options.config.excludeFiles,
       }),
       interactive: options.interactive,
     })
@@ -68,7 +69,7 @@ export class Runner {
 
   async startTask(task: string) {
     const cwd = process.cwd()
-    const [fileList, limited] = await listFiles(cwd, true, 100, cwd)
+    const [fileList, limited] = await listFiles(cwd, true, 100, cwd, this.#options.config.excludeFiles)
     const fileContext = `<files>
 ${fileList.join('\n')}${limited ? '\n<files_truncated>true</files_truncated>' : ''}
 </files>`
