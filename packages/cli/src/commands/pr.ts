@@ -11,7 +11,10 @@ export const prCommand = new Command('pr')
   .action(async (message, options) => {
     const spinner = ora('Gathering information...').start()
 
-    const { provider, modelId, apiKey } = parseOptions(options)
+    const { providerConfig } = parseOptions(options)
+
+    const { provider, model, apiKey } = providerConfig.getConfigForCommand('pr') ?? {}
+
     if (!provider) {
       console.error('Error: No provider specified. Please run "polka-codes config" to configure your AI provider.')
       process.exit(1)
@@ -59,7 +62,7 @@ export const prCommand = new Command('pr')
 
       const ai = createService(provider, {
         apiKey,
-        modelId,
+        model,
       })
 
       spinner.text = 'Generating pull request details...'

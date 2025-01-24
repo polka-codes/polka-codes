@@ -7,11 +7,47 @@ import { ZodError, z } from 'zod'
 
 export const configSchema = z
   .object({
-    provider: z.string().optional(),
-    apiKey: z.string().optional(),
-    modelId: z.string().optional(),
+    providers: z
+      .record(
+        z.string(),
+        z.object({
+          apiKey: z.string().optional(),
+          defaultModel: z.string().optional(),
+        }),
+      )
+      .optional(),
+    defaultProvider: z.string().optional(),
+    defaultModel: z.string().optional(),
     maxIterations: z.number().int().positive().optional(),
-    commands: z.record(z.string(), z.string().or(z.object({ command: z.string(), description: z.string() }))).optional(),
+    scripts: z
+      .record(
+        z.string(),
+        z.string().or(
+          z.object({
+            command: z.string(),
+            description: z.string(),
+          }),
+        ),
+      )
+      .optional(),
+    agents: z
+      .record(
+        z.string(),
+        z.object({
+          provider: z.string().optional(),
+          model: z.string().optional(),
+        }),
+      )
+      .optional(),
+    commands: z
+      .record(
+        z.string(),
+        z.object({
+          provider: z.string().optional(),
+          model: z.string().optional(),
+        }),
+      )
+      .optional(),
     rules: z.array(z.string()).optional().or(z.string()).optional(),
     excludeFiles: z.array(z.string()).optional(),
   })
@@ -82,7 +118,8 @@ export function loadConfig(path?: string, cwd: string = process.cwd(), home = ho
   // Merge configs with project config taking precedence
   if (globalConfig && projectConfig) {
     const mergedConfig = merge({}, globalConfig, projectConfig)
-    // mantually merge rules array
+
+    // Merge rules array
     let projectRules = projectConfig.rules ?? []
     if (typeof projectRules === 'string') {
       projectRules = [projectRules]
@@ -93,6 +130,7 @@ export function loadConfig(path?: string, cwd: string = process.cwd(), home = ho
     }
     mergedConfig.rules = mergeArray(globalRules, projectRules)
 
+    // Merge exclude files
     mergedConfig.excludeFiles = mergeArray(globalConfig.excludeFiles, projectConfig.excludeFiles)
 
     return mergedConfig

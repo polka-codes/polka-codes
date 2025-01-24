@@ -33,17 +33,15 @@ describe('config', () => {
     writeFileSync(
       configPath,
       `
-provider: anthropic
-apiKey: test-key
-modelId: claude-3-opus
+defaultProvider: anthropic
+defaultModel: claude-3-opus
     `,
     )
 
-    const config = loadConfig(configPath, testSubDir)
+    const config = loadConfig(configPath, testSubDir, testHomeDir)
     expect(config).toEqual({
-      provider: 'anthropic',
-      apiKey: 'test-key',
-      modelId: 'claude-3-opus',
+      defaultProvider: 'anthropic',
+      defaultModel: 'claude-3-opus',
     })
   })
 
@@ -52,17 +50,15 @@ modelId: claude-3-opus
     writeFileSync(
       configPath,
       `
-provider: deepseek
-apiKey: test-key-2
-modelId: deepseek-chat
+defaultProvider: deepseek
+defaultModel: deepseek-chat
     `,
     )
 
-    const config = loadConfig(undefined, testSubDir)
+    const config = loadConfig(undefined, testSubDir, testHomeDir)
     expect(config).toEqual({
-      provider: 'deepseek',
-      apiKey: 'test-key-2',
-      modelId: 'deepseek-chat',
+      defaultProvider: 'deepseek',
+      defaultModel: 'deepseek-chat',
     })
 
     // Clean up
@@ -78,7 +74,7 @@ invalidKey: value
     `,
     )
 
-    expect(() => loadConfig(configPath, testSubDir)).toThrow()
+    expect(() => loadConfig(configPath, testSubDir, testHomeDir)).toThrow()
   })
 
   test('handles commands configuration', () => {
@@ -86,7 +82,7 @@ invalidKey: value
     writeFileSync(
       configPath,
       `
-commands:
+scripts:
   test: echo "test"
   complex:
     command: echo "complex"
@@ -95,7 +91,7 @@ commands:
     )
 
     const config = loadConfig(configPath, testSubDir)
-    expect(config?.commands).toEqual({
+    expect(config?.scripts).toEqual({
       test: 'echo "test"',
       complex: {
         command: 'echo "complex"',
@@ -126,10 +122,9 @@ rules:
     writeFileSync(
       globalConfigPath,
       `
-provider: anthropic
-apiKey: global-key
-modelId: claude-3-opus
-commands:
+defaultProvider: anthropic
+defaultModel: claude-3-opus
+scripts:
   test: echo "global"
   complex:
     command: echo "global-complex"
@@ -142,8 +137,10 @@ rules:
     writeFileSync(
       localConfigPath,
       `
-apiKey: local-key
-commands:
+providers:
+  anthropic:
+    apiKey: local-key
+scripts:
   test: echo "local"
 rules:
   - local-rule
@@ -152,10 +149,15 @@ rules:
 
     const config = loadConfig(localConfigPath, testSubDir, testHomeDir)
     expect(config).toEqual({
-      provider: 'anthropic',
-      apiKey: 'local-key',
-      modelId: 'claude-3-opus',
-      commands: {
+      defaultProvider: 'anthropic',
+      defaultModel: 'claude-3-opus',
+      excludeFiles: undefined,
+      providers: {
+        anthropic: {
+          apiKey: 'local-key',
+        },
+      },
+      scripts: {
         test: 'echo "local"',
         complex: {
           command: 'echo "global-complex"',

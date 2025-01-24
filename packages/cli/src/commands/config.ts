@@ -5,8 +5,8 @@ import { stringify } from 'yaml'
 
 import { AiServiceProvider, anthropicDefaultModelId, anthropicModels, deepSeekDefaultModelId } from '@polka-codes/core'
 
-import { merge } from 'lodash'
-import { type Config, getGlobalConfigPath, loadConfigAtPath, localConfigFileName } from '../config'
+import { set } from 'lodash'
+import { getGlobalConfigPath, loadConfigAtPath, localConfigFileName } from '../config'
 
 const fetchOllamaModels = async () => {
   try {
@@ -19,7 +19,13 @@ const fetchOllamaModels = async () => {
   }
 }
 
-export async function configPrompt(existingConfig?: Partial<Config>) {
+type ProviderConfig = {
+  provider: string
+  model: string
+  apiKey?: string
+}
+
+export async function configPrompt(existingConfig?: Partial<ProviderConfig>): Promise<ProviderConfig> {
   // select AI provider
   const provider = await select({
     message: 'Choose AI Provider:',
@@ -27,40 +33,43 @@ export async function configPrompt(existingConfig?: Partial<Config>) {
     default: existingConfig?.provider,
   })
 
-  let modelId = existingConfig?.modelId
+  let model = existingConfig?.model
 
   switch (provider) {
     case AiServiceProvider.Anthropic:
-      modelId = await select({
+      model = await select({
         message: 'Choose Model ID:',
         choices: Object.keys(anthropicModels).map((key) => ({ name: key, value: key })),
-        default: existingConfig?.modelId ?? anthropicDefaultModelId,
+        default: existingConfig?.model ?? anthropicDefaultModelId,
       })
       break
     case AiServiceProvider.Ollama:
       {
         const models = await fetchOllamaModels()
         if (models && models.length > 0) {
-          modelId = await select({
+          model = await select({
             message: 'Choose Model ID:',
             choices: models.map((model) => ({ name: model, value: model })),
-            default: existingConfig?.modelId,
+            default: existingConfig?.model,
           })
         } else {
-          modelId = await input({ message: 'Enter Model ID:' })
+          model = await input({ message: 'Enter Model ID:' })
         }
       }
       // fetch model list from Ollama API
 
       break
     case AiServiceProvider.DeepSeek:
-      modelId = deepSeekDefaultModelId
+      model = deepSeekDefaultModelId
       break
   }
 
-  const apiKey = await password({ message: 'Enter API Key:', mask: '*' })
+  let apiKey: string | undefined
+  if (provider !== AiServiceProvider.Ollama) {
+    apiKey = await password({ message: 'Enter API Key:', mask: '*' })
+  }
 
-  return { provider, modelId, apiKey }
+  return { provider, model, apiKey }
 }
 
 async function printConfig(configPath: string) {
@@ -70,9 +79,14 @@ async function printConfig(configPath: string) {
     return
   }
   console.log(`Config file path: ${configPath}`)
-  if (config.apiKey) {
-    config.apiKey = '<redacted>'
+  if (config.providers) {
+    for (const key of Object.keys(config.providers)) {
+      if (config.providers[key as AiServiceProvider].apiKey) {
+        config.providers[key as AiServiceProvider].apiKey = '<redacted>'
+      }
+    }
   }
+
   console.log(stringify(config))
 }
 
@@ -109,7 +123,7 @@ export async function configCommand(options: { global?: boolean; print?: boolean
   }
   console.log(`Config file path: ${configPath}`)
 
-  const { provider, modelId, apiKey } = await configPrompt(existingConfig)
+  let { provider, model, apiKey } = await configPrompt({ provider: existingConfig?.defaultProvider, model: existingConfig?.defaultModel })
 
   if (apiKey && configPath === localConfigFileName) {
     const option = await select({
@@ -136,28 +150,37 @@ export async function configCommand(options: { global?: boolean; print?: boolean
         break
       case 2: {
         const globalConfig = loadConfigAtPath(globalConfigPath) ?? {}
-        globalConfig.apiKey = apiKey
+        set(globalConfig, ['providers', provider, 'apiKey'], apiKey)
         mkdirSync(dirname(globalConfigPath), { recursive: true })
         writeFileSync(globalConfigPath, stringify(globalConfig))
         console.log(`API key saved to global config file: ${globalConfigPath}`)
+        apiKey = undefined
         break
       }
       case 3: {
         let envFileContent: string
         if (existsSync('.env')) {
           envFileContent = readFileSync('.env', 'utf8')
-          envFileContent += `\nPOLKA_API_KEY=${apiKey}`
+          envFileContent += `\n${provider.toUpperCase()}_API_KEY=${apiKey}`
         } else {
-          envFileContent = 'POLKA_API_KEY=${apiKey}'
+          envFileContent = `${provider.toUpperCase()}_API_KEY=${apiKey}`
         }
         writeFileSync('.env', envFileContent)
         console.log('API key saved to .env file')
+        apiKey = undefined
         break
       }
     }
   }
 
-  const newConfig = merge({}, existingConfig, { provider, modelId, apiKey })
+  const newConfig = {
+    defaultProvider: provider,
+    defaultModel: model,
+    ...existingConfig,
+  }
+  if (apiKey) {
+    set(newConfig, ['providers', provider, 'apiKey'], apiKey)
+  }
   mkdirSync(dirname(configPath), { recursive: true })
   writeFileSync(configPath, stringify(newConfig))
   console.log(`Config file saved at: ${configPath}`)

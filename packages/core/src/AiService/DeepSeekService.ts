@@ -19,7 +19,7 @@ export class DeepSeekService extends AiServiceBase {
       apiKey: options.apiKey,
     })
 
-    const id = (options.modelId || deepSeekDefaultModelId) as DeepSeekModelId
+    const id = (options.model || deepSeekDefaultModelId) as DeepSeekModelId
     this.model = {
       id,
       info: deepSeekModels[id] ?? deepSeekModels[deepSeekDefaultModelId],

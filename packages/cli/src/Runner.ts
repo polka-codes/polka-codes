@@ -6,7 +6,7 @@ import { listFiles } from './utils/listFiles'
 
 export type RunnerOptions = {
   provider: AiServiceProvider
-  modelId: string
+  model: string
   apiKey?: string
   config: Config
   maxIterations: number
@@ -30,7 +30,7 @@ export class Runner {
 
     const service = createService(options.provider, {
       apiKey: options.apiKey,
-      modelId: options.modelId,
+      model: options.model,
     })
 
     let rules = options.config.rules
@@ -42,7 +42,7 @@ export class Runner {
       ai: service,
       os: os.platform(),
       customInstructions: rules,
-      commands: options.config.commands,
+      scripts: options.config.scripts,
       provider: getProvider({
         command: {
           onStarted(command) {

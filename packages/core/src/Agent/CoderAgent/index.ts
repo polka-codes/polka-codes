@@ -11,7 +11,7 @@ export type CoderAgentOptions = {
   interactive: boolean
   additionalTools?: FullToolInfo[]
   customInstructions?: string[]
-  commands?: Record<string, string | { command: string; description: string }>
+  scripts?: Record<string, string | { command: string; description: string }>
 }
 
 export class CoderAgent extends AgentBase {
@@ -26,7 +26,7 @@ export class CoderAgent extends AgentBase {
       tools,
       toolNamePrefix,
       options.customInstructions ?? [],
-      options.commands ?? {},
+      options.scripts ?? {},
       options.interactive,
     )
 

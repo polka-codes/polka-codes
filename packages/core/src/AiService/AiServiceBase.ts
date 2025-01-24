@@ -16,7 +16,7 @@ export interface ApiStreamUsageChunk extends Partial<ApiUsage> {
 export type ApiStream = AsyncGenerator<ApiStreamChunk>
 
 export interface AiServiceOptions {
-  modelId?: string
+  model?: string
   apiKey?: string
   baseUrl?: string
 }
