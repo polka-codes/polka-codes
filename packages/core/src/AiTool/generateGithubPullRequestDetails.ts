@@ -23,15 +23,13 @@ Below is an **example** of the input and output:
 
 Example Input:
 <tool_input>
-  <tool_input_branch_name>feature/refactor-logging</tool_input_branch_name>
-  <tool_input_context>Focus on clean code and maintainability</tool_input_context>
-
-  <tool_input_commit_messages>
+<tool_input_branch_name>feature/refactor-logging</tool_input_branch_name>
+<tool_input_context>Focus on clean code and maintainability</tool_input_context>
+<tool_input_commit_messages>
 Remove debug logs
 Refactor order validation logic
-  </tool_input_commit_messages>
-
-  <tool_input_commit_diff>
+</tool_input_commit_messages>
+<tool_input_commit_diff>
 diff --git a/user_service.py b/user_service.py
 - print("Debug info")
 + # Removed debug print statements
@@ -45,16 +43,18 @@ diff --git a/order_service.py b/order_service.py
 
 Example Output:
 <tool_output>
-  <tool_output_pr_title>Refactor Order Validation and Remove Debug Logs</tool_output_pr_title>
-  <tool_output_pr_description>
-    This PR removes unnecessary debug print statements and updates order validation
-    to use the new validate_and_process method for improved maintainability.
-  </tool_output_pr_description>
+<tool_output_pr_title>Refactor Order Validation and Remove Debug Logs</tool_output_pr_title>
+<tool_output_pr_description>
+This PR removes unnecessary debug print statements and updates order validation
+to use the new validate_and_process method for improved maintainability.
+</tool_output_pr_description>
 </tool_output>
 
 ---
 
 Use the above format whenever you receive \`<tool_input>\` that may include a branch name, an optional context, aggregated commit messages in a single tag, and a combined diff in a single tag. Provide your final output strictly in \`<tool_output>\` with \`<tool_output_pr_title>\` and \`<tool_output_pr_description>\`.
+
+Do not include unnecessary whitespaces in the description.
 `
 
 type Input = {
