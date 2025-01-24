@@ -38,7 +38,7 @@ defaultModel: claude-3-opus
     `,
     )
 
-    const config = loadConfig(configPath, testSubDir)
+    const config = loadConfig(configPath, testSubDir, testHomeDir)
     expect(config).toEqual({
       defaultProvider: 'anthropic',
       defaultModel: 'claude-3-opus',
@@ -55,7 +55,7 @@ defaultModel: deepseek-chat
     `,
     )
 
-    const config = loadConfig(undefined, testSubDir)
+    const config = loadConfig(undefined, testSubDir, testHomeDir)
     expect(config).toEqual({
       defaultProvider: 'deepseek',
       defaultModel: 'deepseek-chat',
@@ -74,7 +74,7 @@ invalidKey: value
     `,
     )
 
-    expect(() => loadConfig(configPath, testSubDir)).toThrow()
+    expect(() => loadConfig(configPath, testSubDir, testHomeDir)).toThrow()
   })
 
   test('handles commands configuration', () => {
@@ -137,7 +137,9 @@ rules:
     writeFileSync(
       localConfigPath,
       `
-apiKey: local-key
+providers:
+  anthropic:
+    apiKey: local-key
 scripts:
   test: echo "local"
 rules:
@@ -149,6 +151,12 @@ rules:
     expect(config).toEqual({
       defaultProvider: 'anthropic',
       defaultModel: 'claude-3-opus',
+      excludeFiles: undefined,
+      providers: {
+        anthropic: {
+          apiKey: 'local-key',
+        },
+      },
       scripts: {
         test: 'echo "local"',
         complex: {
