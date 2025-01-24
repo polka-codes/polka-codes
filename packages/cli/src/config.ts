@@ -13,6 +13,7 @@ export const configSchema = z
     maxIterations: z.number().int().positive().optional(),
     commands: z.record(z.string(), z.string().or(z.object({ command: z.string(), description: z.string() }))).optional(),
     rules: z.array(z.string()).optional().or(z.string()).optional(),
+    excludeFiles: z.array(z.string()).optional(),
   })
   .strict()
 
@@ -31,6 +32,19 @@ export function loadConfigAtPath(path: string): Config | undefined {
 }
 
 export const localConfigFileName = '.polkacodes.yml'
+
+const mergeArray = (a: string[] | undefined, b: string[] | undefined): string[] | undefined => {
+  if (!a && !b) {
+    return undefined
+  }
+  if (!a) {
+    return b
+  }
+  if (!b) {
+    return a
+  }
+  return [...a, ...b]
+}
 
 export function loadConfig(path?: string, cwd: string = process.cwd(), home = homedir()): Config | undefined {
   // Load global config if exists
@@ -77,9 +91,9 @@ export function loadConfig(path?: string, cwd: string = process.cwd(), home = ho
     if (typeof globalRules === 'string') {
       globalRules = [globalRules]
     }
-    if (globalRules.length > 0 && projectRules.length > 0) {
-      mergedConfig.rules = [...globalRules, ...projectRules]
-    }
+    mergedConfig.rules = mergeArray(globalRules, projectRules)
+
+    mergedConfig.excludeFiles = mergeArray(globalConfig.excludeFiles, projectConfig.excludeFiles)
 
     return mergedConfig
   }

@@ -50,9 +50,15 @@ function createIgnore(patterns: string[]): Ignore {
  *   - `files` is the array of file paths (relative to `cwd`)
  *   - `limitReached` is `true` if `maxCount` was hit, otherwise `false`
  */
-export async function listFiles(dirPath: string, recursive: boolean, maxCount: number, cwd: string): Promise<[string[], boolean]> {
-  // Merge default ignores with root .gitignore (if found)
-  let rootPatterns = [...DEFAULT_IGNORES]
+export async function listFiles(
+  dirPath: string,
+  recursive: boolean,
+  maxCount: number,
+  cwd: string,
+  excludeFiles?: string[],
+): Promise<[string[], boolean]> {
+  // Merge default ignores with root .gitignore and excludeFiles (if found)
+  let rootPatterns = [...DEFAULT_IGNORES, ...(excludeFiles || [])]
   try {
     const rootGitignore = await fs.readFile(join(cwd, '.gitignore'), 'utf8')
     const lines = rootGitignore.split(/\r?\n/).filter(Boolean)

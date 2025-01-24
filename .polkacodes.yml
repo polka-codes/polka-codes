@@ -12,6 +12,9 @@ commands:
     description: |
       Format the code and fix fixable linting issues.
       Run this command when linting issues are found.
+excludeFiles:
+  - .env
+  - packages/cli/cli.mjs
 rules: |
   Use `bun` as the package manager
   When adding new dependencies, cd to the package directory and run `bun add <dependency>`
