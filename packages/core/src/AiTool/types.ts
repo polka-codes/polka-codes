@@ -6,5 +6,5 @@ export type AiToolDefinition<Input, Output = string> = {
   parseOutput: (output: string) => Output
 }
 
-export type GetInput<T> = T extends AiToolDefinition<infer Input> ? Input : never
+export type GetInput<T> = T extends AiToolDefinition<infer Input, any> ? Input : never
 export type GetOutput<T> = T extends AiToolDefinition<any, infer Output> ? Output : never

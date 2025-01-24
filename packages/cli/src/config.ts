@@ -77,7 +77,9 @@ export function loadConfig(path?: string, cwd: string = process.cwd(), home = ho
     if (typeof globalRules === 'string') {
       globalRules = [globalRules]
     }
-    mergedConfig.rules = [...globalRules, ...projectRules]
+    if (globalRules.length > 0 && projectRules.length > 0) {
+      mergedConfig.rules = [...globalRules, ...projectRules]
+    }
 
     return mergedConfig
   }

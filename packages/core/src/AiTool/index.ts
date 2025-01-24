@@ -1,5 +1,6 @@
 import type { AiServiceBase, ApiUsage } from '../AiService'
 import generateGitCommitMessageDef from './generateGitCommitMessage'
+import generateGithubPullRequestDetailsDef from './generateGithubPullRequestDetails'
 import type { AiToolDefinition, GetInput, GetOutput } from './types'
 
 export const executeTool = async <T extends AiToolDefinition<any, any>>(
@@ -21,5 +22,6 @@ export const makeTool = <T extends AiToolDefinition<any, any>>(definition: T) =>
 }
 
 export const generateGitCommitMessage = makeTool(generateGitCommitMessageDef)
+export const generateGithubPullRequestDetails = makeTool(generateGithubPullRequestDetailsDef)
 
 export type { AiToolDefinition, GetInput, GetOutput }
