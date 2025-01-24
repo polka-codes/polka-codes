@@ -1,8 +1,5 @@
-providers:
-  deepseek:
-    defaultModel: deepseek-reasoner
 defaultProvider: deepseek
-defaultModel: deepseek-reasoner
+defaultModel: deepseek-chat
 commands:
   pr:
     provider: deepseek
