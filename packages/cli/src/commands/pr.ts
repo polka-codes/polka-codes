@@ -76,7 +76,7 @@ export const prCommand = new Command('pr')
 
       spinner.succeed('Pull request details generated')
 
-      spawnSync('gh', ['pr', 'create', '--title', prDetails.response.title, '--body', prDetails.response.description], {
+      spawnSync('gh', ['pr', 'create', '--title', prDetails.response.title.trim(), '--body', prDetails.response.description.trim()], {
         stdio: 'inherit',
       })
     } catch (error) {
