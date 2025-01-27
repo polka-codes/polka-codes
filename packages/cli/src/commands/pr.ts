@@ -75,6 +75,8 @@ export const prCommand = new Command('pr')
       })
 
       spinner.succeed('Pull request details generated')
+      // wait for 10ms to let the spinner stop
+      await new Promise((resolve) => setTimeout(resolve, 10))
 
       spawnSync('gh', ['pr', 'create', '--title', prDetails.response.title.trim(), '--body', prDetails.response.description.trim()], {
         stdio: 'inherit',
