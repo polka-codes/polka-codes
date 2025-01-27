@@ -2,10 +2,15 @@ import type { Anthropic } from '@anthropic-ai/sdk'
 
 import type { ModelInfo } from './ModelInfo'
 
-export type ApiStreamChunk = ApiStreamTextChunk | ApiStreamUsageChunk
+export type ApiStreamChunk = ApiStreamTextChunk | ApiStreamUsageChunk | ApiStreamReasoningTextChunk
 
 export interface ApiStreamTextChunk {
   type: 'text'
+  text: string
+}
+
+export interface ApiStreamReasoningTextChunk {
+  type: 'reasoning'
   text: string
 }
 
@@ -47,6 +52,7 @@ export abstract class AiServiceBase {
     }
 
     let resp = ''
+    let reasoning = ''
 
     for await (const chunk of stream) {
       switch (chunk.type) {
@@ -60,11 +66,14 @@ export abstract class AiServiceBase {
         case 'text':
           resp += chunk.text
           break
+        case 'reasoning':
+          reasoning += chunk.text
       }
     }
 
     return {
       response: resp,
+      reasoning,
       usage,
     }
   }

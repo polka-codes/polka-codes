@@ -42,6 +42,12 @@ export class DeepSeekService extends AiServiceBase {
     })
     for await (const chunk of stream) {
       const delta = chunk.choices[0]?.delta
+      if ((delta as any)?.reasoning_content) {
+        yield {
+          type: 'reasoning',
+          text: (delta as any).reasoning_content,
+        }
+      }
       if (delta?.content) {
         yield {
           type: 'text',

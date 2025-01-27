@@ -128,6 +128,9 @@ export abstract class AgentBase {
           currentAssistantMessage += chunk.text
           await callback({ kind: 'text', info, newText: chunk.text })
           break
+        case 'reasoning':
+          await callback({ kind: 'reasoning', info, newText: chunk.text })
+          break
       }
     }
 
