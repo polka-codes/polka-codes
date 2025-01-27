@@ -174,9 +174,9 @@ export async function configCommand(options: { global?: boolean; print?: boolean
   }
 
   const newConfig = {
+    ...existingConfig,
     defaultProvider: provider,
     defaultModel: model,
-    ...existingConfig,
   }
   if (apiKey) {
     set(newConfig, ['providers', provider, 'apiKey'], apiKey)
