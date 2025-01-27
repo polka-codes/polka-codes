@@ -158,7 +158,7 @@ export abstract class AgentBase {
     callback: TaskEventCallback,
   ): Promise<[string | undefined, ExitReason | undefined]> {
     const toolReponses: { tool: string; response: string }[] = []
-    for (const content of response) {
+    outer: for (const content of response) {
       switch (content.type) {
         case 'text':
           // no need to handle text content
@@ -179,12 +179,12 @@ export abstract class AgentBase {
               // tell AI about the invalid arguments
               await callback({ kind: 'tool_invalid', info, tool: content.name })
               toolReponses.push({ tool: content.name, response: toolResp.message })
-              break
+              break outer
             case ToolResponseType.Error:
               // tell AI about the error
               await callback({ kind: 'tool_error', info, tool: content.name })
               toolReponses.push({ tool: content.name, response: toolResp.message })
-              break
+              break outer
             case ToolResponseType.Interrupted:
               // the execution is killed
               await callback({ kind: 'tool_interrupted', info, tool: content.name })

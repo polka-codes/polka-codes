@@ -15,7 +15,7 @@
     },
     "packages/action": {
       "name": "@polka-codes/action",
-      "version": "0.4.2",
+      "version": "0.4.3",
       "dependencies": {
         "@actions/core": "^1.11.1",
         "@actions/github": "^6.0.0",
@@ -24,13 +24,14 @@
     },
     "packages/cli": {
       "name": "@polka-codes/cli",
-      "version": "0.4.2",
+      "version": "0.4.3",
       "bin": {
         "polka-codes": "cli.mjs"
       },
       "dependencies": {
         "@inquirer/prompts": "^7.2.3",
         "@polka-codes/core": "workspace:*",
+        "chalk": "^5.4.1",
         "commander": "^13.0.0",
         "dotenv": "^16.4.7",
         "ignore": "^7.0.3",
@@ -45,7 +46,7 @@
     },
     "packages/core": {
       "name": "@polka-codes/core",
-      "version": "0.4.2",
+      "version": "0.4.3",
       "dependencies": {
         "@anthropic-ai/sdk": "^0.36.2",
         "openai": "^4.80.0",

@@ -1,6 +1,7 @@
 import { execSync } from 'node:child_process'
 import { confirm } from '@inquirer/prompts'
 import { Command } from 'commander'
+import ora from 'ora'
 
 import { createService, generateGitCommitMessage } from '@polka-codes/core'
 import { parseOptions } from '../options'
@@ -10,7 +11,9 @@ export const commitCommand = new Command('commit')
   .option('-a, --all', 'Stage all files before committing')
   .argument('[message]', 'Optional context for the commit message generation')
   .action(async (message, options) => {
-    const { providerConfig, config } = parseOptions(options)
+    const spinner = ora('Gathering information...').start()
+
+    const { providerConfig } = parseOptions(options)
 
     const { provider, model, apiKey } = providerConfig.getConfigForCommand('commit') ?? {}
 
@@ -50,8 +53,12 @@ export const commitCommand = new Command('commit')
       // Get diff with 200 lines of context
       const diff = execSync('git diff --cached -U200').toString()
 
+      spinner.text = 'Generating commit message...'
+
       // Generate commit message
       const result = await generateGitCommitMessage(ai, { diff, context: message })
+
+      spinner.succeed('Commit message generated')
 
       // Make the commit
       try {
