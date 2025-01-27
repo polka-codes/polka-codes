@@ -1,12 +1,5 @@
 defaultProvider: deepseek
 defaultModel: deepseek-chat
-commands:
-  pr:
-    provider: deepseek
-    model: deepseek-chat
-  commit:
-    provider: deepseek
-    model: deepseek-chat
 excludeFiles:
   - .env
   - packages/cli/cli.mjs

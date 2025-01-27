@@ -38,9 +38,13 @@ export const commitCommand = new Command('commit')
           // Stage all files
           execSync('git add .')
         } else {
+          spinner.stopAndPersist()
+          // wait for 10ms to let the spinner stop
+          await new Promise((resolve) => setTimeout(resolve, 10))
           const addAll = await confirm({
             message: 'No staged files found. Do you want to stage all files?',
           })
+          spinner.start()
           if (addAll) {
             execSync('git add .')
           } else {
