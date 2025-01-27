@@ -1,5 +1,3 @@
-defaultProvider: deepseek
-defaultModel: deepseek-chat
 excludeFiles:
   - .env
   - packages/cli/cli.mjs
