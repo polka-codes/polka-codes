@@ -13,6 +13,8 @@ export interface ToolUse {
 
 export type AssistantMessageContent = TextContent | ToolUse
 
+// TODO: instead of just using regex, use a real parser
+// Note that we can't use XML parser because the content is not real XML
 /**
  * Parse an assistant's message into an array of text content and tool use content.
  *
@@ -55,16 +57,18 @@ export function parseAssistantMessage(assistantMessage: string, tools: ToolInfo[
   const toolTags = tools.map((tool) => `${toolNamePrefix}${tool.name}`)
   const toolPattern = toolTags.join('|')
 
-  // Find the outermost tool tag by matching first opening and last closing tags
-  const tagRegex = new RegExp(`<(${toolPattern})>(.*)<\\/\\1>`, 's')
-  const match = assistantMessage.match(tagRegex)
+  let remainingMessage = assistantMessage
+  let match: RegExpExecArray | null
 
-  if (match) {
-    // Split message into parts
-    const beforeTag = assistantMessage.slice(0, match.index).trim()
-    const fullTagContent = match[0]
+  // Create regex to find all tool tags
+  const tagRegex = new RegExp(`<(${toolPattern})>([\\s\\S]*?)<\\/\\1>`, 's')
 
-    // Add text before tag if exists
+  while (true) {
+    match = tagRegex.exec(remainingMessage)
+    if (match === null) break
+
+    // Add text before the tool tag if it exists
+    const beforeTag = remainingMessage.slice(0, match.index).trim()
     if (beforeTag) {
       results.push({
         type: 'text',
@@ -72,20 +76,18 @@ export function parseAssistantMessage(assistantMessage: string, tools: ToolInfo[
       })
     }
 
-    // Find which tool was used
+    // Process the tool use
     const tagName = match[1]
     const toolName = tagName.replace(toolNamePrefix, '')
     const tool = tools.find((t) => t.name === toolName)
+    const fullTagContent = match[0]
 
     if (tool) {
-      // Parse parameters using new XML-like syntax
+      // Parse parameters
       const params: Record<string, string> = {}
-
-      // Extract parameters while preserving nested content
       for (const param of tool.parameters) {
         const paramName = `${parameterPrefix}${param.name}`
         const escapedParamName = paramName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-        // Match parameter content non-greedily while preserving nested content
         const paramPattern = `<${escapedParamName}>([\\s\\S]*?)<\\/${escapedParamName}>`
         const paramMatch = fullTagContent.match(new RegExp(paramPattern, 's'))
         if (paramMatch) {
@@ -106,16 +108,20 @@ export function parseAssistantMessage(assistantMessage: string, tools: ToolInfo[
       })
     }
 
-    // Add text after the full tag if exists
-    const afterTag = assistantMessage.slice((match.index ?? 0) + fullTagContent.length).trim()
-    if (afterTag) {
-      results.push({
-        type: 'text',
-        content: afterTag,
-      })
-    }
-  } else {
-    // No tool tags found, treat entire message as text
+    // Update remaining message
+    remainingMessage = remainingMessage.slice(match.index + fullTagContent.length)
+  }
+
+  // Add any remaining text after the last tool tag
+  if (remainingMessage.trim()) {
+    results.push({
+      type: 'text',
+      content: remainingMessage.trim(),
+    })
+  }
+
+  // If no tool tags were found, treat entire message as text
+  if (results.length === 0) {
     results.push({
       type: 'text',
       content: assistantMessage,

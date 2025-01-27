@@ -176,7 +176,7 @@ describe('parseAssistantMessage', () => {
 
   test('should handle parameter values containing tool-like tags', () => {
     const message = `<tool_test_tool>
-      <tool_parameter_param1>value with <tool_test_tool>nested tool</tool_test_tool> tags</tool_parameter_param1>
+      <tool_parameter_param1>value with <tool_test_tool2>nested tool</tool_test_tool2> tags</tool_parameter_param1>
     </tool_test_tool>`
     const result = parseAssistantMessage(message, mockTools, toolPrefix)
 
@@ -185,8 +185,60 @@ describe('parseAssistantMessage', () => {
         type: 'tool_use',
         name: 'test_tool',
         params: {
-          param1: 'value with <tool_test_tool>nested tool</tool_test_tool> tags',
+          param1: 'value with <tool_test_tool2>nested tool</tool_test_tool2> tags',
         },
+      },
+    ])
+  })
+
+  test('should parse message with multiple tool uses', () => {
+    const mockTools2 = [
+      ...mockTools,
+      {
+        name: 'another_tool',
+        description: 'Another test tool',
+        parameters: [{ name: 'paramA', description: 'Parameter A', required: true, usageValue: 'valueA' }],
+      },
+    ]
+
+    const message = `Starting text
+    <tool_test_tool>
+      <tool_parameter_param1>value1</tool_parameter_param1>
+    </tool_test_tool>
+    Middle text
+    <tool_another_tool>
+      <tool_parameter_paramA>valueA</tool_parameter_paramA>
+    </tool_another_tool>
+    Ending text`
+
+    const result = parseAssistantMessage(message, mockTools2, toolPrefix)
+
+    expect(result).toEqual([
+      {
+        type: 'text',
+        content: 'Starting text',
+      },
+      {
+        type: 'tool_use',
+        name: 'test_tool',
+        params: {
+          param1: 'value1',
+        },
+      },
+      {
+        type: 'text',
+        content: 'Middle text',
+      },
+      {
+        type: 'tool_use',
+        name: 'another_tool',
+        params: {
+          paramA: 'valueA',
+        },
+      },
+      {
+        type: 'text',
+        content: 'Ending text',
       },
     ])
   })
