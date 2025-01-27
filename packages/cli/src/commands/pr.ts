@@ -1,8 +1,8 @@
 import { execSync, spawnSync } from 'node:child_process'
 import { createService, generateGithubPullRequestDetails } from '@polka-codes/core'
 import { Command } from 'commander'
-
 import ora from 'ora'
+
 import { parseOptions } from '../options'
 
 export const prCommand = new Command('pr')
