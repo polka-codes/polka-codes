@@ -59,7 +59,7 @@ export abstract class AgentBase {
     context,
     maxIterations = 50,
     callback = () => {},
-  }: { task: string; context?: string; maxIterations: number; callback: TaskEventCallback }): Promise<[ExitReason, TaskInfo]> {
+  }: { task: string; context?: string; maxIterations?: number; callback?: TaskEventCallback }): Promise<[ExitReason, TaskInfo]> {
     const taskInfo: TaskInfo = {
       options: {
         maxIterations,
@@ -101,7 +101,7 @@ export abstract class AgentBase {
     return [{ type: ToolResponseType.Exit, message: 'Task completed successfully' }, taskInfo]
   }
 
-  async continueTask(userMessage: string, taskInfo: TaskInfo, callback: TaskEventCallback): Promise<[ExitReason, TaskInfo]> {
+  async continueTask(userMessage: string, taskInfo: TaskInfo, callback: TaskEventCallback = () => {}): Promise<[ExitReason, TaskInfo]> {
     return await this.#processLoop(userMessage, taskInfo, callback)
   }
 
