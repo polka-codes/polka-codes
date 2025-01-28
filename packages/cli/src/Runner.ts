@@ -93,6 +93,7 @@ export class Runner {
               ai: service,
               os: platform,
               customInstructions: rules,
+              scripts: options.config.scripts,
               provider,
               interactive: options.interactive,
               agents,

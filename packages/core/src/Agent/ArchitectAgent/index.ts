@@ -17,7 +17,7 @@ import {
   searchFiles,
 } from '../../tools'
 import { AgentBase, type AgentInfo } from '../AgentBase'
-import { getSystemPrompt } from './prompts'
+import { fullSystemPrompt } from './prompts'
 
 export type ArchitectAgentOptions = {
   ai: AiServiceBase
@@ -26,6 +26,7 @@ export type ArchitectAgentOptions = {
   interactive: boolean
   additionalTools?: FullToolInfo[]
   customInstructions?: string[]
+  scripts?: Record<string, string | { command: string; description: string }>
   agents?: AgentInfo[]
 }
 
@@ -44,7 +45,16 @@ export class ArchitectAgent extends AgentBase {
     ] // no replace and no write as we don't want architect agent to do the actual coding
     const tools = getAvailableTools(options.provider, agentTools)
     const toolNamePrefix = 'tool_'
-    const systemPrompt = getSystemPrompt()
+    const systemPrompt = fullSystemPrompt(
+      {
+        os: options.os,
+      },
+      tools,
+      toolNamePrefix,
+      options.customInstructions ?? [],
+      options.scripts ?? {},
+      options.interactive,
+    )
 
     super(architectAgentInfo.name, options.ai, {
       systemPrompt,
