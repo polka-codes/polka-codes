@@ -53,6 +53,10 @@ For more information, see [cli README](packages/cli/README.md)
 - ⚡ **Type Safety**: Fully typed with TypeScript for better developer experience
 - 🧪 **Testing**: Comprehensive testing with bun:test and snapshot testing
 - 🔍 **Code Analysis**: Built-in tools for code understanding and improvement
+- 🤝 **MultiAgent System**: Specialized AI agents working together seamlessly
+  - Architect Agent for system design and high-level planning
+  - Coder Agent for implementation and code maintenance
+  - Intelligent task handover for complex development workflows
 
 ## Project Structure
 

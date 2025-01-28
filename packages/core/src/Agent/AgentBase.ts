@@ -82,8 +82,8 @@ export interface TaskEventToolHandOver extends TaskEventBase {
   tool: string
   agentName: string
   task: string
-  context: string
-  files: string[]
+  context?: string
+  files?: string[]
 }
 
 /**
@@ -292,6 +292,8 @@ export abstract class AgentBase {
                 tool: content.name,
                 agentName: toolResp.agentName,
                 task: toolResp.task,
+                context: toolResp.context,
+                files: toolResp.files,
               })
               return [undefined, toolResp]
           }
