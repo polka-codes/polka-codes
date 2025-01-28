@@ -26,7 +26,13 @@ export class MultiAgent {
     }
     if (exitReason.type === 'HandOver') {
       const context = await this.#config.getContext(exitReason.context, exitReason.files)
-      this.#startTask(exitReason.agentName, exitReason.task, context, callback)
+      const [exitReason2, info2] = await this.#startTask(exitReason.agentName, exitReason.task, context, callback)
+      info2.inputTokens += info.inputTokens
+      info2.outputTokens += info.outputTokens
+      info2.cacheWriteTokens += info.cacheWriteTokens
+      info2.cacheReadTokens += info.cacheReadTokens
+      info2.totalCost = (info.totalCost ?? 0) + (info2.totalCost ?? 0)
+      return [exitReason2, info2]
     }
     return [exitReason, info]
   }
