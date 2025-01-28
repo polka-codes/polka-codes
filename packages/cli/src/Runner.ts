@@ -77,8 +77,8 @@ export class Runner {
 
     this.#multiAgent = new MultiAgent({
       createAgent: async (name: string): Promise<AgentBase> => {
-        switch (name) {
-          case coderAgentInfo.name:
+        switch (name.trim().toLowerCase()) {
+          case coderAgentInfo.name.toLowerCase():
             return new CoderAgent({
               ai: service,
               os: platform,
@@ -88,7 +88,7 @@ export class Runner {
               interactive: options.interactive,
               agents,
             })
-          case architectAgentInfo.name:
+          case architectAgentInfo.name.toLowerCase():
             return new ArchitectAgent({
               ai: service,
               os: platform,

@@ -41,7 +41,7 @@ export const toolInfo = {
       parameters: [
         {
           name: 'agent_name',
-          value: 'coder',
+          value: 'Coder',
         },
         {
           name: 'task',

@@ -82,6 +82,8 @@ export interface TaskEventToolHandOver extends TaskEventBase {
   tool: string
   agentName: string
   task: string
+  context: string
+  files: string[]
 }
 
 /**

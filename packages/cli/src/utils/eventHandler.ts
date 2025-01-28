@@ -31,6 +31,8 @@ export const printEvent = (event: TaskEvent) => {
       console.log('\n\n======== Task Handed Over ========\n')
       console.log('Agent:', event.agentName)
       console.log('Task:', event.task)
+      console.log('Context:', event.context)
+      console.log('Files:', event.files)
       console.log()
       break
     case TaskEventKind.MaxIterationsReached:

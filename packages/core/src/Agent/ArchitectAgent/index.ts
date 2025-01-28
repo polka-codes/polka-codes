@@ -9,7 +9,6 @@ import {
   type ToolProvider,
   askFollowupQuestion,
   attemptCompletion,
-  executeCommand,
   handOver,
   listCodeDefinitionNames,
   listFiles,
@@ -37,12 +36,11 @@ export class ArchitectAgent extends AgentBase {
       askFollowupQuestion,
       attemptCompletion,
       handOver,
-      executeCommand,
       listCodeDefinitionNames,
       listFiles,
       readFile,
       searchFiles,
-    ] // no replace and no write as we don't want architect agent to do the actual coding
+    ] // readonly tools
     const tools = getAvailableTools(options.provider, agentTools)
     const toolNamePrefix = 'tool_'
     const systemPrompt = fullSystemPrompt(
