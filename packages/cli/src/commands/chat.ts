@@ -1,4 +1,4 @@
-import { type AiServiceProvider, ExitReason, type TaskInfo, defaultModels } from '@polka-codes/core'
+import { type AiServiceProvider, type ExitReason, type TaskInfo, ToolResponseType, defaultModels } from '@polka-codes/core'
 import { Chat } from '../Chat'
 import { Runner } from '../Runner'
 import { parseOptions } from '../options'
@@ -48,20 +48,24 @@ export const runChat = async (options: any) => {
         exitReason = reason
       }
       switch (exitReason) {
-        case ExitReason.Completed:
-          chat.close()
-          return undefined
-        case ExitReason.MaxIterations:
+        case 'MaxIterations':
           console.log('Max iterations reached.')
           chat.close()
           // TODO: ask user if they want to continue
           break
-        case ExitReason.Interrupted:
-          console.log('Interrupted.')
-          chat.close()
+        case 'WaitForUserInput':
           break
-        case ExitReason.WaitForUserInput:
-          break
+        default: {
+          switch (exitReason.type) {
+            case ToolResponseType.Interrupted:
+              console.log('Interrupted.')
+              chat.close()
+              break
+            case ToolResponseType.Exit:
+              chat.close()
+              return undefined
+          }
+        }
       }
     },
     onExit: async () => {

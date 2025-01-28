@@ -1,5 +1,12 @@
 import type { AiServiceBase, ApiUsage, MessageParam } from '../AiService'
-import { type FullToolInfo, type ToolResponse, ToolResponseType } from '../tool'
+import {
+  type FullToolInfo,
+  type ToolResponse,
+  type ToolResponseExit,
+  type ToolResponseHandOver,
+  type ToolResponseInterrupted,
+  ToolResponseType,
+} from '../tool'
 import type { ToolProvider } from './../tools'
 import { type AssistantMessageContent, parseAssistantMessage } from './parseAssistantMessage'
 import { responsePrompts } from './prompts'
@@ -29,12 +36,7 @@ export type AgentBaseConfig = {
   interactive: boolean
 }
 
-export enum ExitReason {
-  Completed = 'Completed',
-  MaxIterations = 'MaxIterations',
-  WaitForUserInput = 'WaitForUserInput',
-  Interrupted = 'Interrupted',
-}
+export type ExitReason = 'MaxIterations' | 'WaitForUserInput' | ToolResponseExit | ToolResponseInterrupted | ToolResponseHandOver
 
 export abstract class AgentBase {
   protected readonly ai: AiServiceBase
@@ -84,18 +86,19 @@ export abstract class AgentBase {
     while (nextRequest) {
       if (taskInfo.messages.length > taskInfo.options.maxIterations * 2) {
         callback({ kind: 'max_iterations_reached', info: taskInfo })
-        return [ExitReason.MaxIterations, taskInfo]
+        return ['MaxIterations', taskInfo]
       }
       const response = await this.#request(taskInfo, nextRequest, callback)
       const [newMessage, exitReason] = await this.#handleResponse(taskInfo, response, callback)
       if (exitReason) {
+        callback({ kind: 'end_task', info: taskInfo })
         return [exitReason, taskInfo]
       }
       nextRequest = newMessage
     }
 
     callback({ kind: 'end_task', info: taskInfo })
-    return [ExitReason.Completed, taskInfo]
+    return [{ type: ToolResponseType.Exit, message: 'Task completed successfully' }, taskInfo]
   }
 
   async continueTask(userMessage: string, taskInfo: TaskInfo, callback: TaskEventCallback): Promise<[ExitReason, TaskInfo]> {
@@ -174,7 +177,7 @@ export abstract class AgentBase {
               break
             case ToolResponseType.Exit:
               // task completed
-              return [undefined, ExitReason.Completed]
+              return [undefined, toolResp]
             case ToolResponseType.Invalid:
               // tell AI about the invalid arguments
               await callback({ kind: 'tool_invalid', info, tool: content.name })
@@ -188,7 +191,11 @@ export abstract class AgentBase {
             case ToolResponseType.Interrupted:
               // the execution is killed
               await callback({ kind: 'tool_interrupted', info, tool: content.name })
-              return [undefined, ExitReason.Interrupted]
+              return [undefined, toolResp]
+            case ToolResponseType.HandOver:
+              // hand over the task to another agent
+              await callback({ kind: 'tool_hand_over', info, tool: content.name })
+              return [undefined, toolResp]
           }
           break
         }
