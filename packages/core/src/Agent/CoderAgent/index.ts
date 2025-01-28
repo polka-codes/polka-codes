@@ -13,6 +13,7 @@ export type CoderAgentOptions = {
   additionalTools?: FullToolInfo[]
   customInstructions?: string[]
   scripts?: Record<string, string | { command: string; description: string }>
+  agents?: AgentInfo[]
 }
 
 export class CoderAgent extends AgentBase {
@@ -37,6 +38,7 @@ export class CoderAgent extends AgentBase {
       toolNamePrefix,
       provider: options.provider,
       interactive: options.interactive,
+      agents: options.agents,
     })
   }
 }

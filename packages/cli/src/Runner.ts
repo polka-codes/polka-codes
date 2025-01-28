@@ -8,6 +8,8 @@ import {
   type TaskEventCallback,
   TaskEventKind,
   type TaskInfo,
+  architectAgentInfo,
+  coderAgentInfo,
   createService,
 } from '@polka-codes/core'
 import type { Config } from './config'
@@ -74,7 +76,7 @@ export class Runner {
     this.#multiAgent = new MultiAgent({
       createAgent: async (name: string): Promise<AgentBase> => {
         switch (name) {
-          case 'coder':
+          case coderAgentInfo.name:
             return new CoderAgent({
               ai: service,
               os: platform,
@@ -83,7 +85,7 @@ export class Runner {
               provider,
               interactive: options.interactive,
             })
-          case 'architect':
+          case architectAgentInfo.name:
             return new ArchitectAgent({
               ai: service,
               os: platform,

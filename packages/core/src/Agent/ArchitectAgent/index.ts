@@ -6,7 +6,7 @@
 import type { AiServiceBase } from '../../AiService'
 import { type FullToolInfo, getAvailableTools } from '../../tool'
 import { type ToolProvider, allTools } from '../../tools'
-import { AgentBase } from '../AgentBase'
+import { AgentBase, type AgentInfo } from '../AgentBase'
 import { getSystemPrompt } from './prompts'
 
 export type ArchitectAgentOptions = {
@@ -16,6 +16,7 @@ export type ArchitectAgentOptions = {
   interactive: boolean
   additionalTools?: FullToolInfo[]
   customInstructions?: string[]
+  agents?: AgentInfo[]
 }
 
 export class ArchitectAgent extends AgentBase {
@@ -31,6 +32,7 @@ export class ArchitectAgent extends AgentBase {
       toolNamePrefix,
       provider: options.provider,
       interactive: options.interactive,
+      agents: options.agents,
     })
   }
 }
