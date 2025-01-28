@@ -1,21 +1,38 @@
-import type { TaskEvent } from '@polka-codes/core'
+import { type TaskEvent, TaskEventKind } from '@polka-codes/core'
 import chalk from 'chalk'
 
 export const printEvent = (event: TaskEvent) => {
-  if (event.newText) {
-    if (event.kind === 'reasoning') {
-      process.stdout.write(chalk.dim(event.newText))
-    } else {
+  switch (event.kind) {
+    case TaskEventKind.StartRequest:
+      console.log('\n\n======== New Request ========\n')
+      break
+    case TaskEventKind.EndRequest:
+      console.log('\n\n======== Request Ended ========\n')
+      break
+    case TaskEventKind.Usage:
+      break
+    case TaskEventKind.Text:
       process.stdout.write(event.newText)
-    }
-  }
-  if (event.kind === 'start_request') {
-    console.log('\n\n======== New Request ========\n')
-  }
-  if (event.kind === 'end_request') {
-    console.log('\n\n======== End Request ========\n')
-  }
-  if (event.kind === 'max_iterations_reached') {
-    console.log('Max iterations reached')
+      break
+    case TaskEventKind.Reasoning:
+      process.stdout.write(chalk.dim(event.newText))
+      break
+    case TaskEventKind.ToolUse:
+      break
+    case TaskEventKind.ToolReply:
+      break
+    case TaskEventKind.ToolInvalid:
+      break
+    case TaskEventKind.ToolError:
+      break
+    case TaskEventKind.ToolInterrupted:
+      break
+    case TaskEventKind.ToolHandOver:
+      break
+    case TaskEventKind.MaxIterationsReached:
+      console.log('Max iterations reached')
+      break
+    case TaskEventKind.EndTask:
+      break
   }
 }

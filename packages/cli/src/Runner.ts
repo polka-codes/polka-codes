@@ -1,5 +1,13 @@
 import os from 'node:os'
-import { type AgentBase, type AiServiceProvider, CoderAgent, type TaskEventCallback, type TaskInfo, createService } from '@polka-codes/core'
+import {
+  type AgentBase,
+  type AiServiceProvider,
+  CoderAgent,
+  type TaskEventCallback,
+  TaskEventKind,
+  type TaskInfo,
+  createService,
+} from '@polka-codes/core'
 import type { Config } from './config'
 import { getProvider } from './provider'
 import { listFiles } from './utils/listFiles'
@@ -83,7 +91,7 @@ ${fileList.join('\n')}${limited ? '\n<files_truncated>true</files_truncated>' : 
   }
 
   #taskEventCallback: TaskEventCallback = (event) => {
-    if (event.kind === 'usage') {
+    if (event.kind === TaskEventKind.Usage) {
       this.#usage.inputTokens += event.info.inputTokens
       this.#usage.outputTokens += event.info.outputTokens
       this.#usage.cacheWriteTokens += event.info.cacheWriteTokens ?? 0
