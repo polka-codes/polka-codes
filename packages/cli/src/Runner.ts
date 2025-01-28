@@ -111,7 +111,7 @@ ${fileList.join('\n')}${limited ? '\n<files_truncated>true</files_truncated>' : 
 </files>`
 
     const [exitReason, info] = await this.#multiAgent.startTask({
-      agentName: 'coder', // Default to coder agent
+      agentName: architectAgentInfo.name, // Default to architect agent
       task,
       context: `<now_date>${new Date().toISOString()}</now_date>${fileContext}`,
       callback: this.#taskEventCallback,
