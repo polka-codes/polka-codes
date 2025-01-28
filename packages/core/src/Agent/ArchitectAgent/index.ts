@@ -5,7 +5,17 @@
 
 import type { AiServiceBase } from '../../AiService'
 import { type FullToolInfo, getAvailableTools } from '../../tool'
-import { type ToolProvider, allTools } from '../../tools'
+import {
+  type ToolProvider,
+  askFollowupQuestion,
+  attemptCompletion,
+  executeCommand,
+  handOver,
+  listCodeDefinitionNames,
+  listFiles,
+  readFile,
+  searchFiles,
+} from '../../tools'
 import { AgentBase, type AgentInfo } from '../AgentBase'
 import { getSystemPrompt } from './prompts'
 
@@ -21,8 +31,18 @@ export type ArchitectAgentOptions = {
 
 export class ArchitectAgent extends AgentBase {
   constructor(options: ArchitectAgentOptions) {
-    const combinedTools = [...(options.additionalTools ?? []), ...Object.values(allTools)]
-    const tools = getAvailableTools(options.provider, combinedTools)
+    const agentTools = [
+      ...(options.additionalTools ?? []),
+      askFollowupQuestion,
+      attemptCompletion,
+      handOver,
+      executeCommand,
+      listCodeDefinitionNames,
+      listFiles,
+      readFile,
+      searchFiles,
+    ] // no replace and no write as we don't want architect agent to do the actual coding
+    const tools = getAvailableTools(options.provider, agentTools)
     const toolNamePrefix = 'tool_'
     const systemPrompt = getSystemPrompt()
 
