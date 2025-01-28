@@ -95,18 +95,17 @@ export const agentsPrompt = (agents: AgentInfo[], name: string) => `
 AVAILABLE AGENTS
 
 The following agents are available for task handover:
-
 ${agents
   .map(
     (agent) => `
 - **${agent.name}**
   - Responsibilities:
-${agent.responsibilities.map((resp) => `    - ${resp}`).join('\n')}
-`,
+${agent.responsibilities.map((resp) => `    - ${resp}`).join('\n')}`,
   )
-  .join('\n\n')}
+  .join('\n')}
+
 - **Current Agent Role**
-  You are currently acting as **${name}**. If you identify the task is beyond your current scope, use the hand over tool to transition to the other agent. Include sufficient context so the new agent can seamlessly continue the work.
+  You are currently acting as **${name}**. If you identify the task is beyond your current scope, use the handover tool to transition to the other agent. Include sufficient context so the new agent can seamlessly continue the work.
 `
 
 export const responsePrompts = {
