@@ -24,7 +24,7 @@ describe('searchFiles', () => {
     expect(mockSpawn).toHaveBeenCalled()
     const args = mockSpawn.mock.calls[0][1]
     expect(args).toContain('--line-number')
-    expect(args).toContain('--context=2')
+    expect(args).toContain('--context=5')
     expect(args).toContain('--glob')
     expect(args).toContain('*.ts')
     expect(args).toContain('test')
