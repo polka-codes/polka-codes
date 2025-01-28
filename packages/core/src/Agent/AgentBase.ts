@@ -80,6 +80,8 @@ export interface TaskEventTool extends TaskEventBase {
 export interface TaskEventToolHandOver extends TaskEventBase {
   kind: TaskEventKind.ToolHandOver
   tool: string
+  agentName: string
+  task: string
 }
 
 /**
@@ -269,7 +271,13 @@ export abstract class AgentBase {
               return [undefined, toolResp]
             case ToolResponseType.HandOver:
               // hand over the task to another agent
-              await callback({ kind: TaskEventKind.ToolHandOver, info, tool: content.name })
+              await callback({
+                kind: TaskEventKind.ToolHandOver,
+                info,
+                tool: content.name,
+                agentName: toolResp.agentName,
+                task: toolResp.task,
+              })
               return [undefined, toolResp]
           }
           break

@@ -28,6 +28,10 @@ export const printEvent = (event: TaskEvent) => {
     case TaskEventKind.ToolInterrupted:
       break
     case TaskEventKind.ToolHandOver:
+      console.log('\n\n======== Task Handed Over ========\n')
+      console.log('Agent:', event.agentName)
+      console.log('Task:', event.task)
+      console.log()
       break
     case TaskEventKind.MaxIterationsReached:
       console.log('Max iterations reached')
