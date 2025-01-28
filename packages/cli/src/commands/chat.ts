@@ -1,8 +1,8 @@
 import { type AiServiceProvider, ExitReason, type TaskInfo, defaultModels } from '@polka-codes/core'
-import chalk from 'chalk'
 import { Chat } from '../Chat'
 import { Runner } from '../Runner'
 import { parseOptions } from '../options'
+import { printEvent } from '../utils/eventHandler'
 import { configPrompt } from './config'
 
 export const runChat = async (options: any) => {
@@ -31,18 +31,7 @@ export const runChat = async (options: any) => {
     config: config ?? {},
     maxIterations,
     interactive: true,
-    eventCallback: (event) => {
-      if (event.newText) {
-        if (event.kind === 'reasoning') {
-          process.stdout.write(chalk.dim(event.newText))
-        } else {
-          process.stdout.write(event.newText)
-        }
-      }
-      if (event.kind === 'end_request') {
-        console.log('\n\n========\n')
-      }
-    },
+    eventCallback: printEvent,
   })
 
   let taskInfo: TaskInfo | undefined
