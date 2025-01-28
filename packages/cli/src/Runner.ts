@@ -2,7 +2,9 @@ import os from 'node:os'
 import {
   type AgentBase,
   type AiServiceProvider,
+  ArchitectAgent,
   CoderAgent,
+  MultiAgent,
   type TaskEventCallback,
   TaskEventKind,
   type TaskInfo,
@@ -24,7 +26,7 @@ export type RunnerOptions = {
 
 export class Runner {
   readonly #options: RunnerOptions
-  readonly #agent: AgentBase
+  readonly #multiAgent: MultiAgent
   #usage = {
     inputTokens: 0,
     outputTokens: 0,
@@ -46,32 +48,53 @@ export class Runner {
       rules = [rules]
     }
 
-    this.#agent = new CoderAgent({
-      ai: service,
-      os: os.platform(),
-      customInstructions: rules,
-      scripts: options.config.scripts,
-      provider: getProvider({
-        command: {
-          onStarted(command) {
-            console.log(`$ >>>> $ ${command}`)
-          },
-          onStdout(data) {
-            process.stdout.write(data)
-          },
-          onStderr(data) {
-            process.stderr.write(data)
-          },
-          onExit(code) {
-            console.log(`$ <<<< $ Command exited with code: ${code}`)
-          },
-          onError(error) {
-            console.log(`$ <<<< $ Command error: ${error}`)
-          },
+    const provider = getProvider({
+      command: {
+        onStarted(command) {
+          console.log(`$ >>>> $ ${command}`)
         },
-        excludeFiles: options.config.excludeFiles,
-      }),
-      interactive: options.interactive,
+        onStdout(data) {
+          process.stdout.write(data)
+        },
+        onStderr(data) {
+          process.stderr.write(data)
+        },
+        onExit(code) {
+          console.log(`$ <<<< $ Command exited with code: ${code}`)
+        },
+        onError(error) {
+          console.log(`$ <<<< $ Command error: ${error}`)
+        },
+      },
+      excludeFiles: options.config.excludeFiles,
+    })
+
+    const platform = os.platform()
+
+    this.#multiAgent = new MultiAgent({
+      createAgent: async (name: string): Promise<AgentBase> => {
+        switch (name) {
+          case 'coder':
+            return new CoderAgent({
+              ai: service,
+              os: platform,
+              customInstructions: rules,
+              scripts: options.config.scripts,
+              provider,
+              interactive: options.interactive,
+            })
+          case 'architect':
+            return new ArchitectAgent({
+              ai: service,
+              os: platform,
+              customInstructions: rules,
+              provider,
+              interactive: options.interactive,
+            })
+          default:
+            throw new Error(`Unknown agent: ${name}`)
+        }
+      },
     })
   }
 
@@ -82,12 +105,14 @@ export class Runner {
 ${fileList.join('\n')}${limited ? '\n<files_truncated>true</files_truncated>' : ''}
 </files>`
 
-    return await this.#agent.startTask({
+    const [exitReason, usage] = await this.#multiAgent.startTask({
+      agentName: 'coder', // Default to coder agent
       task,
       context: `<now_date>${new Date().toISOString()}</now_date>${fileContext}`,
-      maxIterations: this.#options.maxIterations,
       callback: this.#taskEventCallback,
     })
+
+    return [exitReason, usage] as const
   }
 
   #taskEventCallback: TaskEventCallback = (event) => {
@@ -102,7 +127,7 @@ ${fileList.join('\n')}${limited ? '\n<files_truncated>true</files_truncated>' : 
   }
 
   async continueTask(message: string, taskInfo: TaskInfo) {
-    return await this.#agent.continueTask(message, taskInfo, this.#taskEventCallback)
+    return await this.#multiAgent.continueTask(message, taskInfo, this.#taskEventCallback)
   }
 
   get usage() {
@@ -111,17 +136,7 @@ ${fileList.join('\n')}${limited ? '\n<files_truncated>true</files_truncated>' : 
 
   printUsage() {
     if (!this.#usage.totalCost) {
-      // we need to calculate the total cost
-      const modelInfo = this.#agent.model.info
-      const inputCost = (modelInfo.inputPrice ?? 0) * this.#usage.inputTokens
-      const outputCost = (modelInfo.outputPrice ?? 0) * this.#usage.outputTokens
-      const cacheReadCost = (modelInfo.cacheReadsPrice ?? 0) * this.#usage.cacheReadTokens
-      const cacheWriteCost = (modelInfo.cacheWritesPrice ?? 0) * this.#usage.cacheWriteTokens
-      this.#usage.totalCost = (inputCost + outputCost + cacheReadCost + cacheWriteCost) / 1_000_000
-    }
-
-    if (this.#usage.totalCost === 0) {
-      // nothing to print
+      // Skip printing if no usage recorded
       return
     }
 
