@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises'
 import os from 'node:os'
 import {
   type AgentBase,
@@ -100,20 +101,40 @@ export class Runner {
             throw new Error(`Unknown agent: ${name}`)
         }
       },
+      getContext: async (context, files) => {
+        let ret = await this.#defaultContext()
+        if (files) {
+          for (const file of files) {
+            try {
+              const fileContent = await readFile(file, 'utf8')
+              ret += `\n<file_content path="${file}">${fileContent}</file_content>`
+            } catch (error) {
+              console.warn(`Failed to read file: ${file}`, error)
+            }
+          }
+        }
+        if (context) {
+          ret += `\n\n${context}`
+        }
+        return ret
+      },
     })
   }
 
-  async startTask(task: string) {
+  async #defaultContext() {
     const cwd = process.cwd()
     const [fileList, limited] = await listFiles(cwd, true, 100, cwd, this.#options.config.excludeFiles)
     const fileContext = `<files>
 ${fileList.join('\n')}${limited ? '\n<files_truncated>true</files_truncated>' : ''}
 </files>`
+    return `<now_date>${new Date().toISOString()}</now_date>${fileContext}`
+  }
 
+  async startTask(task: string) {
     const [exitReason, info] = await this.#multiAgent.startTask({
       agentName: architectAgentInfo.name, // Default to architect agent
       task,
-      context: `<now_date>${new Date().toISOString()}</now_date>${fileContext}`,
+      context: await this.#defaultContext(),
       callback: this.#taskEventCallback,
     })
 

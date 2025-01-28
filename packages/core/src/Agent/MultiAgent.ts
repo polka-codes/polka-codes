@@ -2,6 +2,7 @@ import type { AgentBase, ExitReason, TaskEvent, TaskEventCallback, TaskInfo } fr
 
 export type MultiAgentConfig = {
   createAgent: (name: string) => Promise<AgentBase>
+  getContext: (context?: string, files?: string[]) => Promise<string>
 }
 
 export class MultiAgent {
@@ -24,7 +25,8 @@ export class MultiAgent {
       return [exitReason, info]
     }
     if (exitReason.type === 'HandOver') {
-      this.#startTask(exitReason.agentName, exitReason.task, exitReason.context, callback)
+      const context = await this.#config.getContext(exitReason.context, exitReason.files)
+      this.#startTask(exitReason.agentName, exitReason.task, context, callback)
     }
     return [exitReason, info]
   }
