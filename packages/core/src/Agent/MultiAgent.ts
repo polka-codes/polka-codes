@@ -1,4 +1,3 @@
-import type { ApiUsage } from '../AiService'
 import type { AgentBase, ExitReason, TaskEvent, TaskEventCallback, TaskInfo } from './AgentBase'
 
 export type MultiAgentConfig = {
@@ -14,20 +13,20 @@ export class MultiAgent {
     this.#config = config
   }
 
-  async #startTask(agentName: string, task: string, context?: string, callback?: TaskEventCallback): Promise<[ExitReason, ApiUsage]> {
+  async #startTask(agentName: string, task: string, context?: string, callback?: TaskEventCallback): Promise<[ExitReason, TaskInfo]> {
     this.#activeAgent = await this.#config.createAgent(agentName)
-    const [exitReason, usage] = await this.#activeAgent.startTask({
+    const [exitReason, info] = await this.#activeAgent.startTask({
       task: task,
       context: context,
       callback: callback,
     })
     if (typeof exitReason === 'string') {
-      return [exitReason, usage]
+      return [exitReason, info]
     }
     if (exitReason.type === 'HandOver') {
       this.#startTask(exitReason.agentName, exitReason.task, exitReason.context, callback)
     }
-    return [exitReason, usage]
+    return [exitReason, info]
   }
 
   async startTask(options: {
@@ -35,7 +34,7 @@ export class MultiAgent {
     task: string
     context?: string
     callback?: (event: TaskEvent) => void | Promise<void>
-  }): Promise<[ExitReason, ApiUsage]> {
+  }): Promise<[ExitReason, TaskInfo]> {
     if (this.#activeAgent) {
       throw new Error('An active agent already exists')
     }

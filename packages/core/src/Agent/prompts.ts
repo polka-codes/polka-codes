@@ -1,4 +1,5 @@
 import type { ToolExample, ToolInfo } from '../tool'
+import type { AgentInfo } from './AgentBase'
 
 const toolInfoPrompt = (tool: ToolInfo, toolNamePrefix: string, parameterPrefix: string) => `
 ## ${toolNamePrefix}${tool.name}
@@ -87,6 +88,26 @@ By adhering to these guidelines:
 - You confirm each step’s results before proceeding.
 - You provide only the necessary information in user-facing replies to prevent re-interpretation as new commands.`
 }
+
+export const agentsPrompt = (agents: AgentInfo[], name: string) => `
+====
+
+AVAILABLE AGENTS
+
+The following agents are available for task handover:
+
+${agents
+  .map(
+    (agent) => `
+- **${agent.name}**
+  - Responsibilities:
+${agent.responsibilities.map((resp) => `    - ${resp}`).join('\n')}
+`,
+  )
+  .join('\n\n')}
+- **Current Agent Role**
+  You are currently acting as **${name}**. If you identify the task is beyond your current scope, use the hand over tool to transition to the other agent. Include sufficient context so the new agent can seamlessly continue the work.
+`
 
 export const responsePrompts = {
   errorInvokeTool: (tool: string, error: unknown) => `An error occurred while invoking the tool "${tool}": ${error}`,

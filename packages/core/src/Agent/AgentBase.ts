@@ -9,7 +9,7 @@ import {
 } from '../tool'
 import type { ToolProvider } from './../tools'
 import { type AssistantMessageContent, parseAssistantMessage } from './parseAssistantMessage'
-import { responsePrompts } from './prompts'
+import { agentsPrompt, responsePrompts } from './prompts'
 
 /**
  * Enum representing different kinds of task events
@@ -111,6 +111,12 @@ export type AgentBaseConfig = {
   toolNamePrefix: string
   provider: ToolProvider
   interactive: boolean
+  agents?: AgentInfo[]
+}
+
+export type AgentInfo = {
+  name: string
+  responsibilities: string[]
 }
 
 export type ExitReason = 'MaxIterations' | 'WaitForUserInput' | ToolResponseExit | ToolResponseInterrupted | ToolResponseHandOver
@@ -120,8 +126,15 @@ export abstract class AgentBase {
   protected readonly config: Readonly<AgentBaseConfig>
   protected readonly handlers: Record<string, FullToolInfo>
 
-  constructor(ai: AiServiceBase, config: AgentBaseConfig) {
+  constructor(name: string, ai: AiServiceBase, config: AgentBaseConfig) {
     this.ai = ai
+
+    // If agents are provided, add them to the system prompt
+    if (config.agents && Object.keys(config.agents).length > 0) {
+      const agents = agentsPrompt(config.agents, name)
+      config.systemPrompt += `\n${agents}`
+    }
+
     this.config = config
 
     const handlers: Record<string, FullToolInfo> = {}

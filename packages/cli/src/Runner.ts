@@ -105,14 +105,14 @@ export class Runner {
 ${fileList.join('\n')}${limited ? '\n<files_truncated>true</files_truncated>' : ''}
 </files>`
 
-    const [exitReason, usage] = await this.#multiAgent.startTask({
+    const [exitReason, info] = await this.#multiAgent.startTask({
       agentName: 'coder', // Default to coder agent
       task,
       context: `<now_date>${new Date().toISOString()}</now_date>${fileContext}`,
       callback: this.#taskEventCallback,
     })
 
-    return [exitReason, usage] as const
+    return [exitReason, info] as const
   }
 
   #taskEventCallback: TaskEventCallback = (event) => {

@@ -25,7 +25,7 @@ export class ArchitectAgent extends AgentBase {
     const toolNamePrefix = 'tool_'
     const systemPrompt = getSystemPrompt()
 
-    super(options.ai, {
+    super(architectAgentInfo.name, options.ai, {
       systemPrompt,
       tools,
       toolNamePrefix,
@@ -33,4 +33,14 @@ export class ArchitectAgent extends AgentBase {
       interactive: options.interactive,
     })
   }
+}
+
+export const architectAgentInfo = {
+  name: 'Architect',
+  responsibilities: [
+    'Analyzing the user’s overall task and requirements.',
+    'Creating plans and making higher-level decisions about system structure and design.',
+    'Reviewing and analyzing existing code or components for maintainability and scalability.',
+    'Laying out the roadmap for implementation.',
+  ],
 }

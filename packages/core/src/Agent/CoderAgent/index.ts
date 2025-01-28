@@ -2,6 +2,7 @@ import type { AiServiceBase } from '../../AiService'
 import { type FullToolInfo, getAvailableTools } from '../../tool'
 import { type ToolProvider, allTools } from '../../tools'
 import { AgentBase } from '../AgentBase'
+import type { AgentInfo } from './../AgentBase'
 import { fullSystemPrompt } from './prompts'
 
 export type CoderAgentOptions = {
@@ -30,7 +31,7 @@ export class CoderAgent extends AgentBase {
       options.interactive,
     )
 
-    super(options.ai, {
+    super(coderAgentInfo.name, options.ai, {
       systemPrompt,
       tools,
       toolNamePrefix,
@@ -39,3 +40,13 @@ export class CoderAgent extends AgentBase {
     })
   }
 }
+
+export const coderAgentInfo = {
+  name: 'Coder',
+  responsibilities: [
+    'Editing and refactoring existing code.',
+    'Creating new features or modules.',
+    'Running tests and analyzing test results.',
+    'Maintaining coding standards, lint rules, and general code quality.',
+  ],
+} as const satisfies AgentInfo
