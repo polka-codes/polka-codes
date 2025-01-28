@@ -18,6 +18,7 @@
   "dependencies": {
     "@inquirer/prompts": "^7.2.3",
     "@polka-codes/core": "workspace:*",
+    "@vscode/ripgrep": "^1.15.10",
     "chalk": "^5.4.1",
     "commander": "^13.0.0",
     "dotenv": "^16.4.7",

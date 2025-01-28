@@ -5,6 +5,7 @@ import ignore from 'ignore'
 
 import type { ToolProvider } from '@polka-codes/core'
 import { listFiles } from './utils/listFiles'
+import { searchFiles } from './utils/searchFiles'
 
 export type ProviderOptions = {
   command: {
@@ -38,7 +39,9 @@ export const getProvider = (options: ProviderOptions): ToolProvider => {
     listFiles: async (path: string, recursive: boolean, maxCount: number): Promise<[string[], boolean]> => {
       return await listFiles(path, recursive, maxCount, dirname(path), options.excludeFiles)
     },
-    // searchFiles: async (path: string, regex: string, filePattern: string) => Promise<string[]> {},
+    searchFiles: async (path: string, regex: string, filePattern: string): Promise<string[]> => {
+      return await searchFiles(path, regex, filePattern, dirname(path), options.excludeFiles)
+    },
     // listCodeDefinitionNames: async (path: string) => Promise<string[]> {},
 
     executeCommand: (command: string, needApprove: boolean): Promise<{ stdout: string; stderr: string; exitCode: number }> => {
