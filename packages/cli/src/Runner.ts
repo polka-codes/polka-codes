@@ -72,6 +72,7 @@ export class Runner {
     })
 
     const platform = os.platform()
+    const agents = [coderAgentInfo, architectAgentInfo]
 
     this.#multiAgent = new MultiAgent({
       createAgent: async (name: string): Promise<AgentBase> => {
@@ -84,6 +85,7 @@ export class Runner {
               scripts: options.config.scripts,
               provider,
               interactive: options.interactive,
+              agents,
             })
           case architectAgentInfo.name:
             return new ArchitectAgent({
@@ -92,6 +94,7 @@ export class Runner {
               customInstructions: rules,
               provider,
               interactive: options.interactive,
+              agents,
             })
           default:
             throw new Error(`Unknown agent: ${name}`)
