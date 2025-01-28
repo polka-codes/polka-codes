@@ -1,5 +1,18 @@
+import { readFile } from 'node:fs/promises'
 import os from 'node:os'
-import { type AgentBase, type AiServiceProvider, CoderAgent, type TaskEventCallback, type TaskInfo, createService } from '@polka-codes/core'
+import {
+  type AgentBase,
+  type AiServiceProvider,
+  ArchitectAgent,
+  CoderAgent,
+  MultiAgent,
+  type TaskEventCallback,
+  TaskEventKind,
+  type TaskInfo,
+  architectAgentInfo,
+  coderAgentInfo,
+  createService,
+} from '@polka-codes/core'
 import type { Config } from './config'
 import { getProvider } from './provider'
 import { listFiles } from './utils/listFiles'
@@ -16,7 +29,7 @@ export type RunnerOptions = {
 
 export class Runner {
   readonly #options: RunnerOptions
-  readonly #agent: AgentBase
+  readonly #multiAgent: MultiAgent
   #usage = {
     inputTokens: 0,
     outputTokens: 0,
@@ -38,52 +51,99 @@ export class Runner {
       rules = [rules]
     }
 
-    this.#agent = new CoderAgent({
-      ai: service,
-      os: os.platform(),
-      customInstructions: rules,
-      scripts: options.config.scripts,
-      provider: getProvider({
-        command: {
-          onStarted(command) {
-            console.log(`$ >>>> $ ${command}`)
-          },
-          onStdout(data) {
-            process.stdout.write(data)
-          },
-          onStderr(data) {
-            process.stderr.write(data)
-          },
-          onExit(code) {
-            console.log(`$ <<<< $ Command exited with code: ${code}`)
-          },
-          onError(error) {
-            console.log(`$ <<<< $ Command error: ${error}`)
-          },
+    const provider = getProvider({
+      command: {
+        onStarted(command) {
+          console.log(`$ >>>> $ ${command}`)
         },
-        excludeFiles: options.config.excludeFiles,
-      }),
-      interactive: options.interactive,
+        onStdout(data) {
+          process.stdout.write(data)
+        },
+        onStderr(data) {
+          process.stderr.write(data)
+        },
+        onExit(code) {
+          console.log(`$ <<<< $ Command exited with code: ${code}`)
+        },
+        onError(error) {
+          console.log(`$ <<<< $ Command error: ${error}`)
+        },
+      },
+      excludeFiles: options.config.excludeFiles,
+    })
+
+    const platform = os.platform()
+    const agents = [coderAgentInfo, architectAgentInfo]
+
+    this.#multiAgent = new MultiAgent({
+      createAgent: async (name: string): Promise<AgentBase> => {
+        switch (name.trim().toLowerCase()) {
+          case coderAgentInfo.name.toLowerCase():
+            return new CoderAgent({
+              ai: service,
+              os: platform,
+              customInstructions: rules,
+              scripts: options.config.scripts,
+              provider,
+              interactive: options.interactive,
+              agents,
+            })
+          case architectAgentInfo.name.toLowerCase():
+            return new ArchitectAgent({
+              ai: service,
+              os: platform,
+              customInstructions: rules,
+              scripts: options.config.scripts,
+              provider,
+              interactive: options.interactive,
+              agents,
+            })
+          default:
+            throw new Error(`Unknown agent: ${name}`)
+        }
+      },
+      getContext: async (context, files) => {
+        let ret = await this.#defaultContext()
+        if (files) {
+          for (const file of files) {
+            try {
+              const fileContent = await readFile(file, 'utf8')
+              ret += `\n<file_content path="${file}">${fileContent}</file_content>`
+            } catch (error) {
+              console.warn(`Failed to read file: ${file}`, error)
+            }
+          }
+        }
+        if (context) {
+          ret += `\n\n${context}`
+        }
+        return ret
+      },
     })
   }
 
-  async startTask(task: string) {
+  async #defaultContext() {
     const cwd = process.cwd()
     const [fileList, limited] = await listFiles(cwd, true, 100, cwd, this.#options.config.excludeFiles)
     const fileContext = `<files>
 ${fileList.join('\n')}${limited ? '\n<files_truncated>true</files_truncated>' : ''}
 </files>`
+    return `<now_date>${new Date().toISOString()}</now_date>${fileContext}`
+  }
 
-    return await this.#agent.startTask({
+  async startTask(task: string) {
+    const [exitReason, info] = await this.#multiAgent.startTask({
+      agentName: architectAgentInfo.name, // Default to architect agent
       task,
-      context: `<now_date>${new Date().toISOString()}</now_date>${fileContext}`,
-      maxIterations: this.#options.maxIterations,
+      context: await this.#defaultContext(),
       callback: this.#taskEventCallback,
     })
+
+    return [exitReason, info] as const
   }
 
   #taskEventCallback: TaskEventCallback = (event) => {
-    if (event.kind === 'usage') {
+    if (event.kind === TaskEventKind.Usage) {
       this.#usage.inputTokens += event.info.inputTokens
       this.#usage.outputTokens += event.info.outputTokens
       this.#usage.cacheWriteTokens += event.info.cacheWriteTokens ?? 0
@@ -94,7 +154,7 @@ ${fileList.join('\n')}${limited ? '\n<files_truncated>true</files_truncated>' : 
   }
 
   async continueTask(message: string, taskInfo: TaskInfo) {
-    return await this.#agent.continueTask(message, taskInfo, this.#taskEventCallback)
+    return await this.#multiAgent.continueTask(message, taskInfo, this.#taskEventCallback)
   }
 
   get usage() {
@@ -103,17 +163,7 @@ ${fileList.join('\n')}${limited ? '\n<files_truncated>true</files_truncated>' : 
 
   printUsage() {
     if (!this.#usage.totalCost) {
-      // we need to calculate the total cost
-      const modelInfo = this.#agent.model.info
-      const inputCost = (modelInfo.inputPrice ?? 0) * this.#usage.inputTokens
-      const outputCost = (modelInfo.outputPrice ?? 0) * this.#usage.outputTokens
-      const cacheReadCost = (modelInfo.cacheReadsPrice ?? 0) * this.#usage.cacheReadTokens
-      const cacheWriteCost = (modelInfo.cacheWritesPrice ?? 0) * this.#usage.cacheWriteTokens
-      this.#usage.totalCost = (inputCost + outputCost + cacheReadCost + cacheWriteCost) / 1_000_000
-    }
-
-    if (this.#usage.totalCost === 0) {
-      // nothing to print
+      // Skip printing if no usage recorded
       return
     }
 

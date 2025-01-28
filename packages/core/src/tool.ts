@@ -28,6 +28,7 @@ export enum ToolResponseType {
   Invalid = 'Invalid',
   Error = 'Error',
   Interrupted = 'Interrupted',
+  HandOver = 'HandOver',
 }
 
 // Reply to the tool use
@@ -68,7 +69,23 @@ export type ToolResponseInterrupted = {
   message: string
 }
 
-export type ToolResponse = ToolResponseReply | ToolResponseExit | ToolResponseInvalid | ToolResponseError | ToolResponseInterrupted
+// Hand over the task to another agent
+// e.g. hand over a coding task to the coder agent
+export type ToolResponseHandOver = {
+  type: ToolResponseType.HandOver
+  agentName: string
+  task: string
+  context?: string
+  files: string[]
+}
+
+export type ToolResponse =
+  | ToolResponseReply
+  | ToolResponseExit
+  | ToolResponseInvalid
+  | ToolResponseError
+  | ToolResponseInterrupted
+  | ToolResponseHandOver
 
 export type ToolHandler<T extends ToolInfo, P> = (
   provider: P,

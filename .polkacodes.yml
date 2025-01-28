@@ -5,16 +5,11 @@ scripts:
   test:
     command: bun test
     description: Run tests. Pass file path to run a specific test file.
-  check:
-    command: bun check
+  typecheck:
+    command: bun typecheck
     description: |
-      Check the code for type errors and linting issues.
+      Check the code for type errors.
       Run this command after making changes to the code.
-  format:
-    command: bun fix
-    description: |
-      Format the code and fix fixable linting issues.
-      Run this command when linting issues are found.
 rules: |
   Use `bun` as the package manager
   When adding new dependencies, cd to the package directory and run `bun add <dependency>`

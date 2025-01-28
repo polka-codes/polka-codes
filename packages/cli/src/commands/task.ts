@@ -1,7 +1,7 @@
 import { type AiServiceProvider, defaultModels } from '@polka-codes/core'
-import chalk from 'chalk'
 import { Runner } from '../Runner'
 import { parseOptions } from '../options'
+import { printEvent } from '../utils/eventHandler'
 import { runChat } from './chat'
 import { configPrompt } from './config'
 
@@ -33,21 +33,7 @@ export const runTask = async (taskArg: string, options: any) => {
     config: config ?? {},
     maxIterations,
     interactive: false,
-    eventCallback: (event) => {
-      if (event.newText) {
-        if (event.kind === 'reasoning') {
-          process.stdout.write(chalk.dim(event.newText))
-        } else {
-          process.stdout.write(event.newText)
-        }
-      }
-      if (event.kind === 'end_request') {
-        console.log('\n\n========\n')
-      }
-      if (event.kind === 'max_iterations_reached') {
-        console.log('Max iterations reached')
-      }
-    },
+    eventCallback: printEvent,
   })
   await runner.startTask(taskArg)
   runner.printUsage()

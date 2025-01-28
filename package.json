@@ -10,6 +10,7 @@
     "lint": "biome check .",
     "fix": "biome check --write",
     "check": "tsc --noEmit && biome check",
+    "typecheck": "tsc --noEmit",
     "prepare": "husky",
     "clean": "rm -rf packages/*/dist packages/*/tsconfig.tsbuildinfo",
     "cli": "bun run --no-check packages/cli/src/index.ts"
