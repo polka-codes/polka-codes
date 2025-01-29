@@ -107,6 +107,17 @@ export type TaskInfo = {
   messages: MessageParam[]
 } & ApiUsage
 
+export type SharedAgentOptions = {
+  ai: AiServiceBase
+  os: string
+  provider: ToolProvider
+  interactive: boolean
+  additionalTools?: FullToolInfo[]
+  customInstructions?: string[]
+  scripts?: Record<string, string | { command: string; description: string }>
+  agents?: AgentInfo[]
+}
+
 export type AgentBaseConfig = {
   systemPrompt: string
   tools: FullToolInfo[]
