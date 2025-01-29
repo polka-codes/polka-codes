@@ -127,6 +127,7 @@ export class OpenRouterService extends AiServiceBase {
       temperature: 0,
       stream: true,
       transforms: shouldApplyMiddleOutTransform ? ['middle-out'] : undefined,
+      include_reasoning: true,
     })
 
     let genId: string | undefined
@@ -144,6 +145,13 @@ export class OpenRouterService extends AiServiceBase {
       }
 
       const delta = chunk.choices[0]?.delta
+
+      if ((delta as any)?.reasoning) {
+        yield {
+          type: 'reasoning',
+          text: (delta as any).reasoning,
+        }
+      }
       if (delta?.content) {
         yield {
           type: 'text',

@@ -77,12 +77,11 @@ rules: |
 
 ### AI Configuration
 
-The default API provider is Ollama with 'maryasov/qwen2.5-coder-cline:7b' model.
-
-Supported providers (in recommended order):
+Supported providers
 1. DeepSeek / `deepseek` (recommended)
 2. Anthropic / `anthropic` (Sonnet 3.5 recommended)
-3. Ollama / `ollama`
+3. OpenRouter / `openrouter`
+4. Ollama / `ollama`
 
 Configure the AI service by creating a `.env` file in your project root:
 
