@@ -1,20 +1,10 @@
-import type { AiServiceBase } from '../../AiService'
-import { type FullToolInfo, getAvailableTools } from '../../tool'
-import { type ToolProvider, allTools } from '../../tools'
+import { getAvailableTools } from '../../tool'
+import { allTools } from '../../tools'
 import { AgentBase } from '../AgentBase'
-import type { AgentInfo } from './../AgentBase'
+import type { AgentInfo, SharedAgentOptions } from './../AgentBase'
 import { fullSystemPrompt } from './prompts'
 
-export type CoderAgentOptions = {
-  ai: AiServiceBase
-  os: string
-  provider: ToolProvider
-  interactive: boolean
-  additionalTools?: FullToolInfo[]
-  customInstructions?: string[]
-  scripts?: Record<string, string | { command: string; description: string }>
-  agents?: AgentInfo[]
-}
+export type CoderAgentOptions = SharedAgentOptions
 
 export class CoderAgent extends AgentBase {
   constructor(options: CoderAgentOptions) {

@@ -107,6 +107,17 @@ export type TaskInfo = {
   messages: MessageParam[]
 } & ApiUsage
 
+export type SharedAgentOptions = {
+  ai: AiServiceBase
+  os: string
+  provider: ToolProvider
+  interactive: boolean
+  additionalTools?: FullToolInfo[]
+  customInstructions?: string[]
+  scripts?: Record<string, string | { command: string; description: string }>
+  agents?: AgentInfo[]
+}
+
 export type AgentBaseConfig = {
   systemPrompt: string
   tools: FullToolInfo[]
@@ -152,6 +163,10 @@ export abstract class AgentBase {
     maxIterations = 50,
     callback = () => {},
   }: { task: string; context?: string; maxIterations?: number; callback?: TaskEventCallback }): Promise<[ExitReason, TaskInfo]> {
+    if (maxIterations < 1) {
+      throw new Error('Max iterations must be greater than 0')
+    }
+
     const taskInfo: TaskInfo = {
       options: {
         maxIterations,
