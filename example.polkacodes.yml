@@ -44,6 +44,10 @@ scripts:
 # Agent-specific configurations
 # Override provider and model for specific agents
 agents:
+  default: # Default agent configuration
+    provider: "deepseek"
+    model: "deepseek-chat"
+
   coder:
     provider: "anthropic"
     model: "claude-3-5-sonnet-20241022"
@@ -55,6 +59,10 @@ agents:
 # Command-specific configurations
 # Override provider and model for specific commands
 commands:
+  default: # Default command configuration
+    provider: "deepseek"
+    model: "deepseek-chat"
+
   pr:
     provider: "ollama"
     model: "maryasov/qwen2.5-coder-cline:7b"
