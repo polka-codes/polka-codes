@@ -5,6 +5,20 @@ import { merge } from 'lodash'
 import { parse } from 'yaml'
 import { ZodError, z } from 'zod'
 
+const providerModelSchema = z.object({
+  provider: z.string().optional(),
+  model: z.string().optional(),
+})
+
+const agentSchema = providerModelSchema.extend({
+  initialContext: z
+    .object({
+      maxFileCount: z.number().int().positive().optional(),
+      excludes: z.array(z.string()).optional(),
+    })
+    .optional(),
+})
+
 export const configSchema = z
   .object({
     providers: z
@@ -31,22 +45,16 @@ export const configSchema = z
       )
       .optional(),
     agents: z
-      .record(
-        z.string(),
-        z.object({
-          provider: z.string().optional(),
-          model: z.string().optional(),
-        }),
-      )
+      .object({
+        default: agentSchema.optional(),
+      })
+      .catchall(agentSchema)
       .optional(),
     commands: z
-      .record(
-        z.string(),
-        z.object({
-          provider: z.string().optional(),
-          model: z.string().optional(),
-        }),
-      )
+      .object({
+        default: providerModelSchema.optional(),
+      })
+      .catchall(providerModelSchema)
       .optional(),
     rules: z.array(z.string()).optional().or(z.string()).optional(),
     excludeFiles: z.array(z.string()).optional(),

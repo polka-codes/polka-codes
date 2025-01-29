@@ -5,6 +5,7 @@ export const printEvent = (event: TaskEvent) => {
   switch (event.kind) {
     case TaskEventKind.StartRequest:
       console.log('\n\n======== New Request ========\n')
+      console.log(event.userMessage)
       break
     case TaskEventKind.EndRequest:
       console.log('\n\n======== Request Ended ========\n')

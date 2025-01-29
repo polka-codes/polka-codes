@@ -39,7 +39,7 @@ export class ApiProviderConfig {
 
   getConfigForCommand(command: string) {
     // TODO: strong type command
-    const { provider, model } = this.commands?.[command] ?? {}
+    const { provider, model } = this.commands?.[command] ?? this.commands?.default ?? {}
     const finalProvider = provider ?? this.defaultProvider
     if (!finalProvider) {
       return undefined
@@ -55,7 +55,7 @@ export class ApiProviderConfig {
 
   getConfigForAgent(agent: string) {
     // TODO: strong type agent
-    const { provider, model } = this.agents?.[agent] ?? {}
+    const { provider, model } = this.agents?.[agent] ?? this.agents?.default ?? {}
     const finalProvider = provider ?? this.defaultProvider
     if (!finalProvider) {
       return undefined

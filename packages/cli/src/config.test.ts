@@ -90,7 +90,7 @@ scripts:
     `,
     )
 
-    const config = loadConfig(configPath, testSubDir)
+    const config = loadConfig(configPath, testSubDir, testHomeDir)
     expect(config?.scripts).toEqual({
       test: 'echo "test"',
       complex: {
@@ -111,8 +111,49 @@ rules:
     `,
     )
 
-    const config = loadConfig(configPath, testSubDir)
+    const config = loadConfig(configPath, testSubDir, testHomeDir)
     expect(config?.rules).toEqual(['rule1', 'rule2'])
+  })
+
+  test('handles agent and command defaults', () => {
+    const configPath = join(testSubDir, 'defaults-config.yml')
+    writeFileSync(
+      configPath,
+      `
+agents:
+  default:
+    provider: anthropic
+    model: claude-3-opus
+  coder:
+    model: claude-3-sonnet
+commands:
+  default:
+    provider: deepseek
+    model: deepseek-chat
+  task:
+    model: deepseek-coder
+    `,
+    )
+
+    const config = loadConfig(configPath, testSubDir, testHomeDir)
+    expect(config?.agents).toEqual({
+      default: {
+        provider: 'anthropic',
+        model: 'claude-3-opus',
+      },
+      coder: {
+        model: 'claude-3-sonnet',
+      },
+    })
+    expect(config?.commands).toEqual({
+      default: {
+        provider: 'deepseek',
+        model: 'deepseek-chat',
+      },
+      task: {
+        model: 'deepseek-coder',
+      },
+    })
   })
 
   test('merges global and local config with local precedence', () => {
@@ -124,6 +165,16 @@ rules:
       `
 defaultProvider: anthropic
 defaultModel: claude-3-opus
+agents:
+  default:
+    provider: anthropic
+    model: claude-3-opus
+  coder:
+    model: claude-3-sonnet
+commands:
+  default:
+    provider: deepseek
+    model: deepseek-chat
 scripts:
   test: echo "global"
   complex:
@@ -140,6 +191,14 @@ rules:
 providers:
   anthropic:
     apiKey: local-key
+agents:
+  coder:
+    model: claude-3-haiku
+  architect:
+    provider: deepseek
+commands:
+  default:
+    model: deepseek-coder-instruct
 scripts:
   test: echo "local"
 rules:
@@ -155,6 +214,24 @@ rules:
       providers: {
         anthropic: {
           apiKey: 'local-key',
+        },
+      },
+      agents: {
+        default: {
+          provider: 'anthropic',
+          model: 'claude-3-opus',
+        },
+        coder: {
+          model: 'claude-3-haiku',
+        },
+        architect: {
+          provider: 'deepseek',
+        },
+      },
+      commands: {
+        default: {
+          provider: 'deepseek',
+          model: 'deepseek-coder-instruct',
         },
       },
       scripts: {

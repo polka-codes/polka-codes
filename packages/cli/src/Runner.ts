@@ -102,8 +102,8 @@ export class Runner {
             throw new Error(`Unknown agent: ${name}`)
         }
       },
-      getContext: async (context, files) => {
-        let ret = await this.#defaultContext()
+      getContext: async (name, context, files) => {
+        let ret = await this.#defaultContext(name)
         if (files) {
           for (const file of files) {
             try {
@@ -122,9 +122,13 @@ export class Runner {
     })
   }
 
-  async #defaultContext() {
+  async #defaultContext(name: string) {
     const cwd = process.cwd()
-    const [fileList, limited] = await listFiles(cwd, true, 100, cwd, this.#options.config.excludeFiles)
+    const agentConfig = this.#options.config.agents?.[name] ?? this.#options.config.agents?.default ?? {}
+    const maxFileCount = agentConfig.initialContext?.maxFileCount ?? 200
+    const excludes = agentConfig.initialContext?.excludes ?? []
+    const finalExcludes = excludes.concat(this.#options.config.excludeFiles ?? [])
+    const [fileList, limited] = await listFiles(cwd, true, maxFileCount, cwd, finalExcludes)
     const fileContext = `<files>
 ${fileList.join('\n')}${limited ? '\n<files_truncated>true</files_truncated>' : ''}
 </files>`
@@ -132,10 +136,11 @@ ${fileList.join('\n')}${limited ? '\n<files_truncated>true</files_truncated>' : 
   }
 
   async startTask(task: string) {
+    const agentName = architectAgentInfo.name
     const [exitReason, info] = await this.#multiAgent.startTask({
-      agentName: architectAgentInfo.name, // Default to architect agent
+      agentName: agentName,
       task,
-      context: await this.#defaultContext(),
+      context: await this.#defaultContext(agentName),
       callback: this.#taskEventCallback,
     })
 

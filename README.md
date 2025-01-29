@@ -88,6 +88,11 @@ bun run check     # Run type checking and linting
 bun run fix       # Fix linting issues
 ```
 
+### Configuration
+
+A [`.polkacodes.yml`](.polkacodes.yml) configuration file can be used to customize the behavior of polka-codes. An example configuration file is provided in the repository as [`example.polkacodes.yml`](example.polkacodes.yml).
+
+For detailed configuration options, refer to the example file which includes comprehensive comments for each setting.
 
 ## License
 
