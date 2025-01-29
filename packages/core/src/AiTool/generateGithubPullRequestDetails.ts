@@ -1,6 +1,8 @@
 import type { AiToolDefinition } from './types'
 
 const prompt = `
+# Generate Github Pull Request Details
+
 You are given:
 - A branch name in <tool_input_branch_name>.
 - An optional context message in <tool_input_context> (which may or may not be present).
@@ -13,10 +15,30 @@ Your task:
 3. Produce a single GitHub Pull Request title.
 4. Produce a Pull Request description that explains the changes.
 
+Use the following template for the Pull Request description:
+
+---
+**Context (if provided)**:
+- Acknowledge any guiding concerns or instructions.
+
+**Summary of Changes**:
+- Provide a concise list or overview of what changed.
+
+**Highlights of Changed Code**:
+- Mention only the specific sections or functionalities updated, without showing full surrounding context.
+
+**Additional Information (if needed)**:
+- Testing steps (if applicable).
+- Any notes or caveats.
+
+---
+
 Output format:
 <tool_output>
   <tool_output_pr_title>YOUR PR TITLE HERE</tool_output_pr_title>
-  <tool_output_pr_description>YOUR PR DESCRIPTION HERE</tool_output_pr_description>
+  <tool_output_pr_description>
+    YOUR PR DESCRIPTION HERE
+  </tool_output_pr_description>
 </tool_output>
 
 Below is an **example** of the input and output:
@@ -38,7 +60,7 @@ diff --git a/order_service.py b/order_service.py
 - if is_valid_order(order):
 -     process_order(order)
 + validate_and_process(order)
-  </tool_input_commit_diff>
+</tool_input_commit_diff>
 </tool_input>
 
 Example Output:
@@ -52,8 +74,7 @@ to use the new validate_and_process method for improved maintainability.
 
 ---
 
-Use the above format whenever you receive \`<tool_input>\` that may include a branch name, an optional context, aggregated commit messages in a single tag, and a combined diff in a single tag. Provide your final output strictly in \`<tool_output>\` with \`<tool_output_pr_title>\` and \`<tool_output_pr_description>\`.
-Only highlight the changed code and avoid including the context around the changes in the description.
+Use the above format whenever you receive <tool_input> that may include a branch name, an optional context, aggregated commit messages in a single tag, and a combined diff in a single tag. Provide your final output strictly in <tool_output> with <tool_output_pr_title> and <tool_output_pr_description>. Only highlight the changed code and avoid including the context around the changes in the description.
 `
 
 type Input = {
