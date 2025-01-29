@@ -151,9 +151,22 @@ ${fileList.join('\n')}${limited ? '\n<files_truncated>true</files_truncated>' : 
     if (event.kind === TaskEventKind.Usage) {
       this.#usage.inputTokens += event.info.inputTokens
       this.#usage.outputTokens += event.info.outputTokens
-      this.#usage.cacheWriteTokens += event.info.cacheWriteTokens ?? 0
-      this.#usage.cacheReadTokens += event.info.cacheReadTokens ?? 0
-      this.#usage.totalCost += event.info.totalCost ?? 0
+      this.#usage.cacheReadTokens += event.info.cacheReadTokens
+      this.#usage.cacheWriteTokens += event.info.cacheWriteTokens
+
+      let totalCost = event.info.totalCost ?? 0
+
+      if (!totalCost) {
+        // we need to calculate the total cost
+        const modelInfo = this.#multiAgent.model?.info
+        const inputCost = (modelInfo?.inputPrice ?? 0) * event.info.inputTokens
+        const outputCost = (modelInfo?.outputPrice ?? 0) * event.info.outputTokens
+        const cacheReadCost = (modelInfo?.cacheReadsPrice ?? 0) * event.info.cacheReadTokens
+        const cacheWriteCost = (modelInfo?.cacheWritesPrice ?? 0) * event.info.cacheWriteTokens
+        totalCost = (inputCost + outputCost + cacheReadCost + cacheWriteCost) / 1_000_000
+      }
+
+      this.#usage.totalCost += totalCost
     }
     this.#options.eventCallback(event)
   }

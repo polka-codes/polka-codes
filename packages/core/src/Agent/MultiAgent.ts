@@ -14,6 +14,10 @@ export class MultiAgent {
     this.#config = config
   }
 
+  get model() {
+    return this.#activeAgent?.model
+  }
+
   async #startTask(agentName: string, task: string, context?: string, callback?: TaskEventCallback): Promise<[ExitReason, TaskInfo]> {
     this.#activeAgent = await this.#config.createAgent(agentName)
     const [exitReason, info] = await this.#activeAgent.startTask({
