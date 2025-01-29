@@ -1,27 +1,52 @@
 import type { AiToolDefinition } from './types'
 
 const prompt = `
-You are given:
-- A branch name in <tool_input_branch_name>.
-- An optional context message in <tool_input_context> (which may or may not be present).
-- All commit messages combined in <tool_input_commit_messages>.
-- All diffs combined in <tool_input_commit_diff>.
+# Generate Github Pull Request Details
 
-Your task:
+You are given:
+- A branch name in \`<tool_input_branch_name>\`.
+- An **optional** context message in \`<tool_input_context>\` (which may or may not be present).
+- All commit messages combined in \`<tool_input_commit_messages>\`.
+- All diffs combined in \`<tool_input_commit_diff>\`.
+
+**Your task:**
 1. Consider the optional context (if provided).
 2. Analyze the combined commit messages and diffs.
-3. Produce a single GitHub Pull Request title.
-4. Produce a Pull Request description that explains the changes.
+3. Produce a single **GitHub Pull Request title**.
+4. Produce a **Pull Request description** that explains the changes.
 
-Output format:
+### Pull Request Description Template
+You can use the following structure for your PR description:
+
+\`\`\`
+**Summary**
+
+A short summary of the main changes or goals of this PR.
+
+**Changes**
+  • Bullet-point or short paragraphs explaining what is changed.
+  • Only highlight the relevant changed code snippets (avoiding excessive context).
+
+**Rationale** (Optional)
+  • Briefly explain why these changes are needed or beneficial.
+
+**Additional Notes** (Optional)
+  • Any extra information or references.
+  • Any follow-up tasks or known issues.
+\`\`\`
+
+### Output Format
+Your final output **must** be wrapped in:
+
 <tool_output>
-  <tool_output_pr_title>YOUR PR TITLE HERE</tool_output_pr_title>
-  <tool_output_pr_description>YOUR PR DESCRIPTION HERE</tool_output_pr_description>
+<tool_output_pr_title>YOUR PR TITLE HERE</tool_output_pr_title>
+<tool_output_pr_description>YOUR PR DESCRIPTION HERE</tool_output_pr_description>
 </tool_output>
 
-Below is an **example** of the input and output:
+### Example
 
-Example Input:
+**Example Input**:
+
 <tool_input>
 <tool_input_branch_name>feature/refactor-logging</tool_input_branch_name>
 <tool_input_context>Focus on clean code and maintainability</tool_input_context>
@@ -30,18 +55,25 @@ Remove debug logs
 Refactor order validation logic
 </tool_input_commit_messages>
 <tool_input_commit_diff>
-diff --git a/user_service.py b/user_service.py
-- print("Debug info")
-+ # Removed debug print statements
+diff –git a/user_service.py b/user_service.py
+  • print(“Debug info”)
 
-diff --git a/order_service.py b/order_service.py
-- if is_valid_order(order):
--     process_order(order)
-+ validate_and_process(order)
-  </tool_input_commit_diff>
+  • Removed debug print statements
+
+diff –git a/order_service.py b/order_service.py
+  • if is_valid_order(order):
+  •
+
+process_order(order)
+
+
+
+  • validate_and_process(order)
+</tool_input_commit_diff>
 </tool_input>
 
-Example Output:
+**Example Output**:
+
 <tool_output>
 <tool_output_pr_title>Refactor Order Validation and Remove Debug Logs</tool_output_pr_title>
 <tool_output_pr_description>
@@ -52,8 +84,7 @@ to use the new validate_and_process method for improved maintainability.
 
 ---
 
-Use the above format whenever you receive \`<tool_input>\` that may include a branch name, an optional context, aggregated commit messages in a single tag, and a combined diff in a single tag. Provide your final output strictly in \`<tool_output>\` with \`<tool_output_pr_title>\` and \`<tool_output_pr_description>\`.
-Only highlight the changed code and avoid including the context around the changes in the description.
+Use the above format whenever you receive \`<tool_input>\` that may include a branch name, an optional context, aggregated commit messages in a single tag, and a combined diff in a single tag. Provide your final output strictly in \`<tool_output>\` with \`<tool_output_pr_title>\` and \`<tool_output_pr_description>\`. **Only highlight the changed code** and avoid including the context around the changes in the description.
 `
 
 type Input = {
