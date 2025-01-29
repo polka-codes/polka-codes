@@ -1,5 +1,12 @@
+agents:
+  default:
+    initialContext:
+      excludes:
+        - __snapshots__
+        - .husky
 excludeFiles:
   - .env
+  - bun.lock
   - packages/cli/cli.mjs
 scripts:
   test:

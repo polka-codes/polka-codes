@@ -47,6 +47,11 @@ agents:
   default: # Default agent configuration
     provider: "deepseek"
     model: "deepseek-chat"
+    initialContext: # Parameters for the initial context
+      maxFileCount: 200 # Maximum number of files to include in the context
+      excludes:
+        - "__snapshots__"
+        - "*.lock"
 
   coder:
     provider: "anthropic"

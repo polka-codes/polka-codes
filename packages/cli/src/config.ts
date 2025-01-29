@@ -10,6 +10,15 @@ const providerModelSchema = z.object({
   model: z.string().optional(),
 })
 
+const agentSchema = providerModelSchema.extend({
+  initialContext: z
+    .object({
+      maxFileCount: z.number().int().positive().optional(),
+      excludes: z.array(z.string()).optional(),
+    })
+    .optional(),
+})
+
 export const configSchema = z
   .object({
     providers: z
@@ -37,9 +46,9 @@ export const configSchema = z
       .optional(),
     agents: z
       .object({
-        default: providerModelSchema.optional(),
+        default: agentSchema.optional(),
       })
-      .catchall(providerModelSchema)
+      .catchall(agentSchema)
       .optional(),
     commands: z
       .object({
