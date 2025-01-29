@@ -15,6 +15,9 @@ export const prCommand = new Command('pr')
 
     const { provider, model, apiKey } = providerConfig.getConfigForCommand('pr') ?? {}
 
+    console.log('Provider:', provider)
+    console.log('Model:', model)
+
     if (!provider) {
       console.error('Error: No provider specified. Please run "polka-codes config" to configure your AI provider.')
       process.exit(1)
