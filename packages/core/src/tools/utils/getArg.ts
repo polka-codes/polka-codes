@@ -14,6 +14,9 @@ export const getStringArray = <T extends string>(args: Partial<Record<T, string>
     }
     return defaultValue
   }
+  if (ret === '') {
+    return []
+  }
   return ret.split(',')
 }
 
