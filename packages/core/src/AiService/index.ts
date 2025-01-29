@@ -3,17 +3,20 @@ import { AnthropicService } from './AnthropicService'
 import { DeepSeekService } from './DeepSeekService'
 import type { ModelInfo } from './ModelInfo'
 import { OllamaService } from './OllamaService'
+import { OpenRouterService } from './OpenRouterService'
 
 export enum AiServiceProvider {
   Anthropic = 'anthropic',
   Ollama = 'ollama',
   DeepSeek = 'deepseek',
+  OpenRouter = 'openrouter',
 }
 
 export const defaultModels = {
   [AiServiceProvider.Anthropic]: 'claude-3-5-sonnet-20241022',
   [AiServiceProvider.Ollama]: 'maryasov/qwen2.5-coder-cline:7b',
   [AiServiceProvider.DeepSeek]: 'deepseek-chat',
+  [AiServiceProvider.OpenRouter]: 'anthropic/claude-3.5-sonnet',
 }
 
 export const createService = (provider: AiServiceProvider, options: AiServiceOptions) => {
@@ -24,6 +27,9 @@ export const createService = (provider: AiServiceProvider, options: AiServiceOpt
       return new OllamaService(options)
     case AiServiceProvider.DeepSeek:
       return new DeepSeekService(options)
+    case AiServiceProvider.OpenRouter:
+      // fetch model from OpenRouter API
+      return new OpenRouterService(options)
   }
 }
 

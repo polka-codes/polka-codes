@@ -45,6 +45,7 @@ export async function configPrompt(existingConfig?: Partial<ProviderConfig>): Pr
       break
     case AiServiceProvider.Ollama:
       {
+        // fetch model list from Ollama API
         const models = await fetchOllamaModels()
         if (models && models.length > 0) {
           model = await select({
@@ -56,11 +57,13 @@ export async function configPrompt(existingConfig?: Partial<ProviderConfig>): Pr
           model = await input({ message: 'Enter Model ID:' })
         }
       }
-      // fetch model list from Ollama API
-
       break
     case AiServiceProvider.DeepSeek:
       model = deepSeekDefaultModelId
+      break
+    case AiServiceProvider.OpenRouter:
+      // TODO: search for models
+      model = await input({ message: 'Enter Model ID (Visit https://openrouter.ai/models for available models):' })
       break
   }
 

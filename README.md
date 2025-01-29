@@ -46,7 +46,7 @@ For more information, see [cli README](packages/cli/README.md)
 
 ## Features
 
-- 🤖 **Multiple AI Providers**: Supports DeepSeek (recommended), Anthropic Claude, and Ollama
+- 🤖 **Multiple AI Providers**: Supports DeepSeek (recommended), Anthropic Claude, Ollama, and OpenRouter
 - 🔧 **CLI Interface**: Interactive command-line tool with chat and task execution
 - 🔄 **GitHub Action**: Seamless integration with CI/CD pipelines
 - 📦 **Extensible Architecture**: Modular design for adding new AI providers and tools

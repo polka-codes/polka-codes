@@ -17,6 +17,10 @@ providers:
   ollama:
     defaultModel: "maryasov/qwen2.5-coder-cline:7b" # Default model for local Ollama instance
 
+  openrouter:
+    apiKey: "sk-..." # Your OpenRouter API key
+    defaultModel: "openai/gpt-4o" # Default model for this provider
+
 # Default provider to use when not specified elsewhere
 defaultProvider: "deepseek"
 

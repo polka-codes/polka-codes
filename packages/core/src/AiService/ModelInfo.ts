@@ -5,12 +5,11 @@ export interface ModelInfo {
   contextWindow?: number
   supportsImages?: boolean
   supportsComputerUse?: boolean
-  supportsPromptCache: boolean
+  supportsPromptCache?: boolean
   inputPrice?: number
   outputPrice?: number
   cacheWritesPrice?: number
   cacheReadsPrice?: number
-  description?: string
 }
 
 // Anthropic
