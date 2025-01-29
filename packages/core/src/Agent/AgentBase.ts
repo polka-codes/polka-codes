@@ -163,6 +163,10 @@ export abstract class AgentBase {
     maxIterations = 50,
     callback = () => {},
   }: { task: string; context?: string; maxIterations?: number; callback?: TaskEventCallback }): Promise<[ExitReason, TaskInfo]> {
+    if (maxIterations < 1) {
+      throw new Error('Max iterations must be greater than 0')
+    }
+
     const taskInfo: TaskInfo = {
       options: {
         maxIterations,
