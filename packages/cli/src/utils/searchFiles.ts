@@ -64,7 +64,7 @@ export async function searchFiles(
       // Only log actual errors, not warnings
       const err = data.toString()
       if (!err.startsWith('WARNING:')) {
-        console.error(err)
+        console.warn(err)
       }
     })
 
