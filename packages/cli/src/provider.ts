@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process'
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import ignore from 'ignore'
 
@@ -35,6 +35,12 @@ export const getProvider = (options: ProviderOptions): ToolProvider => {
       await mkdir(dirname(path), { recursive: true })
 
       return await writeFile(path, content, 'utf8')
+    },
+    removeFile: async (path: string): Promise<void> => {
+      if (ig.ignores(path)) {
+        throw new Error(`Not allow to access file ${path}`)
+      }
+      return await unlink(path)
     },
     listFiles: async (path: string, recursive: boolean, maxCount: number): Promise<[string[], boolean]> => {
       return await listFiles(path, recursive, maxCount, dirname(path), options.excludeFiles)

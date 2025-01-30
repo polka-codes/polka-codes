@@ -1,6 +1,7 @@
 export type FilesystemProvider = {
   readFile?: (path: string) => Promise<string>
   writeFile?: (path: string, content: string) => Promise<void>
+  removeFile?: (path: string) => Promise<void>
   listFiles?: (path: string, recursive: boolean, maxCount: number) => Promise<[string[], boolean]>
   searchFiles?: (path: string, regex: string, filePattern: string) => Promise<string[]>
   listCodeDefinitionNames?: (path: string) => Promise<string[]>
@@ -23,6 +24,10 @@ export class MockProvider implements ToolProvider {
   }
 
   async writeFile(path: string, content: string): Promise<void> {
+    return
+  }
+
+  async removeFile(path: string): Promise<void> {
     return
   }
 
