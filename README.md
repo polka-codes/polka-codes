@@ -66,7 +66,6 @@ The project is organized as a monorepo with the following packages:
 |---------|-------------|
 | [core](/packages/core) | Core AI services, agent implementations, and tooling |
 | [cli](/packages/cli) | Command-line interface for interacting with AI services |
-| [action](/packages/action) | GitHub Action integration for CI/CD pipelines |
 
 ## Getting Started
 
