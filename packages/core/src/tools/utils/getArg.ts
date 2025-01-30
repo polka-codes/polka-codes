@@ -17,7 +17,7 @@ export const getStringArray = <T extends string>(args: Partial<Record<T, string>
   if (ret === '') {
     return []
   }
-  return ret.split(',')
+  return ret.split(',').map((s) => s.trim())
 }
 
 export const getBoolean = <T extends string>(args: Partial<Record<T, string>>, name: T, defaultValue?: boolean): boolean => {
