@@ -140,6 +140,20 @@ Usage:
 <tool_parameter_path>File path here</tool_parameter_path>
 </tool_remove_file>
 
+## tool_rename_file
+
+Description: Request to rename a file from source path to target path.
+
+Parameters:
+- tool_parameter_sourcePath: (required) The current path of the file
+- tool_parameter_targetPath: (required) The new path for the file
+
+Usage:
+<tool_rename_file>
+<tool_parameter_sourcePath>Source file path here</tool_parameter_sourcePath>
+<tool_parameter_targetPath>Target file path here</tool_parameter_targetPath>
+</tool_rename_file>
+
 ## tool_replace_in_file
 
 Description: Request to replace sections of content in an existing file using SEARCH/REPLACE blocks that define exact changes to specific parts of the file. This tool should be used when you need to make targeted changes to specific parts of a file.
@@ -269,7 +283,14 @@ Usage:
 <tool_parameter_path>src/main.js</tool_parameter_path>
 </tool_remove_file>
 
-## Example 10: Request to replace sections of content in a file
+## Example 10: Request to rename a file
+
+<tool_rename_file>
+<tool_parameter_sourcePath>src/old-name.js</tool_parameter_sourcePath>
+<tool_parameter_targetPath>src/new-name.js</tool_parameter_targetPath>
+</tool_rename_file>
+
+## Example 11: Request to replace sections of content in a file
 
 <tool_replace_in_file>
 <tool_parameter_path>src/main.js</tool_parameter_path>
@@ -304,7 +325,7 @@ return (
 </tool_parameter_diff>
 </tool_replace_in_file>
 
-## Example 11: Request to perform a regex search across files
+## Example 12: Request to perform a regex search across files
 
 <tool_search_files>
 <tool_parameter_path>src</tool_parameter_path>
@@ -312,7 +333,7 @@ return (
 <tool_parameter_file_pattern>*.ts</tool_parameter_file_pattern>
 </tool_search_files>
 
-## Example 12: Request to write content to a file
+## Example 13: Request to write content to a file
 
 <tool_write_to_file>
 <tool_parameter_path>src/main.js</tool_parameter_path>

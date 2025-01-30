@@ -112,7 +112,7 @@ The following agents are available for task handover:
 
 exports[`Agent prompts responsePrompts errorInvokeTool should format error message 1`] = `"An error occurred while invoking the tool "test_tool": Test error"`;
 
-exports[`Agent prompts responsePrompts requireUseTool should return error message 1`] = `"Error: You must use a tool before proceeding"`;
+exports[`Agent prompts responsePrompts requireUseTool should return error message 1`] = `"Error: You must use a tool before proceeding. Making sure the tool is invoked using xml tags."`;
 
 exports[`Agent prompts responsePrompts toolResults should format tool results 1`] = `
 "<tool_response>
