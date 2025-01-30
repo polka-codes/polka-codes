@@ -65,7 +65,7 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
 
   return {
     type: ToolResponseType.Reply,
-    message: `<write_file_path>${path}</write_file_path><status>Success</status>`,
+    message: `<write_to_file_path>${path}</write_to_file_path><status>Success</status>`,
   }
 }
 

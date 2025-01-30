@@ -188,7 +188,7 @@ ${joined}`
 
 export const responsePrompts = {
   errorInvokeTool: (tool: string, error: unknown) => `An error occurred while invoking the tool "${tool}": ${error}`,
-  requireUseTool: 'Error: You must use a tool before proceeding',
+  requireUseTool: 'Error: You must use a tool before proceeding. Making sure the tool is invoked using xml tags.',
   toolResults: (tool: string, result: string) => `<tool_response>
 <tool_name>${tool}</tool_name>
 <tool_result>
