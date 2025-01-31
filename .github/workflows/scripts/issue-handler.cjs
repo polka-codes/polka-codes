@@ -58,5 +58,4 @@ ${commentsText}`
 module.exports = {
   getIssueData,
   formatTask,
-  escapeGitHubOutput,
 }
