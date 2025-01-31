@@ -10,7 +10,7 @@ import { addSharedOptions } from './options'
 
 const program = new Command()
 
-program.name('polka').description('Polka Codes CLI').version(version)
+program.name('polka-codes').description('Polka Codes CLI').version(version)
 
 // Main command for executing tasks
 program.argument('[task]', 'The task to execute').action(runTask)
