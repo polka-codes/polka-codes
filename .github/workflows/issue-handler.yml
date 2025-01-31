@@ -3,6 +3,12 @@ name: Issue Handler
 on:
   issues:
     types: [opened, labeled]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Issue number to process'
+        required: true
+        type: number
 
 env:
   POLKA_API_PROVIDER: openrouter
@@ -12,7 +18,9 @@ env:
 
 jobs:
   handle:
-    if: contains(github.event.issue.labels.*.name, 'polka.codes')
+    if: |
+      (github.event_name == 'issues' && contains(github.event.issue.labels.*.name, 'polka.codes')) ||
+      github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -38,16 +46,20 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
+            const issueNumber = context.eventName === 'workflow_dispatch' 
+              ? context.payload.inputs.issue_number 
+              : context.issue.number;
+
             const { data: issue } = await github.rest.issues.get({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.issue.number
+              issue_number: issueNumber
             })
 
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.issue.number
+              issue_number: issueNumber
             })
 
             // Format the issue data
