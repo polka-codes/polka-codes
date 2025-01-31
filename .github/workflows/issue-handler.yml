@@ -10,12 +10,6 @@ on:
         required: true
         type: number
 
-env:
-  POLKA_API_PROVIDER: openrouter
-  POLKA_MODEL: deepseek/deepseek-chat
-  POLKA_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-  GH_TOKEN: ${{ github.token }}
-
 jobs:
   handle:
     if: |
@@ -59,16 +53,21 @@ jobs:
               throw error;
             }
 
-      - name: Run polka.codes CLI
-        run: |
-          echo "${{ steps.process.outputs.task }}"
-          echo "${{ steps.process.outputs.task }}" | bun cli
-
-      - name: Commit changes
+      - name: Config git
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout -b polka-codes/issue-${{ github.event.issue.number }}
+          git checkout -b polka-codes/issue-${{ steps.process.outputs.issue_number }}
+
+      - name: Run polka.codes CLI and commit changes
+        env:
+          POLKA_API_PROVIDER: openrouter
+          POLKA_MODEL: deepseek/deepseek-chat
+          POLKA_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "${{ steps.process.outputs.task }}"
+          echo "${{ steps.process.outputs.task }}" | bun cli
           bun cli commit -a
           bun cli pr
 
