@@ -29,5 +29,6 @@ git commit -m "chore: release $VERSION"
 git tag v$VERSION
 bun run publish
 git push origin v$VERSION
+git push
 gh release create v$VERSION --generate-notes
 
