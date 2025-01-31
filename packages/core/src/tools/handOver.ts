@@ -31,7 +31,7 @@ export const toolInfo = {
     {
       name: 'files',
       description: 'The files relevant to the task',
-      required: true,
+      required: false,
       usageValue: 'Relevant files',
     },
   ],
