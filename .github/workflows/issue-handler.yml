@@ -6,8 +6,9 @@ on:
 
 env:
   POLKA_API_PROVIDER: openrouter
-  POLKA_MODEL: anthropic/claude-3.5-sonnet
+  POLKA_MODEL: deepseek/deepseek-chat
   POLKA_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+  GH_TOKEN: ${{ github.token }}
 
 jobs:
   handle:
