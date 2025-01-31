@@ -105,6 +105,8 @@ export class Runner {
       },
       getContext: async (name, context, files) => {
         let ret = await this.#defaultContext(name)
+        const unreadableFiles: string[] = []
+
         if (files) {
           for (const file of files) {
             try {
@@ -112,9 +114,19 @@ export class Runner {
               ret += `\n<file_content path="${file}">${fileContent}</file_content>`
             } catch (error) {
               console.warn(`Failed to read file: ${file}`, error)
+              unreadableFiles.push(file)
             }
           }
+
+          if (unreadableFiles.length > 0) {
+            ret += '\n<unreadable_files>\n'
+            for (const file of unreadableFiles) {
+              ret += `${file}\n`
+            }
+            ret += '</unreadable_files>'
+          }
         }
+
         if (context) {
           ret += `\n\n${context}`
         }
