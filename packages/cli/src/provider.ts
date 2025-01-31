@@ -1,9 +1,10 @@
 import { spawn } from 'node:child_process'
 import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
+import type { ToolProvider } from '@polka-codes/core'
 import ignore from 'ignore'
 
-import type { ToolProvider } from '@polka-codes/core'
+import type { Config } from './config'
 import { listFiles } from './utils/listFiles'
 import { searchFiles } from './utils/searchFiles'
 
@@ -18,9 +19,9 @@ export type ProviderOptions = {
   excludeFiles?: string[]
 }
 
-export const getProvider = (options: ProviderOptions): ToolProvider => {
+export const getProvider = (agentName: string, config: Config, options: ProviderOptions): ToolProvider => {
   const ig = ignore().add(options.excludeFiles ?? [])
-  return {
+  const provider = {
     readFile: async (path: string): Promise<string> => {
       if (ig.ignores(path)) {
         throw new Error(`Not allow to access file ${path}`)
@@ -100,6 +101,32 @@ export const getProvider = (options: ProviderOptions): ToolProvider => {
       })
     },
     // askFollowupQuestion: async (question: string, options: string[]) => Promise<string> {},
-    // attemptCompletion: async (result: string) => Promise<string | undefined> {},
+    attemptCompletion: async (result: string): Promise<string | undefined> => {
+      // Check if agent has beforeCompletion hook
+      const cmd = config.agents?.[agentName]?.hooks?.beforeCompletion?.trim()
+      if (cmd) {
+        try {
+          const { exitCode, stdout, stderr } = await provider.executeCommand(cmd, false)
+          if (exitCode !== 0) {
+            return `
+<command>${cmd}</command>
+<command_exit_code>${exitCode}</command_exit_code>
+<command_stdout>
+${stdout}
+</command_stdout>
+<command_stderr>
+${stderr}
+</command_stderr>`
+          }
+        } catch (error) {
+          console.warn(`Failed to execute hook: ${error}`)
+        }
+      }
+
+      // TODO: if interactive, ask user to confirm completion
+
+      return undefined
+    },
   }
+  return provider
 }

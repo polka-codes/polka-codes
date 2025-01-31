@@ -17,6 +17,11 @@ const agentSchema = providerModelSchema.extend({
       excludes: z.array(z.string()).optional(),
     })
     .optional(),
+  hooks: z
+    .object({
+      beforeCompletion: z.string().optional(),
+    })
+    .optional(),
 })
 
 export const configSchema = z
