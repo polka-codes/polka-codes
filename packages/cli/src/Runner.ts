@@ -85,7 +85,7 @@ export class Runner {
               os: platform,
               customInstructions: rules,
               scripts: options.config.scripts,
-              provider: getProvider(agentName, options.config, providerOptions),
+              provider: getProvider('coder', options.config, providerOptions),
               interactive: options.interactive,
               agents,
             })
@@ -95,7 +95,7 @@ export class Runner {
               os: platform,
               customInstructions: rules,
               scripts: options.config.scripts,
-              provider: getProvider(agentName, options.config, providerOptions),
+              provider: getProvider('architect', options.config, providerOptions),
               interactive: options.interactive,
               agents,
             })
@@ -125,7 +125,7 @@ export class Runner {
 
   async #defaultContext(name: string) {
     const cwd = process.cwd()
-    const agentConfig = this.#options.config.agents?.[name] ?? this.#options.config.agents?.default ?? {}
+    const agentConfig = this.#options.config.agents?.[name as 'coder'] ?? this.#options.config.agents?.default ?? {}
     const maxFileCount = agentConfig.initialContext?.maxFileCount ?? 200
     const excludes = agentConfig.initialContext?.excludes ?? []
     const finalExcludes = excludes.concat(this.#options.config.excludeFiles ?? [])

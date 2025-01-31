@@ -19,7 +19,7 @@ export type ProviderOptions = {
   excludeFiles?: string[]
 }
 
-export const getProvider = (agentName: string, config: Config, options: ProviderOptions): ToolProvider => {
+export const getProvider = (agentName: 'coder' | 'architect', config: Config, options: ProviderOptions): ToolProvider => {
   const ig = ignore().add(options.excludeFiles ?? [])
   const provider = {
     readFile: async (path: string): Promise<string> => {
@@ -103,7 +103,7 @@ export const getProvider = (agentName: string, config: Config, options: Provider
     // askFollowupQuestion: async (question: string, options: string[]) => Promise<string> {},
     attemptCompletion: async (result: string): Promise<string | undefined> => {
       // Check if agent has beforeCompletion hook
-      const cmd = config.agents?.[agentName]?.hooks?.beforeCompletion?.trim()
+      const cmd = (config.hooks?.agents?.[agentName]?.beforeCompletion ?? config.hooks?.agents?.default?.beforeCompletion)?.trim()
       if (cmd) {
         try {
           const { exitCode, stdout, stderr } = await provider.executeCommand(cmd, false)
