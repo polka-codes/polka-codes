@@ -55,15 +55,6 @@ Comments:
 ${commentsText}`
 }
 
-/**
- * Escapes a string for GitHub Actions output
- * @param {string} str String to escape
- * @returns {string} Escaped string
- */
-function escapeGitHubOutput(str) {
-  return str.replace(/%/g, '%25').replace(/\n/g, '%0A').replace(/\r/g, '%0D')
-}
-
 module.exports = {
   getIssueData,
   formatTask,

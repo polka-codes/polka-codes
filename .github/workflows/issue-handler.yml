@@ -45,9 +45,9 @@ jobs:
             try {
               const issueData = await handler.getIssueData(github, context, context.payload.inputs);
               const taskString = handler.formatTask(issueData);
-              const escapedTask = handler.escapeGitHubOutput(taskString);
 
-              core.setOutput('task', escapedTask);
+              core.setOutput('task', taskString);
+              core.setOutput('issue_number', issueData.number);
             } catch (error) {
               core.setFailed(`Failed to process issue: ${error.message}`);
               throw error;
