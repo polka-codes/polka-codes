@@ -60,6 +60,8 @@ agents:
   coder:
     provider: "anthropic"
     model: "claude-3-5-sonnet-20241022"
+    hooks:
+      beforeCompletion: "bun test && bun typecheck" # Run tests and type checking before completion
 
   architect:
     provider: "deepseek"
