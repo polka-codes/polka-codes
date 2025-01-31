@@ -31,6 +31,17 @@ defaultModel: "deepseek-chat"
 # Helps prevent infinite loops and excessive API calls
 maxIterations: 50
 
+# Hook configurations for different agents
+# Hooks allow you to run specific commands at certain points in the agent's lifecycle
+hooks:
+  agents:
+    default:
+      beforeCompletion: "bun test" # Run tests before completing any agent task
+    coder:
+      beforeCompletion: "bun typecheck" # Run type checking before coder agent completes
+    architect:
+      beforeCompletion: "bun test && bun typecheck" # Run both tests and type checking for architect
+
 # Custom script definitions that can be executed by the AI
 scripts:
   # Simple script definition (just the command)
@@ -60,8 +71,6 @@ agents:
   coder:
     provider: "anthropic"
     model: "claude-3-5-sonnet-20241022"
-    hooks:
-      beforeCompletion: "bun test && bun typecheck" # Run tests and type checking before completion
 
   architect:
     provider: "deepseek"

@@ -7,8 +7,7 @@ agents:
 hooks:
   agents:
     coder:
-      hooks:
-        beforeCompletion: bun fix; bun typecheck && bun test -u
+      beforeCompletion: bun fix; bun typecheck && bun test -u
 excludeFiles:
   - .env
   - bun.lock
