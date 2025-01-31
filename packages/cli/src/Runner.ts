@@ -14,7 +14,7 @@ import {
   createService,
 } from '@polka-codes/core'
 import type { Config } from './config'
-import { getProvider } from './provider'
+import { type ProviderOptions, getProvider } from './provider'
 import { listFiles } from './utils/listFiles'
 
 export type RunnerOptions = {
@@ -51,7 +51,7 @@ export class Runner {
       rules = [rules]
     }
 
-    const provider = getProvider({
+    const providerOptions: ProviderOptions = {
       command: {
         onStarted(command) {
           console.log(`$ >>>> $ ${command}`)
@@ -70,21 +70,22 @@ export class Runner {
         },
       },
       excludeFiles: options.config.excludeFiles,
-    })
+    }
 
     const platform = os.platform()
     const agents = [coderAgentInfo, architectAgentInfo]
 
     this.#multiAgent = new MultiAgent({
       createAgent: async (name: string): Promise<AgentBase> => {
-        switch (name.trim().toLowerCase()) {
+        const agentName = name.trim().toLowerCase()
+        switch (agentName) {
           case coderAgentInfo.name.toLowerCase():
             return new CoderAgent({
               ai: service,
               os: platform,
               customInstructions: rules,
               scripts: options.config.scripts,
-              provider,
+              provider: getProvider('coder', options.config, providerOptions),
               interactive: options.interactive,
               agents,
             })
@@ -94,7 +95,7 @@ export class Runner {
               os: platform,
               customInstructions: rules,
               scripts: options.config.scripts,
-              provider,
+              provider: getProvider('architect', options.config, providerOptions),
               interactive: options.interactive,
               agents,
             })
@@ -124,7 +125,7 @@ export class Runner {
 
   async #defaultContext(name: string) {
     const cwd = process.cwd()
-    const agentConfig = this.#options.config.agents?.[name] ?? this.#options.config.agents?.default ?? {}
+    const agentConfig = this.#options.config.agents?.[name as 'coder'] ?? this.#options.config.agents?.default ?? {}
     const maxFileCount = agentConfig.initialContext?.maxFileCount ?? 200
     const excludes = agentConfig.initialContext?.excludes ?? []
     const finalExcludes = excludes.concat(this.#options.config.excludeFiles ?? [])

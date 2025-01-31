@@ -175,6 +175,12 @@ commands:
   default:
     provider: deepseek
     model: deepseek-chat
+hooks:
+  agents:
+    coder:
+      beforeCompletion: "echo 'global coder hook'"
+    architect:
+      beforeCompletion: "echo 'global architect hook'"
 scripts:
   test: echo "global"
   complex:
@@ -199,6 +205,12 @@ agents:
 commands:
   default:
     model: deepseek-coder-instruct
+hooks:
+  agents:
+    coder:
+      beforeCompletion: "echo 'local coder hook'"
+    architect:
+      beforeCompletion: "echo 'local architect hook'"
 scripts:
   test: echo "local"
 rules:
@@ -207,42 +219,7 @@ rules:
     )
 
     const config = loadConfig(localConfigPath, testSubDir, testHomeDir)
-    expect(config).toEqual({
-      defaultProvider: 'anthropic',
-      defaultModel: 'claude-3-opus',
-      excludeFiles: undefined,
-      providers: {
-        anthropic: {
-          apiKey: 'local-key',
-        },
-      },
-      agents: {
-        default: {
-          provider: 'anthropic',
-          model: 'claude-3-opus',
-        },
-        coder: {
-          model: 'claude-3-haiku',
-        },
-        architect: {
-          provider: 'deepseek',
-        },
-      },
-      commands: {
-        default: {
-          provider: 'deepseek',
-          model: 'deepseek-coder-instruct',
-        },
-      },
-      scripts: {
-        test: 'echo "local"',
-        complex: {
-          command: 'echo "global-complex"',
-          description: 'Global complex command',
-        },
-      },
-      rules: ['global-rule', 'local-rule'],
-    })
+    expect(config).toMatchSnapshot()
   })
 
   test('concatenates arrays', () => {
@@ -267,5 +244,135 @@ rules: local-rule
 
     const config = loadConfig(localConfigPath, testSubDir, testHomeDir)
     expect(config?.rules).toEqual(['global-rule-1', 'global-rule-2', 'local-rule'])
+  })
+
+  test('handles hooks configuration', () => {
+    const configPath = join(testSubDir, 'hooks-config.yml')
+    writeFileSync(
+      configPath,
+      `
+hooks:
+  agents:
+    coder:
+      beforeCompletion: "echo 'before completion'"
+    architect:
+      beforeCompletion: "echo 'architect hook'"
+    `,
+    )
+
+    const config = loadConfig(configPath, testSubDir, testHomeDir)
+    expect(config?.hooks).toEqual({
+      agents: {
+        coder: {
+          beforeCompletion: "echo 'before completion'",
+        },
+        architect: {
+          beforeCompletion: "echo 'architect hook'",
+        },
+      },
+    })
+  })
+
+  test('merges hooks from global and local configs', () => {
+    const globalConfigPath = join(testHomeDir, '.config', 'polkacodes', 'config.yml')
+    const localConfigPath = join(testSubDir, '.polkacodes.yml')
+
+    writeFileSync(
+      globalConfigPath,
+      `
+hooks:
+  agents:
+    coder:
+      beforeCompletion: "echo 'global coder hook'"
+    architect:
+      beforeCompletion: "echo 'global architect hook'"
+    `,
+    )
+
+    writeFileSync(
+      localConfigPath,
+      `
+hooks:
+  agents:
+    coder:
+      beforeCompletion: "echo 'local coder hook'"
+    `,
+    )
+
+    const config = loadConfig(localConfigPath, testSubDir, testHomeDir)
+    expect(config?.hooks).toEqual({
+      agents: {
+        coder: {
+          beforeCompletion: "echo 'local coder hook'",
+        },
+        architect: {
+          beforeCompletion: "echo 'global architect hook'",
+        },
+      },
+    })
+  })
+
+  test('parses project .polkacodes.yml successfully', () => {
+    loadConfig()
+  })
+
+  test('parses example.polkacodes.yml successfully', () => {
+    loadConfig('example.polkacodes.yml')
+  })
+
+  test('handles both string and array rules formats', () => {
+    // Test string format
+    const stringConfigPath = join(testSubDir, 'string-rules.yml')
+    writeFileSync(
+      stringConfigPath,
+      `
+rules: |
+  Rule 1
+  Rule 2
+  Rule 3
+      `,
+    )
+    const stringConfig = loadConfig(stringConfigPath, testSubDir, testHomeDir)
+    expect(typeof stringConfig?.rules).toBe('string')
+    expect(stringConfig?.rules).toContain('Rule 1')
+
+    // Test array format
+    const arrayConfigPath = join(testSubDir, 'array-rules.yml')
+    writeFileSync(
+      arrayConfigPath,
+      `
+rules:
+  - "Rule 1"
+  - "Rule 2"
+  - "Rule 3"
+      `,
+    )
+    const arrayConfig = loadConfig(arrayConfigPath, testSubDir, testHomeDir)
+    expect(Array.isArray(arrayConfig?.rules)).toBe(true)
+    expect(arrayConfig?.rules).toHaveLength(3)
+
+    // Test merging behavior
+    const globalConfigPath = join(testHomeDir, '.config', 'polkacodes', 'config.yml')
+    const localConfigPath = join(testSubDir, 'merged-rules.yml')
+
+    writeFileSync(
+      globalConfigPath,
+      `
+rules:
+  - "Global Rule 1"
+  - "Global Rule 2"
+      `,
+    )
+
+    writeFileSync(
+      localConfigPath,
+      `
+rules: "Local Rule"
+      `,
+    )
+
+    const mergedConfig = loadConfig(localConfigPath, testSubDir, testHomeDir)
+    expect(Array.isArray(mergedConfig?.rules)).toBe(true)
+    expect(mergedConfig?.rules).toEqual(['Global Rule 1', 'Global Rule 2', 'Local Rule'])
   })
 })

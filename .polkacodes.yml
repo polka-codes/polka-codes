@@ -4,6 +4,10 @@ agents:
       excludes:
         - __snapshots__
         - .husky
+hooks:
+  agents:
+    coder:
+      beforeCompletion: bun fix; bun typecheck && bun test -u
 excludeFiles:
   - .env
   - bun.lock

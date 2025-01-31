@@ -5,6 +5,9 @@ import { merge } from 'lodash'
 import { parse } from 'yaml'
 import { ZodError, z } from 'zod'
 
+const agentNames = z.enum(['coder', 'architect'])
+const agentNameOrDefault = z.union([agentNames, z.literal('default')])
+
 const providerModelSchema = z.object({
   provider: z.string().optional(),
   model: z.string().optional(),
@@ -33,6 +36,11 @@ export const configSchema = z
     defaultProvider: z.string().optional(),
     defaultModel: z.string().optional(),
     maxIterations: z.number().int().positive().optional(),
+    hooks: z
+      .object({
+        agents: z.record(agentNameOrDefault, z.object({ beforeCompletion: z.string().optional() })).optional(),
+      })
+      .optional(),
     scripts: z
       .record(
         z.string(),
@@ -44,12 +52,7 @@ export const configSchema = z
         ),
       )
       .optional(),
-    agents: z
-      .object({
-        default: agentSchema.optional(),
-      })
-      .catchall(agentSchema)
-      .optional(),
+    agents: z.record(agentNameOrDefault, agentSchema).optional(),
     commands: z
       .object({
         default: providerModelSchema.optional(),
