@@ -6,7 +6,7 @@ import { printEvent } from '../utils/eventHandler'
 import { configPrompt } from './config'
 
 export const runChat = async (options: any) => {
-  const { config, providerConfig, maxIterations } = parseOptions(options)
+  const { config, providerConfig, maxIterations, verbose } = parseOptions(options)
 
   let { provider, model, apiKey } = providerConfig.getConfigForAgent('coder') ?? {}
 
@@ -31,7 +31,7 @@ export const runChat = async (options: any) => {
     config: config ?? {},
     maxIterations,
     interactive: true,
-    eventCallback: printEvent,
+    eventCallback: printEvent(verbose),
   })
 
   let taskInfo: TaskInfo | undefined

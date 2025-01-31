@@ -13,6 +13,7 @@ export interface CliOptions {
   model?: string
   apiKey?: string
   maxIterations?: number
+  verbose?: number
 }
 
 export function addSharedOptions(command: Command) {
@@ -22,6 +23,7 @@ export function addSharedOptions(command: Command) {
     .option('--model <model>', 'Model ID')
     .option('--api-key <key>', 'API key')
     .option('--max-iterations <iterations>', 'Maximum number of iterations to run. Default to 30', Number.parseInt)
+    .option('-v --verbose', 'Enable verbose output. Use -v for level 1, -vv for level 2', (value, prev) => prev + 1, 0)
 }
 
 export class ApiProviderConfig {
@@ -103,6 +105,7 @@ export function parseOptions(options: CliOptions, cwd: string = process.cwd(), h
 
   return {
     maxIterations: options.maxIterations ?? 30,
+    verbose: options.verbose ?? 0,
     config,
     providerConfig,
   }

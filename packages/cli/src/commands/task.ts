@@ -11,7 +11,7 @@ export const runTask = async (taskArg: string, options: any) => {
     return
   }
 
-  const { providerConfig, config, maxIterations } = parseOptions(options)
+  const { providerConfig, config, maxIterations, verbose } = parseOptions(options)
 
   let { provider, model, apiKey } = providerConfig.getConfigForAgent('coder') ?? {}
 
@@ -33,7 +33,7 @@ export const runTask = async (taskArg: string, options: any) => {
     config: config ?? {},
     maxIterations,
     interactive: false,
-    eventCallback: printEvent,
+    eventCallback: printEvent(verbose),
   })
   await runner.startTask(taskArg)
   runner.printUsage()

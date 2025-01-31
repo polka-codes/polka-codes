@@ -99,10 +99,23 @@ providers:
     const command = new Command()
     addSharedOptions(command)
     const options = command
-      .parse(['node', 'test', '--api-provider', 'deepseek', '--model', 'deepseek-chat-32k', '--api-key', 'cli-key', '--config', configPath])
+      .parse([
+        'node',
+        'test',
+        '--api-provider',
+        'deepseek',
+        '--model',
+        'deepseek-chat-32k',
+        '--api-key',
+        'cli-key',
+        '--config',
+        configPath,
+        '--verbose',
+      ])
       .opts()
 
     const result = parseOptions(options, testDir, testDir)
+    expect(result.verbose).toBe(1)
     expect(result.providerConfig.getConfigForCommand('chat')).toMatchSnapshot()
   })
 
