@@ -10,6 +10,10 @@ on:
         required: true
         type: number
 
+permissions:
+  contents: write # required for push commit
+  pull-requests: write # required for create pr
+
 concurrency:
   group: issue-${{ github.event.issue.number || github.event.inputs.issue_number }}
   cancel-in-progress: false
