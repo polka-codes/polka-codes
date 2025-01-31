@@ -1,5 +1,9 @@
 # Polka Codes Core
 
+[![npm version](https://img.shields.io/npm/v/@polkacodes/core.svg)](https://www.npmjs.com/package/@polkacodes/core)
+[![npm downloads](https://img.shields.io/npm/dm/@polkacodes/core.svg)](https://www.npmjs.com/package/@polkacodes/core)
+[![License](https://img.shields.io/npm/l/@polkacodes/core.svg)](https://github.com/polkacodes/polkacodes/blob/main/LICENSE)
+
 Core AI services and agent implementations for Polka Codes framework.
 
 ## Features
