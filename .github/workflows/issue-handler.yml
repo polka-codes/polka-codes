@@ -46,7 +46,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const handler = require('./.github/workflows/scripts/issue-handler.js');
+            const handler = require('./.github/workflows/scripts/issue-handler.cjs');
 
             try {
               const issueData = await handler.getIssueData(github, context, context.payload.inputs);
