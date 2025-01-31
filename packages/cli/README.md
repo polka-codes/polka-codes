@@ -1,8 +1,8 @@
 # Polka Codes CLI - Command Line Interface
 
-[![npm version](https://img.shields.io/npm/v/@polkacodes/cli.svg)](https://www.npmjs.com/package/@polkacodes/cli)
-[![npm downloads](https://img.shields.io/npm/dm/@polkacodes/cli.svg)](https://www.npmjs.com/package/@polkacodes/cli)
-[![License](https://img.shields.io/npm/l/@polkacodes/cli.svg)](https://github.com/polkacodes/polkacodes/blob/main/LICENSE)
+[![npm version](https://img.shields.io/npm/v/@polka-codes/cli.svg)](https://www.npmjs.com/package/@polka-codes/cli)
+[![npm downloads](https://img.shields.io/npm/dm/@polka-codes/cli.svg)](https://www.npmjs.com/package/@polka-codes/cli)
+[![License](https://img.shields.io/npm/l/@polka-codes/cli.svg)](https://github.com/polkacodes/polkacodes/blob/main/LICENSE)
 
 [![Bun Version](https://img.shields.io/badge/Bun-v1.0.0+-brightgreen)](https://bun.sh)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue)](https://www.typescriptlang.org)
