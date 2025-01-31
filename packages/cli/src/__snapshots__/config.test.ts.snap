@@ -51,3 +51,151 @@ exports[`config merges global and local config with local precedence 1`] = `
   },
 }
 `;
+
+exports[`config parses project .polkacodes.yml successfully 1`] = `
+{
+  "agents": {
+    "default": {
+      "initialContext": {
+        "excludes": [
+          "__snapshots__",
+          ".husky",
+        ],
+      },
+    },
+  },
+  "excludeFiles": [
+    ".env",
+    "bun.lock",
+    "packages/cli/cli.mjs",
+  ],
+  "hooks": {
+    "agents": {
+      "coder": {
+        "beforeCompletion": "bun fix; bun typecheck && bun test -u",
+      },
+    },
+  },
+  "rules": 
+"Use \`bun\` as the package manager
+When adding new dependencies, cd to the package directory and run \`bun add <dependency>\`
+Use \`bun:test\` to write tests. DO NOT use jest or mocha or vi
+DO NOT use mock in tests. Use spyOn imported bun 'bun:test' if needed
+When writing unit tests, use \`.toMatchSnapshot()\` if suitable
+When creating a new file, try to check if there are other files with similar content, and if so, read those files and use them as a reference
+    
+"
+,
+  "scripts": {
+    "test": {
+      "command": "bun test",
+      "description": "Run tests. Pass file path to run a specific test file.",
+    },
+    "typecheck": {
+      "command": "bun typecheck",
+      "description": 
+"Check the code for type errors.
+Run this command after making changes to the code.
+"
+,
+    },
+  },
+}
+`;
+
+exports[`config parses example.polkacodes.yml successfully 1`] = `
+{
+  "agents": {
+    "architect": {
+      "model": "deepseek-reasoner",
+      "provider": "deepseek",
+    },
+    "coder": {
+      "model": "claude-3-5-sonnet-20241022",
+      "provider": "anthropic",
+    },
+    "default": {
+      "initialContext": {
+        "excludes": [
+          "__snapshots__",
+          "*.lock",
+        ],
+        "maxFileCount": 200,
+      },
+      "model": "deepseek-chat",
+      "provider": "deepseek",
+    },
+  },
+  "commands": {
+    "commit": {
+      "model": "maryasov/qwen2.5-coder-cline:7b",
+      "provider": "ollama",
+    },
+    "default": {
+      "model": "deepseek-chat",
+      "provider": "deepseek",
+    },
+    "pr": {
+      "model": "maryasov/qwen2.5-coder-cline:7b",
+      "provider": "ollama",
+    },
+  },
+  "defaultModel": "deepseek-chat",
+  "defaultProvider": "deepseek",
+  "excludeFiles": [
+    "node_modules/**",
+    "dist/**",
+    "*.log",
+    ".env",
+    "coverage/**",
+  ],
+  "hooks": {
+    "agents": {
+      "architect": {
+        "beforeCompletion": "bun test && bun typecheck",
+      },
+      "coder": {
+        "beforeCompletion": "bun typecheck",
+      },
+      "default": {
+        "beforeCompletion": "bun test",
+      },
+    },
+  },
+  "maxIterations": 50,
+  "providers": {
+    "anthropic": {
+      "apiKey": "sk-ant-...",
+      "defaultModel": "claude-3-5-sonnet-20241022",
+    },
+    "deepseek": {
+      "apiKey": "sk-...",
+      "defaultModel": "deepseek-chat",
+    },
+    "ollama": {
+      "defaultModel": "maryasov/qwen2.5-coder-cline:7b",
+    },
+    "openrouter": {
+      "apiKey": "sk-...",
+      "defaultModel": "openai/gpt-4o",
+    },
+  },
+  "rules": [
+    "Use \`bun\` as the package manager",
+    "Write tests using bun:test",
+    "Follow the project's coding style",
+    "Add JSDoc comments for public APIs",
+  ],
+  "scripts": {
+    "build": {
+      "command": "bun build",
+      "description": "Build the project",
+    },
+    "test": "bun test",
+    "typecheck": {
+      "command": "bun typecheck",
+      "description": "Run TypeScript type checking",
+    },
+  },
+}
+`;

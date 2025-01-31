@@ -311,4 +311,68 @@ hooks:
       },
     })
   })
+
+  test('parses project .polkacodes.yml successfully', () => {
+    loadConfig()
+  })
+
+  test('parses example.polkacodes.yml successfully', () => {
+    loadConfig('example.polkacodes.yml')
+  })
+
+  test('handles both string and array rules formats', () => {
+    // Test string format
+    const stringConfigPath = join(testSubDir, 'string-rules.yml')
+    writeFileSync(
+      stringConfigPath,
+      `
+rules: |
+  Rule 1
+  Rule 2
+  Rule 3
+      `,
+    )
+    const stringConfig = loadConfig(stringConfigPath, testSubDir, testHomeDir)
+    expect(typeof stringConfig?.rules).toBe('string')
+    expect(stringConfig?.rules).toContain('Rule 1')
+
+    // Test array format
+    const arrayConfigPath = join(testSubDir, 'array-rules.yml')
+    writeFileSync(
+      arrayConfigPath,
+      `
+rules:
+  - "Rule 1"
+  - "Rule 2"
+  - "Rule 3"
+      `,
+    )
+    const arrayConfig = loadConfig(arrayConfigPath, testSubDir, testHomeDir)
+    expect(Array.isArray(arrayConfig?.rules)).toBe(true)
+    expect(arrayConfig?.rules).toHaveLength(3)
+
+    // Test merging behavior
+    const globalConfigPath = join(testHomeDir, '.config', 'polkacodes', 'config.yml')
+    const localConfigPath = join(testSubDir, 'merged-rules.yml')
+
+    writeFileSync(
+      globalConfigPath,
+      `
+rules:
+  - "Global Rule 1"
+  - "Global Rule 2"
+      `,
+    )
+
+    writeFileSync(
+      localConfigPath,
+      `
+rules: "Local Rule"
+      `,
+    )
+
+    const mergedConfig = loadConfig(localConfigPath, testSubDir, testHomeDir)
+    expect(Array.isArray(mergedConfig?.rules)).toBe(true)
+    expect(mergedConfig?.rules).toEqual(['Global Rule 1', 'Global Rule 2', 'Local Rule'])
+  })
 })
