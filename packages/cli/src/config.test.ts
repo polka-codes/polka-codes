@@ -209,8 +209,8 @@ hooks:
   agents:
     coder:
       beforeCompletion: "echo 'local coder hook'"
-    reviewer:
-      beforeCompletion: "echo 'local reviewer hook'"
+    architect:
+      beforeCompletion: "echo 'local architect hook'"
 scripts:
   test: echo "local"
 rules:
@@ -219,42 +219,7 @@ rules:
     )
 
     const config = loadConfig(localConfigPath, testSubDir, testHomeDir)
-    expect(config).toEqual({
-      defaultProvider: 'anthropic',
-      defaultModel: 'claude-3-opus',
-      excludeFiles: undefined,
-      providers: {
-        anthropic: {
-          apiKey: 'local-key',
-        },
-      },
-      agents: {
-        default: {
-          provider: 'anthropic',
-          model: 'claude-3-opus',
-        },
-        coder: {
-          model: 'claude-3-haiku',
-        },
-        architect: {
-          provider: 'deepseek',
-        },
-      },
-      commands: {
-        default: {
-          provider: 'deepseek',
-          model: 'deepseek-coder-instruct',
-        },
-      },
-      scripts: {
-        test: 'echo "local"',
-        complex: {
-          command: 'echo "global-complex"',
-          description: 'Global complex command',
-        },
-      },
-      rules: ['global-rule', 'local-rule'],
-    })
+    expect(config).toMatchSnapshot()
   })
 
   test('concatenates arrays', () => {
