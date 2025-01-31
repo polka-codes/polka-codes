@@ -12,19 +12,14 @@ const program = new Command()
 
 program.name('polka').description('Polka Codes CLI').version(version)
 
+// Main command for executing tasks
+program.argument('[task]', 'The task to execute').action(runTask)
+
 // Chat command
 program.command('chat').description('Start an interactive chat session').action(runChat)
 
 // Config command
-program
-  .command('config')
-  .description('Configure global or local settings')
-  .option('-g, --global', 'Use global config')
-  .option('-p, --print', 'Print config')
-  .action(configCommand)
-
-// Main command for executing tasks
-program.argument('[task]', 'The task to execute').action(runTask)
+program.addCommand(configCommand)
 
 // Commit command
 program.addCommand(commitCommand)
