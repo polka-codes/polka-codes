@@ -70,7 +70,6 @@ jobs:
           POLKA_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           GH_TOKEN: ${{ github.token }}
         run: |
-          echo "$TASK"
           echo "$TASK" | bun cli -v
           bun cli commit -a
           git push origin polka-codes/issue-$ISSUE_NUMBER
