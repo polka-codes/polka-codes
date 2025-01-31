@@ -11,6 +11,9 @@ You are given:
 
 Your task:
 1. Consider the optional context (if provided).
+   - Look for issue numbers in the format "#123" or "issue #123"
+   - If an issue number is found, add "Closes #xxx" at the beginning of the PR description
+   - Use the exact format "Closes #xxx" - do not modify or rephrase
 2. Analyze the combined commit messages and diffs.
 3. Produce a single GitHub Pull Request title.
 4. Produce a Pull Request description that explains the changes.
@@ -46,7 +49,7 @@ Below is an **example** of the input and output:
 Example Input:
 <tool_input>
 <tool_input_branch_name>feature/refactor-logging</tool_input_branch_name>
-<tool_input_context>Focus on clean code and maintainability</tool_input_context>
+<tool_input_context>Implementing changes for issue #123 - Focus on clean code and maintainability</tool_input_context>
 <tool_input_commit_messages>
 Remove debug logs
 Refactor order validation logic
@@ -67,6 +70,8 @@ Example Output:
 <tool_output>
 <tool_output_pr_title>Refactor Order Validation and Remove Debug Logs</tool_output_pr_title>
 <tool_output_pr_description>
+Closes #123
+
 This PR removes unnecessary debug print statements and updates order validation
 to use the new validate_and_process method for improved maintainability.
 </tool_output_pr_description>
