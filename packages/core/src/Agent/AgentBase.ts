@@ -15,6 +15,7 @@ import { agentsPrompt, responsePrompts } from './prompts'
  * Enum representing different kinds of task events
  */
 export enum TaskEventKind {
+  StartTask = 'StartTask',
   StartRequest = 'StartRequest',
   EndRequest = 'EndRequest',
   Usage = 'Usage',
@@ -39,11 +40,26 @@ export interface TaskEventBase {
 }
 
 /**
- * Event for request start/end
+ * Event for task start
  */
-export interface TaskEventRequest extends TaskEventBase {
-  kind: TaskEventKind.StartRequest | TaskEventKind.EndRequest
-  userMessage?: string
+export interface TaskEventStartTask extends TaskEventBase {
+  kind: TaskEventKind.StartTask
+  systemPrompt: string
+}
+
+/**
+ * Event for request start
+ */
+export interface TaskEventStartRequest extends TaskEventBase {
+  kind: TaskEventKind.StartRequest
+  userMessage: string
+}
+
+/**
+ * Event for request end
+ */
+export interface TaskEventEndRequest extends TaskEventBase {
+  kind: TaskEventKind.EndRequest
 }
 
 /**
@@ -96,7 +112,15 @@ export interface TaskEventCompletion extends TaskEventBase {
 /**
  * Union type of all possible task events
  */
-export type TaskEvent = TaskEventRequest | TaskEventUsage | TaskEventText | TaskEventTool | TaskEventToolHandOver | TaskEventCompletion
+export type TaskEvent =
+  | TaskEventStartTask
+  | TaskEventStartRequest
+  | TaskEventEndRequest
+  | TaskEventUsage
+  | TaskEventText
+  | TaskEventTool
+  | TaskEventToolHandOver
+  | TaskEventCompletion
 
 export type TaskEventCallback = (event: TaskEvent) => void | Promise<void>
 
@@ -184,6 +208,8 @@ export abstract class AgentBase {
     if (context) {
       text += `\n<context>${context}</context>`
     }
+
+    callback({ kind: TaskEventKind.StartTask, info: taskInfo, systemPrompt: this.config.systemPrompt })
 
     return await this.#processLoop(text, taskInfo, callback)
   }

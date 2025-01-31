@@ -115,7 +115,7 @@ providers:
       .opts()
 
     const result = parseOptions(options, testDir, testDir)
-    expect(result.verbose).toBe(true)
+    expect(result.verbose).toBe(1)
     expect(result.providerConfig.getConfigForCommand('chat')).toMatchSnapshot()
   })
 

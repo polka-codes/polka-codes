@@ -1,10 +1,16 @@
 import { type TaskEvent, TaskEventKind } from '@polka-codes/core'
 import chalk from 'chalk'
 
-export const printEvent = (verbose: boolean) => (event: TaskEvent) => {
+export const printEvent = (verbose: number) => (event: TaskEvent) => {
   let hadReasoning = false
 
   switch (event.kind) {
+    case TaskEventKind.StartTask:
+      if (verbose > 1) {
+        console.log(`\n====== System Prompt ======\n${event.systemPrompt}`)
+        console.log('\n\n================\n')
+      }
+      break
     case TaskEventKind.StartRequest:
       console.log('\n\n======== New Request ========\n')
       if (verbose) {
@@ -19,7 +25,7 @@ export const printEvent = (verbose: boolean) => (event: TaskEvent) => {
       break
     case TaskEventKind.Text:
       if (hadReasoning) {
-        process.stdout.write('\n')
+        process.stdout.write('\n\n')
         hadReasoning = false
       }
       process.stdout.write(event.newText)
