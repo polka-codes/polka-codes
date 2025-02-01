@@ -41,7 +41,20 @@ export abstract class AiServiceBase {
 
   abstract get model(): { id: string; info: ModelInfo }
 
-  abstract send(systemPrompt: string, messages: MessageParam[]): ApiStream
+  abstract sendImpl(systemPrompt: string, messages: MessageParam[]): ApiStream
+
+  async *send(systemPrompt: string, messages: MessageParam[]): ApiStream {
+    const stream = this.sendImpl(systemPrompt, messages)
+
+    for await (const chunk of stream) {
+      switch (chunk.type) {
+        case 'usage':
+          this.usageMeter.addUsage(chunk)
+          break
+      }
+      yield chunk
+    }
+  }
 
   async request(systemPrompt: string, messages: MessageParam[]) {
     const stream = this.send(systemPrompt, messages)
