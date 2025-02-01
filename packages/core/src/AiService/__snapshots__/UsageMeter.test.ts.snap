@@ -1,0 +1,51 @@
+// Bun Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`UsageMeter should initialize with zero values 1`] = `
+{
+  "cacheReadTokens": 0,
+  "cacheWriteTokens": 0,
+  "inputTokens": 0,
+  "outputTokens": 0,
+  "totalCost": 0,
+}
+`;
+
+exports[`UsageMeter should correctly add usage metrics 1`] = `
+{
+  "cacheReadTokens": 10,
+  "cacheWriteTokens": 25,
+  "inputTokens": 100,
+  "outputTokens": 50,
+  "totalCost": 0.002,
+}
+`;
+
+exports[`UsageMeter should handle partial usage updates 1`] = `
+{
+  "cacheReadTokens": 0,
+  "cacheWriteTokens": 0,
+  "inputTokens": 100,
+  "outputTokens": 50,
+  "totalCost": 0.001,
+}
+`;
+
+exports[`UsageMeter should reset all metrics to zero 1`] = `
+{
+  "cacheReadTokens": 0,
+  "cacheWriteTokens": 0,
+  "inputTokens": 0,
+  "outputTokens": 0,
+  "totalCost": 0,
+}
+`;
+
+exports[`UsageMeter should handle multiple consecutive updates 1`] = `
+{
+  "cacheReadTokens": 10,
+  "cacheWriteTokens": 0,
+  "inputTokens": 80,
+  "outputTokens": 40,
+  "totalCost": 0.001,
+}
+`;

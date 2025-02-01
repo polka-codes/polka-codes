@@ -1,6 +1,6 @@
 import type { Anthropic } from '@anthropic-ai/sdk'
-
 import type { ModelInfo } from './ModelInfo'
+import { UsageMeter } from './UsageMeter'
 
 export type ApiStreamChunk = ApiStreamTextChunk | ApiStreamUsageChunk | ApiStreamReasoningTextChunk
 
@@ -37,6 +37,8 @@ export type ApiUsage = {
 }
 
 export abstract class AiServiceBase {
+  protected readonly usageMeter = new UsageMeter()
+
   abstract get model(): { id: string; info: ModelInfo }
 
   abstract send(systemPrompt: string, messages: MessageParam[]): ApiStream
@@ -71,10 +73,34 @@ export abstract class AiServiceBase {
       }
     }
 
+    // Track usage metrics
+    this.usageMeter.addUsage(usage)
+
     return {
       response: resp,
       reasoning,
       usage,
     }
+  }
+
+  /**
+   * Get current usage statistics
+   */
+  getUsageStats(): ApiUsage {
+    return this.usageMeter.getUsage()
+  }
+
+  /**
+   * Get total tokens used across all categories
+   */
+  getTotalTokens(): number {
+    return this.usageMeter.getTotalTokens()
+  }
+
+  /**
+   * Reset usage statistics
+   */
+  resetUsage(): void {
+    this.usageMeter.reset()
   }
 }
