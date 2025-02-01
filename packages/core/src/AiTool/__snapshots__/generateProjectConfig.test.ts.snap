@@ -1,0 +1,21 @@
+// Bun Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`generateProjectConfig should format input correctly 1`] = `
+"<tool_input>
+=== package.json ===
+{"scripts": {"test": "bun test"}}
+
+=== .polkacodes.yml ===
+rules: ["Use bun"]
+</tool_input>"
+`;
+
+exports[`generateProjectConfig should parse output correctly 1`] = `
+"scripts:
+  test:
+    command: "bun test"
+    description: "Run tests"
+
+rules:
+  - "Use bun as package manager""
+`;
