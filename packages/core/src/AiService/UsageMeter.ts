@@ -27,10 +27,11 @@ export class UsageMeter {
 
     if (!usage.totalCost && model) {
       usage.totalCost =
-        (model.inputPrice ?? 0) * (usage.inputTokens ?? 0) +
-        (model.outputPrice ?? 0) * (usage.outputTokens ?? 0) +
-        (model.cacheWritesPrice ?? 0) * (usage.cacheWriteTokens ?? 0) +
-        ((model.cacheReadsPrice ?? 0) * (usage.cacheReadTokens ?? 0)) / 1_000_000
+        ((model.inputPrice ?? 0) * (usage.inputTokens ?? 0) +
+          (model.outputPrice ?? 0) * (usage.outputTokens ?? 0) +
+          (model.cacheWritesPrice ?? 0) * (usage.cacheWriteTokens ?? 0) +
+          (model.cacheReadsPrice ?? 0) * (usage.cacheReadTokens ?? 0)) /
+        1_000_000
     }
 
     this.#usage.totalCost = (this.#usage.totalCost ?? 0) + (usage.totalCost ?? 0)
