@@ -40,7 +40,7 @@ export class OpenRouterService extends AiServiceBase {
     }
   }
 
-  async *send(systemPrompt: string, messages: MessageParam[]): ApiStream {
+  override async *sendImpl(systemPrompt: string, messages: MessageParam[]): ApiStream {
     const openAiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
       { role: 'system', content: systemPrompt },
       ...convertToOpenAiMessages(messages),

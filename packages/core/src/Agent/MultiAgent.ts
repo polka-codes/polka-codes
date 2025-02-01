@@ -1,3 +1,4 @@
+import { UsageMeter } from '../AiService/UsageMeter'
 import type { AgentBase, ExitReason, TaskEvent, TaskEventCallback, TaskInfo } from './AgentBase'
 
 export type MultiAgentConfig = {
@@ -7,6 +8,7 @@ export type MultiAgentConfig = {
 
 export class MultiAgent {
   readonly #config: MultiAgentConfig
+  readonly #usage = new UsageMeter()
 
   #activeAgent: AgentBase | null = null
 
@@ -32,6 +34,7 @@ export class MultiAgent {
       maxIterations,
       callback,
     })
+    this.#usage.addUsage(this.#activeAgent.usage, this.#activeAgent.model.info)
     if (typeof exitReason === 'string') {
       return [exitReason, info]
     }
@@ -43,13 +46,7 @@ export class MultiAgent {
       }
 
       const context = await this.#config.getContext(agentName, exitReason.context, exitReason.files)
-      const [exitReason2, info2] = await this.#startTask(exitReason.agentName, exitReason.task, context, remainIteration, callback)
-      info2.inputTokens += info.inputTokens
-      info2.outputTokens += info.outputTokens
-      info2.cacheWriteTokens += info.cacheWriteTokens
-      info2.cacheReadTokens += info.cacheReadTokens
-      info2.totalCost = (info.totalCost ?? 0) + (info2.totalCost ?? 0)
-      return [exitReason2, info2]
+      return await this.#startTask(exitReason.agentName, exitReason.task, context, remainIteration, callback)
     }
     return [exitReason, info]
   }
@@ -73,5 +70,13 @@ export class MultiAgent {
       throw new Error('No active agent')
     }
     return this.#activeAgent.continueTask(userMessage, taskInfo, callback)
+  }
+
+  get usage() {
+    return this.#usage.usage
+  }
+
+  printUsage() {
+    this.#usage.printUsage()
   }
 }

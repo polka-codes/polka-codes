@@ -28,7 +28,7 @@ export class AnthropicService extends AiServiceBase {
     }
   }
 
-  async *send(systemPrompt: string, messages: MessageParam[]): ApiStream {
+  override async *sendImpl(systemPrompt: string, messages: MessageParam[]): ApiStream {
     let stream: AnthropicStream<Anthropic.Messages.RawMessageStreamEvent>
     const modelId = this.model.id
     switch (modelId) {
