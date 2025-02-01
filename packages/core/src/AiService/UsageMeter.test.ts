@@ -9,7 +9,7 @@ import { UsageMeter } from './UsageMeter'
 describe('UsageMeter', () => {
   test('should initialize with zero values', () => {
     const meter = new UsageMeter()
-    expect(meter.getUsage()).toMatchSnapshot()
+    expect(meter.usage).toMatchSnapshot()
   })
 
   test('should correctly add usage metrics', () => {
@@ -23,7 +23,7 @@ describe('UsageMeter', () => {
       totalCost: 0.002,
     })
 
-    expect(meter.getUsage()).toMatchSnapshot()
+    expect(meter.usage).toMatchSnapshot()
   })
 
   test('should handle partial usage updates', () => {
@@ -33,33 +33,7 @@ describe('UsageMeter', () => {
     meter.addUsage({ outputTokens: 50 })
     meter.addUsage({ totalCost: 0.001 })
 
-    expect(meter.getUsage()).toMatchSnapshot()
-  })
-
-  test('should calculate total tokens correctly', () => {
-    const meter = new UsageMeter()
-
-    meter.addUsage({
-      inputTokens: 100,
-      outputTokens: 50,
-      cacheWriteTokens: 25,
-      cacheReadTokens: 10,
-    })
-
-    expect(meter.getTotalTokens()).toBe(185)
-  })
-
-  test('should reset all metrics to zero', () => {
-    const meter = new UsageMeter()
-
-    meter.addUsage({
-      inputTokens: 100,
-      outputTokens: 50,
-      totalCost: 0.002,
-    })
-
-    meter.reset()
-    expect(meter.getUsage()).toMatchSnapshot()
+    expect(meter.usage).toMatchSnapshot()
   })
 
   test('should handle multiple consecutive updates', () => {
@@ -69,6 +43,6 @@ describe('UsageMeter', () => {
     meter.addUsage({ inputTokens: 30, cacheReadTokens: 10 })
     meter.addUsage({ outputTokens: 15, totalCost: 0.001 })
 
-    expect(meter.getUsage()).toMatchSnapshot()
+    expect(meter.usage).toMatchSnapshot()
   })
 })

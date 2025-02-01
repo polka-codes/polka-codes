@@ -49,7 +49,7 @@ export abstract class AiServiceBase {
     for await (const chunk of stream) {
       switch (chunk.type) {
         case 'usage':
-          this.usageMeter.addUsage(chunk)
+          this.usageMeter.addUsage(chunk, this.model.info)
           break
       }
       yield chunk
@@ -57,7 +57,7 @@ export abstract class AiServiceBase {
   }
 
   async request(systemPrompt: string, messages: MessageParam[]) {
-    const stream = this.send(systemPrompt, messages)
+    const stream = this.sendImpl(systemPrompt, messages)
     const usage: ApiUsage = {
       inputTokens: 0,
       outputTokens: 0,
@@ -87,7 +87,7 @@ export abstract class AiServiceBase {
     }
 
     // Track usage metrics
-    this.usageMeter.addUsage(usage)
+    this.usageMeter.addUsage(usage, this.model.info)
 
     return {
       response: resp,
@@ -99,21 +99,7 @@ export abstract class AiServiceBase {
   /**
    * Get current usage statistics
    */
-  getUsageStats(): ApiUsage {
-    return this.usageMeter.getUsage()
-  }
-
-  /**
-   * Get total tokens used across all categories
-   */
-  getTotalTokens(): number {
-    return this.usageMeter.getTotalTokens()
-  }
-
-  /**
-   * Reset usage statistics
-   */
-  resetUsage(): void {
-    this.usageMeter.reset()
+  get usage(): ApiUsage {
+    return this.usageMeter.usage
   }
 }

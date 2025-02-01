@@ -39,28 +39,8 @@ export class UsageMeter {
   /**
    * Get current usage totals
    */
-  getUsage(): ApiUsage {
+  get usage(): ApiUsage {
     return { ...this.#usage }
-  }
-
-  /**
-   * Get total tokens across all categories
-   */
-  getTotalTokens(): number {
-    return this.#usage.inputTokens + this.#usage.outputTokens + this.#usage.cacheWriteTokens + this.#usage.cacheReadTokens
-  }
-
-  /**
-   * Reset all usage metrics to zero
-   */
-  reset(): void {
-    this.#usage = {
-      inputTokens: 0,
-      outputTokens: 0,
-      cacheWriteTokens: 0,
-      cacheReadTokens: 0,
-      totalCost: 0,
-    }
   }
 
   printUsage() {

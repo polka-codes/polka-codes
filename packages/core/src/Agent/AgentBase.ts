@@ -375,4 +375,8 @@ export abstract class AgentBase {
   get model() {
     return this.ai.model
   }
+
+  get usage() {
+    return this.ai.usage
+  }
 }

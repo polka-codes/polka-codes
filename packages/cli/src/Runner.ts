@@ -7,7 +7,6 @@ import {
   CoderAgent,
   MultiAgent,
   type TaskEventCallback,
-  TaskEventKind,
   type TaskInfo,
   architectAgentInfo,
   coderAgentInfo,
@@ -30,13 +29,6 @@ export type RunnerOptions = {
 export class Runner {
   readonly #options: RunnerOptions
   readonly #multiAgent: MultiAgent
-  #usage = {
-    inputTokens: 0,
-    outputTokens: 0,
-    cacheWriteTokens: 0,
-    cacheReadTokens: 0,
-    totalCost: 0,
-  }
 
   constructor(options: RunnerOptions) {
     this.#options = options
@@ -154,55 +146,21 @@ ${fileList.join('\n')}${limited ? '\n<files_truncated>true</files_truncated>' : 
       agentName: agentName,
       task,
       context: await this.#defaultContext(agentName),
-      callback: this.#taskEventCallback,
+      callback: this.#options.eventCallback,
     })
 
     return [exitReason, info] as const
   }
 
-  #taskEventCallback: TaskEventCallback = (event) => {
-    if (event.kind === TaskEventKind.Usage) {
-      this.#usage.inputTokens += event.info.inputTokens
-      this.#usage.outputTokens += event.info.outputTokens
-      this.#usage.cacheReadTokens += event.info.cacheReadTokens
-      this.#usage.cacheWriteTokens += event.info.cacheWriteTokens
-
-      let totalCost = event.info.totalCost ?? 0
-
-      if (!totalCost) {
-        // we need to calculate the total cost
-        const modelInfo = this.#multiAgent.model?.info
-        const inputCost = (modelInfo?.inputPrice ?? 0) * event.info.inputTokens
-        const outputCost = (modelInfo?.outputPrice ?? 0) * event.info.outputTokens
-        const cacheReadCost = (modelInfo?.cacheReadsPrice ?? 0) * event.info.cacheReadTokens
-        const cacheWriteCost = (modelInfo?.cacheWritesPrice ?? 0) * event.info.cacheWriteTokens
-        totalCost = (inputCost + outputCost + cacheReadCost + cacheWriteCost) / 1_000_000
-      }
-
-      this.#usage.totalCost += totalCost
-    }
-    this.#options.eventCallback(event)
-  }
-
   async continueTask(message: string, taskInfo: TaskInfo) {
-    return await this.#multiAgent.continueTask(message, taskInfo, this.#taskEventCallback)
+    return await this.#multiAgent.continueTask(message, taskInfo, this.#options.eventCallback)
   }
 
   get usage() {
-    return this.#usage
+    return this.#multiAgent.usage
   }
 
   printUsage() {
-    if (!this.#usage.totalCost) {
-      // Skip printing if no usage recorded
-      return
-    }
-
-    console.log('Usages:')
-    console.log(`Input tokens: ${this.#usage.inputTokens}`)
-    console.log(`Output tokens: ${this.#usage.outputTokens}`)
-    console.log(`Cache read tokens: ${this.#usage.cacheReadTokens}`)
-    console.log(`Cache write tokens: ${this.#usage.cacheWriteTokens}`)
-    console.log(`Total cost: ${this.#usage.totalCost}`)
+    this.#multiAgent.printUsage()
   }
 }
