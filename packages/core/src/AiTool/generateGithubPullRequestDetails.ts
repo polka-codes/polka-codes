@@ -11,11 +11,9 @@ You are given:
 
 Your task:
 1. Consider the optional context (if provided).
-   - Look for issue numbers ONLY in the format "#xxx" (where xxx is the issue number)
-   - If an issue number is found, add "closes #xxx" at the beginning of the PR description
-   - IMPORTANT: Use ONLY the exact format "closes #xxx" at the beginning of the description
-   - DO NOT use variations like "closes issue #xxx" or other formats
-   - The issue reference must be the first line of the PR description if present
+   - If an issue number is found, add "Closes #xxx" at the beginning of the PR description
+   - IMPORTANT: Use ONLY the exact format "Closes #xxx" at the beginning of the description
+   - DO NOT use variations like "Closes issue #xxx" or other formats
 2. Analyze the combined commit messages and diffs.
 3. Produce a single GitHub Pull Request title.
 4. Produce a Pull Request description that explains the changes.
