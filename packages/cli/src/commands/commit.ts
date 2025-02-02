@@ -65,17 +65,28 @@ export const commitCommand = new Command('commit')
       // Generate commit message
       const result = await generateGitCommitMessage(ai, { diff, context: message })
 
-      spinner.succeed('Commit message generated')
-
-      // Make the commit
-      try {
-        execSync(`git commit -m "${result.response}"`)
-      } catch {
-        console.error('Error: Commit failed')
+      // Validate commit message
+      if (!result.response || result.response.trim().length === 0) {
+        spinner.fail('Error: Generated commit message is empty')
         process.exit(1)
       }
 
+      // Log the commit message before attempting to commit
+      spinner.succeed('Commit message generated')
       console.log(`\nCommit message:\n${result.response}`)
+
+      // Make the commit with properly escaped message
+      try {
+        // Use Buffer.from to properly escape the message for shell
+        const encodedMessage = Buffer.from(result.response).toString('base64')
+        execSync(`git commit -m "$(echo ${encodedMessage} | base64 --decode)"`)
+      } catch (error) {
+        console.error('Error: Commit failed')
+        if (error instanceof Error) {
+          console.error(error.message)
+        }
+        process.exit(1)
+      }
     } catch (error) {
       console.error('Error:', error)
       process.exit(1)
