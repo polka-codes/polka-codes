@@ -11,9 +11,11 @@ You are given:
 
 Your task:
 1. Consider the optional context (if provided).
-   - Look for issue numbers in the format "#123" or "issue #123"
-   - If an issue number is found, add "Closes #xxx" at the beginning of the PR description
-   - Use the exact format "Closes #xxx" - do not modify or rephrase
+   - Look for issue numbers ONLY in the format "#xxx" (where xxx is the issue number)
+   - If an issue number is found, add "closes #xxx" at the beginning of the PR description
+   - IMPORTANT: Use ONLY the exact format "closes #xxx" at the beginning of the description
+   - DO NOT use variations like "closes issue #xxx" or other formats
+   - The issue reference must be the first line of the PR description if present
 2. Analyze the combined commit messages and diffs.
 3. Produce a single GitHub Pull Request title.
 4. Produce a Pull Request description that explains the changes.
@@ -70,7 +72,7 @@ Example Output:
 <tool_output>
 <tool_output_pr_title>Refactor Order Validation and Remove Debug Logs</tool_output_pr_title>
 <tool_output_pr_description>
-Closes #123
+closes #123
 
 This PR removes unnecessary debug print statements and updates order validation
 to use the new validate_and_process method for improved maintainability.
