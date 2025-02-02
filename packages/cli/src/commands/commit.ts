@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process'
+import { execSync, spawnSync } from 'node:child_process'
 import { confirm } from '@inquirer/prompts'
 import { Command } from 'commander'
 import ora from 'ora'
@@ -67,15 +67,15 @@ export const commitCommand = new Command('commit')
 
       spinner.succeed('Commit message generated')
 
+      console.log(`\nCommit message:\n${result.response}`)
+
       // Make the commit
       try {
-        execSync(`git commit -m "${result.response}"`)
+        spawnSync('git', ['commit', '-m', result.response], { stdio: 'inherit' })
       } catch {
         console.error('Error: Commit failed')
         process.exit(1)
       }
-
-      console.log(`\nCommit message:\n${result.response}`)
     } catch (error) {
       console.error('Error:', error)
       process.exit(1)
