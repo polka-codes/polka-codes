@@ -4,6 +4,7 @@ import { version } from '../package.json'
 import { runChat } from './commands/chat'
 import { commitCommand } from './commands/commit'
 import { configCommand } from './commands/config'
+import { initCommand } from './commands/init'
 import { prCommand } from './commands/pr'
 import { runTask } from './commands/task'
 import { addSharedOptions } from './options'
@@ -20,6 +21,9 @@ program.command('chat').description('Start an interactive chat session').action(
 
 // Config command
 program.addCommand(configCommand)
+
+// Init command
+program.addCommand(initCommand)
 
 // Commit command
 program.addCommand(commitCommand)

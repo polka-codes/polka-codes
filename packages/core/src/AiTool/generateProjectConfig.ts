@@ -53,11 +53,8 @@ export default {
   name: 'generateProjectConfig',
   description: 'Analyzes project files to generate polkacodes config sections',
   prompt,
-  formatInput: (params: { files: Record<string, string> }) => {
-    const fileContent = Object.entries(params.files)
-      .map(([path, content]) => `=== ${path} ===\n${content}`)
-      .join('\n\n')
-    return `<tool_input>\n${fileContent}\n</tool_input>`
+  formatInput: (params: string[]) => {
+    return `<tool_input>\n${params.join('\n')}\n</tool_input>`
   },
   parseOutput: (output: string) => {
     const regex = /<tool_output>([\s\S]*)<\/tool_output>/gm
@@ -68,4 +65,4 @@ export default {
     return match[1].trim()
   },
   agent: 'analyzer',
-} as const satisfies AiToolDefinition<{ files: Record<string, string> }>
+} as const satisfies AiToolDefinition<string[]>
