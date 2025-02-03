@@ -1,5 +1,5 @@
 import { MultiAgent } from '../Agent'
-import type { AiServiceBase, ApiUsage, MessageParam } from '../AiService'
+import type { AiServiceBase, ApiUsage } from '../AiService'
 import { ToolResponseType } from '../tool'
 import generateGitCommitMessageDef from './generateGitCommitMessage'
 import generateGithubPullRequestDetailsDef from './generateGithubPullRequestDetails'
@@ -11,29 +11,22 @@ export const executeTool = async <T extends AiToolDefinition<any, any>>(
   ai: AiServiceBase | MultiAgent,
   params: GetInput<T>,
 ): Promise<{ response: GetOutput<T>; usage: ApiUsage }> => {
-  if (ai instanceof MultiAgent && definition.preferredAgent) {
+  if (ai instanceof MultiAgent && definition.agent) {
     const [exitReason, taskInfo] = await ai.startTask({
-      agentName: definition.preferredAgent,
+      agentName: definition.agent,
       task: definition.formatInput(params),
       context: definition.prompt,
     })
 
-    if (taskInfo.messages.length > 0) {
-      const lastMessage = taskInfo.messages[taskInfo.messages.length - 1] as MessageParam
-      const content = lastMessage.content
-      if (typeof content !== 'string') {
-        throw new Error('Expected string content in agent response')
-      }
-
-      // Check if we have a successful completion
-      const isSuccess = typeof exitReason === 'object' && 'type' in exitReason && exitReason.type === ToolResponseType.Exit
-      if (isSuccess) {
-        return {
-          response: definition.parseOutput(content),
-          usage: ai.usage,
-        }
+    // Check if we have a successful completion
+    const isSuccess = typeof exitReason === 'object' && 'type' in exitReason && exitReason.type === ToolResponseType.Exit
+    if (isSuccess) {
+      return {
+        response: definition.parseOutput(exitReason.message),
+        usage: ai.usage,
       }
     }
+
     throw new Error(`Tool execution failed: ${JSON.stringify(exitReason)}`)
   }
 

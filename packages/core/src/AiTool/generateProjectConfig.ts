@@ -67,5 +67,5 @@ export default {
     }
     return match[1].trim()
   },
-  preferredAgent: 'analyzer',
+  agent: 'analyzer',
 } as const satisfies AiToolDefinition<{ files: Record<string, string> }>
