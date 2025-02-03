@@ -1,6 +1,6 @@
 import { getAvailableTools } from '../../tool'
 import { askFollowupQuestion, attemptCompletion, handOver, listCodeDefinitionNames, listFiles, readFile, searchFiles } from '../../tools'
-import { AgentBase, type SharedAgentOptions } from '../AgentBase'
+import { AgentBase, type AgentInfo, type SharedAgentOptions } from '../AgentBase'
 import { fullSystemPrompt } from './prompts'
 
 export type ArchitectAgentOptions = SharedAgentOptions
@@ -42,11 +42,11 @@ export class ArchitectAgent extends AgentBase {
 }
 
 export const architectAgentInfo = {
-  name: 'Architect',
+  name: 'architect',
   responsibilities: [
     'Analyzing the user’s overall task and requirements.',
     'Creating plans and making higher-level decisions about system structure and design.',
     'Reviewing and analyzing existing code or components for maintainability and scalability.',
     'Laying out the roadmap for implementation.',
   ],
-}
+} as const satisfies AgentInfo

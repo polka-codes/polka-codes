@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process'
 import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
-import type { ToolProvider } from '@polka-codes/core'
+import type { AgentNameType, ToolProvider } from '@polka-codes/core'
 import ignore from 'ignore'
 
 import type { Config } from './config'
@@ -19,7 +19,7 @@ export type ProviderOptions = {
   excludeFiles?: string[]
 }
 
-export const getProvider = (agentName: 'coder' | 'architect', config: Config, options: ProviderOptions): ToolProvider => {
+export const getProvider = (agentName: AgentNameType, config: Config, options: ProviderOptions): ToolProvider => {
   const ig = ignore().add(options.excludeFiles ?? [])
   const provider = {
     readFile: async (path: string): Promise<string> => {

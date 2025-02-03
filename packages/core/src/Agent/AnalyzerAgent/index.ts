@@ -3,7 +3,7 @@
 
 import { getAvailableTools } from '../../tool'
 import { askFollowupQuestion, attemptCompletion, handOver, listCodeDefinitionNames, listFiles, readFile, searchFiles } from '../../tools'
-import { AgentBase, type SharedAgentOptions } from '../AgentBase'
+import { AgentBase, type AgentInfo, type SharedAgentOptions } from '../AgentBase'
 import { fullSystemPrompt } from './prompts'
 
 export type AnalyzerAgentOptions = SharedAgentOptions
@@ -45,7 +45,7 @@ export class AnalyzerAgent extends AgentBase {
 }
 
 export const analyzerAgentInfo = {
-  name: 'Analyzer',
+  name: 'analyzer',
   responsibilities: [
     'Analyzing project structure and organization',
     'Identifying key source code files and their relationships',
@@ -53,4 +53,4 @@ export const analyzerAgentInfo = {
     'Examining development workflow and tooling',
     'Analyzing dependencies and their usage patterns',
   ],
-}
+} as const satisfies AgentInfo

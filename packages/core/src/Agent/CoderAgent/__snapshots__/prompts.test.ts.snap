@@ -252,7 +252,7 @@ Usage:
 ## Example 5: Hand over a coding task to the coder agent
 
 <tool_hand_over>
-<tool_parameter_agent_name>Coder</tool_parameter_agent_name>
+<tool_parameter_agent_name>coder</tool_parameter_agent_name>
 <tool_parameter_task>Implement the login feature</tool_parameter_task>
 <tool_parameter_context>We need a secure login system with email and password</tool_parameter_context>
 <tool_parameter_files>src/auth/login.ts,src/auth/types.ts</tool_parameter_files>
