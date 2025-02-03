@@ -34,7 +34,7 @@ export class CoderAgent extends AgentBase {
 }
 
 export const coderAgentInfo = {
-  name: 'Coder',
+  name: 'coder',
   responsibilities: [
     'Editing and refactoring existing code.',
     'Creating new features or modules.',

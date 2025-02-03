@@ -5,7 +5,12 @@ import { merge } from 'lodash'
 import { parse } from 'yaml'
 import { ZodError, z } from 'zod'
 
-const agentNames = z.enum(['coder', 'architect'])
+import { type AgentNameType, allAgents } from '@polka-codes/core'
+
+const agentNameValues = allAgents.map((agent) => agent.name)
+
+// TODO: figure out if there is a better way to do this
+const agentNames = z.enum<AgentNameType, [AgentNameType, ...AgentNameType[]]>([agentNameValues[0], ...agentNameValues.slice(1)])
 const agentNameOrDefault = z.union([agentNames, z.literal('default')])
 
 const providerModelSchema = z.object({

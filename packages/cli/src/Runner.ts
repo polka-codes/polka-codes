@@ -2,12 +2,15 @@ import { readFile } from 'node:fs/promises'
 import os from 'node:os'
 import {
   type AgentBase,
+  type AgentNameType,
   type AiServiceProvider,
+  AnalyzerAgent,
   ArchitectAgent,
   CoderAgent,
   MultiAgent,
   type TaskEventCallback,
   type TaskInfo,
+  analyzerAgentInfo,
   architectAgentInfo,
   coderAgentInfo,
   createService,
@@ -71,7 +74,7 @@ export class Runner {
       createAgent: async (name: string): Promise<AgentBase> => {
         const agentName = name.trim().toLowerCase()
         switch (agentName) {
-          case coderAgentInfo.name.toLowerCase():
+          case coderAgentInfo.name:
             return new CoderAgent({
               ai: service,
               os: platform,
@@ -81,13 +84,23 @@ export class Runner {
               interactive: options.interactive,
               agents,
             })
-          case architectAgentInfo.name.toLowerCase():
+          case architectAgentInfo.name:
             return new ArchitectAgent({
               ai: service,
               os: platform,
               customInstructions: rules,
               scripts: options.config.scripts,
               provider: getProvider('architect', options.config, providerOptions),
+              interactive: options.interactive,
+              agents,
+            })
+          case analyzerAgentInfo.name:
+            return new AnalyzerAgent({
+              ai: service,
+              os: platform,
+              customInstructions: rules,
+              scripts: options.config.scripts,
+              provider: getProvider('analyzer', options.config, providerOptions),
               interactive: options.interactive,
               agents,
             })
@@ -129,7 +142,7 @@ export class Runner {
 
   async #defaultContext(name: string) {
     const cwd = process.cwd()
-    const agentConfig = this.#options.config.agents?.[name as 'coder'] ?? this.#options.config.agents?.default ?? {}
+    const agentConfig = this.#options.config.agents?.[name as AgentNameType] ?? this.#options.config.agents?.default ?? {}
     const maxFileCount = agentConfig.initialContext?.maxFileCount ?? 200
     const excludes = agentConfig.initialContext?.excludes ?? []
     const finalExcludes = excludes.concat(this.#options.config.excludeFiles ?? [])
