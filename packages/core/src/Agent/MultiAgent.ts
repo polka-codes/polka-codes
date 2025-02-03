@@ -3,7 +3,7 @@ import type { AgentBase, ExitReason, TaskEvent, TaskEventCallback, TaskInfo } fr
 
 export type MultiAgentConfig = {
   createAgent: (name: string) => Promise<AgentBase>
-  getContext: (name: string, context?: string, files?: string[]) => Promise<string>
+  getContext?: (name: string, context?: string, files?: string[]) => Promise<string>
 }
 
 export class MultiAgent {
@@ -45,7 +45,7 @@ export class MultiAgent {
         return ['MaxIterations', info]
       }
 
-      const context = await this.#config.getContext(agentName, exitReason.context, exitReason.files)
+      const context = await this.#config.getContext?.(agentName, exitReason.context, exitReason.files)
       return await this.#startTask(exitReason.agentName, exitReason.task, context, remainIteration, callback)
     }
     return [exitReason, info]
