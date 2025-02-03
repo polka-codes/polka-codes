@@ -5,25 +5,21 @@
 
 import type { AiToolDefinition } from './types'
 
-const prompt = `
-You are an advanced assistant specialized in analyzing project files and generating configuration for polka.codes. When you receive:
-- A list of project files and their contents inside the <tool_input> tag.
+const prompt = `Analyze the provided project files and generate a polkacodes configuration that captures:
 
-You will produce a configuration object enclosed within <tool_output> tags containing:
+1. Build tools and package manager (e.g., bun, npm)
+2. Testing framework and patterns
+3. Code style tools and rules
+4. Project structure and conventions
+5. Common development workflows
+
+Generate a YAML configuration with:
 1. scripts section based on package.json scripts and CI workflows
 2. rules section based on project conventions, tools, and patterns
 
-The configuration should accurately reflect the project's structure, tools, and conventions. Focus on:
-- Package manager and dependency management
-- Testing frameworks and patterns
-- Code style and linting rules
-- File organization and naming conventions
-- Build and development workflows
+The configuration should be enclosed in <tool_output> tags and follow this format:
 
-Here's an example of the expected output format:
-
-\`\`\`
-<tool_output>
+\`\`\`yaml
 scripts:
   test:
     command: "bun test"
@@ -36,17 +32,14 @@ rules:
   - "Use \`bun\` as package manager"
   - "Write tests using bun:test with snapshots"
   - "Follow Biome code style"
-</tool_output>
 \`\`\`
 
-Analyze the provided files to understand:
-1. Build tools and package manager (e.g., bun, npm)
-2. Testing framework and patterns
-3. Code style tools and rules
-4. Project structure and conventions
-5. Common development workflows
-
-Generate a configuration that captures these aspects in a clear and maintainable way.
+Focus on accurately reflecting:
+- Package manager and dependency management
+- Testing frameworks and patterns
+- Code style and linting rules
+- File organization and naming conventions
+- Build and development workflows
 `
 
 export default {
@@ -57,7 +50,7 @@ export default {
     const fileContent = Object.entries(params.files)
       .map(([path, content]) => `=== ${path} ===\n${content}`)
       .join('\n\n')
-    return `<tool_input>\n${fileContent}\n</tool_input>`
+    return `Here are the project files to analyze:\n\n${fileContent}`
   },
   parseOutput: (output: string) => {
     const regex = /<tool_output>([\s\S]*)<\/tool_output>/gm

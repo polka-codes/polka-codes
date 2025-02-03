@@ -1,13 +1,13 @@
 // Bun Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`generateProjectConfig should format input correctly 1`] = `
-"<tool_input>
+"Here are the project files to analyze:
+
 === package.json ===
 {"scripts": {"test": "bun test"}}
 
 === .polkacodes.yml ===
-rules: ["Use bun"]
-</tool_input>"
+rules: ["Use bun"]"
 `;
 
 exports[`generateProjectConfig should parse output correctly 1`] = `
