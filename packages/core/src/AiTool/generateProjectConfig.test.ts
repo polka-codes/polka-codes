@@ -8,17 +8,33 @@ import generateProjectConfig from './generateProjectConfig'
 
 describe('generateProjectConfig', () => {
   test('should format input correctly', () => {
-    const files = {
-      'package.json': '{"scripts": {"test": "bun test"}}',
-      '.polkacodes.yml': 'rules: ["Use bun"]',
-    }
+    const files = ['package.json', '.polkacodes.yml']
 
-    const input = generateProjectConfig.formatInput({ files })
-    expect(input).toMatchSnapshot()
+    const input = generateProjectConfig.formatInput(files)
+    expect(input).toBe('package.json,.polkacodes.yml')
   })
 
   test('should parse output correctly', () => {
-    const output = `<tool_output>
+    const output = `scripts:
+  test:
+    command: "bun test"
+    description: "Run tests"
+
+rules:
+  - "Use bun as package manager"`
+
+    const result = generateProjectConfig.parseOutput(output)
+    expect(result).toBe(output)
+  })
+
+  test('should handle empty files array', () => {
+    const files: string[] = []
+    const input = generateProjectConfig.formatInput(files)
+    expect(input).toBe('')
+  })
+
+  test('should trim whitespace in output', () => {
+    const output = `
 scripts:
   test:
     command: "bun test"
@@ -26,14 +42,9 @@ scripts:
 
 rules:
   - "Use bun as package manager"
-</tool_output>`
+    `
 
     const result = generateProjectConfig.parseOutput(output)
-    expect(result).toMatchSnapshot()
-  })
-
-  test('should throw error on invalid output', () => {
-    const output = 'Invalid output without tool_output tags'
-    expect(() => generateProjectConfig.parseOutput(output)).toThrow()
+    expect(result).toBe(output.trim())
   })
 })

@@ -12,10 +12,10 @@ export const executeTool = async <T extends AiToolDefinition<any, any>>(
   params: GetInput<T>,
 ): Promise<{ response: GetOutput<T>; usage: ApiUsage }> => {
   if (ai instanceof MultiAgent && definition.agent) {
-    const [exitReason, taskInfo] = await ai.startTask({
+    const [exitReason] = await ai.startTask({
       agentName: definition.agent,
-      task: definition.formatInput(params),
-      context: definition.prompt,
+      task: definition.prompt,
+      context: definition.formatInput(params),
     })
 
     // Check if we have a successful completion

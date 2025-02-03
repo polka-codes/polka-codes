@@ -5,25 +5,22 @@
 
 import type { AiToolDefinition } from './types'
 
-const prompt = `
-You are an advanced assistant specialized in analyzing project files and generating configuration for polka.codes. When you receive:
-- A list of project files and their contents inside the <tool_input> tag.
+const prompt = `You are an analyzer agent responsible for examining project files and generating appropriate polkacodes configuration. Your task is to:
 
-You will produce a configuration object enclosed within <tool_output> tags containing:
-1. scripts section based on package.json scripts and CI workflows
-2. rules section based on project conventions, tools, and patterns
+1. Read and analyze the provided files using tool_read_file to understand:
+   - Build tools and package manager (e.g., bun, npm)
+   - Testing frameworks and patterns
+   - Code style tools and rules
+   - Project structure and conventions
+   - Common development workflows
 
-The configuration should accurately reflect the project's structure, tools, and conventions. Focus on:
-- Package manager and dependency management
-- Testing frameworks and patterns
-- Code style and linting rules
-- File organization and naming conventions
-- Build and development workflows
+2. Generate a YAML configuration that captures:
+   - scripts section based on package.json scripts and CI workflows
+   - rules section based on project conventions, tools, and patterns
 
-Here's an example of the expected output format:
+3. Use tool_attempt_completion to return the final configuration in this format:
 
-\`\`\`
-<tool_output>
+\`\`\`yaml
 scripts:
   test:
     command: "bun test"
@@ -36,17 +33,16 @@ rules:
   - "Use \`bun\` as package manager"
   - "Write tests using bun:test with snapshots"
   - "Follow Biome code style"
-</tool_output>
 \`\`\`
 
-Analyze the provided files to understand:
-1. Build tools and package manager (e.g., bun, npm)
-2. Testing framework and patterns
-3. Code style tools and rules
-4. Project structure and conventions
-5. Common development workflows
+Focus on:
+- Package manager and dependency management
+- Testing frameworks and patterns
+- Code style and linting rules
+- File organization and naming conventions
+- Build and development workflows
 
-Generate a configuration that captures these aspects in a clear and maintainable way.
+The configuration should accurately reflect the project's structure, tools, and conventions.
 `
 
 export default {
@@ -57,12 +53,7 @@ export default {
     return `<tool_input>\n${params.join('\n')}\n</tool_input>`
   },
   parseOutput: (output: string) => {
-    const regex = /<tool_output>([\s\S]*)<\/tool_output>/gm
-    const match = regex.exec(output)
-    if (!match) {
-      throw new Error(`Could not parse output:\n${output}`)
-    }
-    return match[1].trim()
+    return output.trim()
   },
   agent: 'analyzer',
 } as const satisfies AiToolDefinition<string[]>
