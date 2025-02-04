@@ -63,7 +63,7 @@ export const runTask = async (taskArg: string, _options: any, command: Command) 
         task = stdinInput
       } else {
         // No stdin input, fall back to chat
-        runChat(options)
+        runChat(options, command)
         return
       }
     } catch (error) {
