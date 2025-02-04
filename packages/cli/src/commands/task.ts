@@ -25,6 +25,9 @@ export async function runTask(task: string | undefined, _options: any, command: 
     return
   }
 
+  console.log('Provider:', provider)
+  console.log('Model:', model)
+
   const runner = new Runner({
     provider,
     model,
@@ -37,29 +40,27 @@ export async function runTask(task: string | undefined, _options: any, command: 
     enableCache: true,
   })
 
-  if (task) {
-    const [exitReason, info] = await runner.startTask(task)
+  const [exitReason] = await runner.startTask(task)
 
-    switch (exitReason.type) {
-      case 'UsageExceeded':
-        console.error('Task failed: Usage limit exceeded')
-        process.exit(1)
-        break
-      case 'WaitForUserInput':
-        // Normal exit waiting for user input
-        break
-      case ToolResponseType.Exit:
-        // Task completed successfully
-        break
-      case ToolResponseType.Interrupted:
-        console.error('Task interrupted:', exitReason.message)
-        process.exit(1)
-        break
-      case ToolResponseType.HandOver:
-        // Task handed over to another agent
-        break
-    }
-
-    runner.printUsage()
+  switch (exitReason.type) {
+    case 'UsageExceeded':
+      console.error('Task failed: Usage limit exceeded')
+      process.exit(1)
+      break
+    case 'WaitForUserInput':
+      // Normal exit waiting for user input
+      break
+    case ToolResponseType.Exit:
+      // Task completed successfully
+      break
+    case ToolResponseType.Interrupted:
+      console.error('Task interrupted:', exitReason.message)
+      process.exit(1)
+      break
+    case ToolResponseType.HandOver:
+      // Task handed over to another agent
+      break
   }
+
+  runner.printUsage()
 }
