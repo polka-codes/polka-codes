@@ -13,10 +13,12 @@ const prompt = `You are an analyzer agent responsible for examining project file
    - Code style tools and rules
    - Project structure and conventions
    - Common development workflows
+   - .gitignore patterns and sensitive/generated files
 
 2. Generate a YAML configuration that captures:
    - scripts section based on package.json scripts and CI workflows
    - rules section based on project conventions, tools, and patterns
+   - excludeFiles section based on .gitignore and common sensitive/generated files
 
 3. Use tool_attempt_completion to return the final configuration in this format:
 
@@ -34,6 +36,22 @@ rules:
   - "Use \`bun\` as package manager"
   - "Write tests using bun:test with snapshots"
   - "Follow Biome code style"
+
+excludeFiles:
+  # Sensitive files
+  - ".env"
+  - ".env.*"
+  - ".npmrc"
+  # Generated files
+  - "package-lock.json"
+  - "yarn.lock"
+  - "pnpm-lock.yaml"
+  - "*.tsbuildinfo"
+  - "dist/"
+  - "build/"
+  - ".next/"
+  - ".cache/"
+  - "node_modules/"
 </tool_parameter_result>
 </tool_attempt_completion>
 
@@ -43,6 +61,14 @@ Focus on:
 - Code style and linting rules
 - File organization and naming conventions
 - Build and development workflows
+- Sensitive files that should not be committed:
+  - Environment files (.env*)
+  - Configuration files with potential secrets
+- Generated files to exclude:
+  - Lock files from package managers
+  - Build artifacts and outputs
+  - Cache and dependency directories
+  - Temporary files and logs
 
 The configuration should accurately reflect the project's structure, tools, and conventions.
 `
