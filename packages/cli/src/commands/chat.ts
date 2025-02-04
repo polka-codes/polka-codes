@@ -3,9 +3,9 @@ import type { Command } from 'commander'
 
 import { Chat } from '../Chat'
 import { Runner } from '../Runner'
+import { configPrompt } from '../configPrompt'
 import { parseOptions } from '../options'
 import { printEvent } from '../utils/eventHandler'
-import { configPrompt } from './config'
 
 export const runChat = async (opts: any, command?: Command) => {
   const options = command?.parent?.opts() ?? opts ?? {}

@@ -155,7 +155,7 @@ export function loadConfig(path?: string, cwd: string = process.cwd(), home = ho
   return projectConfig || globalConfig
 }
 
-const readConfig = (path: string): Config => {
+export const readConfig = (path: string): Config => {
   const file = readFileSync(path, 'utf8')
   const config = parse(file)
   return configSchema.parse(config)
