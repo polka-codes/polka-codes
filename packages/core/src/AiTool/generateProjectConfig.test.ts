@@ -11,7 +11,7 @@ describe('generateProjectConfig', () => {
     const files = ['package.json', '.polkacodes.yml']
 
     const input = generateProjectConfig.formatInput(files)
-    expect(input).toBe('package.json,.polkacodes.yml')
+    expect(input).toBe('<tool_input>\npackage.json\n.polkacodes.yml\n</tool_input>')
   })
 
   test('should parse output correctly', () => {
@@ -30,7 +30,7 @@ rules:
   test('should handle empty files array', () => {
     const files: string[] = []
     const input = generateProjectConfig.formatInput(files)
-    expect(input).toBe('')
+    expect(input).toBe('<tool_input>\n\n</tool_input>')
   })
 
   test('should trim whitespace in output', () => {

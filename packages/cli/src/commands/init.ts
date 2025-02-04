@@ -17,8 +17,8 @@ import {
 import { Command } from 'commander'
 import { parse, stringify } from 'yaml'
 
-import { loadConfig, localConfigFileName, readLocalConfig } from '../config'
-import { addSharedOptions } from '../options'
+import { localConfigFileName, readLocalConfig } from '../config'
+import { addSharedOptions, parseOptions } from '../options'
 import { getProvider } from '../provider'
 import { listFiles } from '../utils/listFiles'
 import { configPrompt } from './config'
@@ -29,7 +29,6 @@ addSharedOptions(initCommand)
 initCommand.action(async (options) => {
   try {
     // Check for existing config
-    const existingConfig = loadConfig() ?? {}
     const localConfig = readLocalConfig() ?? {}
     if (localConfig) {
       const proceed = await confirm({
@@ -42,11 +41,19 @@ initCommand.action(async (options) => {
       }
     }
 
-    // Configure AI provider
-    const { provider, model, apiKey } = await configPrompt({
-      provider: existingConfig.defaultProvider,
-      model: existingConfig.defaultModel,
-    })
+    const { config: existingConfig, providerConfig } = parseOptions(options)
+
+    let { provider, model, apiKey } = providerConfig.getConfigForCommand('init') ?? {}
+
+    if (!provider) {
+      // new user? ask for config
+      const newConfig = await configPrompt({ provider, model, apiKey })
+      provider = newConfig.provider as AiServiceProvider
+      model = newConfig.model
+      apiKey = newConfig.apiKey
+      localConfig.defaultProvider = provider
+      localConfig.defaultModel = model
+    }
 
     // Create AI service
     const service = createService(provider as AiServiceProvider, {
@@ -97,8 +104,6 @@ initCommand.action(async (options) => {
     // Combine configs
     const config = {
       ...localConfig,
-      defaultProvider: provider,
-      defaultModel: model,
       ...parsedConfig,
     }
 
