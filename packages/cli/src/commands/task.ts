@@ -8,6 +8,7 @@ import type { Command } from 'commander'
 import { Runner } from '../Runner'
 import { parseOptions } from '../options'
 import { printEvent } from '../utils/eventHandler'
+import { runChat } from './chat'
 
 export async function runTask(task: string | undefined, _options: any, command: Command) {
   const { config, providerConfig } = parseOptions(command.opts())
@@ -16,6 +17,12 @@ export async function runTask(task: string | undefined, _options: any, command: 
   if (!provider || !model) {
     console.error('Provider and model must be configured')
     process.exit(1)
+  }
+
+  if (!task) {
+    // do chat
+    await runChat({}, command)
+    return
   }
 
   const runner = new Runner({
