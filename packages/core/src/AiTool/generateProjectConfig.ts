@@ -20,7 +20,8 @@ const prompt = `You are an analyzer agent responsible for examining project file
 
 3. Use tool_attempt_completion to return the final configuration in this format:
 
-\`\`\`yaml
+<tool_attempt_completion>
+<tool_parameter_result>
 scripts:
   test:
     command: "bun test"
@@ -33,7 +34,8 @@ rules:
   - "Use \`bun\` as package manager"
   - "Write tests using bun:test with snapshots"
   - "Follow Biome code style"
-\`\`\`
+</tool_parameter_result>
+</tool_attempt_completion>
 
 Focus on:
 - Package manager and dependency management

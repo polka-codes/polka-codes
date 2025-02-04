@@ -18,16 +18,17 @@ import { Command } from 'commander'
 import { parse, stringify } from 'yaml'
 
 import { localConfigFileName, readLocalConfig } from '../config'
-import { addSharedOptions, parseOptions } from '../options'
+import { parseOptions } from '../options'
 import { getProvider } from '../provider'
 import { printEvent } from '../utils/eventHandler'
 import { listFiles } from '../utils/listFiles'
 import { configPrompt } from './config'
 
 export const initCommand = new Command('init').description('Initialize polkacodes configuration')
-addSharedOptions(initCommand)
 
-initCommand.action(async (options) => {
+initCommand.action(async (_options, command: Command) => {
+  const options = command.parent?.opts() ?? {}
+
   try {
     // Check for existing config
     const localConfig = readLocalConfig() ?? {}
@@ -45,6 +46,10 @@ initCommand.action(async (options) => {
     const { config: existingConfig, providerConfig, verbose } = parseOptions(options)
 
     let { provider, model, apiKey } = providerConfig.getConfigForCommand('init') ?? {}
+
+    console.log('Provider:', provider)
+    console.log('Model:', model)
+    console.log('Verbose:', verbose)
 
     if (!provider) {
       // new user? ask for config
