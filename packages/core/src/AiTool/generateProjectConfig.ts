@@ -18,7 +18,7 @@ const prompt = `You are an analyzer agent responsible for examining project file
 2. Generate a YAML configuration that captures:
    - scripts section based on package.json scripts and CI workflows
    - rules section based on project conventions, tools, and patterns
-   - excludeFiles section based on .gitignore and common sensitive/generated files
+   - excludeFiles section for common sensitive/generated files
 
 3. Use tool_attempt_completion to return the final configuration in this format:
 
@@ -46,12 +46,6 @@ excludeFiles:
   - "package-lock.json"
   - "yarn.lock"
   - "pnpm-lock.yaml"
-  - "*.tsbuildinfo"
-  - "dist/"
-  - "build/"
-  - ".next/"
-  - ".cache/"
-  - "node_modules/"
 </tool_parameter_result>
 </tool_attempt_completion>
 
@@ -67,8 +61,7 @@ Focus on:
 - Generated files to exclude:
   - Lock files from package managers
   - Build artifacts and outputs
-  - Cache and dependency directories
-  - Temporary files and logs
+  - Generated file that are not ignored by .gitignore
 
 The configuration should accurately reflect the project's structure, tools, and conventions.
 `
