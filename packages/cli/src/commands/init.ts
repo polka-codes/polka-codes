@@ -49,7 +49,6 @@ initCommand.action(async (_options, command: Command) => {
 
     console.log('Provider:', provider)
     console.log('Model:', model)
-    console.log('Verbose:', verbose)
 
     if (!provider) {
       // new user? ask for config
@@ -76,8 +75,8 @@ initCommand.action(async (_options, command: Command) => {
             return new AnalyzerAgent({
               ai: service,
               os: os.platform(),
-              provider: getProvider('analyzer', options.config),
-              interactive: options.interactive,
+              provider: getProvider('analyzer', existingConfig),
+              interactive: false,
             })
           default:
             throw new Error(`Unknown agent: ${name}`)
