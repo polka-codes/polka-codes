@@ -36,7 +36,7 @@ Description: Whenever you need extra details or clarification to complete the ta
 
 Parameters:
 - tool_parameter_question: (required) The question to ask the user. This should be a clear, specific question that addresses the information you need.
-- tool_parameter_options: (optional) A comma separated list of possible answers to the question. If not provided, the user will be prompted to provide an answer.
+- tool_parameter_options: (optional) A comma separated list of possible answers to the question. Ordered by preference. If not provided, the user will be prompted to provide an answer.
 
 Usage:
 <tool_ask_followup_question>

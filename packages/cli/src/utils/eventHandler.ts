@@ -13,6 +13,7 @@ export const printEvent = (verbose: number) => (event: TaskEvent) => {
       break
     case TaskEventKind.StartRequest:
       console.log('\n\n======== New Request ========\n')
+
       if (verbose) {
         console.log(event.userMessage)
         console.log('\n\n======== Request Message Ended ========\n')

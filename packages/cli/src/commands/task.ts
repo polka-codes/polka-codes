@@ -11,7 +11,7 @@ import { printEvent } from '../utils/eventHandler'
 import { runChat } from './chat'
 
 export async function runTask(task: string | undefined, _options: any, command: Command) {
-  const { config, providerConfig } = parseOptions(command.opts())
+  const { config, providerConfig, verbose } = parseOptions(command.opts())
   const { provider, model, apiKey } = providerConfig.getConfigForCommand('task') ?? {}
 
   if (!provider || !model) {
@@ -32,8 +32,8 @@ export async function runTask(task: string | undefined, _options: any, command: 
     config,
     maxMessageCount: 100, // TODO: Make configurable
     budget: 10, // TODO: Make configurable
-    interactive: true,
-    eventCallback: printEvent(1),
+    interactive: process.stdin.isTTY,
+    eventCallback: printEvent(verbose),
     enableCache: true,
   })
 

@@ -16,7 +16,7 @@ export const toolInfo = {
     {
       name: 'options',
       description:
-        'A comma separated list of possible answers to the question. If not provided, the user will be prompted to provide an answer.',
+        'A comma separated list of possible answers to the question. Ordered by preference. If not provided, the user will be prompted to provide an answer.',
       required: false,
       usageValue: 'A comma separated list of possible answers (optional)',
     },
