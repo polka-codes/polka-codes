@@ -3,7 +3,6 @@ import { Command } from 'commander'
 import { version } from '../package.json'
 import { runChat } from './commands/chat'
 import { commitCommand } from './commands/commit'
-import { configCommand } from './commands/config'
 import { initCommand } from './commands/init'
 import { prCommand } from './commands/pr'
 import { runTask } from './commands/task'
@@ -18,9 +17,6 @@ program.argument('[task]', 'The task to execute').action(runTask)
 
 // Chat command
 program.command('chat').description('Start an interactive chat session').action(runChat)
-
-// Config command
-program.addCommand(configCommand)
 
 // Init command
 program.addCommand(initCommand)
