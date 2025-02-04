@@ -36,7 +36,7 @@ export const handler: ToolHandler<typeof toolInfo, InteractionProvider> = async 
   if (!moreMessage) {
     return {
       type: ToolResponseType.Exit,
-      message: '<completed>true</completed>',
+      message: result,
     }
   }
 

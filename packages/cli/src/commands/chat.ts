@@ -1,11 +1,14 @@
 import { type AiServiceProvider, type ExitReason, type TaskInfo, ToolResponseType, defaultModels } from '@polka-codes/core'
+import type { Command } from 'commander'
+
 import { Chat } from '../Chat'
 import { Runner } from '../Runner'
 import { parseOptions } from '../options'
 import { printEvent } from '../utils/eventHandler'
 import { configPrompt } from './config'
 
-export const runChat = async (options: any) => {
+export const runChat = async (_options: any, command: Command) => {
+  const options = command.parent?.opts() ?? {}
   const { config, providerConfig, maxIterations, verbose } = parseOptions(options)
 
   let { provider, model, apiKey } = providerConfig.getConfigForAgent('coder') ?? {}

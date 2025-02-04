@@ -8,9 +8,10 @@ import { parseOptions } from '../options'
 export const prCommand = new Command('pr')
   .description('Create a GitHub pull request')
   .argument('[message]', 'Optional context for the commit message generation')
-  .action(async (message, options) => {
+  .action(async (message, _options, command: Command) => {
     const spinner = ora('Gathering information...').start()
 
+    const options = command.parent?.opts() ?? {}
     const { providerConfig } = parseOptions(options)
 
     const { provider, model, apiKey } = providerConfig.getConfigForCommand('pr') ?? {}

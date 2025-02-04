@@ -6,7 +6,7 @@ export type AiToolDefinition<Input, Output = string> = {
   prompt: string
   formatInput: (params: Input) => string
   parseOutput: (output: string) => Output
-  preferredAgent?: AgentNameType
+  agent?: AgentNameType
 }
 
 export type GetInput<T> = T extends AiToolDefinition<infer Input, any> ? Input : never

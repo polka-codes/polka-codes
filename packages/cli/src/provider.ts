@@ -9,7 +9,7 @@ import { listFiles } from './utils/listFiles'
 import { searchFiles } from './utils/searchFiles'
 
 export type ProviderOptions = {
-  command: {
+  command?: {
     onStarted(command: string): void
     onStdout(data: string): void
     onStderr(data: string): void
@@ -19,7 +19,7 @@ export type ProviderOptions = {
   excludeFiles?: string[]
 }
 
-export const getProvider = (agentName: AgentNameType, config: Config, options: ProviderOptions): ToolProvider => {
+export const getProvider = (agentName: AgentNameType, config: Config, options: ProviderOptions = {}): ToolProvider => {
   const ig = ignore().add(options.excludeFiles ?? [])
   const provider = {
     readFile: async (path: string): Promise<string> => {
@@ -63,7 +63,7 @@ export const getProvider = (agentName: AgentNameType, config: Config, options: P
       return new Promise((resolve, reject) => {
         // spawn a shell to execute the command
 
-        options.command.onStarted(command)
+        options.command?.onStarted(command)
 
         const child = spawn(command, [], {
           shell: true,
@@ -75,18 +75,18 @@ export const getProvider = (agentName: AgentNameType, config: Config, options: P
 
         child.stdout.on('data', (data) => {
           const dataStr = data.toString()
-          options.command.onStdout(dataStr)
+          options.command?.onStdout(dataStr)
           stdoutText += dataStr
         })
 
         child.stderr.on('data', (data) => {
           const dataStr = data.toString()
-          options.command.onStderr(dataStr)
+          options.command?.onStderr(dataStr)
           stderrText += dataStr
         })
 
         child.on('close', (code) => {
-          options.command.onExit(code ?? 0)
+          options.command?.onExit(code ?? 0)
           resolve({
             stdout: stdoutText,
             stderr: stderrText,
@@ -95,7 +95,7 @@ export const getProvider = (agentName: AgentNameType, config: Config, options: P
         })
 
         child.on('error', (err) => {
-          options.command.onError(err)
+          options.command?.onError(err)
           reject(err)
         })
       })

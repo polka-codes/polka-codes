@@ -10,9 +10,10 @@ export const commitCommand = new Command('commit')
   .description('Create a commit with AI-generated message')
   .option('-a, --all', 'Stage all files before committing')
   .argument('[message]', 'Optional context for the commit message generation')
-  .action(async (message, options) => {
+  .action(async (message, _options, command: Command) => {
     const spinner = ora('Gathering information...').start()
 
+    const options = command.parent?.opts() ?? {}
     const { providerConfig } = parseOptions(options)
 
     const { provider, model, apiKey } = providerConfig.getConfigForCommand('commit') ?? {}
