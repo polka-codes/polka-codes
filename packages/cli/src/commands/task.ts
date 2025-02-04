@@ -72,7 +72,7 @@ export const runTask = async (taskArg: string, _options: any, command: Command) 
     }
   }
 
-  const { providerConfig, config, maxIterations, verbose } = parseOptions(options)
+  const { providerConfig, config, maxMessageCount, verbose } = parseOptions(options)
 
   let { provider, model, apiKey } = providerConfig.getConfigForAgent('coder') ?? {}
 
@@ -92,7 +92,7 @@ export const runTask = async (taskArg: string, _options: any, command: Command) 
     model: model ?? defaultModels[provider],
     apiKey,
     config: config ?? {},
-    maxIterations,
+    maxMessageCount,
     interactive: false,
     eventCallback: printEvent(verbose),
   })

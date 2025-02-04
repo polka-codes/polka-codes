@@ -27,9 +27,9 @@ defaultProvider: "deepseek"
 # Default model to use when not specified for a provider
 defaultModel: "deepseek-chat"
 
-# Maximum number of iterations for AI operations
+# Maximum number of messages for AI operations
 # Helps prevent infinite loops and excessive API calls
-maxIterations: 50
+maxMessageCount: 50
 
 # Hook configurations for different agents
 # Hooks allow you to run specific commands at certain points in the agent's lifecycle

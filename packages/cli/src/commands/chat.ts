@@ -9,7 +9,7 @@ import { configPrompt } from './config'
 
 export const runChat = async (_options: any, command: Command) => {
   const options = command.parent?.opts() ?? {}
-  const { config, providerConfig, maxIterations, verbose } = parseOptions(options)
+  const { config, providerConfig, maxMessageCount, verbose } = parseOptions(options)
 
   let { provider, model, apiKey } = providerConfig.getConfigForAgent('coder') ?? {}
 
@@ -32,7 +32,7 @@ export const runChat = async (_options: any, command: Command) => {
     model: model ?? defaultModels[provider],
     apiKey,
     config: config ?? {},
-    maxIterations,
+    maxMessageCount,
     interactive: true,
     eventCallback: printEvent(verbose),
   })
@@ -50,25 +50,21 @@ export const runChat = async (_options: any, command: Command) => {
         taskInfo = info
         exitReason = reason
       }
-      switch (exitReason) {
-        case 'MaxIterations':
-          console.log('Max iterations reached.')
+      switch (exitReason.type) {
+        case 'UsageExceeded':
+          console.log('Usage exceeded.')
           chat.close()
           // TODO: ask user if they want to continue
           break
         case 'WaitForUserInput':
           break
-        default: {
-          switch (exitReason.type) {
-            case ToolResponseType.Interrupted:
-              console.log('Interrupted.')
-              chat.close()
-              break
-            case ToolResponseType.Exit:
-              chat.close()
-              return undefined
-          }
-        }
+        case ToolResponseType.Interrupted:
+          console.log('Interrupted.')
+          chat.close()
+          break
+        case ToolResponseType.Exit:
+          chat.close()
+          return undefined
       }
     },
     onExit: async () => {
