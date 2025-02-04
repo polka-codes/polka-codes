@@ -46,6 +46,7 @@ export class Runner {
     const service = createService(options.provider, {
       apiKey: options.apiKey,
       model: options.model,
+      usageMeter: this.#usageMeter,
     })
 
     let rules = options.config.rules
