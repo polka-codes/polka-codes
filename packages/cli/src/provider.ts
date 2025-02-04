@@ -4,6 +4,7 @@ import { dirname } from 'node:path'
 import type { AgentNameType, ToolProvider } from '@polka-codes/core'
 import ignore from 'ignore'
 
+import { input, select } from '@inquirer/prompts'
 import type { Config } from './config'
 import { listFiles } from './utils/listFiles'
 import { searchFiles } from './utils/searchFiles'
@@ -17,6 +18,7 @@ export type ProviderOptions = {
     onError(error: unknown): void
   }
   excludeFiles?: string[]
+  interactive?: boolean
 }
 
 export const getProvider = (agentName: AgentNameType, config: Config, options: ProviderOptions = {}): ToolProvider => {
@@ -100,7 +102,27 @@ export const getProvider = (agentName: AgentNameType, config: Config, options: P
         })
       })
     },
-    // askFollowupQuestion: async (question: string, options: string[]) => Promise<string> {},
+    askFollowupQuestion: async (question: string, answerOptions: string[]): Promise<string> => {
+      if (options.interactive) {
+        if (answerOptions.length === 0) {
+          return await input({ message: question })
+        }
+
+        const otherMessage = 'Other (enter text)'
+        answerOptions.push(otherMessage)
+        const answer = await select({
+          message: question,
+          choices: answerOptions.map((option) => ({ name: option, value: option })),
+        })
+
+        if (answer === otherMessage) {
+          return await input({ message: 'Enter your answer:' })
+        }
+        return answer
+      }
+
+      return answerOptions[0] ?? '<warning>This is non-interactive mode, no answer can be provided.</warning>'
+    },
     attemptCompletion: async (result: string): Promise<string | undefined> => {
       // TODO: if interactive, ask user to confirm completion
 

@@ -76,6 +76,7 @@ export class Runner {
         },
       },
       excludeFiles: options.config.excludeFiles,
+      interactive: options.interactive,
     }
 
     const platform = os.platform()
