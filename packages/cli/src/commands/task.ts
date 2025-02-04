@@ -27,6 +27,7 @@ export async function runTask(task: string | undefined, _options: any, command: 
     budget: 10, // TODO: Make configurable
     interactive: true,
     eventCallback: printEvent(1),
+    enableCache: true,
   })
 
   if (task) {

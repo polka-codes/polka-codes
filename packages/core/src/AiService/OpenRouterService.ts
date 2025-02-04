@@ -7,8 +7,9 @@ import type { ModelInfo } from './ModelInfo'
 import { convertToOpenAiMessages } from './utils'
 
 export class OpenRouterService extends AiServiceBase {
-  #client: OpenAI
-  #apiKey: string
+  readonly #client: OpenAI
+  readonly #apiKey: string
+  readonly #options: AiServiceOptions
 
   readonly model: { id: string; info: ModelInfo }
 
@@ -34,6 +35,8 @@ export class OpenRouterService extends AiServiceBase {
       },
     })
 
+    this.#options = options
+
     this.model = {
       id: options.model,
       info: {},
@@ -45,6 +48,8 @@ export class OpenRouterService extends AiServiceBase {
       { role: 'system', content: systemPrompt },
       ...convertToOpenAiMessages(messages),
     ]
+
+    const cacheControl = this.#options.enableCache ? { type: 'ephemeral' as const } : undefined
 
     // prompt caching: https://openrouter.ai/docs/prompt-caching
     // this is specifically for claude models (some models may 'support prompt caching' automatically without this)
@@ -68,7 +73,7 @@ export class OpenRouterService extends AiServiceBase {
               type: 'text',
               text: systemPrompt,
               // @ts-ignore-next-line
-              cache_control: { type: 'ephemeral' },
+              cache_control: cacheControl,
             },
           ],
         }
@@ -87,7 +92,7 @@ export class OpenRouterService extends AiServiceBase {
               msg.content.push(lastTextPart)
             }
             // @ts-ignore-next-line
-            lastTextPart.cache_control = { type: 'ephemeral' }
+            lastTextPart.cache_control = cacheControl
           }
         }
         break

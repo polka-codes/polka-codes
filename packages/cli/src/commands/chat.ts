@@ -36,6 +36,7 @@ export const runChat = async (opts: any, command?: Command) => {
     budget,
     interactive: true,
     eventCallback: printEvent(verbose),
+    enableCache: true,
   })
 
   let taskInfo: TaskInfo | undefined
