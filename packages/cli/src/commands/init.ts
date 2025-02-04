@@ -17,7 +17,7 @@ import {
 import { Command } from 'commander'
 import { parse, stringify } from 'yaml'
 
-import { loadConfig, localConfigFileName } from '../config'
+import { loadConfig, localConfigFileName, readLocalConfig } from '../config'
 import { addSharedOptions } from '../options'
 import { getProvider } from '../provider'
 import { listFiles } from '../utils/listFiles'
@@ -30,7 +30,8 @@ initCommand.action(async (options) => {
   try {
     // Check for existing config
     const existingConfig = loadConfig() ?? {}
-    if (existingConfig) {
+    const localConfig = readLocalConfig() ?? {}
+    if (localConfig) {
       const proceed = await confirm({
         message: `Found existing config at ${localConfigFileName}. Do you want to proceed? This will overwrite the existing config.`,
         default: false,
@@ -88,14 +89,14 @@ initCommand.action(async (options) => {
       }
     }
 
-    const { response: generatedConfig } = await generateProjectConfig(service, relevantFiles)
+    const { response: generatedConfig } = await generateProjectConfig(multiAgent, relevantFiles)
 
     // Parse generated config
     const parsedConfig = generatedConfig ? parse(generatedConfig) : {}
 
     // Combine configs
     const config = {
-      ...existingConfig,
+      ...localConfig,
       defaultProvider: provider,
       defaultModel: model,
       ...parsedConfig,

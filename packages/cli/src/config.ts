@@ -159,3 +159,11 @@ const readConfig = (path: string): Config => {
   const config = parse(file)
   return configSchema.parse(config)
 }
+
+export const readLocalConfig = (path?: string): Config | undefined => {
+  try {
+    return readConfig(path ?? localConfigFileName)
+  } catch (error) {
+    return undefined
+  }
+}
