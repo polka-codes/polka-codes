@@ -20,6 +20,7 @@ import { parse, stringify } from 'yaml'
 import { localConfigFileName, readLocalConfig } from '../config'
 import { addSharedOptions, parseOptions } from '../options'
 import { getProvider } from '../provider'
+import { printEvent } from '../utils/eventHandler'
 import { listFiles } from '../utils/listFiles'
 import { configPrompt } from './config'
 
@@ -36,12 +37,12 @@ initCommand.action(async (options) => {
         default: false,
       })
       if (!proceed) {
-        console.log('Initialization cancelled')
+        console.log('Cancelled')
         return
       }
     }
 
-    const { config: existingConfig, providerConfig } = parseOptions(options)
+    const { config: existingConfig, providerConfig, verbose } = parseOptions(options)
 
     let { provider, model, apiKey } = providerConfig.getConfigForCommand('init') ?? {}
 
@@ -96,7 +97,7 @@ initCommand.action(async (options) => {
       }
     }
 
-    const { response: generatedConfig } = await generateProjectConfig(multiAgent, relevantFiles)
+    const { response: generatedConfig } = await generateProjectConfig(multiAgent, relevantFiles, printEvent(verbose))
 
     // Parse generated config
     const parsedConfig = generatedConfig ? parse(generatedConfig) : {}

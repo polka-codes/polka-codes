@@ -1,5 +1,5 @@
 import { UsageMeter } from '../AiService/UsageMeter'
-import type { AgentBase, ExitReason, TaskEvent, TaskEventCallback, TaskInfo } from './AgentBase'
+import type { AgentBase, ExitReason, TaskEventCallback, TaskInfo } from './AgentBase'
 
 export type MultiAgentConfig = {
   createAgent: (name: string) => Promise<AgentBase>
@@ -56,7 +56,7 @@ export class MultiAgent {
     task: string
     context?: string
     maxIterations?: number
-    callback?: (event: TaskEvent) => void | Promise<void>
+    callback?: TaskEventCallback
   }): Promise<[ExitReason, TaskInfo]> {
     if (this.#activeAgent) {
       throw new Error('An active agent already exists')
