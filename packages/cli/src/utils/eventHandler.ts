@@ -52,8 +52,8 @@ export const printEvent = (verbose: number) => (event: TaskEvent) => {
       console.log('Files:', event.files)
       console.log()
       break
-    case TaskEventKind.MaxIterationsReached:
-      console.log('Max iterations reached')
+    case TaskEventKind.UsageExceeded:
+      console.log('\n\n======= Usage Exceeded ========\n')
       break
     case TaskEventKind.EndTask:
       break

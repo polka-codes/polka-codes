@@ -4,6 +4,7 @@ import { DeepSeekService } from './DeepSeekService'
 import type { ModelInfo } from './ModelInfo'
 import { OllamaService } from './OllamaService'
 import { OpenRouterService } from './OpenRouterService'
+import { UsageMeter } from './UsageMeter'
 
 export enum AiServiceProvider {
   Anthropic = 'anthropic',
@@ -32,5 +33,7 @@ export const createService = (provider: AiServiceProvider, options: AiServiceOpt
       return new OpenRouterService(options)
   }
 }
+
+export { UsageMeter }
 
 export type { MessageParam, AiServiceOptions, AiServiceBase, ModelInfo, ApiUsage }

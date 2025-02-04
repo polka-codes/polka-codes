@@ -12,7 +12,7 @@ export class DeepSeekService extends AiServiceBase {
   readonly model: { id: string; info: ModelInfo }
 
   constructor(options: AiServiceOptions) {
-    super()
+    super(options.usageMeter)
 
     this.#client = new OpenAI({
       baseURL: 'https://api.deepseek.com/v1',

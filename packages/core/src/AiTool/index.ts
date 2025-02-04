@@ -25,7 +25,7 @@ export const executeAgentTool = async <T extends AiToolDefinition<any, any>>(
   agent: MultiAgent,
   params: GetInput<T>,
   callback?: TaskEventCallback,
-): Promise<{ response: GetOutput<T>; usage: ApiUsage }> => {
+): Promise<GetOutput<T>> => {
   if (!definition.agent) {
     throw new Error('Agent not specified')
   }
@@ -38,15 +38,11 @@ export const executeAgentTool = async <T extends AiToolDefinition<any, any>>(
   })
 
   // Check if we have a successful completion
-  const isSuccess = typeof exitReason === 'object' && 'type' in exitReason && exitReason.type === ToolResponseType.Exit
-  if (isSuccess) {
-    return {
-      response: definition.parseOutput(exitReason.message),
-      usage: agent.usage,
-    }
+  if (exitReason.type === ToolResponseType.Exit) {
+    return definition.parseOutput(exitReason.message)
   }
 
-  throw new Error(`Tool execution failed: ${JSON.stringify(exitReason)}`)
+  throw new Error(`Tool execution failed: ${exitReason.type}`)
 }
 
 export const makeTool = <T extends AiToolDefinition<any, any>>(definition: T) => {

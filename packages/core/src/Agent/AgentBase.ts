@@ -27,7 +27,7 @@ export enum TaskEventKind {
   ToolError = 'ToolError',
   ToolInterrupted = 'ToolInterrupted',
   ToolHandOver = 'ToolHandOver',
-  MaxIterationsReached = 'MaxIterationsReached',
+  UsageExceeded = 'UsageExceeded',
   EndTask = 'EndTask',
 }
 
@@ -106,7 +106,7 @@ export interface TaskEventToolHandOver extends TaskEventBase {
  * Event for task completion states
  */
 export interface TaskEventCompletion extends TaskEventBase {
-  kind: TaskEventKind.MaxIterationsReached | TaskEventKind.EndTask
+  kind: TaskEventKind.UsageExceeded | TaskEventKind.EndTask
 }
 
 /**
@@ -125,9 +125,6 @@ export type TaskEvent =
 export type TaskEventCallback = (event: TaskEvent) => void | Promise<void>
 
 export type TaskInfo = {
-  options: {
-    maxIterations: number
-  }
   messages: MessageParam[]
 } & ApiUsage
 
@@ -156,7 +153,12 @@ export type AgentInfo = {
   responsibilities: string[]
 }
 
-export type ExitReason = 'MaxIterations' | 'WaitForUserInput' | ToolResponseExit | ToolResponseInterrupted | ToolResponseHandOver
+export type ExitReason =
+  | { type: 'UsageExceeded' }
+  | { type: 'WaitForUserInput' }
+  | ToolResponseExit
+  | ToolResponseInterrupted
+  | ToolResponseHandOver
 
 export abstract class AgentBase {
   protected readonly ai: AiServiceBase
@@ -184,17 +186,9 @@ export abstract class AgentBase {
   async startTask({
     task,
     context,
-    maxIterations = 50,
     callback = () => {},
-  }: { task: string; context?: string; maxIterations?: number; callback?: TaskEventCallback }): Promise<[ExitReason, TaskInfo]> {
-    if (maxIterations < 1) {
-      throw new Error('Max iterations must be greater than 0')
-    }
-
+  }: { task: string; context?: string; maxMessagesCount?: number; callback?: TaskEventCallback }): Promise<[ExitReason, TaskInfo]> {
     const taskInfo: TaskInfo = {
-      options: {
-        maxIterations,
-      },
       messages: [],
       inputTokens: 0,
       outputTokens: 0,
@@ -217,9 +211,9 @@ export abstract class AgentBase {
   async #processLoop(userMessage: string, taskInfo: TaskInfo, callback: TaskEventCallback): Promise<[ExitReason, TaskInfo]> {
     let nextRequest: string | undefined = userMessage
     while (nextRequest) {
-      if (taskInfo.messages.length > taskInfo.options.maxIterations * 2) {
-        callback({ kind: TaskEventKind.MaxIterationsReached, info: taskInfo })
-        return ['MaxIterations', taskInfo]
+      if (this.ai.usageMeter.isLimitExceeded().result) {
+        callback({ kind: TaskEventKind.UsageExceeded, info: taskInfo })
+        return [{ type: 'UsageExceeded' }, taskInfo]
       }
       const response = await this.#request(taskInfo, nextRequest, callback)
       const [newMessage, exitReason] = await this.#handleResponse(taskInfo, response, callback)
@@ -377,6 +371,6 @@ export abstract class AgentBase {
   }
 
   get usage() {
-    return this.ai.usage
+    return this.ai.usageMeter.usage
   }
 }

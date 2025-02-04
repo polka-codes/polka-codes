@@ -7,12 +7,23 @@ import type { ApiUsage } from './AiServiceBase'
 import type { ModelInfo } from './ModelInfo'
 
 export class UsageMeter {
-  #usage: ApiUsage = {
+  #usage = {
     inputTokens: 0,
     outputTokens: 0,
     cacheWriteTokens: 0,
     cacheReadTokens: 0,
     totalCost: 0,
+  }
+
+  #messageCount = 0
+
+  readonly maxCost: number
+  readonly maxMessageCount: number
+
+  constructor(options: { maxCost?: number; maxMessageCount?: number } = {}) {
+    // default to some something is definitely wrong if ever exceeded value
+    this.maxCost = options.maxCost || 1000
+    this.maxMessageCount = options.maxMessageCount || 1000
   }
 
   /**
@@ -34,7 +45,21 @@ export class UsageMeter {
         1_000_000
     }
 
-    this.#usage.totalCost = (this.#usage.totalCost ?? 0) + (usage.totalCost ?? 0)
+    this.#usage.totalCost += usage.totalCost ?? 0
+  }
+
+  incrementMessageCount(count = 1) {
+    this.#messageCount += count
+  }
+
+  isLimitExceeded() {
+    const messageCount = this.#messageCount >= this.maxMessageCount
+    const cost = this.#usage.totalCost >= this.maxCost
+    return {
+      messageCount,
+      cost,
+      result: messageCount || cost,
+    }
   }
 
   /**

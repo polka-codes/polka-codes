@@ -24,6 +24,7 @@ export interface AiServiceOptions {
   model?: string
   apiKey?: string
   baseUrl?: string
+  usageMeter?: UsageMeter
 }
 
 export type MessageParam = Anthropic.Messages.MessageParam
@@ -37,13 +38,19 @@ export type ApiUsage = {
 }
 
 export abstract class AiServiceBase {
-  protected readonly usageMeter = new UsageMeter()
+  readonly usageMeter: UsageMeter
+
+  constructor(usageMeter?: UsageMeter) {
+    this.usageMeter = usageMeter ?? new UsageMeter()
+  }
 
   abstract get model(): { id: string; info: ModelInfo }
 
   abstract sendImpl(systemPrompt: string, messages: MessageParam[]): ApiStream
 
   async *send(systemPrompt: string, messages: MessageParam[]): ApiStream {
+    this.usageMeter.incrementMessageCount()
+
     const stream = this.sendImpl(systemPrompt, messages)
 
     for await (const chunk of stream) {
@@ -57,6 +64,8 @@ export abstract class AiServiceBase {
   }
 
   async request(systemPrompt: string, messages: MessageParam[]) {
+    this.usageMeter.incrementMessageCount()
+
     const stream = this.sendImpl(systemPrompt, messages)
     const usage: ApiUsage = {
       inputTokens: 0,
@@ -94,12 +103,5 @@ export abstract class AiServiceBase {
       reasoning,
       usage,
     }
-  }
-
-  /**
-   * Get current usage statistics
-   */
-  get usage(): ApiUsage {
-    return this.usageMeter.usage
   }
 }

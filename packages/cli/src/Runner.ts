@@ -10,11 +10,13 @@ import {
   MultiAgent,
   type TaskEventCallback,
   type TaskInfo,
+  UsageMeter,
   analyzerAgentInfo,
   architectAgentInfo,
   coderAgentInfo,
   createService,
 } from '@polka-codes/core'
+
 import type { Config } from './config'
 import { type ProviderOptions, getProvider } from './provider'
 import { listFiles } from './utils/listFiles'
@@ -24,7 +26,8 @@ export type RunnerOptions = {
   model: string
   apiKey?: string
   config: Config
-  maxIterations: number
+  maxMessageCount: number
+  budget: number
   interactive: boolean
   eventCallback: TaskEventCallback
 }
@@ -32,13 +35,19 @@ export type RunnerOptions = {
 export class Runner {
   readonly #options: RunnerOptions
   readonly #multiAgent: MultiAgent
+  readonly #usageMeter: UsageMeter
 
   constructor(options: RunnerOptions) {
     this.#options = options
+    this.#usageMeter = new UsageMeter({
+      maxCost: options.budget,
+      maxMessageCount: options.maxMessageCount,
+    })
 
     const service = createService(options.provider, {
       apiKey: options.apiKey,
       model: options.model,
+      usageMeter: this.#usageMeter,
     })
 
     let rules = options.config.rules
@@ -170,10 +179,10 @@ ${fileList.join('\n')}${limited ? '\n<files_truncated>true</files_truncated>' : 
   }
 
   get usage() {
-    return this.#multiAgent.usage
+    return this.#usageMeter.usage
   }
 
   printUsage() {
-    this.#multiAgent.printUsage()
+    this.#usageMeter.printUsage()
   }
 }

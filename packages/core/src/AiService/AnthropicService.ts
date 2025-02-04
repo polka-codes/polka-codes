@@ -13,7 +13,7 @@ export class AnthropicService extends AiServiceBase {
   readonly model: { id: AnthropicModelId; info: ModelInfo }
 
   constructor(options: AiServiceOptions) {
-    super()
+    super(options.usageMeter)
 
     this.#options = options
     this.#client = new Anthropic({
