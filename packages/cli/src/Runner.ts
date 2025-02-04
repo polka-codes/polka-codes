@@ -30,6 +30,7 @@ export type RunnerOptions = {
   budget: number
   interactive: boolean
   eventCallback: TaskEventCallback
+  enableCache: boolean
 }
 
 export class Runner {
@@ -48,6 +49,7 @@ export class Runner {
       apiKey: options.apiKey,
       model: options.model,
       usageMeter: this.#usageMeter,
+      enableCache: options.enableCache,
     })
 
     let rules = options.config.rules

@@ -152,6 +152,7 @@ initCommand.action(async (options, command: Command) => {
       const service = createService(provider, {
         apiKey,
         model,
+        enableCache: true,
       })
 
       // Create MultiAgent

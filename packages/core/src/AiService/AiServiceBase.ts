@@ -25,6 +25,7 @@ export interface AiServiceOptions {
   apiKey?: string
   baseUrl?: string
   usageMeter?: UsageMeter
+  enableCache?: boolean
 }
 
 export type MessageParam = Anthropic.Messages.MessageParam
