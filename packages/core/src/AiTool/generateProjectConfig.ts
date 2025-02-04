@@ -16,7 +16,11 @@ const prompt = `You are an analyzer agent responsible for examining project file
    - .gitignore patterns and sensitive/generated files
 
 2. Generate a YAML configuration that captures:
-   - scripts section based on package.json scripts and CI workflows
+   - scripts section based on package.json scripts and CI workflows. If applicable, generate following scripts:
+     - format: Format the code using a code formatter tool
+     - check: Check the code for errors using a linter tool
+     - test: Run tests using a test runner tool
+   - include other relevant scripts based on project conventions, tools, and patterns
    - rules section based on project conventions, tools, and patterns
    - excludeFiles section for common sensitive/generated files
 

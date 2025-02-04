@@ -102,27 +102,6 @@ export const getProvider = (agentName: AgentNameType, config: Config, options: P
     },
     // askFollowupQuestion: async (question: string, options: string[]) => Promise<string> {},
     attemptCompletion: async (result: string): Promise<string | undefined> => {
-      // Check if agent has beforeCompletion hook
-      const cmd = (config.hooks?.agents?.[agentName]?.beforeCompletion ?? config.hooks?.agents?.default?.beforeCompletion)?.trim()
-      if (cmd) {
-        try {
-          const { exitCode, stdout, stderr } = await provider.executeCommand(cmd, false)
-          if (exitCode !== 0) {
-            return `
-<command>${cmd}</command>
-<command_exit_code>${exitCode}</command_exit_code>
-<command_stdout>
-${stdout}
-</command_stdout>
-<command_stderr>
-${stderr}
-</command_stderr>`
-          }
-        } catch (error) {
-          console.warn(`Failed to execute hook: ${error}`)
-        }
-      }
-
       // TODO: if interactive, ask user to confirm completion
 
       return undefined

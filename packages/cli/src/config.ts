@@ -41,12 +41,7 @@ export const configSchema = z
     defaultProvider: z.string().optional(),
     defaultModel: z.string().optional(),
     maxMessageCount: z.number().int().positive().optional(),
-    budget: z.number().int().positive().optional(),
-    hooks: z
-      .object({
-        agents: z.record(agentNameOrDefault, z.object({ beforeCompletion: z.string().optional() })).optional(),
-      })
-      .optional(),
+    budget: z.number().positive().optional(),
     scripts: z
       .record(
         z.string(),

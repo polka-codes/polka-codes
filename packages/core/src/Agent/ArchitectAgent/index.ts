@@ -37,7 +37,12 @@ export class ArchitectAgent extends AgentBase {
       provider: options.provider,
       interactive: options.interactive,
       agents: options.agents,
+      scripts: options.scripts,
     })
+  }
+
+  override onBeforeInvokeTool() {
+    return Promise.resolve(undefined)
   }
 }
 

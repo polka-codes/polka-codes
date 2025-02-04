@@ -23,16 +23,6 @@ exports[`config merges global and local config with local precedence 1`] = `
   "defaultModel": "claude-3-opus",
   "defaultProvider": "anthropic",
   "excludeFiles": undefined,
-  "hooks": {
-    "agents": {
-      "architect": {
-        "beforeCompletion": "echo 'local architect hook'",
-      },
-      "coder": {
-        "beforeCompletion": "echo 'local coder hook'",
-      },
-    },
-  },
   "providers": {
     "anthropic": {
       "apiKey": "local-key",

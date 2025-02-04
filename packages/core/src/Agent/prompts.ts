@@ -191,4 +191,12 @@ export const responsePrompts = {
 ${result}
 </tool_result>
 </tool_response>`,
+  commandResult: (command: string, exitCode: number, stdout: string, stderr: string) => `<command>${command}</command>
+<command_exit_code>${exitCode}</command_exit_code>
+<command_stdout>
+${stdout}
+</command_stdout>
+<command_stderr>
+${stderr}
+</command_stderr>`,
 } as const

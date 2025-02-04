@@ -175,12 +175,6 @@ commands:
   default:
     provider: deepseek
     model: deepseek-chat
-hooks:
-  agents:
-    coder:
-      beforeCompletion: "echo 'global coder hook'"
-    architect:
-      beforeCompletion: "echo 'global architect hook'"
 scripts:
   test: echo "global"
   complex:
@@ -205,12 +199,6 @@ agents:
 commands:
   default:
     model: deepseek-coder-instruct
-hooks:
-  agents:
-    coder:
-      beforeCompletion: "echo 'local coder hook'"
-    architect:
-      beforeCompletion: "echo 'local architect hook'"
 scripts:
   test: echo "local"
 rules:
@@ -244,72 +232,6 @@ rules: local-rule
 
     const config = loadConfig(localConfigPath, testSubDir, testHomeDir)
     expect(config?.rules).toEqual(['global-rule-1', 'global-rule-2', 'local-rule'])
-  })
-
-  test('handles hooks configuration', () => {
-    const configPath = join(testSubDir, 'hooks-config.yml')
-    writeFileSync(
-      configPath,
-      `
-hooks:
-  agents:
-    coder:
-      beforeCompletion: "echo 'before completion'"
-    architect:
-      beforeCompletion: "echo 'architect hook'"
-    `,
-    )
-
-    const config = loadConfig(configPath, testSubDir, testHomeDir)
-    expect(config?.hooks).toEqual({
-      agents: {
-        coder: {
-          beforeCompletion: "echo 'before completion'",
-        },
-        architect: {
-          beforeCompletion: "echo 'architect hook'",
-        },
-      },
-    })
-  })
-
-  test('merges hooks from global and local configs', () => {
-    const globalConfigPath = join(testHomeDir, '.config', 'polkacodes', 'config.yml')
-    const localConfigPath = join(testSubDir, '.polkacodes.yml')
-
-    writeFileSync(
-      globalConfigPath,
-      `
-hooks:
-  agents:
-    coder:
-      beforeCompletion: "echo 'global coder hook'"
-    architect:
-      beforeCompletion: "echo 'global architect hook'"
-    `,
-    )
-
-    writeFileSync(
-      localConfigPath,
-      `
-hooks:
-  agents:
-    coder:
-      beforeCompletion: "echo 'local coder hook'"
-    `,
-    )
-
-    const config = loadConfig(localConfigPath, testSubDir, testHomeDir)
-    expect(config?.hooks).toEqual({
-      agents: {
-        coder: {
-          beforeCompletion: "echo 'local coder hook'",
-        },
-        architect: {
-          beforeCompletion: "echo 'global architect hook'",
-        },
-      },
-    })
   })
 
   test('parses project .polkacodes.yml successfully', () => {
