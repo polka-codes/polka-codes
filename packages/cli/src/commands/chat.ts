@@ -11,6 +11,11 @@ export const runChat = async (opts: any, command?: Command) => {
   const options = command?.parent?.opts() ?? opts ?? {}
   const { config, providerConfig, maxMessageCount, verbose, budget } = parseOptions(options)
 
+  if (!process.stdin.isTTY) {
+    console.error('Error: Terminal is not interactive. Please run this command in an interactive terminal.')
+    process.exit(1)
+  }
+
   let { provider, model, apiKey } = providerConfig.getConfigForAgent('coder') ?? {}
 
   if (!provider) {
