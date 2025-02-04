@@ -23,8 +23,8 @@ export function addSharedOptions(command: Command) {
     .option('--api-provider <provider>', 'API provider')
     .option('--model <model>', 'Model ID')
     .option('--api-key <key>', 'API key')
-    .option('--max-messages <iterations>', 'Maximum number of messages to send. Default to 30', Number.parseInt, 30)
-    .option('--budget <budget>', 'Budget for the AI service. Default to $1000', Number.parseInt, 1000)
+    .option('--max-messages <iterations>', 'Maximum number of messages to send. Default to 50', Number.parseInt, 50)
+    .option('--budget <budget>', 'Budget for the AI service. Default to $1000', Number.parseFloat, 1000)
     .option('-v --verbose', 'Enable verbose output. Use -v for level 1, -vv for level 2', (value, prev) => prev + 1, 0)
 }
 

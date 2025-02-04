@@ -7,8 +7,8 @@ import { parseOptions } from '../options'
 import { printEvent } from '../utils/eventHandler'
 import { configPrompt } from './config'
 
-export const runChat = async (_options: any, command: Command) => {
-  const options = command.parent?.opts() ?? {}
+export const runChat = async (opts: any, command?: Command) => {
+  const options = command?.parent?.opts() ?? opts ?? {}
   const { config, providerConfig, maxMessageCount, verbose, budget } = parseOptions(options)
 
   let { provider, model, apiKey } = providerConfig.getConfigForAgent('coder') ?? {}
