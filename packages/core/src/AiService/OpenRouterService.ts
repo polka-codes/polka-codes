@@ -13,7 +13,7 @@ export class OpenRouterService extends AiServiceBase {
   readonly model: { id: string; info: ModelInfo }
 
   constructor(options: AiServiceOptions) {
-    super()
+    super(options.usageMeter)
 
     if (!options.model) {
       throw new Error('OpenRouter requires a model')

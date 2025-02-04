@@ -24,6 +24,7 @@ export interface AiServiceOptions {
   model?: string
   apiKey?: string
   baseUrl?: string
+  usageMeter?: UsageMeter
 }
 
 export type MessageParam = Anthropic.Messages.MessageParam
@@ -37,7 +38,11 @@ export type ApiUsage = {
 }
 
 export abstract class AiServiceBase {
-  protected readonly usageMeter = new UsageMeter()
+  protected readonly usageMeter: UsageMeter
+
+  constructor(usageMeter?: UsageMeter) {
+    this.usageMeter = usageMeter ?? new UsageMeter()
+  }
 
   abstract get model(): { id: string; info: ModelInfo }
 
