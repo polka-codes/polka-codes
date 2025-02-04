@@ -10,7 +10,7 @@ export const commitCommand = new Command('commit')
   .description('Create a commit with AI-generated message')
   .option('-a, --all', 'Stage all files before committing')
   .argument('[message]', 'Optional context for the commit message generation')
-  .action(async (message, _options, command: Command) => {
+  .action(async (message, localOptions, command: Command) => {
     const spinner = ora('Gathering information...').start()
 
     const options = command.parent?.opts() ?? {}
@@ -38,7 +38,7 @@ export const commitCommand = new Command('commit')
 
       // Handle no staged files case
       if (stagedFiles.length === 0) {
-        if (options.all) {
+        if (localOptions.all) {
           // Stage all files
           execSync('git add .')
         } else {
