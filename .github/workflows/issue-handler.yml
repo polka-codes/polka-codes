@@ -80,7 +80,7 @@ jobs:
           POLKA_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           GH_TOKEN: ${{ github.token }}
         run: |
-          echo "$TASK" | polka-codes -v
+          echo "$TASK" | polka-codes -v --budget 1
           POLKA_MODEL=deepseek/deepseek-chat polka-codes commit -a
           git push origin polka-codes/issue-$ISSUE_NUMBER
           POLKA_MODEL=deepseek/deepseek-chat polka-codes pr "closes #$ISSUE_NUMBER"
