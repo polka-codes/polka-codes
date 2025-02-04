@@ -146,6 +146,7 @@ export type AgentBaseConfig = {
   provider: ToolProvider
   interactive: boolean
   agents?: AgentInfo[]
+  scripts?: Record<string, string | { command: string; description: string }>
 }
 
 export type AgentInfo = {
@@ -356,6 +357,10 @@ export abstract class AgentBase {
           canRetry: false,
         }
       }
+      const resp = await this.onBeforeInvokeTool(name, args)
+      if (resp) {
+        return resp
+      }
       return await handler(this.config.provider, args)
     } catch (error) {
       return {
@@ -365,6 +370,8 @@ export abstract class AgentBase {
       }
     }
   }
+
+  protected abstract onBeforeInvokeTool(name: string, args: Record<string, string>): Promise<ToolResponse | undefined>
 
   get model() {
     return this.ai.model

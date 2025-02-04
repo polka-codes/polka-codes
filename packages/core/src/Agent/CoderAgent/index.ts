@@ -1,11 +1,16 @@
-import { getAvailableTools } from '../../tool'
+import { type ToolResponse, ToolResponseType, getAvailableTools } from '../../tool'
 import { allTools } from '../../tools'
 import { AgentBase } from '../AgentBase'
+import { responsePrompts } from '../prompts'
 import type { AgentInfo, SharedAgentOptions } from './../AgentBase'
 import { fullSystemPrompt } from './prompts'
 
 export type CoderAgentOptions = SharedAgentOptions
 
+/**
+ * Coder agent for writing code.
+ * Using Scripts: format, check, test
+ */
 export class CoderAgent extends AgentBase {
   constructor(options: CoderAgentOptions) {
     const combinedTools = [...(options.additionalTools ?? []), ...Object.values(allTools)]
@@ -29,7 +34,60 @@ export class CoderAgent extends AgentBase {
       provider: options.provider,
       interactive: options.interactive,
       agents: options.agents,
+      scripts: options.scripts,
     })
+  }
+
+  protected async onBeforeInvokeTool(name: string, args: Record<string, string>): Promise<ToolResponse | undefined> {
+    const executeCommand = this.config.provider.executeCommand
+    if (!executeCommand) {
+      return
+    }
+    // try to format the code, ignore errors
+    const format = this.config.scripts?.format
+    const formatCommand = typeof format === 'string' ? format : format?.command
+
+    if (formatCommand) {
+      try {
+        await executeCommand(formatCommand, false)
+      } catch (error) {
+        console.warn(`Failed to format code using command: ${formatCommand}`, error)
+      }
+    }
+
+    // try to check the code, report errors if any
+    const check = this.config.scripts?.check
+    const checkCommand = typeof check === 'string' ? check : check?.command
+    if (checkCommand) {
+      try {
+        const { exitCode, stdout, stderr } = await executeCommand(checkCommand, false)
+        if (exitCode !== 0) {
+          return {
+            type: ToolResponseType.Reply,
+            message: responsePrompts.commandResult(checkCommand, exitCode, stdout, stderr),
+          }
+        }
+      } catch (error) {
+        console.warn(`Failed to check code using command: ${checkCommand}`, error)
+      }
+    }
+
+    // try to test the code, report errors if any
+    const test = this.config.scripts?.test
+    const testCommand = typeof test === 'string' ? test : test?.command
+    if (testCommand) {
+      try {
+        const { exitCode, stdout, stderr } = await executeCommand(testCommand, false)
+        if (exitCode !== 0) {
+          return {
+            type: ToolResponseType.Reply,
+            message: responsePrompts.commandResult(testCommand, exitCode, stdout, stderr),
+          }
+        }
+      } catch (error) {
+        console.warn(`Failed to test code using command: ${testCommand}`, error)
+      }
+    }
   }
 }
 
