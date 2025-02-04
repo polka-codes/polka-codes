@@ -22,8 +22,8 @@ export class UsageMeter {
 
   constructor(options: { maxCost?: number; maxMessageCount?: number } = {}) {
     // default to some something is definitely wrong if ever exceeded value
-    this.maxCost = options.maxCost ?? 1000
-    this.maxMessageCount = options.maxMessageCount ?? 1000
+    this.maxCost = options.maxCost || 1000
+    this.maxMessageCount = options.maxMessageCount || 1000
   }
 
   /**

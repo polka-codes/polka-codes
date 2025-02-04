@@ -27,6 +27,7 @@ export type RunnerOptions = {
   apiKey?: string
   config: Config
   maxMessageCount: number
+  budget: number
   interactive: boolean
   eventCallback: TaskEventCallback
 }
@@ -39,7 +40,7 @@ export class Runner {
   constructor(options: RunnerOptions) {
     this.#options = options
     this.#usageMeter = new UsageMeter({
-      maxCost: 1, // TODO: from options
+      maxCost: options.budget,
       maxMessageCount: options.maxMessageCount,
     })
 

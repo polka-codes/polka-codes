@@ -9,7 +9,7 @@ import { configPrompt } from './config'
 
 export const runChat = async (_options: any, command: Command) => {
   const options = command.parent?.opts() ?? {}
-  const { config, providerConfig, maxMessageCount, verbose } = parseOptions(options)
+  const { config, providerConfig, maxMessageCount, verbose, budget } = parseOptions(options)
 
   let { provider, model, apiKey } = providerConfig.getConfigForAgent('coder') ?? {}
 
@@ -33,6 +33,7 @@ export const runChat = async (_options: any, command: Command) => {
     apiKey,
     config: config ?? {},
     maxMessageCount,
+    budget,
     interactive: true,
     eventCallback: printEvent(verbose),
   })
