@@ -1,6 +1,7 @@
 import type { MultiAgent, TaskEventCallback } from '../Agent'
 import type { AiServiceBase, ApiUsage } from '../AiService'
 import { ToolResponseType } from '../tool'
+import createNewProjectDef from './createNewProject'
 import generateGitCommitMessageDef from './generateGitCommitMessage'
 import generateGithubPullRequestDetailsDef from './generateGithubPullRequestDetails'
 import generateProjectConfigDef from './generateProjectConfig'
@@ -64,5 +65,6 @@ export const makeAgentTool = <T extends AiToolDefinition<any, any>>(definition: 
 export const generateGitCommitMessage = makeTool(generateGitCommitMessageDef)
 export const generateGithubPullRequestDetails = makeTool(generateGithubPullRequestDetailsDef)
 export const generateProjectConfig = makeAgentTool(generateProjectConfigDef)
+export const createNewProject = makeAgentTool(createNewProjectDef)
 
 export type { AiToolDefinition, GetInput, GetOutput }
