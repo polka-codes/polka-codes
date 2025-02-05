@@ -1,4 +1,4 @@
-import { type AiServiceProvider, type ExitReason, type TaskInfo, ToolResponseType, defaultModels } from '@polka-codes/core'
+import { type ExitReason, type TaskInfo, ToolResponseType, defaultModels } from '@polka-codes/core'
 import type { Command } from 'commander'
 
 import { Chat } from '../Chat'
@@ -21,7 +21,7 @@ export const runChat = async (opts: any, command?: Command) => {
   if (!provider) {
     // new user? ask for config
     const newConfig = await configPrompt({ provider, model, apiKey })
-    provider = newConfig.provider as AiServiceProvider
+    provider = newConfig.provider
     model = newConfig.model
     apiKey = newConfig.apiKey
   }
