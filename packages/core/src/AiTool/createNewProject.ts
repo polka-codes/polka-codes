@@ -5,121 +5,37 @@
 
 import type { AiToolDefinition } from './types'
 
-export type ProjectSpecification = {
-  projectType: string
-  targetAudience: string
-  language: string
-  framework: string
-  packageManager: string
-  linter: string
-  testing: string
-  additionalFeatures: string[]
-}
+const prompt = `You are an AiTool designed to assist users in creating new projects. Follow these guidelines:
 
-const prompt = `You are an architect agent responsible for gathering and validating project specifications. Your task is to:
+1. **Gather Information:**
+   - Begin by asking the user for essential project details, including:
+     - Project type (e.g., web, mobile, desktop, etc.)
+     - Desired programming languages
+     - Preferred frameworks or libraries
+     - Any additional specifications or requirements
 
-1. Analyze the provided project specifications for completeness and compatibility:
+2. **Clarification & Confirmation:**
+   - Do not make any decisions or assumptions on behalf of the user.
+   - Ask clarifying questions if any detail is ambiguous.
+   - Confirm each piece of information with the user before proceeding to the next step.
 
-Project Type Options:
-- web (Web application)
-- cli (Command-line interface)
-- library (Reusable package/library)
-- api (Backend API service)
+3. **Avoid Redundancy:**
+   - Do not repeat questions or details that have already been confirmed.
+   - Keep interactions concise and focused on gathering complete and accurate details.
 
-Target Audience Options:
-- developers (Developer tools/libraries)
-- end-users (Consumer applications)
-- enterprise (Business applications)
-
-Language Options:
-- TypeScript (Recommended for large projects)
-- JavaScript (For simpler projects)
-
-Framework Options:
-- React (Web applications)
-- Vue (Web applications)
-- None (For libraries or simple projects)
-
-Package Manager Options:
-- bun (Fast, modern package manager)
-- npm (Standard package manager)
-- pnpm (Efficient package manager)
-
-Linter Options:
-- eslint (Flexible, customizable)
-- biome (Fast, modern linter)
-
-Testing Options:
-- bun:test (Fast, built-in testing)
-- vitest (Feature-rich testing)
-- jest (Popular testing framework)
-
-Additional Features:
-- docker (Containerization)
-- ci/cd (Continuous Integration/Deployment)
-- api-docs (API Documentation)
-- monitoring (Application monitoring)
-
-2. Validate specifications for compatibility:
-- Ensure framework matches project type
-- Verify testing framework compatibility
-- Check package manager constraints
-- Validate feature combinations
-
-3. Hand over to coder agent with complete specifications using this format:
-
-<tool_hand_over>
-<tool_parameter_agent_name>coder</tool_parameter_agent_name>
-<tool_parameter_task>Implement new project based on specifications</tool_parameter_task>
-<tool_parameter_context>
-Project Specifications:
-- Type: {projectType}
-- Target: {targetAudience}
-- Language: {language}
-- Framework: {framework}
-- Package Manager: {packageManager}
-- Linter: {linter}
-- Testing: {testing}
-- Additional Features: {additionalFeatures}
-
-Implementation Requirements:
-1. Create project structure
-2. Set up build configuration
-3. Configure testing framework
-4. Add linting rules
-5. Implement CI/CD if specified
-6. Add documentation
-</tool_parameter_context>
-</tool_hand_over>
-
-Focus on:
-- Compatibility between choices
-- Best practices for chosen stack
-- Modern development workflows
-- Developer experience
-- Project maintainability
-
-The specifications should form a cohesive and well-structured project foundation.`
+4. **Handover to Coder Agent:**
+   - Once all required information is collected and validated by the user, compile the final project specifications.
+   - Clearly hand over these details to the coder agent, instructing them to create the new project based on the confirmed specifications.`
 
 export default {
   name: 'createNewProject',
-  description: 'Creates a new project based on user specifications',
+  description: 'Creates a new project',
   prompt,
-  formatInput: (params: ProjectSpecification) => {
-    return `<tool_input>
-Project Specifications:
-- Type: ${params.projectType}
-- Target: ${params.targetAudience}
-- Language: ${params.language}
-- Framework: ${params.framework}
-- Package Manager: ${params.packageManager}
-- Linter: ${params.linter}
-- Testing: ${params.testing}
-- Additional Features: ${params.additionalFeatures.join(', ')}
-</tool_input>`
+  formatInput: (params: string) => {
+    return `<project_name>${params}</project_name>`
   },
   parseOutput: (output: string) => {
     return output.trim()
   },
   agent: 'architect',
-} as const satisfies AiToolDefinition<ProjectSpecification>
+} as const satisfies AiToolDefinition<string>

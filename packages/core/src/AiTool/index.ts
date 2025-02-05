@@ -68,4 +68,3 @@ export const generateProjectConfig = makeAgentTool(generateProjectConfigDef)
 export const createNewProject = makeAgentTool(createNewProjectDef)
 
 export type { AiToolDefinition, GetInput, GetOutput }
-export type { ProjectSpecification } from './createNewProject'
