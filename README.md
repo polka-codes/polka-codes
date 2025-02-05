@@ -29,6 +29,12 @@ npx @polka-codes/cli "your task description"
 ### Basic Usage
 
 ```bash
+# Create a new project
+polka-codes create my-project
+
+# Initialize configuration
+polka-codes init
+
 # Run some task
 polka-codes "improve README.md"
 
@@ -37,15 +43,14 @@ polka-codes
 
 # Get help
 polka-codes --help
-
-# Create config file
-polka-codes config
 ```
 
 For more information, see [cli README](packages/cli/README.md)
 
 ## Features
 
+- 🎯 **Project Creation**: Easy project scaffolding with `create` command
+- 🔧 **Simple Setup**: Quick configuration with `init` command
 - 🤖 **Multiple AI Providers**: Supports DeepSeek (recommended), Anthropic Claude, Ollama, and OpenRouter
 - 🔧 **CLI Interface**: Interactive command-line tool with chat and task execution
 - 🔄 **GitHub Action**: Seamless integration with CI/CD pipelines
