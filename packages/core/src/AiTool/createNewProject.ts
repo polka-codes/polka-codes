@@ -12,6 +12,9 @@ const prompt = `You are an AiTool designed to assist users in creating new proje
      - Project type (e.g., web, mobile, desktop, etc.)
      - Desired programming languages
      - Preferred frameworks or libraries
+     - Build tools and package manager preferences
+     - Testing frameworks and patterns
+     - Code style and linting preferences
      - Any additional specifications or requirements
 
 2. **Clarification & Confirmation:**
@@ -23,9 +26,43 @@ const prompt = `You are an AiTool designed to assist users in creating new proje
    - Do not repeat questions or details that have already been confirmed.
    - Keep interactions concise and focused on gathering complete and accurate details.
 
-4. **Handover to Coder Agent:**
-   - Once all required information is collected and validated by the user, compile the final project specifications.
-   - Clearly hand over these details to the coder agent, instructing them to create the new project based on the confirmed specifications.`
+4. **Generate Configuration:**
+   - Based on the collected information, generate a .polkacodes.yml configuration file that includes:
+     - scripts section with common development commands (test, format, check, etc.)
+     - rules section reflecting project conventions and tools
+     - excludeFiles section for sensitive and generated files
+   - Example structure:
+     \`\`\`yaml
+     scripts:
+       test:
+         command: "[test-command]"
+         description: "Run tests"
+       format:
+         command: "[format-command]"
+         description: "Format code"
+       check:
+         command: "[check-command]"
+         description: "Check code"
+
+     rules:
+       - "[package-manager-rule]"
+       - "[testing-framework-rule]"
+       - "[code-style-rule]"
+       - "[other-rule]"
+
+     excludeFiles:
+       - ".env"
+       - ".env.*"
+     \`\`\`
+
+5. **Handover to Coder Agent:**
+   - Once all required information is collected and validated by the user, compile:
+     1. The final project specifications
+     2. The .polkacodes.yml configuration content
+   - Clearly hand over these details to the coder agent, instructing them to:
+     1. Create the new project based on the confirmed specifications
+     2. Include the .polkacodes.yml file in the project root
+     3. Ensure all specified tools and configurations are properly set up`
 
 export default {
   name: 'createNewProject',

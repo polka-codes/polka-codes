@@ -69,7 +69,8 @@ export async function runTask(taskArg: string | undefined, _options: any, comman
   }
 
   const { config, providerConfig, verbose, maxMessageCount, budget } = parseOptions(command.opts())
-  const { provider, model, apiKey } = providerConfig.getConfigForCommand('task') ?? {}
+  // TODO: configure starter agent
+  const { provider, model, apiKey } = providerConfig.getConfigForAgent('architect') ?? {}
 
   if (!provider || !model) {
     console.error('Provider and model must be configured')
