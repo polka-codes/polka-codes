@@ -88,7 +88,7 @@ export class Runner {
         switch (agentName) {
           case coderAgentInfo.name:
             return new CoderAgent({
-              ai: service,
+              ai: service, // TODO: different code may use different ai service
               os: platform,
               customInstructions: rules,
               scripts: options.config.scripts,
