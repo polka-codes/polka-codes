@@ -9,7 +9,6 @@ import {
   CoderAgent,
   MultiAgent,
   type TaskEventCallback,
-  type TaskInfo,
   UsageMeter,
   analyzerAgentInfo,
   architectAgentInfo,
@@ -167,18 +166,17 @@ ${fileList.join('\n')}${limited ? '\n<files_truncated>true</files_truncated>' : 
 
   async startTask(task: string) {
     const agentName = architectAgentInfo.name
-    const [exitReason, info] = await this.#multiAgent.startTask({
+    const exitReason = await this.#multiAgent.startTask({
       agentName: agentName,
       task,
       context: await this.#defaultContext(agentName),
-      callback: this.#options.eventCallback,
     })
 
-    return [exitReason, info] as const
+    return exitReason
   }
 
-  async continueTask(message: string, taskInfo: TaskInfo) {
-    return await this.#multiAgent.continueTask(message, taskInfo, this.#options.eventCallback)
+  async continueTask(message: string) {
+    return await this.#multiAgent.continueTask(message)
   }
 
   get usage() {

@@ -31,7 +31,7 @@ export const executeAgentTool = async <T extends AiToolDefinition<any, any>>(
     throw new Error('Agent not specified')
   }
 
-  const [exitReason] = await agent.startTask({
+  const exitReason = await agent.startTask({
     agentName: definition.agent,
     task: definition.prompt,
     context: definition.formatInput(params),

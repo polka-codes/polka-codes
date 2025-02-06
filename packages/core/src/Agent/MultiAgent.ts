@@ -1,4 +1,5 @@
-import type { AgentBase, ExitReason, TaskEventCallback, TaskInfo } from './AgentBase'
+import { ToolResponseType } from '../tool'
+import type { AgentBase, ExitReason, TaskEventCallback } from './AgentBase'
 
 export type MultiAgentConfig = {
   createAgent: (name: string) => Promise<AgentBase>
@@ -18,26 +19,17 @@ export class MultiAgent {
     return this.#activeAgent?.model
   }
 
-  async #startTask(
-    agentName: string,
-    task: string,
-    context: string | undefined,
-    callback?: TaskEventCallback,
-  ): Promise<[ExitReason, TaskInfo]> {
+  async #startTask(agentName: string, task: string, context: string | undefined): Promise<ExitReason> {
     this.#activeAgent = await this.#config.createAgent(agentName)
-    const [exitReason, info] = await this.#activeAgent.startTask({
+    const exitReason = await this.#activeAgent.startTask({
       task,
       context,
-      callback,
     })
-    if (typeof exitReason === 'string') {
-      return [exitReason, info]
-    }
-    if (exitReason.type === 'HandOver') {
+    if (exitReason.type === ToolResponseType.HandOver) {
       const context = await this.#config.getContext?.(agentName, exitReason.context, exitReason.files)
-      return await this.#startTask(exitReason.agentName, exitReason.task, context, callback)
+      return await this.#startTask(exitReason.agentName, exitReason.task, context)
     }
-    return [exitReason, info]
+    return exitReason
   }
 
   async startTask(options: {
@@ -45,17 +37,17 @@ export class MultiAgent {
     task: string
     context?: string
     callback?: TaskEventCallback
-  }): Promise<[ExitReason, TaskInfo]> {
+  }): Promise<ExitReason> {
     if (this.#activeAgent) {
       throw new Error('An active agent already exists')
     }
-    return this.#startTask(options.agentName, options.task, options.context, options.callback)
+    return this.#startTask(options.agentName, options.task, options.context)
   }
 
-  async continueTask(userMessage: string, taskInfo: TaskInfo, callback: TaskEventCallback = () => {}): Promise<[ExitReason, TaskInfo]> {
+  async continueTask(userMessage: string): Promise<ExitReason> {
     if (!this.#activeAgent) {
       throw new Error('No active agent')
     }
-    return this.#activeAgent.continueTask(userMessage, taskInfo, callback)
+    return this.#activeAgent.continueTask(userMessage)
   }
 }
