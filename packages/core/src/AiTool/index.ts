@@ -1,4 +1,4 @@
-import type { MultiAgent, TaskEventCallback } from '../Agent'
+import type { MultiAgent } from '../Agent'
 import type { AiServiceBase, ApiUsage } from '../AiService'
 import { ToolResponseType } from '../tool'
 import createNewProjectDef from './createNewProject'
@@ -25,17 +25,15 @@ export const executeAgentTool = async <T extends AiToolDefinition<any, any>>(
   definition: T,
   agent: MultiAgent,
   params: GetInput<T>,
-  callback?: TaskEventCallback,
 ): Promise<GetOutput<T>> => {
   if (!definition.agent) {
     throw new Error('Agent not specified')
   }
 
-  const [exitReason] = await agent.startTask({
+  const exitReason = await agent.startTask({
     agentName: definition.agent,
     task: definition.prompt,
     context: definition.formatInput(params),
-    callback,
   })
 
   // Check if we have a successful completion
@@ -53,12 +51,8 @@ export const makeTool = <T extends AiToolDefinition<any, any>>(definition: T) =>
 }
 
 export const makeAgentTool = <T extends AiToolDefinition<any, any>>(definition: T) => {
-  return async (
-    agent: MultiAgent,
-    params: GetInput<T>,
-    callback?: TaskEventCallback,
-  ): Promise<{ response: GetOutput<T>; usage: ApiUsage }> => {
-    return executeAgentTool(definition, agent, params, callback)
+  return async (agent: MultiAgent, params: GetInput<T>): Promise<{ response: GetOutput<T>; usage: ApiUsage }> => {
+    return executeAgentTool(definition, agent, params)
   }
 }
 

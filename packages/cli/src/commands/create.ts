@@ -5,24 +5,15 @@
 
 import { existsSync } from 'node:fs'
 import { mkdir, stat } from 'node:fs/promises'
-import os from 'node:os'
 import { join } from 'node:path'
 import { Command } from 'commander'
 
 import { confirm, input } from '@inquirer/prompts'
-import {
-  ArchitectAgent,
-  CoderAgent,
-  MultiAgent,
-  UsageMeter,
-  architectAgentInfo,
-  coderAgentInfo,
-  createNewProject,
-  createService,
-} from '@polka-codes/core'
+import { architectAgentInfo, coderAgentInfo, createNewProject } from '@polka-codes/core'
+import { ApiProviderConfig } from '../ApiProviderConfig'
+import { Runner } from '../Runner'
 import { configPrompt } from '../configPrompt'
 import { parseOptions } from '../options'
-import { getProvider } from '../provider'
 import { printEvent } from '../utils/eventHandler'
 
 const askForPath = async (projectName: string) => {
@@ -98,48 +89,17 @@ export const createCommand = new Command('create')
     // Change working directory
     process.chdir(targetPath)
 
-    const usageMeter = new UsageMeter({
-      maxCost: budget,
+    const runner = new Runner({
+      providerConfig: new ApiProviderConfig({ defaultProvider: provider, defaultModel: model, providers: { [provider]: { apiKey } } }),
+      config: {},
       maxMessageCount,
-    })
-
-    // Create AI service
-    const service = createService(provider, {
-      apiKey,
-      model,
-      usageMeter,
+      budget,
+      interactive: true,
+      eventCallback: printEvent(verbose),
       enableCache: true,
-    })
-
-    const agents = [architectAgentInfo, coderAgentInfo]
-
-    // Create MultiAgent
-    const multiAgent = new MultiAgent({
-      createAgent: async (name: string) => {
-        const agentName = name.trim().toLowerCase()
-        switch (agentName) {
-          case architectAgentInfo.name:
-            return new ArchitectAgent({
-              ai: service, // TODO: different code may use different ai service
-              os: os.platform(),
-              provider: getProvider('architect', config, { interactive: true }),
-              interactive: true,
-              agents,
-            })
-          case coderAgentInfo.name:
-            return new CoderAgent({
-              ai: service, // TODO: different code may use different ai service
-              os: os.platform(),
-              provider: getProvider('coder', config, { interactive: true }),
-              interactive: true,
-              agents,
-            })
-          default:
-            throw new Error(`Unknown agent: ${name}`)
-        }
-      },
+      availableAgents: [architectAgentInfo, coderAgentInfo],
     })
 
     // Start project creation
-    await createNewProject(multiAgent, projectName, printEvent(verbose))
+    await createNewProject(runner.multiAgent, projectName)
   })

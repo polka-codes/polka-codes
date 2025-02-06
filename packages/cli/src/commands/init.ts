@@ -4,21 +4,20 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import os from 'node:os'
 import { dirname } from 'node:path'
 import { confirm, select } from '@inquirer/prompts'
-import { AnalyzerAgent, MultiAgent, analyzerAgentInfo, createService, generateProjectConfig } from '@polka-codes/core'
+import { analyzerAgentInfo, generateProjectConfig } from '@polka-codes/core'
 import { Command } from 'commander'
 import { set } from 'lodash'
 import { parse, stringify } from 'yaml'
 
 import { ZodError } from 'zod'
+import { ApiProviderConfig } from '../ApiProviderConfig'
+import { Runner } from '../Runner'
 import { type Config, getGlobalConfigPath, loadConfigAtPath, localConfigFileName } from '../config'
 import { type ProviderConfig, configPrompt } from '../configPrompt'
 import { parseOptions } from '../options'
-import { getProvider } from '../provider'
 import { printEvent } from '../utils/eventHandler'
-import { listFiles } from '../utils/listFiles'
 
 export const initCommand = new Command('init')
   .description('Initialize polkacodes configuration')
@@ -77,7 +76,7 @@ initCommand.action(async (options, command: Command) => {
       }
     }
 
-    const { config, providerConfig, verbose } = parseOptions(cmdOptions)
+    const { config, providerConfig, verbose, maxMessageCount, budget } = parseOptions(cmdOptions)
     let { provider, model, apiKey } = providerConfig.getConfigForCommand('init') ?? {}
 
     // Get provider configuration
@@ -148,49 +147,21 @@ initCommand.action(async (options, command: Command) => {
 
     let generatedConfig = {}
     if (shouldAnalyze) {
-      // Create AI service
-      const service = createService(provider, {
-        apiKey,
-        model,
+      const runner = new Runner({
+        providerConfig: new ApiProviderConfig({ defaultProvider: provider, defaultModel: model, providers: { [provider]: { apiKey } } }),
+        config: {},
+        maxMessageCount,
+        budget,
+        interactive: true,
+        eventCallback: printEvent(verbose),
         enableCache: true,
-      })
-
-      // Create MultiAgent
-      const multiAgent = new MultiAgent({
-        createAgent: async (name: string) => {
-          const agentName = name.trim().toLowerCase()
-          switch (agentName) {
-            case analyzerAgentInfo.name:
-              return new AnalyzerAgent({
-                ai: service,
-                os: os.platform(),
-                provider: getProvider('analyzer', config),
-                interactive: false,
-              })
-            default:
-              throw new Error(`Unknown agent: ${name}`)
-          }
-        },
+        availableAgents: [analyzerAgentInfo],
       })
 
       // Generate project config
       console.log('Analyzing project files...')
-      const files: Record<string, string> = {}
-      const [relevantFiles] = await listFiles('.', true, 1000, process.cwd())
 
-      // Read relevant files
-      for (const filePath of relevantFiles) {
-        if (typeof filePath === 'string' && existsSync(filePath)) {
-          try {
-            const content = readFileSync(filePath, 'utf8')
-            files[filePath] = content
-          } catch (error) {
-            console.warn(`Failed to read file: ${filePath}`)
-          }
-        }
-      }
-
-      const { response } = await generateProjectConfig(multiAgent, relevantFiles, printEvent(verbose))
+      const { response } = await generateProjectConfig(runner.multiAgent, undefined)
       generatedConfig = response ? parse(response) : {}
     }
 

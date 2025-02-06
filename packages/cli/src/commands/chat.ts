@@ -1,4 +1,4 @@
-import { type ExitReason, type TaskInfo, ToolResponseType, defaultModels } from '@polka-codes/core'
+import { type ExitReason, ToolResponseType, architectAgentInfo } from '@polka-codes/core'
 import type { Command } from 'commander'
 
 import { Chat } from '../Chat'
@@ -16,7 +16,9 @@ export const runChat = async (opts: any, command?: Command) => {
     process.exit(1)
   }
 
-  let { provider, model, apiKey } = providerConfig.getConfigForAgent('coder') ?? {}
+  // TODO: configure starter agent
+  const startAgent = architectAgentInfo.name
+  let { provider, model, apiKey } = providerConfig.getConfigForAgent(startAgent) ?? {}
 
   if (!provider) {
     // new user? ask for config
@@ -33,9 +35,7 @@ export const runChat = async (opts: any, command?: Command) => {
   console.log('What can I do for you?')
 
   const runner = new Runner({
-    provider,
-    model: model ?? defaultModels[provider],
-    apiKey,
+    providerConfig,
     config: config ?? {},
     maxMessageCount,
     budget,
@@ -44,17 +44,16 @@ export const runChat = async (opts: any, command?: Command) => {
     enableCache: true,
   })
 
-  let taskInfo: TaskInfo | undefined
+  let started = false
   const chat = new Chat({
     onMessage: async (message) => {
       let exitReason: ExitReason
-      if (taskInfo) {
-        const [reason, info] = await runner.continueTask(message, taskInfo)
-        taskInfo = info
+      if (started) {
+        const reason = await runner.continueTask(message)
         exitReason = reason
       } else {
-        const [reason, info] = await runner.startTask(message)
-        taskInfo = info
+        const reason = await runner.startTask(message)
+        started = true
         exitReason = reason
       }
       switch (exitReason.type) {

@@ -2,14 +2,14 @@ import { readFile } from 'node:fs/promises'
 import os from 'node:os'
 import {
   type AgentBase,
+  type AgentInfo,
   type AgentNameType,
-  type AiServiceProvider,
+  type AiServiceBase,
   AnalyzerAgent,
   ArchitectAgent,
   CoderAgent,
   MultiAgent,
   type TaskEventCallback,
-  type TaskInfo,
   UsageMeter,
   analyzerAgentInfo,
   architectAgentInfo,
@@ -17,39 +17,33 @@ import {
   createService,
 } from '@polka-codes/core'
 
+import type { ApiProviderConfig } from './ApiProviderConfig'
 import type { Config } from './config'
 import { type ProviderOptions, getProvider } from './provider'
 import { listFiles } from './utils/listFiles'
 
 export type RunnerOptions = {
-  provider: AiServiceProvider
-  model: string
-  apiKey?: string
+  providerConfig: ApiProviderConfig
   config: Config
   maxMessageCount: number
   budget: number
   interactive: boolean
   eventCallback: TaskEventCallback
   enableCache: boolean
+  availableAgents?: AgentInfo[] // empty to enable all agents
 }
 
 export class Runner {
   readonly #options: RunnerOptions
-  readonly #multiAgent: MultiAgent
   readonly #usageMeter: UsageMeter
+
+  readonly multiAgent: MultiAgent
 
   constructor(options: RunnerOptions) {
     this.#options = options
     this.#usageMeter = new UsageMeter({
       maxCost: options.budget,
       maxMessageCount: options.maxMessageCount,
-    })
-
-    const service = createService(options.provider, {
-      apiKey: options.apiKey,
-      model: options.model,
-      usageMeter: this.#usageMeter,
-      enableCache: options.enableCache,
     })
 
     let rules = options.config.rules
@@ -80,41 +74,59 @@ export class Runner {
     }
 
     const platform = os.platform()
-    const agents = [coderAgentInfo, architectAgentInfo]
 
-    this.#multiAgent = new MultiAgent({
+    const services: Record<string, Record<string, AiServiceBase>> = {}
+
+    const getOrCreateService = (agentName: string) => {
+      const config = this.#options.providerConfig.getConfigForAgent(agentName)
+      if (!config) {
+        // return any existing service if found
+        const service = Object.values(Object.values(services)[0] ?? {})[0]
+        if (service) {
+          return service
+        }
+        throw new Error(`No provider configured for agent: ${agentName}`)
+      }
+      const { provider, model, apiKey } = config
+      let service = services[provider]?.[model]
+      if (!service) {
+        service = createService(provider, {
+          apiKey,
+          model,
+          usageMeter: this.#usageMeter,
+          enableCache: options.enableCache,
+        })
+        services[provider] = { [model]: service }
+      }
+      return service
+    }
+
+    this.multiAgent = new MultiAgent({
       createAgent: async (name: string): Promise<AgentBase> => {
         const agentName = name.trim().toLowerCase()
+        const args = {
+          ai: getOrCreateService(agentName),
+          os: platform,
+          customInstructions: rules,
+          scripts: options.config.scripts,
+          interactive: options.interactive,
+          agents: this.#options.availableAgents ?? [coderAgentInfo, architectAgentInfo, analyzerAgentInfo],
+        }
         switch (agentName) {
           case coderAgentInfo.name:
             return new CoderAgent({
-              ai: service, // TODO: different code may use different ai service
-              os: platform,
-              customInstructions: rules,
-              scripts: options.config.scripts,
-              provider: getProvider('coder', options.config, providerOptions),
-              interactive: options.interactive,
-              agents,
+              ...args,
+              provider: getProvider(agentName, options.config, providerOptions),
             })
           case architectAgentInfo.name:
             return new ArchitectAgent({
-              ai: service,
-              os: platform,
-              customInstructions: rules,
-              scripts: options.config.scripts,
-              provider: getProvider('architect', options.config, providerOptions),
-              interactive: options.interactive,
-              agents,
+              ...args,
+              provider: getProvider(agentName, options.config, providerOptions),
             })
           case analyzerAgentInfo.name:
             return new AnalyzerAgent({
-              ai: service,
-              os: platform,
-              customInstructions: rules,
-              scripts: options.config.scripts,
-              provider: getProvider('analyzer', options.config, providerOptions),
-              interactive: options.interactive,
-              agents,
+              ...args,
+              provider: getProvider(agentName, options.config, providerOptions),
             })
           default:
             throw new Error(`Unknown agent: ${name}`)
@@ -165,20 +177,18 @@ ${fileList.join('\n')}${limited ? '\n<files_truncated>true</files_truncated>' : 
     return `<now_date>${new Date().toISOString()}</now_date>${fileContext}`
   }
 
-  async startTask(task: string) {
-    const agentName = architectAgentInfo.name
-    const [exitReason, info] = await this.#multiAgent.startTask({
+  async startTask(task: string, agentName: string = architectAgentInfo.name, context?: string) {
+    const exitReason = await this.multiAgent.startTask({
       agentName: agentName,
       task,
-      context: await this.#defaultContext(agentName),
-      callback: this.#options.eventCallback,
+      context: context ?? (await this.#defaultContext(agentName)),
     })
 
-    return [exitReason, info] as const
+    return exitReason
   }
 
-  async continueTask(message: string, taskInfo: TaskInfo) {
-    return await this.#multiAgent.continueTask(message, taskInfo, this.#options.eventCallback)
+  async continueTask(message: string) {
+    return await this.multiAgent.continueTask(message)
   }
 
   get usage() {

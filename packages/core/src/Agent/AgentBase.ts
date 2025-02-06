@@ -1,4 +1,4 @@
-import type { AiServiceBase, ApiUsage, MessageParam } from '../AiService'
+import type { AiServiceBase, MessageParam } from '../AiService'
 import {
   type FullToolInfo,
   type ToolResponse,
@@ -36,7 +36,7 @@ export enum TaskEventKind {
  */
 export interface TaskEventBase {
   kind: TaskEventKind
-  info: TaskInfo
+  agent: AgentBase
 }
 
 /**
@@ -124,10 +124,6 @@ export type TaskEvent =
 
 export type TaskEventCallback = (event: TaskEvent) => void | Promise<void>
 
-export type TaskInfo = {
-  messages: MessageParam[]
-} & ApiUsage
-
 export type SharedAgentOptions = {
   ai: AiServiceBase
   os: string
@@ -147,6 +143,7 @@ export type AgentBaseConfig = {
   interactive: boolean
   agents?: AgentInfo[]
   scripts?: Record<string, string | { command: string; description: string }>
+  callback?: TaskEventCallback
 }
 
 export type AgentInfo = {
@@ -165,6 +162,7 @@ export abstract class AgentBase {
   protected readonly ai: AiServiceBase
   protected readonly config: Readonly<AgentBaseConfig>
   protected readonly handlers: Record<string, FullToolInfo>
+  protected readonly messages: MessageParam[] = []
 
   constructor(name: string, ai: AiServiceBase, config: AgentBaseConfig) {
     this.ai = ai
@@ -184,83 +182,69 @@ export abstract class AgentBase {
     this.handlers = handlers
   }
 
-  async startTask({
-    task,
-    context,
-    callback = () => {},
-  }: { task: string; context?: string; maxMessagesCount?: number; callback?: TaskEventCallback }): Promise<[ExitReason, TaskInfo]> {
-    const taskInfo: TaskInfo = {
-      messages: [],
-      inputTokens: 0,
-      outputTokens: 0,
-      cacheWriteTokens: 0,
-      cacheReadTokens: 0,
-      totalCost: 0,
-    }
+  async #callback(event: TaskEvent) {
+    await this.config.callback?.(event)
+  }
 
+  async startTask({ task, context }: { task: string; context?: string }): Promise<ExitReason> {
     let text = `<task>${task}</task>`
 
     if (context) {
       text += `\n<context>${context}</context>`
     }
 
-    callback({ kind: TaskEventKind.StartTask, info: taskInfo, systemPrompt: this.config.systemPrompt })
+    this.#callback({ kind: TaskEventKind.StartTask, agent: this, systemPrompt: this.config.systemPrompt })
 
-    return await this.#processLoop(text, taskInfo, callback)
+    return await this.#processLoop(text)
   }
 
-  async #processLoop(userMessage: string, taskInfo: TaskInfo, callback: TaskEventCallback): Promise<[ExitReason, TaskInfo]> {
+  async #processLoop(userMessage: string): Promise<ExitReason> {
     let nextRequest: string | undefined = userMessage
     while (nextRequest) {
       if (this.ai.usageMeter.isLimitExceeded().result) {
-        callback({ kind: TaskEventKind.UsageExceeded, info: taskInfo })
-        return [{ type: 'UsageExceeded' }, taskInfo]
+        this.#callback({ kind: TaskEventKind.UsageExceeded, agent: this })
+        return { type: 'UsageExceeded' }
       }
-      const response = await this.#request(taskInfo, nextRequest, callback)
-      const [newMessage, exitReason] = await this.#handleResponse(taskInfo, response, callback)
+      const response = await this.#request(nextRequest)
+      const [newMessage, exitReason] = await this.#handleResponse(response)
       if (exitReason) {
-        callback({ kind: TaskEventKind.EndTask, info: taskInfo })
-        return [exitReason, taskInfo]
+        this.#callback({ kind: TaskEventKind.EndTask, agent: this })
+        return exitReason
       }
       nextRequest = newMessage
     }
 
-    callback({ kind: TaskEventKind.EndTask, info: taskInfo })
-    return [{ type: ToolResponseType.Exit, message: 'Task completed successfully' }, taskInfo]
+    this.#callback({ kind: TaskEventKind.EndTask, agent: this })
+    return { type: ToolResponseType.Exit, message: 'Task completed successfully' }
   }
 
-  async continueTask(userMessage: string, taskInfo: TaskInfo, callback: TaskEventCallback = () => {}): Promise<[ExitReason, TaskInfo]> {
-    return await this.#processLoop(userMessage, taskInfo, callback)
+  async continueTask(userMessage: string): Promise<ExitReason> {
+    return await this.#processLoop(userMessage)
   }
 
-  async #request(info: TaskInfo, userMessage: string, callback: TaskEventCallback) {
-    await callback({ kind: TaskEventKind.StartRequest, info, userMessage })
+  async #request(userMessage: string) {
+    await this.#callback({ kind: TaskEventKind.StartRequest, agent: this, userMessage })
 
-    info.messages.push({
+    this.messages.push({
       role: 'user',
       content: userMessage,
     })
 
     // TODO: use a truncated messages if needed to avoid exceeding the token limit
-    const stream = this.ai.send(this.config.systemPrompt, info.messages)
+    const stream = this.ai.send(this.config.systemPrompt, this.messages)
     let currentAssistantMessage = ''
 
     for await (const chunk of stream) {
       switch (chunk.type) {
         case 'usage':
-          info.inputTokens = chunk.inputTokens ?? 0
-          info.outputTokens = chunk.outputTokens ?? 0
-          info.cacheWriteTokens = chunk.cacheWriteTokens ?? 0
-          info.cacheReadTokens = chunk.cacheReadTokens ?? 0
-          info.totalCost = chunk.totalCost
-          await callback({ kind: TaskEventKind.Usage, info })
+          await this.#callback({ kind: TaskEventKind.Usage, agent: this })
           break
         case 'text':
           currentAssistantMessage += chunk.text
-          await callback({ kind: TaskEventKind.Text, info, newText: chunk.text })
+          await this.#callback({ kind: TaskEventKind.Text, agent: this, newText: chunk.text })
           break
         case 'reasoning':
-          await callback({ kind: TaskEventKind.Reasoning, info, newText: chunk.text })
+          await this.#callback({ kind: TaskEventKind.Reasoning, agent: this, newText: chunk.text })
           break
       }
     }
@@ -271,23 +255,19 @@ export abstract class AgentBase {
       throw new Error('No assistant message received')
     }
 
-    info.messages.push({
+    this.messages.push({
       role: 'assistant',
       content: currentAssistantMessage,
     })
 
     const ret = parseAssistantMessage(currentAssistantMessage, this.config.tools, this.config.toolNamePrefix)
 
-    await callback({ kind: TaskEventKind.EndRequest, info })
+    await this.#callback({ kind: TaskEventKind.EndRequest, agent: this })
 
     return ret
   }
 
-  async #handleResponse(
-    info: TaskInfo,
-    response: AssistantMessageContent[],
-    callback: TaskEventCallback,
-  ): Promise<[string | undefined, ExitReason | undefined]> {
+  async #handleResponse(response: AssistantMessageContent[]): Promise<[string | undefined, ExitReason | undefined]> {
     const toolReponses: { tool: string; response: string }[] = []
     outer: for (const content of response) {
       switch (content.type) {
@@ -295,12 +275,12 @@ export abstract class AgentBase {
           // no need to handle text content
           break
         case 'tool_use': {
-          await callback({ kind: TaskEventKind.ToolUse, info, tool: content.name })
+          await this.#callback({ kind: TaskEventKind.ToolUse, agent: this, tool: content.name })
           const toolResp = await this.#invokeTool(content.name, content.params)
           switch (toolResp.type) {
             case ToolResponseType.Reply:
               // reply to the tool use
-              await callback({ kind: TaskEventKind.ToolReply, info, tool: content.name })
+              await this.#callback({ kind: TaskEventKind.ToolReply, agent: this, tool: content.name })
               toolReponses.push({ tool: content.name, response: toolResp.message })
               break
             case ToolResponseType.Exit:
@@ -308,23 +288,23 @@ export abstract class AgentBase {
               return [undefined, toolResp]
             case ToolResponseType.Invalid:
               // tell AI about the invalid arguments
-              await callback({ kind: TaskEventKind.ToolInvalid, info, tool: content.name })
+              await this.#callback({ kind: TaskEventKind.ToolInvalid, agent: this, tool: content.name })
               toolReponses.push({ tool: content.name, response: toolResp.message })
               break outer
             case ToolResponseType.Error:
               // tell AI about the error
-              await callback({ kind: TaskEventKind.ToolError, info, tool: content.name })
+              await this.#callback({ kind: TaskEventKind.ToolError, agent: this, tool: content.name })
               toolReponses.push({ tool: content.name, response: toolResp.message })
               break outer
             case ToolResponseType.Interrupted:
               // the execution is killed
-              await callback({ kind: TaskEventKind.ToolInterrupted, info, tool: content.name })
+              await this.#callback({ kind: TaskEventKind.ToolInterrupted, agent: this, tool: content.name })
               return [undefined, toolResp]
             case ToolResponseType.HandOver:
               // hand over the task to another agent
-              await callback({
+              await this.#callback({
                 kind: TaskEventKind.ToolHandOver,
-                info,
+                agent: this,
                 tool: content.name,
                 agentName: toolResp.agentName,
                 task: toolResp.task,

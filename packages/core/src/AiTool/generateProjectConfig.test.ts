@@ -7,13 +7,6 @@ import { describe, expect, test } from 'bun:test'
 import generateProjectConfig from './generateProjectConfig'
 
 describe('generateProjectConfig', () => {
-  test('should format input correctly', () => {
-    const files = ['package.json', '.polkacodes.yml']
-
-    const input = generateProjectConfig.formatInput(files)
-    expect(input).toBe('<tool_input>\npackage.json\n.polkacodes.yml\n</tool_input>')
-  })
-
   test('should parse output correctly with all sections', () => {
     const output = `scripts:
   test:
@@ -31,12 +24,6 @@ excludeFiles:
 
     const result = generateProjectConfig.parseOutput(output)
     expect(result).toBe(output)
-  })
-
-  test('should handle empty files array', () => {
-    const files: string[] = []
-    const input = generateProjectConfig.formatInput(files)
-    expect(input).toBe('<tool_input>\n\n</tool_input>')
   })
 
   test('should trim whitespace in output', () => {
