@@ -1,4 +1,4 @@
-import type { AiServiceProvider } from '@polka-codes/core'
+import { type AiServiceProvider, defaultModels } from '@polka-codes/core'
 import type { Config } from './config'
 
 export class ApiProviderConfig {
@@ -21,7 +21,7 @@ export class ApiProviderConfig {
     if (!finalProvider) {
       return undefined
     }
-    const finalModel = model ?? this.providers[finalProvider]?.defaultModel
+    const finalModel = model ?? this.providers[finalProvider]?.defaultModel ?? defaultModels[finalProvider]
     const apiKey = this.providers[finalProvider]?.apiKey
     return {
       provider: finalProvider,
@@ -37,7 +37,7 @@ export class ApiProviderConfig {
     if (!finalProvider) {
       return undefined
     }
-    const finalModel = model ?? this.providers[finalProvider]?.defaultModel
+    const finalModel = model ?? this.providers[finalProvider]?.defaultModel ?? defaultModels[finalProvider]
     const apiKey = this.providers[finalProvider]?.apiKey
     return {
       provider: finalProvider,
