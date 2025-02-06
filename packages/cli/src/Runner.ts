@@ -79,7 +79,7 @@ export class Runner {
     }
 
     const platform = os.platform()
-    const agents = [coderAgentInfo, architectAgentInfo]
+    const agents = [coderAgentInfo, architectAgentInfo, analyzerAgentInfo]
 
     this.#multiAgent = new MultiAgent({
       createAgent: async (name: string): Promise<AgentBase> => {
