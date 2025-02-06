@@ -2,6 +2,7 @@ import type { AiServiceBase, MessageParam } from '../AiService'
 import {
   type FullToolInfo,
   type ToolResponse,
+  type ToolResponseDelegate,
   type ToolResponseExit,
   type ToolResponseHandOver,
   type ToolResponseInterrupted,
@@ -27,6 +28,7 @@ export enum TaskEventKind {
   ToolError = 'ToolError',
   ToolInterrupted = 'ToolInterrupted',
   ToolHandOver = 'ToolHandOver',
+  ToolDelegate = 'ToolDelegate',
   UsageExceeded = 'UsageExceeded',
   EndTask = 'EndTask',
 }
@@ -93,8 +95,8 @@ export interface TaskEventTool extends TaskEventBase {
 /**
  * Event for tool handover
  */
-export interface TaskEventToolHandOver extends TaskEventBase {
-  kind: TaskEventKind.ToolHandOver
+export interface TaskEventToolHandOverDelegate extends TaskEventBase {
+  kind: TaskEventKind.ToolHandOver | TaskEventKind.ToolDelegate
   tool: string
   agentName: string
   task: string
@@ -119,7 +121,7 @@ export type TaskEvent =
   | TaskEventUsage
   | TaskEventText
   | TaskEventTool
-  | TaskEventToolHandOver
+  | TaskEventToolHandOverDelegate
   | TaskEventCompletion
 
 export type TaskEventCallback = (event: TaskEvent) => void | Promise<void>
@@ -157,6 +159,7 @@ export type ExitReason =
   | ToolResponseExit
   | ToolResponseInterrupted
   | ToolResponseHandOver
+  | ToolResponseDelegate
 
 export abstract class AgentBase {
   protected readonly ai: AiServiceBase
@@ -304,6 +307,18 @@ export abstract class AgentBase {
               // hand over the task to another agent
               await this.#callback({
                 kind: TaskEventKind.ToolHandOver,
+                agent: this,
+                tool: content.name,
+                agentName: toolResp.agentName,
+                task: toolResp.task,
+                context: toolResp.context,
+                files: toolResp.files,
+              })
+              return [undefined, toolResp]
+            case ToolResponseType.Delegate:
+              // delegate the task to another agent
+              await this.#callback({
+                kind: TaskEventKind.ToolDelegate,
                 agent: this,
                 tool: content.name,
                 agentName: toolResp.agentName,

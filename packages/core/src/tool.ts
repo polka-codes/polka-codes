@@ -29,6 +29,7 @@ export enum ToolResponseType {
   Error = 'Error',
   Interrupted = 'Interrupted',
   HandOver = 'HandOver',
+  Delegate = 'Delegate',
 }
 
 // Reply to the tool use
@@ -76,7 +77,16 @@ export type ToolResponseHandOver = {
   agentName: string
   task: string
   context?: string
-  files: string[]
+  files?: string[]
+}
+
+// Delegate the task to another agent
+export type ToolResponseDelegate = {
+  type: ToolResponseType.Delegate
+  agentName: string
+  task: string
+  context?: string
+  files?: string[]
 }
 
 export type ToolResponse =
@@ -86,6 +96,7 @@ export type ToolResponse =
   | ToolResponseError
   | ToolResponseInterrupted
   | ToolResponseHandOver
+  | ToolResponseDelegate
 
 export type ToolHandler<T extends ToolInfo, P> = (
   provider: P,
