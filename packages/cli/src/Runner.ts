@@ -30,13 +30,14 @@ export type RunnerOptions = {
   interactive: boolean
   eventCallback: TaskEventCallback
   enableCache: boolean
-  availableAgents: AgentInfo[]
+  availableAgents?: AgentInfo[] // empty to enable all agents
 }
 
 export class Runner {
   readonly #options: RunnerOptions
-  readonly #multiAgent: MultiAgent
   readonly #usageMeter: UsageMeter
+
+  readonly multiAgent: MultiAgent
 
   constructor(options: RunnerOptions) {
     this.#options = options
@@ -100,7 +101,7 @@ export class Runner {
       return service
     }
 
-    this.#multiAgent = new MultiAgent({
+    this.multiAgent = new MultiAgent({
       createAgent: async (name: string): Promise<AgentBase> => {
         const agentName = name.trim().toLowerCase()
         const args = {
@@ -109,7 +110,7 @@ export class Runner {
           customInstructions: rules,
           scripts: options.config.scripts,
           interactive: options.interactive,
-          agents: this.#options.availableAgents,
+          agents: this.#options.availableAgents ?? [coderAgentInfo, architectAgentInfo, analyzerAgentInfo],
         }
         switch (agentName) {
           case coderAgentInfo.name:
@@ -176,18 +177,18 @@ ${fileList.join('\n')}${limited ? '\n<files_truncated>true</files_truncated>' : 
     return `<now_date>${new Date().toISOString()}</now_date>${fileContext}`
   }
 
-  async startTask(task: string, agentName: string = architectAgentInfo.name) {
-    const exitReason = await this.#multiAgent.startTask({
+  async startTask(task: string, agentName: string = architectAgentInfo.name, context?: string) {
+    const exitReason = await this.multiAgent.startTask({
       agentName: agentName,
       task,
-      context: await this.#defaultContext(agentName),
+      context: context ?? (await this.#defaultContext(agentName)),
     })
 
     return exitReason
   }
 
   async continueTask(message: string) {
-    return await this.#multiAgent.continueTask(message)
+    return await this.multiAgent.continueTask(message)
   }
 
   get usage() {

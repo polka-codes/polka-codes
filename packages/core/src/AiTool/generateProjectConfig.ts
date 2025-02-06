@@ -74,11 +74,11 @@ export default {
   name: 'generateProjectConfig',
   description: 'Analyzes project files to generate polkacodes config sections',
   prompt,
-  formatInput: (params: string[]) => {
-    return `<tool_input>\n${params.join('\n')}\n</tool_input>`
+  formatInput: () => {
+    return ''
   },
   parseOutput: (output: string) => {
     return output.trim()
   },
   agent: 'analyzer',
-} as const satisfies AiToolDefinition<string[]>
+} as const satisfies AiToolDefinition<void>

@@ -5,7 +5,8 @@ import { join } from 'node:path'
 import { AiServiceProvider } from '@polka-codes/core'
 import { Command } from 'commander'
 
-import { ApiProviderConfig, addSharedOptions, parseOptions } from './options'
+import { ApiProviderConfig } from './ApiProviderConfig'
+import { addSharedOptions, parseOptions } from './options'
 
 describe('ApiProviderConfig', () => {
   let testDir: string

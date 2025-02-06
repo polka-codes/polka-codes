@@ -1,5 +1,5 @@
 import { ToolResponseType } from '../tool'
-import type { AgentBase, ExitReason, TaskEventCallback } from './AgentBase'
+import type { AgentBase, ExitReason } from './AgentBase'
 
 export type MultiAgentConfig = {
   createAgent: (name: string) => Promise<AgentBase>
@@ -36,7 +36,6 @@ export class MultiAgent {
     agentName: string
     task: string
     context?: string
-    callback?: TaskEventCallback
   }): Promise<ExitReason> {
     if (this.#activeAgent) {
       throw new Error('An active agent already exists')
