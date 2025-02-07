@@ -14,7 +14,7 @@ export type CoderAgentOptions = SharedAgentOptions
 export class CoderAgent extends AgentBase {
   constructor(options: CoderAgentOptions) {
     const combinedTools = [...(options.additionalTools ?? []), ...Object.values(allTools)]
-    const tools = getAvailableTools(options.provider, combinedTools)
+    const tools = getAvailableTools(options.provider, combinedTools, (options.agents?.length ?? 0) > 0)
     const toolNamePrefix = 'tool_'
     const systemPrompt = fullSystemPrompt(
       {

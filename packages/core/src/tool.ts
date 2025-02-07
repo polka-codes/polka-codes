@@ -1,3 +1,5 @@
+import { delegate, handOver } from './tools'
+
 export type ToolParameter = {
   name: string
   description: string
@@ -29,6 +31,7 @@ export enum ToolResponseType {
   Error = 'Error',
   Interrupted = 'Interrupted',
   HandOver = 'HandOver',
+  Delegate = 'Delegate',
 }
 
 // Reply to the tool use
@@ -76,7 +79,16 @@ export type ToolResponseHandOver = {
   agentName: string
   task: string
   context?: string
-  files: string[]
+  files?: string[]
+}
+
+// Delegate the task to another agent
+export type ToolResponseDelegate = {
+  type: ToolResponseType.Delegate
+  agentName: string
+  task: string
+  context?: string
+  files?: string[]
 }
 
 export type ToolResponse =
@@ -86,12 +98,27 @@ export type ToolResponse =
   | ToolResponseError
   | ToolResponseInterrupted
   | ToolResponseHandOver
+  | ToolResponseDelegate
 
 export type ToolHandler<T extends ToolInfo, P> = (
   provider: P,
   args: Partial<Record<T['parameters'][number]['name'], string>>,
 ) => Promise<ToolResponse>
 
-export const getAvailableTools = (provider: any, allTools: FullToolInfo[]) => {
-  return allTools.filter((tool) => tool.isAvailable(provider))
+export const getAvailableTools = (provider: any, allTools: FullToolInfo[], hasAgent: boolean) => {
+  const tools: FullToolInfo[] = []
+  for (const tool of allTools) {
+    // disable agent tools if no agents available
+    if (!hasAgent) {
+      switch (tool.name) {
+        case handOver.name:
+        case delegate.name:
+          continue
+      }
+    }
+    if (tool.isAvailable(provider)) {
+      tools.push(tool)
+    }
+  }
+  return tools
 }

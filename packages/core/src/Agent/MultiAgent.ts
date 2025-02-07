@@ -10,6 +10,7 @@ export class MultiAgent {
   readonly #config: MultiAgentConfig
 
   #activeAgent: AgentBase | null = null
+  #agentStack: AgentBase[] = []
 
   constructor(config: MultiAgentConfig) {
     this.#config = config
@@ -20,15 +21,34 @@ export class MultiAgent {
   }
 
   async #startTask(agentName: string, task: string, context: string | undefined): Promise<ExitReason> {
-    this.#activeAgent = await this.#config.createAgent(agentName)
-    const exitReason = await this.#activeAgent.startTask({
+    const newAgent = await this.#config.createAgent(agentName)
+    this.#activeAgent = newAgent
+    const exitReason = await newAgent.startTask({
       task,
       context,
     })
+
     if (exitReason.type === ToolResponseType.HandOver) {
-      const context = await this.#config.getContext?.(agentName, exitReason.context, exitReason.files)
-      return await this.#startTask(exitReason.agentName, exitReason.task, context)
+      const newContext = await this.#config.getContext?.(agentName, exitReason.context, exitReason.files)
+      return await this.#startTask(exitReason.agentName, exitReason.task, newContext)
     }
+
+    if (exitReason.type === ToolResponseType.Delegate) {
+      // Save current agent to stack before delegation
+      if (this.#activeAgent) {
+        this.#agentStack.push(this.#activeAgent)
+      }
+
+      const newContext = await this.#config.getContext?.(agentName, exitReason.context, exitReason.files)
+      const delegateResult = await this.#startTask(exitReason.agentName, exitReason.task, newContext)
+
+      // Restore previous agent after delegation completes
+      this.#activeAgent = this.#agentStack.pop() || null
+
+      // Return the original agent's result
+      return delegateResult
+    }
+
     return exitReason
   }
 

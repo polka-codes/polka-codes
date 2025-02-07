@@ -20,7 +20,7 @@ export class AnalyzerAgent extends AgentBase {
       readFile,
       searchFiles,
     ] // readonly tools
-    const tools = getAvailableTools(options.provider, agentTools)
+    const tools = getAvailableTools(options.provider, agentTools, (options.agents?.length ?? 0) > 0)
     const toolNamePrefix = 'tool_'
     const systemPrompt = fullSystemPrompt(
       {
