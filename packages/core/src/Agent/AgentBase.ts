@@ -171,7 +171,7 @@ export abstract class AgentBase {
     this.ai = ai
 
     // If agents are provided, add them to the system prompt
-    if (config.agents && Object.keys(config.agents).length > 0) {
+    if (config.agents && config.agents.length > 0) {
       const agents = agentsPrompt(config.agents, name)
       config.systemPrompt += `\n${agents}`
     }
