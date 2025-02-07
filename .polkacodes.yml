@@ -8,18 +8,18 @@ excludeFiles:
   - .env
   - bun.lock
   - packages/cli/cli.mjs
-scripts:
-  test:
-    command: bun test -u
-    description: Run tests and update snapshots. Pass file path to run a specific test file.
-  check:
-    command: bun typecheck
-    description: |
-      Check the code for type errors.
-      Run this command after making changes to the code.
-  format:
-    command: bun fix
-    description: Run code formatter.
+# scripts:
+#   test:
+#     command: bun test -u
+#     description: Run tests and update snapshots. Pass file path to run a specific test file.
+#   check:
+#     command: bun typecheck
+#     description: |
+#       Check the code for type errors.
+#       Run this command after making changes to the code.
+#   format:
+#     command: bun fix
+#     description: Run code formatter.
 rules: |
   Use `bun` as the package manager
   When adding new dependencies, cd to the package directory and run `bun add <dependency>`

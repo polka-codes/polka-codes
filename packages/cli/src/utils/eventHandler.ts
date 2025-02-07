@@ -1,4 +1,4 @@
-import { type TaskEvent, TaskEventKind } from '@polka-codes/core'
+import { type TaskEvent, TaskEventKind, ToolResponseType } from '@polka-codes/core'
 import chalk from 'chalk'
 
 export const printEvent = (verbose: number) => (event: TaskEvent) => {
@@ -65,6 +65,16 @@ export const printEvent = (verbose: number) => (event: TaskEvent) => {
       console.log('\n\n======= Usage Exceeded ========\n')
       break
     case TaskEventKind.EndTask:
+      console.log('\n\n======== Task Ended ========\n')
+      console.log('Reason:', event.exitReason.type)
+      switch (event.exitReason.type) {
+        case ToolResponseType.Exit:
+          console.log('Exit Message:', event.exitReason.message)
+          break
+        case ToolResponseType.Interrupted:
+          console.log('Interrupted Message:', event.exitReason.message)
+          break
+      }
       break
   }
 }

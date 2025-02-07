@@ -105,10 +105,18 @@ export interface TaskEventToolHandOverDelegate extends TaskEventBase {
 }
 
 /**
- * Event for task completion states
+ * Event for task usage exceeded
  */
-export interface TaskEventCompletion extends TaskEventBase {
-  kind: TaskEventKind.UsageExceeded | TaskEventKind.EndTask
+export interface TaskEventUsageExceeded extends TaskEventBase {
+  kind: TaskEventKind.UsageExceeded
+}
+
+/**
+ * Event for task end
+ */
+export interface TaskEventEndTask extends TaskEventBase {
+  kind: TaskEventKind.EndTask
+  exitReason: ExitReason
 }
 
 /**
@@ -122,7 +130,8 @@ export type TaskEvent =
   | TaskEventText
   | TaskEventTool
   | TaskEventToolHandOverDelegate
-  | TaskEventCompletion
+  | TaskEventUsageExceeded
+  | TaskEventEndTask
 
 export type TaskEventCallback = (event: TaskEvent) => void | Promise<void>
 
@@ -212,7 +221,7 @@ export abstract class AgentBase {
       const response = await this.#request(nextRequest)
       const resp = await this.#handleResponse(response)
       if ('exit' in resp) {
-        this.#callback({ kind: TaskEventKind.EndTask, agent: this })
+        this.#callback({ kind: TaskEventKind.EndTask, agent: this, exitReason: resp.exit })
         return resp.exit
       }
       nextRequest = resp.replay
