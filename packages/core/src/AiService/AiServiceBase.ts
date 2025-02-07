@@ -1,6 +1,6 @@
 import type { Anthropic } from '@anthropic-ai/sdk'
 import type { ModelInfo } from './ModelInfo'
-import { UsageMeter } from './UsageMeter'
+import type { UsageMeter } from './UsageMeter'
 
 export type ApiStreamChunk = ApiStreamTextChunk | ApiStreamUsageChunk | ApiStreamReasoningTextChunk
 
@@ -24,7 +24,7 @@ export interface AiServiceOptions {
   model?: string
   apiKey?: string
   baseUrl?: string
-  usageMeter?: UsageMeter
+  usageMeter: UsageMeter
   enableCache?: boolean
 }
 
@@ -41,8 +41,8 @@ export type ApiUsage = {
 export abstract class AiServiceBase {
   readonly usageMeter: UsageMeter
 
-  constructor(usageMeter?: UsageMeter) {
-    this.usageMeter = usageMeter ?? new UsageMeter()
+  constructor(usageMeter: UsageMeter) {
+    this.usageMeter = usageMeter
   }
 
   abstract get model(): { id: string; info: ModelInfo }

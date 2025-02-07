@@ -1,5 +1,5 @@
 import { execSync, spawnSync } from 'node:child_process'
-import { createService, generateGithubPullRequestDetails } from '@polka-codes/core'
+import { UsageMeter, createService, generateGithubPullRequestDetails } from '@polka-codes/core'
 import { Command } from 'commander'
 import ora from 'ora'
 
@@ -64,9 +64,12 @@ export const prCommand = new Command('pr')
 
       const diff = execSync(`git diff --cached -U200 ${defaultBranch}`, { encoding: 'utf-8' })
 
+      const usage = new UsageMeter()
+
       const ai = createService(provider, {
         apiKey,
         model,
+        usageMeter: usage,
       })
 
       spinner.text = 'Generating pull request details...'
@@ -85,6 +88,8 @@ export const prCommand = new Command('pr')
       spawnSync('gh', ['pr', 'create', '--title', prDetails.response.title.trim(), '--body', prDetails.response.description.trim()], {
         stdio: 'inherit',
       })
+
+      usage.printUsage()
     } catch (error) {
       console.error('Error creating pull request:', error)
       process.exit(1)

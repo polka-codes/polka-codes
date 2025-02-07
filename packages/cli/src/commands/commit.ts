@@ -3,7 +3,7 @@ import { confirm } from '@inquirer/prompts'
 import { Command } from 'commander'
 import ora from 'ora'
 
-import { createService, generateGitCommitMessage } from '@polka-codes/core'
+import { UsageMeter, createService, generateGitCommitMessage } from '@polka-codes/core'
 import { parseOptions } from '../options'
 
 export const commitCommand = new Command('commit')
@@ -26,9 +26,12 @@ export const commitCommand = new Command('commit')
       process.exit(1)
     }
 
+    const usage = new UsageMeter()
+
     const ai = createService(provider, {
       apiKey,
       model,
+      usageMeter: usage,
     })
 
     try {
@@ -65,6 +68,8 @@ export const commitCommand = new Command('commit')
 
       // Generate commit message
       const result = await generateGitCommitMessage(ai, { diff, context: message })
+
+      usage.printUsage()
 
       spinner.succeed('Commit message generated')
 
