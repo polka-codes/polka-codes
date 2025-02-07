@@ -111,6 +111,7 @@ export class Runner {
           scripts: options.config.scripts,
           interactive: options.interactive,
           agents: this.#options.availableAgents ?? [coderAgentInfo, architectAgentInfo, analyzerAgentInfo],
+          callback: this.#options.eventCallback,
         }
         switch (agentName) {
           case coderAgentInfo.name:

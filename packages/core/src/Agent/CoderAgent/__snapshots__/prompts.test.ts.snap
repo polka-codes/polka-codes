@@ -56,6 +56,24 @@ Usage:
 <tool_parameter_result>Your final result description here</tool_parameter_result>
 </tool_attempt_completion>
 
+## tool_delegate
+
+Description: Temporarily delegate a task to another agent and receive the result back
+
+Parameters:
+- tool_parameter_agent_name: (required) The name of the agent to delegate the task to
+- tool_parameter_task: (required) The task to be completed by the target agent
+- tool_parameter_context: (required) The context information for the task
+- tool_parameter_files: (optional) The files relevant to the task. Comma separated paths
+
+Usage:
+<tool_delegate>
+<tool_parameter_agent_name>Name of the target agent</tool_parameter_agent_name>
+<tool_parameter_task>Task description</tool_parameter_task>
+<tool_parameter_context>Context information</tool_parameter_context>
+<tool_parameter_files>Relevant files</tool_parameter_files>
+</tool_delegate>
+
 ## tool_execute_command
 
 Description: Request to execute a CLI command on the system. Use this when you need to perform system operations or run specific commands to accomplish any step in the user's task. You must tailor your command to the user's system and provide a clear explanation of what the command does. Prefer to execute complex CLI commands over creating executable scripts, as they are more flexible and easier to run. Commands will also be executed in the project root directory regardless of executed commands in previous tool uses.
@@ -78,7 +96,7 @@ Parameters:
 - tool_parameter_agent_name: (required) The name of the agent to hand over the task to
 - tool_parameter_task: (required) The task to be completed by the target agent
 - tool_parameter_context: (required) The context information for the task
-- tool_parameter_files: (optional) The files relevant to the task
+- tool_parameter_files: (optional) The files relevant to the task. Comma separated paths
 
 Usage:
 <tool_hand_over>
@@ -242,14 +260,23 @@ Usage:
 <tool_parameter_result>Your final result description here</tool_parameter_result>
 </tool_attempt_completion>
 
-## Example 4: Request to execute a command
+## Example 4: Delegate a code analysis task to the analyzer agent
+
+<tool_delegate>
+<tool_parameter_agent_name>analyzer</tool_parameter_agent_name>
+<tool_parameter_task>Analyze the authentication implementation</tool_parameter_task>
+<tool_parameter_context>Need to understand the security implications of the current auth system</tool_parameter_context>
+<tool_parameter_files>src/auth/login.ts,src/auth/types.ts</tool_parameter_files>
+</tool_delegate>
+
+## Example 5: Request to execute a command
 
 <tool_execute_command>
 <tool_parameter_command>npm run dev</tool_parameter_command>
 <tool_parameter_requires_approval>false</tool_parameter_requires_approval>
 </tool_execute_command>
 
-## Example 5: Hand over a coding task to the coder agent
+## Example 6: Hand over a coding task to the coder agent
 
 <tool_hand_over>
 <tool_parameter_agent_name>coder</tool_parameter_agent_name>
@@ -258,39 +285,39 @@ Usage:
 <tool_parameter_files>src/auth/login.ts,src/auth/types.ts</tool_parameter_files>
 </tool_hand_over>
 
-## Example 6: Request to list files
+## Example 7: Request to list files
 
 <tool_list_files>
 <tool_parameter_path>src</tool_parameter_path>
 <tool_parameter_max_count>100</tool_parameter_max_count>
 </tool_list_files>
 
-## Example 7: Request to read the contents of a file
+## Example 8: Request to read the contents of a file
 
 <tool_read_file>
 <tool_parameter_path>src/main.js</tool_parameter_path>
 </tool_read_file>
 
-## Example 8: Request to read multiple files
+## Example 9: Request to read multiple files
 
 <tool_read_file>
 <tool_parameter_path>src/main.js,src/index.js</tool_parameter_path>
 </tool_read_file>
 
-## Example 9: Request to remove a file
+## Example 10: Request to remove a file
 
 <tool_remove_file>
 <tool_parameter_path>src/main.js</tool_parameter_path>
 </tool_remove_file>
 
-## Example 10: Request to rename a file
+## Example 11: Request to rename a file
 
 <tool_rename_file>
 <tool_parameter_sourcePath>src/old-name.js</tool_parameter_sourcePath>
 <tool_parameter_targetPath>src/new-name.js</tool_parameter_targetPath>
 </tool_rename_file>
 
-## Example 11: Request to replace sections of content in a file
+## Example 12: Request to replace sections of content in a file
 
 <tool_replace_in_file>
 <tool_parameter_path>src/main.js</tool_parameter_path>
@@ -325,7 +352,7 @@ return (
 </tool_parameter_diff>
 </tool_replace_in_file>
 
-## Example 12: Request to perform a regex search across files
+## Example 13: Request to perform a regex search across files
 
 <tool_search_files>
 <tool_parameter_path>src</tool_parameter_path>
@@ -333,7 +360,7 @@ return (
 <tool_parameter_file_pattern>*.ts</tool_parameter_file_pattern>
 </tool_search_files>
 
-## Example 13: Request to write content to a file
+## Example 14: Request to write content to a file
 
 <tool_write_to_file>
 <tool_parameter_path>src/main.js</tool_parameter_path>

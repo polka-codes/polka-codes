@@ -1,5 +1,14 @@
 import { getAvailableTools } from '../../tool'
-import { askFollowupQuestion, attemptCompletion, handOver, listCodeDefinitionNames, listFiles, readFile, searchFiles } from '../../tools'
+import {
+  askFollowupQuestion,
+  attemptCompletion,
+  delegate,
+  handOver,
+  listCodeDefinitionNames,
+  listFiles,
+  readFile,
+  searchFiles,
+} from '../../tools'
 import { AgentBase, type AgentInfo, type SharedAgentOptions } from '../AgentBase'
 import { fullSystemPrompt } from './prompts'
 
@@ -12,12 +21,13 @@ export class ArchitectAgent extends AgentBase {
       askFollowupQuestion,
       attemptCompletion,
       handOver,
+      delegate,
       listCodeDefinitionNames,
       listFiles,
       readFile,
       searchFiles,
     ] // readonly tools
-    const tools = getAvailableTools(options.provider, agentTools)
+    const tools = getAvailableTools(options.provider, agentTools, (options.agents?.length ?? 0) > 0)
     const toolNamePrefix = 'tool_'
     const systemPrompt = fullSystemPrompt(
       {
@@ -38,6 +48,7 @@ export class ArchitectAgent extends AgentBase {
       interactive: options.interactive,
       agents: options.agents,
       scripts: options.scripts,
+      callback: options.callback,
     })
   }
 

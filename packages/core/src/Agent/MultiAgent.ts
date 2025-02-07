@@ -8,28 +8,57 @@ export type MultiAgentConfig = {
 
 export class MultiAgent {
   readonly #config: MultiAgentConfig
-
-  #activeAgent: AgentBase | null = null
+  readonly #agents: AgentBase[] = []
 
   constructor(config: MultiAgentConfig) {
     this.#config = config
   }
 
-  get model() {
-    return this.#activeAgent?.model
+  async #handleTaskResult(exitReason: ExitReason) {
+    switch (exitReason.type) {
+      case ToolResponseType.HandOver: {
+        // remove the current agent
+        this.#agents.pop()
+
+        const newContext = await this.#config.getContext?.(exitReason.agentName, exitReason.context, exitReason.files)
+        return await this.#startTask(exitReason.agentName, exitReason.task, newContext)
+      }
+      case ToolResponseType.Delegate: {
+        const newContext = await this.#config.getContext?.(exitReason.agentName, exitReason.context, exitReason.files)
+        const delegateResult = await this.#startTask(exitReason.agentName, exitReason.task, newContext)
+        switch (delegateResult.type) {
+          case ToolResponseType.HandOver:
+          case ToolResponseType.Delegate:
+            console.warn('Unexpected exit reason', delegateResult)
+            break
+          case ToolResponseType.Interrupted:
+            return delegateResult
+          case ToolResponseType.Exit:
+            return this.continueTask(delegateResult.message)
+        }
+        return delegateResult
+      }
+      case ToolResponseType.Interrupted:
+      case ToolResponseType.Exit:
+        // execution is finished
+        this.#agents.pop()
+        return exitReason
+      default:
+        return exitReason
+    }
   }
 
   async #startTask(agentName: string, task: string, context: string | undefined): Promise<ExitReason> {
-    this.#activeAgent = await this.#config.createAgent(agentName)
-    const exitReason = await this.#activeAgent.startTask({
+    const newAgent = await this.#config.createAgent(agentName)
+
+    this.#agents.push(newAgent)
+
+    const exitReason = await newAgent.startTask({
       task,
       context,
     })
-    if (exitReason.type === ToolResponseType.HandOver) {
-      const context = await this.#config.getContext?.(agentName, exitReason.context, exitReason.files)
-      return await this.#startTask(exitReason.agentName, exitReason.task, context)
-    }
-    return exitReason
+
+    return await this.#handleTaskResult(exitReason)
   }
 
   async startTask(options: {
@@ -37,16 +66,17 @@ export class MultiAgent {
     task: string
     context?: string
   }): Promise<ExitReason> {
-    if (this.#activeAgent) {
+    if (this.#agents.length > 0) {
       throw new Error('An active agent already exists')
     }
     return this.#startTask(options.agentName, options.task, options.context)
   }
 
   async continueTask(userMessage: string): Promise<ExitReason> {
-    if (!this.#activeAgent) {
+    if (!this.#agents.length) {
       throw new Error('No active agent')
     }
-    return this.#activeAgent.continueTask(userMessage)
+    const exitReason = await this.#agents[this.#agents.length - 1].continueTask(userMessage)
+    return await this.#handleTaskResult(exitReason)
   }
 }
