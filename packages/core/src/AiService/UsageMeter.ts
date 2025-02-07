@@ -70,11 +70,16 @@ export class UsageMeter {
   }
 
   printUsage() {
+    const { inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens } = this.#usage
+    const allTokensZero = inputTokens === 0 && outputTokens === 0 && cacheReadTokens === 0 && cacheWriteTokens === 0
+
     console.log('Usages:')
-    console.log(`Input tokens: ${this.#usage.inputTokens}`)
-    console.log(`Output tokens: ${this.#usage.outputTokens}`)
-    console.log(`Cache read tokens: ${this.#usage.cacheReadTokens}`)
-    console.log(`Cache write tokens: ${this.#usage.cacheWriteTokens}`)
+    if (!allTokensZero) {
+      console.log(`Input tokens: ${this.#usage.inputTokens}`)
+      console.log(`Output tokens: ${this.#usage.outputTokens}`)
+      console.log(`Cache read tokens: ${this.#usage.cacheReadTokens}`)
+      console.log(`Cache write tokens: ${this.#usage.cacheWriteTokens}`)
+    }
     console.log(`Total cost: ${this.#usage.totalCost}`)
   }
 }
