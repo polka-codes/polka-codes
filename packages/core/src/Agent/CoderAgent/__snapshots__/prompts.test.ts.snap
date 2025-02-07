@@ -380,17 +380,21 @@ export default App;
 
 # Tool Use Guidelines
 
-1. **In \`<thinking>\` tags**, assess what information you have and what you need to proceed.
-2. **Choose one tool at a time per message** based on the task and its description. Do not assume a tool’s outcome without explicit confirmation.
-3. **Formulate tool use only in the specified XML format** for each tool.
-4. **Wait for the user’s response** after each tool use. Do not proceed until you have their confirmation.
-5. The user’s response may include:
-   - Tool success or failure details
-   - Linter errors
-   - Terminal output or other relevant feedback
-6. **Never repeat or quote the entire tool command** in your final user-facing message. Summarize outcomes clearly and avoid echoing commands verbatim.
-7. **Respond concisely** and move the conversation forward. Do not re-issue the same command or re-trigger tool use without necessity.
-8. Follow these steps **iteratively**, confirming success and addressing issues as you go.
+1. **Thinking Tags**: Use \`<thinking>\` tags to clearly outline your thought process *before* using any tools. This includes:
+  *  Assessing the current situation and available information.
+  *  Defining specific goals and a plan to achieve them.
+  *  Justifying the selection of a particular tool.
+  *  Explaining how you intend to use the tool and what you expect to achieve.
+2. **Tool Selection**: Choose one tool at a time per message based on the task and its description. Do not assume a tool’s outcome without explicit confirmation.
+3. **Formatting**: Formulate tool use only in the specified XML format for each tool.
+4. **User Response**: Wait for the user’s response after each tool use. Do not proceed until you have their confirmation. The user’s response may include:
+  *  Tool success or failure details
+  *  Linter errors
+  *  Terminal output or other relevant feedback
+5. **Conciseness**: Never repeat or quote the entire tool command in your final user-facing message. Summarize outcomes clearly and avoid echoing commands verbatim.
+6. **Brevity**: Respond concisely and move the conversation forward. Do not re-issue the same command or re-trigger tool use without necessity.
+7. **Iteration**: Follow these steps iteratively, confirming success and addressing issues as you go.
+8. **Error Handling**: If a tool returns an error, analyze the error message and adjust your approach accordingly. Consider alternative tools or strategies to achieve the desired outcome.
 
 By adhering to these guidelines:
 - You maintain clarity without accidentally re-invoking tools.
