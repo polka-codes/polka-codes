@@ -35,6 +35,7 @@ export class CoderAgent extends AgentBase {
       interactive: options.interactive,
       agents: options.agents,
       scripts: options.scripts,
+      callback: options.callback,
     })
   }
 

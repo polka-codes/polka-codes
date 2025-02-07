@@ -135,6 +135,7 @@ export type SharedAgentOptions = {
   customInstructions?: string[]
   scripts?: Record<string, string | { command: string; description: string }>
   agents?: AgentInfo[]
+  callback?: TaskEventCallback
 }
 
 export type AgentBaseConfig = {
@@ -202,23 +203,20 @@ export abstract class AgentBase {
   }
 
   async #processLoop(userMessage: string): Promise<ExitReason> {
-    let nextRequest: string | undefined = userMessage
-    while (nextRequest) {
+    let nextRequest = userMessage
+    while (true) {
       if (this.ai.usageMeter.isLimitExceeded().result) {
         this.#callback({ kind: TaskEventKind.UsageExceeded, agent: this })
         return { type: 'UsageExceeded' }
       }
       const response = await this.#request(nextRequest)
-      const [newMessage, exitReason] = await this.#handleResponse(response)
-      if (exitReason) {
+      const resp = await this.#handleResponse(response)
+      if ('exit' in resp) {
         this.#callback({ kind: TaskEventKind.EndTask, agent: this })
-        return exitReason
+        return resp.exit
       }
-      nextRequest = newMessage
+      nextRequest = resp.replay
     }
-
-    this.#callback({ kind: TaskEventKind.EndTask, agent: this })
-    return { type: ToolResponseType.Exit, message: 'Task completed successfully' }
   }
 
   async continueTask(userMessage: string): Promise<ExitReason> {
@@ -270,7 +268,7 @@ export abstract class AgentBase {
     return ret
   }
 
-  async #handleResponse(response: AssistantMessageContent[]): Promise<[string | undefined, ExitReason | undefined]> {
+  async #handleResponse(response: AssistantMessageContent[]): Promise<{ replay: string } | { exit: ExitReason }> {
     const toolReponses: { tool: string; response: string }[] = []
     outer: for (const content of response) {
       switch (content.type) {
@@ -288,7 +286,7 @@ export abstract class AgentBase {
               break
             case ToolResponseType.Exit:
               // task completed
-              return [undefined, toolResp]
+              return { exit: toolResp }
             case ToolResponseType.Invalid:
               // tell AI about the invalid arguments
               await this.#callback({ kind: TaskEventKind.ToolInvalid, agent: this, tool: content.name })
@@ -302,7 +300,7 @@ export abstract class AgentBase {
             case ToolResponseType.Interrupted:
               // the execution is killed
               await this.#callback({ kind: TaskEventKind.ToolInterrupted, agent: this, tool: content.name })
-              return [undefined, toolResp]
+              return { exit: toolResp }
             case ToolResponseType.HandOver:
               // hand over the task to another agent
               await this.#callback({
@@ -314,7 +312,7 @@ export abstract class AgentBase {
                 context: toolResp.context,
                 files: toolResp.files,
               })
-              return [undefined, toolResp]
+              return { exit: toolResp }
             case ToolResponseType.Delegate:
               // delegate the task to another agent
               await this.#callback({
@@ -326,7 +324,7 @@ export abstract class AgentBase {
                 context: toolResp.context,
                 files: toolResp.files,
               })
-              return [undefined, toolResp]
+              return { exit: toolResp }
           }
           break
         }
@@ -335,11 +333,11 @@ export abstract class AgentBase {
 
     if (toolReponses.length === 0 && !this.config.interactive) {
       // always require a tool usage in non-interactive mode
-      return [responsePrompts.requireUseTool, undefined]
+      return { replay: responsePrompts.requireUseTool }
     }
 
     const finalResp = toolReponses.map(({ tool, response }) => responsePrompts.toolResults(tool, response)).join('\n\n')
-    return [finalResp, undefined]
+    return { replay: finalResp }
   }
 
   async #invokeTool(name: string, args: Record<string, string>): Promise<ToolResponse> {

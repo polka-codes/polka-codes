@@ -2,7 +2,16 @@
 // This file implements the AnalyzerAgent class for project analysis
 
 import { getAvailableTools } from '../../tool'
-import { askFollowupQuestion, attemptCompletion, handOver, listCodeDefinitionNames, listFiles, readFile, searchFiles } from '../../tools'
+import {
+  askFollowupQuestion,
+  attemptCompletion,
+  delegate,
+  handOver,
+  listCodeDefinitionNames,
+  listFiles,
+  readFile,
+  searchFiles,
+} from '../../tools'
 import { AgentBase, type AgentInfo, type SharedAgentOptions } from '../AgentBase'
 import { fullSystemPrompt } from './prompts'
 
@@ -15,6 +24,7 @@ export class AnalyzerAgent extends AgentBase {
       askFollowupQuestion,
       attemptCompletion,
       handOver,
+      delegate,
       listCodeDefinitionNames,
       listFiles,
       readFile,
@@ -41,6 +51,7 @@ export class AnalyzerAgent extends AgentBase {
       interactive: options.interactive,
       agents: options.agents,
       scripts: options.scripts,
+      callback: options.callback,
     })
   }
 

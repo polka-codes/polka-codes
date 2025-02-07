@@ -64,7 +64,7 @@ Parameters:
 - tool_parameter_agent_name: (required) The name of the agent to delegate the task to
 - tool_parameter_task: (required) The task to be completed by the target agent
 - tool_parameter_context: (required) The context information for the task
-- tool_parameter_files: (optional) The files relevant to the task
+- tool_parameter_files: (optional) The files relevant to the task. Comma separated paths
 
 Usage:
 <tool_delegate>
@@ -96,7 +96,7 @@ Parameters:
 - tool_parameter_agent_name: (required) The name of the agent to hand over the task to
 - tool_parameter_task: (required) The task to be completed by the target agent
 - tool_parameter_context: (required) The context information for the task
-- tool_parameter_files: (optional) The files relevant to the task
+- tool_parameter_files: (optional) The files relevant to the task. Comma separated paths
 
 Usage:
 <tool_hand_over>
@@ -266,7 +266,7 @@ Usage:
 <tool_parameter_agent_name>analyzer</tool_parameter_agent_name>
 <tool_parameter_task>Analyze the authentication implementation</tool_parameter_task>
 <tool_parameter_context>Need to understand the security implications of the current auth system</tool_parameter_context>
-<tool_parameter_files>src/auth/**/*.ts</tool_parameter_files>
+<tool_parameter_files>src/auth/login.ts,src/auth/types.ts</tool_parameter_files>
 </tool_delegate>
 
 ## Example 5: Request to execute a command

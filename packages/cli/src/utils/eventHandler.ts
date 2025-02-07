@@ -53,6 +53,14 @@ export const printEvent = (verbose: number) => (event: TaskEvent) => {
       console.log('Files:', event.files)
       console.log()
       break
+    case TaskEventKind.ToolDelegate:
+      console.log('\n\n======== Task Delegated ========\n')
+      console.log('Agent:', event.agentName)
+      console.log('Task:', event.task)
+      console.log('Context:', event.context)
+      console.log('Files:', event.files)
+      console.log()
+      break
     case TaskEventKind.UsageExceeded:
       console.log('\n\n======= Usage Exceeded ========\n')
       break
