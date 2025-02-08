@@ -93,7 +93,7 @@ By adhering to these guidelines:
 - You provide only the necessary information in user-facing replies to prevent re-interpretation as new commands.`
 }
 
-export const agentsPrompt = (agents: AgentInfo[], name: string) => `
+export const agentsPrompt = (agents: Readonly<AgentInfo[]>, name: string) => `
 ====
 
 AVAILABLE AGENTS

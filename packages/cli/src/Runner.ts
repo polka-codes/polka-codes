@@ -7,12 +7,15 @@ import {
   type AiServiceBase,
   AnalyzerAgent,
   ArchitectAgent,
+  CodeFixerAgent,
   CoderAgent,
   MultiAgent,
   type TaskEventCallback,
   UsageMeter,
+  allAgents,
   analyzerAgentInfo,
   architectAgentInfo,
+  codeFixerAgentInfo,
   coderAgentInfo,
   createService,
 } from '@polka-codes/core'
@@ -110,7 +113,7 @@ export class Runner {
           customInstructions: rules,
           scripts: options.config.scripts,
           interactive: options.interactive,
-          agents: this.#options.availableAgents ?? [coderAgentInfo, architectAgentInfo, analyzerAgentInfo],
+          agents: this.#options.availableAgents ?? allAgents,
           callback: this.#options.eventCallback,
         }
         switch (agentName) {
@@ -126,6 +129,11 @@ export class Runner {
             })
           case analyzerAgentInfo.name:
             return new AnalyzerAgent({
+              ...args,
+              provider: getProvider(agentName, options.config, providerOptions),
+            })
+          case codeFixerAgentInfo.name:
+            return new CodeFixerAgent({
               ...args,
               provider: getProvider(agentName, options.config, providerOptions),
             })
