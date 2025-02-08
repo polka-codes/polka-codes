@@ -268,6 +268,8 @@ export abstract class AgentBase {
       if (currentAssistantMessage) {
         break
       }
+
+      console.debug(`Retrying request ${i + 1} of ${retryCount}`)
     }
 
     if (!currentAssistantMessage) {
@@ -369,7 +371,7 @@ export abstract class AgentBase {
           canRetry: false,
         }
       }
-      const resp = await this.onBeforeInvokeTool(name, args)
+      const resp = await this.onBeforeInvokeTool(this.handlers[name].name, args)
       if (resp) {
         return resp
       }

@@ -1,5 +1,5 @@
 import { type ToolResponse, ToolResponseType, getAvailableTools } from '../../tool'
-import { allTools } from '../../tools'
+import { allTools, attemptCompletion } from '../../tools'
 import { AgentBase } from '../AgentBase'
 import { responsePrompts } from '../prompts'
 import type { AgentInfo, SharedAgentOptions } from './../AgentBase'
@@ -40,6 +40,11 @@ export class CoderAgent extends AgentBase {
   }
 
   protected async onBeforeInvokeTool(name: string, args: Record<string, string>): Promise<ToolResponse | undefined> {
+    // if agent is about to attemptCompletion, do format and check
+    if (name !== attemptCompletion.name) {
+      return
+    }
+
     const executeCommand = this.config.provider.executeCommand
     if (!executeCommand) {
       return
