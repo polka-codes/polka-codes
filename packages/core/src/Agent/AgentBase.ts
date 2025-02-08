@@ -245,14 +245,12 @@ export abstract class AgentBase {
     const retryCount = 3 // TODO: make this configurable
 
     for (let i = 0; i < retryCount; i++) {
-      let gotAnything = false
       currentAssistantMessage = ''
 
       // TODO: use a truncated messages if needed to avoid exceeding the token limit
       const stream = this.ai.send(this.config.systemPrompt, this.messages)
 
       for await (const chunk of stream) {
-        gotAnything = true
         switch (chunk.type) {
           case 'usage':
             await this.#callback({ kind: TaskEventKind.Usage, agent: this })
@@ -270,13 +268,11 @@ export abstract class AgentBase {
       if (currentAssistantMessage) {
         break
       }
+    }
+
+    if (!currentAssistantMessage) {
       // something went wrong
-      if (gotAnything) {
-        // the stream started, but didn't finish
-        // TODO: handle this case. we need to somehow recall already emitted text/reasoning events
-        throw new Error('No assistant message received')
-      }
-      // the stream not even started, we can retry safely
+      throw new Error('No assistant message received')
     }
 
     this.messages.push({
