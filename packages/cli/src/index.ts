@@ -3,6 +3,7 @@ import { Command } from 'commander'
 import { version } from '../package.json'
 import { runChat } from './commands/chat'
 import { commitCommand } from './commands/commit'
+import { createCommand } from './commands/create'
 import { initCommand } from './commands/init'
 import { prCommand } from './commands/pr'
 import { runTask } from './commands/task'
@@ -26,6 +27,9 @@ program.addCommand(commitCommand)
 
 // PR command
 program.addCommand(prCommand)
+
+// Create command
+program.addCommand(createCommand)
 
 addSharedOptions(program)
 
