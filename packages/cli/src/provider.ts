@@ -8,6 +8,7 @@ import { input, select } from '@inquirer/prompts'
 import type { Config } from './config'
 import { listFiles } from './utils/listFiles'
 import { searchFiles } from './utils/searchFiles'
+import { parseSourceCodeForDefinitionsTopLevel } from './utils/tree-sitter'
 
 export type ProviderOptions = {
   command?: {
@@ -52,12 +53,14 @@ export const getProvider = (agentName: AgentNameType, config: Config, options: P
       return await rename(sourcePath, targetPath)
     },
     listFiles: async (path: string, recursive: boolean, maxCount: number): Promise<[string[], boolean]> => {
-      return await listFiles(path, recursive, maxCount, dirname(path), options.excludeFiles)
+      return await listFiles(path, recursive, maxCount, process.cwd(), options.excludeFiles)
     },
     searchFiles: async (path: string, regex: string, filePattern: string): Promise<string[]> => {
-      return await searchFiles(path, regex, filePattern, dirname(path), options.excludeFiles)
+      return await searchFiles(path, regex, filePattern, process.cwd(), options.excludeFiles)
     },
-    // listCodeDefinitionNames: async (path: string) => Promise<string[]> {},
+    listCodeDefinitionNames: async (path: string): Promise<string> => {
+      return await parseSourceCodeForDefinitionsTopLevel(path, process.cwd(), options.excludeFiles)
+    },
 
     executeCommand: (command: string, needApprove: boolean): Promise<{ stdout: string; stderr: string; exitCode: number }> => {
       // TODO: add timeout

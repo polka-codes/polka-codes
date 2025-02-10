@@ -4,10 +4,9 @@ exports[`listCodeDefinitionNames should return code definitions 1`] = `
 {
   "message": 
 "<list_code_definition_names_path>src/main.js</list_code_definition_names_path>
-<list_code_definition_names_files>
+<list_code_definition_names_result>
 TestClass
-testFunction
-</list_code_definition_names_files>"
+</list_code_definition_names_result>"
 ,
   "type": "Reply",
 }
@@ -17,9 +16,9 @@ exports[`listCodeDefinitionNames should handle empty directory 1`] = `
 {
   "message": 
 "<list_code_definition_names_path>empty-dir</list_code_definition_names_path>
-<list_code_definition_names_files>
+<list_code_definition_names_result>
 
-</list_code_definition_names_files>"
+</list_code_definition_names_result>"
 ,
   "type": "Reply",
 }
