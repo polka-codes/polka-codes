@@ -36,6 +36,7 @@ export function parseOptions(options: CliOptions, cwdArg?: string, home: string 
   if (options.baseDir) {
     process.chdir(options.baseDir)
     cwd = options.baseDir
+    console.log('Changed working directory to', cwd)
   } else {
     cwd = process.cwd()
   }

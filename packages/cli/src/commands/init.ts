@@ -25,6 +25,11 @@ export const initCommand = new Command('init')
 
 initCommand.action(async (options, command: Command) => {
   const cmdOptions = command.parent?.opts() ?? {}
+
+  parseOptions(cmdOptions) // process --base-dir
+
+  cmdOptions.baseDir = undefined // so it won't be processed again later
+
   const globalConfigPath = getGlobalConfigPath()
 
   let gloabl = options.global
@@ -76,7 +81,7 @@ initCommand.action(async (options, command: Command) => {
       }
     }
 
-    const { config, providerConfig, verbose, maxMessageCount, budget } = parseOptions(cmdOptions)
+    const { providerConfig, verbose, maxMessageCount, budget } = parseOptions(cmdOptions)
     let { provider, model, apiKey } = providerConfig.getConfigForCommand('init') ?? {}
 
     // Get provider configuration
@@ -161,8 +166,7 @@ initCommand.action(async (options, command: Command) => {
       // Generate project config
       console.log('Analyzing project files...')
 
-      const { response } = await generateProjectConfig(runner.multiAgent, undefined)
-      console.log(response)
+      const response = await generateProjectConfig(runner.multiAgent, undefined)
       generatedConfig = response ? parse(response) : {}
     }
 

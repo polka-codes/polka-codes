@@ -51,7 +51,7 @@ export const makeTool = <T extends AiToolDefinition<any, any>>(definition: T) =>
 }
 
 export const makeAgentTool = <T extends AiToolDefinition<any, any>>(definition: T) => {
-  return async (agent: MultiAgent, params: GetInput<T>): Promise<{ response: GetOutput<T>; usage: ApiUsage }> => {
+  return async (agent: MultiAgent, params: GetInput<T>): Promise<GetOutput<T>> => {
     return executeAgentTool(definition, agent, params)
   }
 }
