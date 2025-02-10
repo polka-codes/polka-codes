@@ -10,26 +10,26 @@ export async function parseSourceCodeForDefinitionsTopLevel(dirPath: string, cwd
   // Get all files at top level (not gitignored)
   const [allFiles] = await listFiles(dirPath, false, 200, cwd, excldueFiles)
 
-  let result = ''
-
   // Separate files to parse and remaining files
   const { filesToParse } = separateFiles(allFiles)
-
   const languageParsers = await loadRequiredLanguageParsers(filesToParse)
 
   // Parse specific files we have language parsers for
-  // const filesWithoutDefinitions: string[] = []
+
+  const results: string[] = []
+
   for (const file of filesToParse) {
-    const definitions = await parseFile(file, languageParsers)
+    const abspath = path.resolve(dirPath, file)
+    const definitions = await parseFile(abspath, languageParsers)
     if (definitions) {
-      result += `${path.relative(dirPath, file)}\n${definitions}\n`
+      results.push(`${file}\n-------------\n${definitions}\n`)
     }
   }
 
-  return result ? result : 'No source code definitions found.'
+  return results.length > 0 ? results.join('\n=============\n') : 'No source code definitions found.'
 }
 
-function separateFiles(allFiles: string[]): {
+export function separateFiles(allFiles: string[]): {
   filesToParse: string[]
   remainingFiles: string[]
 } {
@@ -57,7 +57,7 @@ This approach allows us to focus on the most relevant parts of the code (defined
 - https://github.com/tree-sitter/tree-sitter/blob/master/lib/binding_web/test/helper.js
 - https://tree-sitter.github.io/tree-sitter/code-navigation-systems
 */
-async function parseFile(filePath: string, languageParsers: LanguageParser): Promise<string | undefined> {
+export async function parseFile(filePath: string, languageParsers: LanguageParser): Promise<string | undefined> {
   const fileContent = await fs.readFile(filePath, 'utf8')
   const ext = path.extname(filePath).toLowerCase().slice(1)
 
