@@ -28,10 +28,14 @@ sample.py
 sample.ts
 -------------
 |----
+│interface User {
+|----
 │class UserService {
 │  getUser(id: number): User {
 |----
 │function calculateTotal(items: number[]): number {
+|----
+│const someFunctionWithManyParameters = (
 |----
 
 "

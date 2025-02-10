@@ -4,6 +4,10 @@
 - abstract method signatures
 - class declarations (including abstract classes)
 - module declarations
+- variable declarations and constants
+- interface declarations
+- type aliases
+- class properties
 */
 export default `
 (function_signature
@@ -20,6 +24,20 @@ export default `
 
 (module
   name: (identifier) @name.definition.module) @definition.module
+
+(variable_declaration
+  (variable_declarator
+    name: (identifier) @name.definition.variable)) @definition.variable
+
+(lexical_declaration
+  (variable_declarator
+    name: (identifier) @name.definition.constant)) @definition.constant
+
+(interface_declaration
+  name: (type_identifier) @name.definition.interface) @definition.interface
+
+(type_alias_declaration
+  name: (type_identifier) @name.definition.type) @definition.type
 
 (function_declaration
   name: (identifier) @name.definition.function) @definition.function
