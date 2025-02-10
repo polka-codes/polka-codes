@@ -2,6 +2,7 @@
   "name": "@polka-codes/cli",
   "version": "0.5.4",
   "license": "AGPL-3.0",
+  "author": "github@polka.codes",
   "type": "module",
   "bin": {
     "polka-codes": "cli.mjs"
