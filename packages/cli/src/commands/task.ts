@@ -60,7 +60,7 @@ export async function runTask(taskArg: string | undefined, _options: any, comman
         task = stdinInput
       } else {
         // No stdin input, fall back to chat
-        runChat({}, command)
+        runChat(command.opts())
         return
       }
     } catch (error) {
