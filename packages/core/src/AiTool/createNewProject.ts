@@ -30,7 +30,7 @@ const prompt = `You are an AiTool designed to assist users in creating new proje
    - Based on the collected information, generate a .polkacodes.yml configuration file that includes:
      - scripts section with common development commands (test, format, check, etc.)
      - rules section reflecting project conventions and tools
-     - excludeFiles section for sensitive and generated files
+     - excludeFiles section for sensitive files only
    - Example structure:
      \`\`\`yaml
      scripts:

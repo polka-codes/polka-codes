@@ -26,25 +26,6 @@ excludeFiles:
     expect(result).toBe(output)
   })
 
-  test('should trim whitespace in output', () => {
-    const output = `
-scripts:
-  test:
-    command: "bun test"
-    description: "Run tests"
-
-rules:
-  - "Use bun as package manager"
-
-excludeFiles:
-  - ".env"
-  - "dist/"
-    `
-
-    const result = generateProjectConfig.parseOutput(output)
-    expect(result).toBe(output.trim())
-  })
-
   test('should handle output with empty excludeFiles section', () => {
     const output = `scripts:
   test:

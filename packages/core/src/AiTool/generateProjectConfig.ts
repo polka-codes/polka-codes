@@ -73,7 +73,7 @@ export default {
     return ''
   },
   parseOutput: (output: string) => {
-    return output.trim()
+    return output
   },
   agent: 'analyzer',
 } as const satisfies AiToolDefinition<void>
