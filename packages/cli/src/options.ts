@@ -31,9 +31,13 @@ export function addSharedOptions(command: Command) {
     .option('-d --base-dir <path>', 'Base directory to run commands in')
 }
 
-export function parseOptions(options: CliOptions, cwd: string = process.cwd(), home: string = os.homedir()) {
+export function parseOptions(options: CliOptions, cwdArg?: string, home: string = os.homedir()) {
+  let cwd = cwdArg
   if (options.baseDir) {
     process.chdir(options.baseDir)
+    cwd = options.baseDir
+  } else {
+    cwd = process.cwd()
   }
 
   const config = loadConfig(options.config, cwd, home) ?? {}
