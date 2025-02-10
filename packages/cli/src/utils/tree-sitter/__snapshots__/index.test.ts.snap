@@ -1,0 +1,42 @@
+// Bun Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`tree-sitter parseSourceCodeForDefinitionsTopLevel should successfully parse multiple files 1`] = `
+"sample.js
+-------------
+|----
+|----
+│function formatName(first, last) {
+|----
+│class Person {
+|----
+│  greet() {
+|----
+
+
+=============
+sample.py
+-------------
+|----
+│class Calculator:
+│    def add(self, a, b):
+|----
+│def main():
+|----
+
+
+=============
+sample.ts
+-------------
+|----
+│interface User {
+|----
+│class UserService {
+│  getUser(id: number): User {
+|----
+│function calculateTotal(items: number[]): number {
+|----
+│const someFunctionWithManyParameters = (
+|----
+
+"
+`;

@@ -26,14 +26,14 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
 
   const path = getString(args, 'path')
 
-  const files = await provider.listCodeDefinitionNames(path)
+  const result = await provider.listCodeDefinitionNames(path)
 
   return {
     type: ToolResponseType.Reply,
     message: `<list_code_definition_names_path>${path}</list_code_definition_names_path>
-<list_code_definition_names_files>
-${files.join('\n')}
-</list_code_definition_names_files>`,
+<list_code_definition_names_result>
+${result}
+</list_code_definition_names_result>`,
   }
 }
 

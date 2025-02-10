@@ -5,7 +5,7 @@ import { MockProvider } from './provider'
 describe('listCodeDefinitionNames', () => {
   it('should return code definitions', async () => {
     const mockProvider = new MockProvider()
-    spyOn(mockProvider, 'listCodeDefinitionNames').mockResolvedValue(['TestClass', 'testFunction'])
+    spyOn(mockProvider, 'listCodeDefinitionNames').mockResolvedValue('TestClass')
 
     const result = await listCodeDefinitionNames.handler(mockProvider, {
       path: 'src/main.js',
@@ -17,7 +17,7 @@ describe('listCodeDefinitionNames', () => {
 
   it('should handle empty directory', async () => {
     const mockProvider = new MockProvider()
-    spyOn(mockProvider, 'listCodeDefinitionNames').mockResolvedValue([])
+    spyOn(mockProvider, 'listCodeDefinitionNames').mockResolvedValue('')
 
     const result = await listCodeDefinitionNames.handler(mockProvider, {
       path: 'empty-dir',
