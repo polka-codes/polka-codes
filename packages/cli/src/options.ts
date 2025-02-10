@@ -36,7 +36,7 @@ export function parseOptions(options: CliOptions, cwd: string = process.cwd(), h
     process.chdir(options.baseDir)
   }
 
-  const config = loadConfig(options.config ?? options.c, cwd, home) ?? {}
+  const config = loadConfig(options.config, cwd, home) ?? {}
 
   const defaultProvider = (options.apiProvider || process.env.POLKA_API_PROVIDER || config.defaultProvider) as AiServiceProvider | undefined
   const defaultModel = options.model || process.env.POLKA_MODEL || config.defaultModel
