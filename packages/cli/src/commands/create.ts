@@ -34,7 +34,7 @@ const askForPath = async (projectName: string) => {
             default: true,
           })
 
-          if (!confirmPath) {
+          if (confirmPath) {
             return targetPath
           }
         } else {
