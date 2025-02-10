@@ -44,16 +44,14 @@ export const runChat = async (opts: any, command?: Command) => {
     enableCache: true,
   })
 
-  let started = false
   const chat = new Chat({
     onMessage: async (message) => {
       let exitReason: ExitReason
-      if (started) {
+      if (runner.hasActiveAgent) {
         const reason = await runner.continueTask(message)
         exitReason = reason
       } else {
         const reason = await runner.startTask(message)
-        started = true
         exitReason = reason
       }
       switch (exitReason.type) {

@@ -200,6 +200,10 @@ ${fileList.join('\n')}${limited ? '\n<files_truncated>true</files_truncated>' : 
     return await this.multiAgent.continueTask(message)
   }
 
+  get hasActiveAgent() {
+    return this.multiAgent.hasActiveAgent
+  }
+
   get usage() {
     return this.#usageMeter.usage
   }

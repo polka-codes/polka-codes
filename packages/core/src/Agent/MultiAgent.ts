@@ -79,4 +79,8 @@ export class MultiAgent {
     const exitReason = await this.#agents[this.#agents.length - 1].continueTask(userMessage)
     return await this.#handleTaskResult(exitReason)
   }
+
+  get hasActiveAgent(): boolean {
+    return this.#agents.length > 0
+  }
 }
