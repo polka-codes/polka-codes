@@ -13,7 +13,6 @@ const prompt = `You are an analyzer agent responsible for examining project file
    - Code style tools and rules
    - Project structure and conventions
    - Common development workflows
-   - .gitignore patterns and sensitive/generated files
 
 2. Generate a YAML configuration that captures:
    - scripts section based on package.json scripts and CI workflows. If applicable, generate following scripts:
@@ -22,7 +21,7 @@ const prompt = `You are an analyzer agent responsible for examining project file
      - test: Run tests using a test runner tool
    - include other relevant scripts based on project conventions, tools, and patterns
    - rules section based on project conventions, tools, and patterns
-   - excludeFiles section for common sensitive/generated files
+   - excludeFiles section for sensitive files
 
 3. Use tool_attempt_completion to return the final configuration in this format:
 
@@ -46,10 +45,6 @@ excludeFiles:
   - ".env"
   - ".env.*"
   - ".npmrc"
-  # Generated files
-  - "package-lock.json"
-  - "yarn.lock"
-  - "pnpm-lock.yaml"
 </tool_parameter_result>
 </tool_attempt_completion>
 

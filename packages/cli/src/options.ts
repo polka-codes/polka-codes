@@ -10,13 +10,13 @@ import { loadConfig } from './config'
 
 export interface CliOptions {
   config?: string
-  c?: string
   apiProvider?: string
   model?: string
   apiKey?: string
   maxMessageCount?: number
   budget?: number
   verbose?: number
+  baseDir?: string
 }
 
 export function addSharedOptions(command: Command) {
@@ -28,10 +28,15 @@ export function addSharedOptions(command: Command) {
     .option('--max-messages <iterations>', 'Maximum number of messages to send. Default to 50', Number.parseInt, 50)
     .option('--budget <budget>', 'Budget for the AI service. Default to $1000', Number.parseFloat, 1000)
     .option('-v --verbose', 'Enable verbose output. Use -v for level 1, -vv for level 2', (value, prev) => prev + 1, 0)
+    .option('-d --base-dir <path>', 'Base directory to run commands in')
 }
 
 export function parseOptions(options: CliOptions, cwd: string = process.cwd(), home: string = os.homedir()) {
-  const config = loadConfig(options.config ?? options.c, cwd, home) ?? {}
+  if (options.baseDir) {
+    process.chdir(options.baseDir)
+  }
+
+  const config = loadConfig(options.config, cwd, home) ?? {}
 
   const defaultProvider = (options.apiProvider || process.env.POLKA_API_PROVIDER || config.defaultProvider) as AiServiceProvider | undefined
   const defaultModel = options.model || process.env.POLKA_MODEL || config.defaultModel

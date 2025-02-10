@@ -162,6 +162,7 @@ initCommand.action(async (options, command: Command) => {
       console.log('Analyzing project files...')
 
       const { response } = await generateProjectConfig(runner.multiAgent, undefined)
+      console.log(response)
       generatedConfig = response ? parse(response) : {}
     }
 
@@ -177,14 +178,6 @@ initCommand.action(async (options, command: Command) => {
       if (newConfig.apiKey) {
         set(finalConfig, ['providers', newConfig.provider, 'apiKey'], newConfig.apiKey)
       }
-    }
-
-    if (!finalConfig.defaultProvider) {
-      finalConfig.defaultProvider = provider
-    }
-
-    if (!finalConfig.defaultModel) {
-      finalConfig.defaultModel = model
     }
 
     // Save config
