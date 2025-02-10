@@ -8,14 +8,13 @@
         "bun-types": "^1.2.0",
         "husky": "^9.1.7",
         "lint-staged": "^15.4.2",
-        "ts-add-js-extension": "^1.6.5",
         "tslib": "^2.8.1",
         "typescript": "^5.7.3",
       },
     },
     "packages/cli": {
       "name": "@polka-codes/cli",
-      "version": "0.5.2",
+      "version": "0.5.4",
       "bin": {
         "polka-codes": "cli.mjs"
       },
@@ -40,7 +39,7 @@
     },
     "packages/core": {
       "name": "@polka-codes/core",
-      "version": "0.5.2",
+      "version": "0.5.4",
       "dependencies": {
         "@anthropic-ai/sdk": "^0.36.2",
         "openai": "^4.80.0",
@@ -293,8 +292,6 @@
     "tr46": ["tr46@0.0.3", "", {}, "sha512-N3WMsuqV66lT30CrXNbEjx4GEwlow3v6rr4mCcv6prnfwhS01rkgyFdjPNBYd9br7LpXV1+Emh01fHnq2Gdgrw=="],
 
     "tree-sitter-wasms": ["tree-sitter-wasms@0.1.12", "", { "dependencies": { "tree-sitter-wasms": "^0.1.11" } }, "sha512-N9Jp+dkB23Ul5Gw0utm+3pvG4km4Fxsi2jmtMFg7ivzwqWPlSyrYQIrOmcX+79taVfcHEA+NzP0hl7vXL8DNUQ=="],
-
-    "ts-add-js-extension": ["ts-add-js-extension@1.6.5", "", { "dependencies": { "typescript": "^5.6.3" }, "bin": { "ts-add-js-extension": "build/cjs/bin.js" } }, "sha512-ijPXEuexDZorzkqBRGwYSS9tyqJYhhCvK92qIRussMnQD7FC4b38aL58XDI5OhLMQUR5fAyA9FCQmV+RCRfukA=="],
 
     "tslib": ["tslib@2.8.1", "", {}, "sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w=="],
 
