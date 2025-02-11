@@ -147,7 +147,7 @@ rules:
 
     const command = new Command()
     addSharedOptions(command)
-    const options = command.parse(['node', 'test', '--config', configPath1, configPath2]).opts()
+    const options = command.parse(['node', 'test', '--config', configPath1, '--config', configPath2]).opts()
 
     const result = parseOptions(options, testDir, testDir)
     expect(result.config).toMatchSnapshot()
