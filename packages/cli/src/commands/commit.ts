@@ -61,8 +61,8 @@ export const commitCommand = new Command('commit')
         }
       }
 
-      // Get diff with 200 lines of context
-      const diff = execSync('git diff --cached -U200').toString()
+      // Get diff with some context
+      const diff = execSync('git diff --cached -U50').toString()
 
       spinner.text = 'Generating commit message...'
 

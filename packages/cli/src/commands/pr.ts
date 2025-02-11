@@ -62,7 +62,7 @@ export const prCommand = new Command('pr')
         encoding: 'utf-8',
       })
 
-      const diff = execSync(`git diff --cached -U200 ${defaultBranch}`, { encoding: 'utf-8' })
+      const diff = execSync(`git diff --cached -U50 ${defaultBranch}`, { encoding: 'utf-8' })
 
       const usage = new UsageMeter()
 
