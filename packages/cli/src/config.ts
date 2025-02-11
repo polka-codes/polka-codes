@@ -139,7 +139,7 @@ export function loadConfig(paths?: string | string[], cwd: string = process.cwd(
   }
 
   // Load project configs
-  if (paths) {
+  if (paths && paths.length > 0) {
     const configPaths = Array.isArray(paths) ? paths : [paths]
     for (const path of configPaths) {
       try {
