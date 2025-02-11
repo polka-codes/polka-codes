@@ -21,7 +21,7 @@ export interface CliOptions {
 
 export function addSharedOptions(command: Command) {
   return command
-    .option('-c --config <paths...>', 'Path to config file(s)')
+    .option('-c --config <paths>', 'Path to config file(s)', (value: string, prev: string[]) => prev.concat(value), [])
     .option('--api-provider <provider>', 'API provider')
     .option('--model <model>', 'Model ID')
     .option('--api-key <key>', 'API key')
