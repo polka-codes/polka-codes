@@ -9,7 +9,7 @@ import { ApiProviderConfig } from './ApiProviderConfig'
 import { loadConfig } from './config'
 
 export interface CliOptions {
-  config?: string
+  config?: string | string[]
   apiProvider?: string
   model?: string
   apiKey?: string
@@ -21,7 +21,7 @@ export interface CliOptions {
 
 export function addSharedOptions(command: Command) {
   return command
-    .option('-c --config <path>', 'Path to config file')
+    .option('-c --config <paths...>', 'Path to config file(s)')
     .option('--api-provider <provider>', 'API provider')
     .option('--model <model>', 'Model ID')
     .option('--api-key <key>', 'API key')
