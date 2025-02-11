@@ -32,6 +32,23 @@ exports[`parseOptions prioritizes CLI flags over env vars and config 1`] = `
 }
 `;
 
+exports[`parseOptions handles multiple config files 1`] = `
+{
+  "defaultModel": "claude-3-sonnet",
+  "defaultProvider": "anthropic",
+  "excludeFiles": undefined,
+  "providers": {
+    "anthropic": {
+      "defaultModel": "claude-3-sonnet",
+    },
+  },
+  "rules": [
+    "rule1",
+    "rule2",
+  ],
+}
+`;
+
 exports[`parseOptions merges environment variables with config 1`] = `
 {
   "apiKey": "cli-key",
