@@ -98,6 +98,20 @@ A [`.polkacodes.yml`](.polkacodes.yml) configuration file can be used to customi
 
 For detailed configuration options, refer to the example file which includes comprehensive comments for each setting.
 
+## Environment Variables
+
+The following environment variables can be used to configure Polka Codes. Note that command line options take precedence over environment variables, which in turn take precedence over the configuration file.
+
+| Variable | Description |
+|----------|-------------|
+| `POLKA_API_PROVIDER` | Specify the default AI service provider |
+| `POLKA_MODEL` | Specify the default AI model to use |
+| `POLKA_API_KEY` | Default API key for the selected provider |
+| `POLKA_BUDGET` | Set the budget limit for AI service usage (defaults to 1000) |
+| `ANTHROPIC_API_KEY` | API key for Anthropic Claude service |
+| `OPENROUTER_API_KEY` | API key for OpenRouter service |
+| `DEEPSEEK_API_KEY` | API key for DeepSeek service |
+
 ## License
 
 This project is licensed under the [AGPL-3.0 License](LICENSE).
