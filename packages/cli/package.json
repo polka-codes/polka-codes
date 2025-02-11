@@ -5,7 +5,7 @@
   "author": "github@polka.codes",
   "type": "module",
   "bin": {
-    "polka-codes": "cli.mjs"
+    "polka": "cli.mjs"
   },
   "exports": {
     ".": {
