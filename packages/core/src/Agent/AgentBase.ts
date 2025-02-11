@@ -323,6 +323,11 @@ export abstract class AgentBase {
               await this.#callback({ kind: TaskEventKind.ToolInterrupted, agent: this, tool: content.name })
               return { exit: toolResp }
             case ToolResponseType.HandOver:
+              if (toolReponses.length > 0) {
+                // agent is trying run multiple tools at the same time
+                // ignore the request in this case
+                continue
+              }
               // hand over the task to another agent
               await this.#callback({
                 kind: TaskEventKind.ToolHandOver,
@@ -335,6 +340,11 @@ export abstract class AgentBase {
               })
               return { exit: toolResp }
             case ToolResponseType.Delegate:
+              if (toolReponses.length > 0) {
+                // agent is trying run multiple tools at the same time
+                // ignore the request in this case
+                continue
+              }
               // delegate the task to another agent
               await this.#callback({
                 kind: TaskEventKind.ToolDelegate,
