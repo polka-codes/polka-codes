@@ -20,7 +20,7 @@ export const prCommand = new Command('pr')
     console.log('Model:', model)
 
     if (!provider) {
-      console.error('Error: No provider specified. Please run "polka-codes config" to configure your AI provider.')
+      console.error('Error: No provider specified. Please run "pokla config" to configure your AI provider.')
       process.exit(1)
     }
 

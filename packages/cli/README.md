@@ -32,13 +32,13 @@ npx @polka-codes/cli
 polka-codes
 
 # Run specific task
-polka-codes task "improve readme"
+pokla task "improve readme"
 
 # Create config file
-polka-codes config
+pokla config
 
 # Generate commit message
-polka-codes commit
+pokla commit
 ```
 
 ### Commit Command
@@ -47,10 +47,10 @@ The `commit` subcommand helps generate meaningful commit messages based on your 
 
 ```bash
 # Generate commit message for staged changes
-polka-codes commit
+pokla commit
 
 # Generate commit message with specific context
-polka-codes commit "closes issue #123"
+pokla commit "closes issue #123"
 
 ```
 
@@ -59,7 +59,7 @@ polka-codes commit "closes issue #123"
 Create a GitHub pull request with AI-generated details:
 
 ```bash
-polka-codes pr "optional message. e.g. closes #123"
+pokla pr "optional message. e.g. closes #123"
 ```
 
 ### Configuration

@@ -16,7 +16,7 @@
       "name": "@polka-codes/cli",
       "version": "0.5.4",
       "bin": {
-        "polka-codes": "cli.mjs"
+        "polka": "cli.mjs"
       },
       "dependencies": {
         "@inquirer/prompts": "^7.2.3",

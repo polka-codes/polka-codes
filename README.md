@@ -30,19 +30,19 @@ npx @polka-codes/cli "your task description"
 
 ```bash
 # Create a new project
-polka-codes create my-project
+pokla create my-project
 
 # Initialize configuration
-polka-codes init
+pokla init
 
 # Run some task
-polka-codes "improve README.md"
+pokla "improve README.md"
 
 # Start interactive chat session
 polka-codes
 
 # Get help
-polka-codes --help
+pokla --help
 ```
 
 For more information, see [cli README](packages/cli/README.md)
