@@ -13,7 +13,9 @@
     "typecheck": "tsc --noEmit",
     "prepare": "husky",
     "clean": "rm -rf packages/*/dist packages/*/tsconfig.tsbuildinfo",
-    "cli": "bun run --no-check packages/cli/src/index.ts"
+    "cli": "bun run --no-check packages/cli/src/index.ts",
+    "pr": "bun cli pr",
+    "commit": "bun cli commit"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",

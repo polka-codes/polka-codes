@@ -1,6 +1,7 @@
 import type { AiServiceBase, MessageParam } from '../AiService'
 import {
   type FullToolInfo,
+  PermissionLevel,
   type ToolResponse,
   type ToolResponseDelegate,
   type ToolResponseExit,
@@ -297,6 +298,14 @@ export abstract class AgentBase {
           // no need to handle text content
           break
         case 'tool_use': {
+          if (toolReponses.length > 0) {
+            const toolLevel = this.handlers[content.name].permissionLevel
+            if (toolLevel > PermissionLevel.Read) {
+              // only allow multiple None / Read level tools to be executed in a single request
+              break outer
+            }
+          }
+
           await this.#callback({ kind: TaskEventKind.ToolUse, agent: this, tool: content.name })
           const toolResp = await this.#invokeTool(content.name, content.params)
           switch (toolResp.type) {
@@ -324,9 +333,9 @@ export abstract class AgentBase {
               return { exit: toolResp }
             case ToolResponseType.HandOver:
               if (toolReponses.length > 0) {
-                // agent is trying run multiple tools at the same time
-                // ignore the request in this case
-                continue
+                // agent is trying run too many tools in a single request
+                // stop the tool execution
+                break outer
               }
               // hand over the task to another agent
               await this.#callback({
@@ -341,8 +350,8 @@ export abstract class AgentBase {
               return { exit: toolResp }
             case ToolResponseType.Delegate:
               if (toolReponses.length > 0) {
-                // agent is trying run multiple tools at the same time
-                // ignore the request in this case
+                // agent is trying run too many tools in a single request
+                // stop the tool execution
                 continue
               }
               // delegate the task to another agent
