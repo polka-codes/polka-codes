@@ -7,97 +7,191 @@
 [![Bun Version](https://img.shields.io/badge/Bun-v1.0.0+-brightgreen)](https://bun.sh)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue)](https://www.typescriptlang.org)
 
-The Polka Codes CLI provides a powerful command-line interface for interacting with the Polka Codes AI coding assistant framework.
+The Polka Codes CLI provides a powerful command-line interface for interacting with AI-powered coding assistants. It offers features like interactive chat, task execution, commit message generation, and pull request creation.
 
 ## Installation
 
-### Global Installation
-
 ```bash
+# Install globally with npm
 npm install -g @polka-codes/cli
-```
 
-### Run Directly
+# Install globally with yarn
+yarn global add @polka-codes/cli
 
-```bash
+# Install globally with bun
+bun add -g @polka-codes/cli
+
+# Or run directly with npx
 npx @polka-codes/cli
 ```
 
-## Usage
+## Commands
 
-### Basic Commands
+### Interactive Chat
 
-```bash
-# Run interactive session
-polka-codes
-
-# Run specific task
-pokla task "improve readme"
-
-# Create config file
-pokla config
-
-# Generate commit message
-pokla commit
-```
-
-### Commit Command
-
-The `commit` subcommand helps generate meaningful commit messages based on your staged changes:
+Start an interactive chat session with the AI assistant:
 
 ```bash
-# Generate commit message for staged changes
-pokla commit
-
-# Generate commit message with specific context
-pokla commit "closes issue #123"
-
+polka chat
+# or simply
+polka
 ```
 
-### PR Command
+### Task Execution
 
-Create a GitHub pull request with AI-generated details:
+Execute a specific task:
 
 ```bash
-pokla pr "optional message. e.g. closes #123"
+polka task "improve error handling in auth module"
+# or pipe input
+echo "optimize database queries" | polka task
 ```
+
+### Project Creation
+
+Create a new project with AI assistance:
+
+```bash
+polka create my-project
+```
+
+The command will:
+1. Prompt for project location confirmation
+2. Set up initial project structure
+3. Configure basic dependencies
+4. Generate starter code
 
 ### Configuration
 
-Create a `.polkacodes.yml` file in your project root:
-
-```yaml
-# Example configuration
-provider: deepseek
-modelId: deepseek-chat
-commands: # a set of available commands for the AI assistant
-  check: bun check # command
-  test: # command name
-    command: bun test # command to execute
-    description: Run tests. Pass file path to run a specific test file. # description of the command
-rules: |
-  Additional rules for the AI assistant.
-```
-
-### AI Configuration
-
-Supported providers
-1. DeepSeek / `deepseek` (recommended)
-2. Anthropic / `anthropic` (Sonnet 3.5 recommended)
-3. OpenRouter / `openrouter`
-4. Ollama / `ollama`
-
-Configure the AI service by creating a `.env` file in your project root:
+Initialize Polka Codes configuration:
 
 ```bash
+# Create local config
+polka init
+
+# Create global config
+polka init --global
+```
+
+### Git Integration
+
+Generate commit messages based on staged changes:
+
+```bash
+# Generate commit message for staged changes
+polka commit
+
+# Generate commit message with context
+polka commit "closes #123"
+
+# Stage all changes and commit
+polka commit -a
+```
+
+Create pull requests with AI-generated details:
+
+```bash
+# Create PR with current branch changes
+polka pr
+
+# Create PR with additional context
+polka pr "implements feature #456"
+```
+
+## Configuration
+
+### Provider Setup
+
+Polka Codes supports multiple AI providers:
+
+1. DeepSeek (Recommended)
+2. Anthropic (Claude 3 Sonnet recommended)
+3. OpenRouter
+4. Ollama
+
+Configure your provider in `.env`:
+
+```bash
+# Required
 POLKA_API_KEY=your_api_key_here
 
-# Optional - override default model
-POLKA_API_PROVIDER=deepseek # or anthropic, ollama
+# Optional - override defaults
+POLKA_API_PROVIDER=deepseek  # or anthropic, openrouter, ollama
 POLKA_AI_MODEL_ID=deepseek-chat  # or claude-3-sonnet-20240229
 ```
 
----
+### Project Configuration
 
+Create `.polkacodes.yml` in your project root:
+
+```yaml
+# AI provider settings
+provider: deepseek  # default provider
+modelId: deepseek-chat  # default model
+
+# Custom commands available to AI
+commands:
+  test:
+    command: bun test
+    description: Run tests. Pass file path to run specific tests.
+  check:
+    command: bun typecheck
+    description: Run type checker
+  format:
+    command: bun fix
+    description: Format code
+
+# Additional rules/guidelines for AI
+rules: |
+  - Use TypeScript for all new files
+  - Follow project's existing code style
+  - Add tests for new features
+```
+
+### Global vs Local Configuration
+
+- Global config (`~/.config/polkacodes/config.yml`): Store API keys and default settings
+- Local config (`.polkacodes.yml`): Project-specific settings and commands
+
+## Features
+
+- 🤖 Multiple AI provider support
+- 💬 Interactive chat mode
+- 🎯 Task-focused commands
+- 🔄 Git workflow integration
+- 📊 Project analysis and configuration
+- 🛠️ Custom command integration
+- 🔑 Secure API key management
+- 📝 Detailed logging with `--verbose`
+
+## Usage Tips
+
+1. Use interactive mode for complex tasks:
+   ```bash
+   polka chat
+   ```
+
+2. Pipe tasks for automation:
+   ```bash
+   echo "update dependencies" | polka task
+   ```
+
+3. Combine with git workflow:
+   ```bash
+   git add . && polka commit && polka pr
+   ```
+
+4. Monitor AI usage:
+   ```bash
+   polka task "refactor auth" --verbose
+   ```
+
+## Requirements
+
+- Node.js 18+
+- Git (for commit/PR features)
+- GitHub CLI (for PR creation)
+
+---
 
 *This README was generated by polka.codes*
