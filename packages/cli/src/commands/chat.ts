@@ -1,4 +1,4 @@
-import { type ExitReason, ToolResponseType, architectAgentInfo } from '@polka-codes/core'
+import { type ExitReason, ToolResponseType } from '@polka-codes/core'
 import type { Command } from 'commander'
 
 import { Chat } from '../Chat'
@@ -9,16 +9,14 @@ import { printEvent } from '../utils/eventHandler'
 
 export const runChat = async (opts: any, command?: Command) => {
   const options = command?.parent?.opts() ?? opts ?? {}
-  const { config, providerConfig, maxMessageCount, verbose, budget } = parseOptions(options)
+  const { config, providerConfig, maxMessageCount, verbose, budget, agent } = parseOptions(options)
 
   if (!process.stdin.isTTY) {
     console.error('Error: Terminal is not interactive. Please run this command in an interactive terminal.')
     process.exit(1)
   }
 
-  // TODO: configure starter agent
-  const startAgent = architectAgentInfo.name
-  let { provider, model, apiKey } = providerConfig.getConfigForAgent(startAgent) ?? {}
+  let { provider, model, apiKey } = providerConfig.getConfigForAgent(agent) ?? {}
 
   if (!provider) {
     // new user? ask for config
@@ -42,6 +40,7 @@ export const runChat = async (opts: any, command?: Command) => {
     interactive: true,
     eventCallback: printEvent(verbose),
     enableCache: true,
+    initialAgent: agent,
   })
 
   const chat = new Chat({
