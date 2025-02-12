@@ -34,7 +34,6 @@ export type RunnerOptions = {
   eventCallback: TaskEventCallback
   enableCache: boolean
   availableAgents?: AgentInfo[] // empty to enable all agents
-  initialAgent?: string
 }
 
 export class Runner {

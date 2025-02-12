@@ -18,14 +18,12 @@ describe('agent option', () => {
   })
 
   test('defaults to architect when no agent specified', () => {
-    const result = parseOptions({})
+    const result = parseOptions({}, testDir, testDir, {})
     expect(result.agent).toBe('architect')
   })
 
   test('uses agent from CLI option', () => {
-    const result = parseOptions({
-      agent: 'coder',
-    })
+    const result = parseOptions({ agent: 'coder' }, testDir, testDir, {})
     expect(result.agent).toBe('coder')
   })
 

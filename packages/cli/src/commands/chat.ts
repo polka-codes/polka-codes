@@ -40,7 +40,6 @@ export const runChat = async (opts: any, command?: Command) => {
     interactive: true,
     eventCallback: printEvent(verbose),
     enableCache: true,
-    initialAgent: agent,
   })
 
   const chat = new Chat({
@@ -50,7 +49,7 @@ export const runChat = async (opts: any, command?: Command) => {
         const reason = await runner.continueTask(message)
         exitReason = reason
       } else {
-        const reason = await runner.startTask(message)
+        const reason = await runner.startTask(message, agent)
         exitReason = reason
       }
       switch (exitReason.type) {

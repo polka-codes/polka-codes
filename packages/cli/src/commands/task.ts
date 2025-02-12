@@ -83,9 +83,8 @@ export async function runTask(taskArg: string | undefined, _options: any, comman
     interactive: process.stdin.isTTY,
     eventCallback: printEvent(verbose),
     enableCache: true,
-    initialAgent: agent,
   })
 
-  await runner.startTask(task)
+  await runner.startTask(task, agent)
   runner.printUsage()
 }
