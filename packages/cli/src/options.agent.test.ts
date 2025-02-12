@@ -41,6 +41,8 @@ agent: analyzer
         config: [configPath],
       },
       testDir,
+      testDir,
+      {},
     )
     expect(result.agent).toBe('analyzer')
   })
@@ -60,6 +62,8 @@ agent: analyzer
         agent: 'coder',
       },
       testDir,
+      testDir,
+      {},
     )
     expect(result.agent).toBe('coder')
   })
