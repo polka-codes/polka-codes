@@ -12,11 +12,25 @@ export type ToolExample = {
   parameters: { name: string; value: string }[]
 }
 
+export enum PermissionLevel {
+  // This tool is completely safe
+  None = 0,
+  // This tool can read files
+  Read = 1,
+  // This tool can write files
+  Write = 2,
+  // This tool can perform arbitrary action
+  Arbitrary = 3,
+}
+
+console.log(PermissionLevel)
+
 export type ToolInfo = {
   name: string
   description: string
   parameters: ToolParameter[]
   examples?: ToolExample[]
+  permissionLevel: PermissionLevel
 }
 
 export type FullToolInfo = ToolInfo & {

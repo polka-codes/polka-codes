@@ -1,4 +1,4 @@
-import { type FullToolInfo, type ToolHandler, type ToolInfo, ToolResponseType } from '../tool'
+import { type FullToolInfo, PermissionLevel, type ToolHandler, type ToolInfo, ToolResponseType } from '../tool'
 import type { CommandProvider } from './provider'
 import { getBoolean, getString } from './utils'
 
@@ -35,6 +35,7 @@ export const toolInfo = {
       ],
     },
   ],
+  permissionLevel: PermissionLevel.Arbitrary,
 } as const satisfies ToolInfo
 
 export const handler: ToolHandler<typeof toolInfo, CommandProvider> = async (provider, args) => {
