@@ -1,5 +1,3 @@
-import { delegate, handOver } from './tools'
-
 export type ToolParameter = {
   name: string
   description: string
@@ -22,8 +20,6 @@ export enum PermissionLevel {
   // This tool can perform arbitrary action
   Arbitrary = 3,
 }
-
-console.log(PermissionLevel)
 
 export type ToolInfo = {
   name: string
@@ -118,21 +114,3 @@ export type ToolHandler<T extends ToolInfo, P> = (
   provider: P,
   args: Partial<Record<T['parameters'][number]['name'], string>>,
 ) => Promise<ToolResponse>
-
-export const getAvailableTools = (provider: any, allTools: FullToolInfo[], hasAgent: boolean) => {
-  const tools: FullToolInfo[] = []
-  for (const tool of allTools) {
-    // disable agent tools if no agents available
-    if (!hasAgent) {
-      switch (tool.name) {
-        case handOver.name:
-        case delegate.name:
-          continue
-      }
-    }
-    if (tool.isAvailable(provider)) {
-      tools.push(tool)
-    }
-  }
-  return tools
-}

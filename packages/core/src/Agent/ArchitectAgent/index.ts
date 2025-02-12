@@ -1,4 +1,4 @@
-import { getAvailableTools } from '../../tool'
+import { getAvailableTools } from '../../getAvailableTools'
 import {
   askFollowupQuestion,
   attemptCompletion,
