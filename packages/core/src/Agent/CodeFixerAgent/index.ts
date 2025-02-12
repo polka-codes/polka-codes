@@ -4,7 +4,7 @@
  */
 
 import { getAvailableTools } from '../../getAvailableTools'
-import { type ToolResponse, ToolResponseType } from '../../tool'
+import { PermissionLevel, type ToolResponse, ToolResponseType } from '../../tool'
 import { allTools, attemptCompletion } from '../../tools'
 import { AgentBase } from '../AgentBase'
 import type { AgentInfo, SharedAgentOptions } from '../AgentBase'
@@ -25,7 +25,7 @@ export class CodeFixerAgent extends AgentBase {
 
   constructor(options: CodeFixerAgentOptions) {
     const combinedTools = [...(options.additionalTools ?? []), ...Object.values(allTools)]
-    const tools = getAvailableTools(options.provider, combinedTools, (options.agents?.length ?? 0) > 0)
+    const tools = getAvailableTools(options.provider, combinedTools, (options.agents?.length ?? 0) > 0, PermissionLevel.Arbitrary)
     const toolNamePrefix = 'tool_'
     const systemPrompt = fullSystemPrompt(
       {

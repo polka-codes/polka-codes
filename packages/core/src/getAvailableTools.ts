@@ -1,7 +1,15 @@
-import type { FullToolInfo } from './tool'
+import type { FullToolInfo, PermissionLevel } from './tool'
 import { delegate, handOver } from './tools'
 
-export const getAvailableTools = (provider: any, allTools: FullToolInfo[], hasAgent: boolean) => {
+/**
+ * Get the available tools based on the provider and agent availability
+ * @param provider The provider to use
+ * @param allTools All possible tools
+ * @param hasAgent Whether the agent has agents
+ * @param permissionLevel The permission level of the agent. Tool requires higher permission level will be disabled
+ * @returns The available tools
+ */
+export const getAvailableTools = (provider: any, allTools: FullToolInfo[], hasAgent: boolean, permissionLevel: PermissionLevel) => {
   const tools: FullToolInfo[] = []
   for (const tool of allTools) {
     // disable agent tools if no agents available
@@ -12,7 +20,7 @@ export const getAvailableTools = (provider: any, allTools: FullToolInfo[], hasAg
           continue
       }
     }
-    if (tool.isAvailable(provider)) {
+    if (tool.isAvailable(provider) && tool.permissionLevel <= permissionLevel) {
       tools.push(tool)
     }
   }
