@@ -1,14 +1,6 @@
-import { getAvailableTools } from '../../tool'
-import {
-  askFollowupQuestion,
-  attemptCompletion,
-  delegate,
-  handOver,
-  listCodeDefinitionNames,
-  listFiles,
-  readFile,
-  searchFiles,
-} from '../../tools'
+import { getAvailableTools } from '../../getAvailableTools'
+import { PermissionLevel } from '../../tool'
+import { allTools } from '../../tools'
 import { AgentBase, type AgentInfo, type SharedAgentOptions } from '../AgentBase'
 import { fullSystemPrompt } from './prompts'
 
@@ -16,18 +8,8 @@ export type ArchitectAgentOptions = SharedAgentOptions
 
 export class ArchitectAgent extends AgentBase {
   constructor(options: ArchitectAgentOptions) {
-    const agentTools = [
-      ...(options.additionalTools ?? []),
-      askFollowupQuestion,
-      attemptCompletion,
-      handOver,
-      delegate,
-      listCodeDefinitionNames,
-      listFiles,
-      readFile,
-      searchFiles,
-    ] // readonly tools
-    const tools = getAvailableTools(options.provider, agentTools, (options.agents?.length ?? 0) > 0)
+    const combinedTools = [...(options.additionalTools ?? []), ...Object.values(allTools)]
+    const tools = getAvailableTools(options.provider, combinedTools, (options.agents?.length ?? 0) > 0, PermissionLevel.Read)
     const toolNamePrefix = 'tool_'
     const systemPrompt = fullSystemPrompt(
       {

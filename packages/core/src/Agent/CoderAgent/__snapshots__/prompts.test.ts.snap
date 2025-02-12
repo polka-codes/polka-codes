@@ -108,7 +108,7 @@ Usage:
 
 ## tool_list_code_definition_names
 
-Description: Request to list definition names (classes, functions, methods, etc.) used in a file. This tool provides insights into the codebase structure and important constructs, encapsulating high-level concepts and relationships that are crucial for understanding the overall architecture.
+Description: Request to list definition names (classes, functions, methods, etc.) used for all files in a directory. This tool provides insights into the codebase structure and important constructs, encapsulating high-level concepts and relationships that are crucial for understanding the overall architecture.
 
 Parameters:
 - tool_parameter_path: (required) The path of a code file to list top level source code definitions for.
@@ -285,39 +285,45 @@ Usage:
 <tool_parameter_files>src/auth/login.ts,src/auth/types.ts</tool_parameter_files>
 </tool_hand_over>
 
-## Example 7: Request to list files
+## Example 7: Request to list code definition names in a directory
+
+<tool_list_code_definition_names>
+<tool_parameter_path>src/utils</tool_parameter_path>
+</tool_list_code_definition_names>
+
+## Example 8: Request to list files
 
 <tool_list_files>
 <tool_parameter_path>src</tool_parameter_path>
 <tool_parameter_max_count>100</tool_parameter_max_count>
 </tool_list_files>
 
-## Example 8: Request to read the contents of a file
+## Example 9: Request to read the contents of a file
 
 <tool_read_file>
 <tool_parameter_path>src/main.js</tool_parameter_path>
 </tool_read_file>
 
-## Example 9: Request to read multiple files
+## Example 10: Request to read multiple files
 
 <tool_read_file>
 <tool_parameter_path>src/main.js,src/index.js</tool_parameter_path>
 </tool_read_file>
 
-## Example 10: Request to remove a file
+## Example 11: Request to remove a file
 
 <tool_remove_file>
 <tool_parameter_path>src/main.js</tool_parameter_path>
 </tool_remove_file>
 
-## Example 11: Request to rename a file
+## Example 12: Request to rename a file
 
 <tool_rename_file>
 <tool_parameter_sourcePath>src/old-name.js</tool_parameter_sourcePath>
 <tool_parameter_targetPath>src/new-name.js</tool_parameter_targetPath>
 </tool_rename_file>
 
-## Example 12: Request to replace sections of content in a file
+## Example 13: Request to replace sections of content in a file
 
 <tool_replace_in_file>
 <tool_parameter_path>src/main.js</tool_parameter_path>
@@ -352,7 +358,7 @@ return (
 </tool_parameter_diff>
 </tool_replace_in_file>
 
-## Example 13: Request to perform a regex search across files
+## Example 14: Request to perform a regex search across files
 
 <tool_search_files>
 <tool_parameter_path>src</tool_parameter_path>
@@ -360,7 +366,7 @@ return (
 <tool_parameter_file_pattern>*.ts</tool_parameter_file_pattern>
 </tool_search_files>
 
-## Example 14: Request to write content to a file
+## Example 15: Request to write content to a file
 
 <tool_write_to_file>
 <tool_parameter_path>src/main.js</tool_parameter_path>

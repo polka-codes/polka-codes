@@ -1,4 +1,5 @@
-import { type ToolResponse, ToolResponseType, getAvailableTools } from '../../tool'
+import { getAvailableTools } from '../../getAvailableTools'
+import { PermissionLevel, type ToolResponse, ToolResponseType } from '../../tool'
 import { allTools, attemptCompletion } from '../../tools'
 import { AgentBase } from '../AgentBase'
 import { responsePrompts } from '../prompts'
@@ -14,7 +15,7 @@ export type CoderAgentOptions = SharedAgentOptions
 export class CoderAgent extends AgentBase {
   constructor(options: CoderAgentOptions) {
     const combinedTools = [...(options.additionalTools ?? []), ...Object.values(allTools)]
-    const tools = getAvailableTools(options.provider, combinedTools, (options.agents?.length ?? 0) > 0)
+    const tools = getAvailableTools(options.provider, combinedTools, (options.agents?.length ?? 0) > 0, PermissionLevel.Arbitrary)
     const toolNamePrefix = 'tool_'
     const systemPrompt = fullSystemPrompt(
       {

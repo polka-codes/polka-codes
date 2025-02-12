@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test } from 'bun:test'
-import type { ToolInfo } from '../tool'
+import { PermissionLevel, type ToolInfo } from '../tool'
 import type { AgentInfo } from './AgentBase'
 import { agentsPrompt, responsePrompts, toolUsePrompt } from './prompts'
 
@@ -38,6 +38,7 @@ describe('Agent prompts', () => {
               ],
             },
           ],
+          permissionLevel: PermissionLevel.None,
         },
       ]
 

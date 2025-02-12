@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import type { ToolInfo } from '../tool'
+import { PermissionLevel, type ToolInfo } from '../tool'
 import { parseAssistantMessage } from './parseAssistantMessage'
 
 describe('parseAssistantMessage', () => {
@@ -11,6 +11,7 @@ describe('parseAssistantMessage', () => {
         { name: 'param1', description: 'First parameter', required: true, usageValue: 'value1' },
         { name: 'param2', description: 'Second parameter', required: false, usageValue: 'value2' },
       ],
+      permissionLevel: PermissionLevel.None,
     },
   ]
   const toolPrefix = 'tool_'
@@ -198,6 +199,7 @@ describe('parseAssistantMessage', () => {
         name: 'another_tool',
         description: 'Another test tool',
         parameters: [{ name: 'paramA', description: 'Parameter A', required: true, usageValue: 'valueA' }],
+        permissionLevel: PermissionLevel.None,
       },
     ]
 

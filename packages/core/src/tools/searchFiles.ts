@@ -1,4 +1,4 @@
-import { type FullToolInfo, type ToolHandler, type ToolInfo, ToolResponseType } from '../tool'
+import { type FullToolInfo, PermissionLevel, type ToolHandler, type ToolInfo, ToolResponseType } from '../tool'
 import type { FilesystemProvider } from './provider'
 import { getString } from './utils'
 
@@ -46,6 +46,7 @@ export const toolInfo = {
       ],
     },
   ],
+  permissionLevel: PermissionLevel.Read,
 } as const satisfies ToolInfo
 
 export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (provider, args) => {

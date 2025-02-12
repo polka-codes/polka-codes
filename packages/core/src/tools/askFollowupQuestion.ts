@@ -1,4 +1,4 @@
-import { type FullToolInfo, type ToolHandler, type ToolInfo, ToolResponseType } from '../tool'
+import { type FullToolInfo, PermissionLevel, type ToolHandler, type ToolInfo, ToolResponseType } from '../tool'
 import type { InteractionProvider } from './provider'
 import { getString, getStringArray } from './utils'
 
@@ -45,6 +45,7 @@ export const toolInfo = {
       ],
     },
   ],
+  permissionLevel: PermissionLevel.None,
 } as const satisfies ToolInfo
 
 export const handler: ToolHandler<typeof toolInfo, InteractionProvider> = async (provider, args) => {

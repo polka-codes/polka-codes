@@ -1,5 +1,3 @@
-import { delegate, handOver } from './tools'
-
 export type ToolParameter = {
   name: string
   description: string
@@ -12,11 +10,23 @@ export type ToolExample = {
   parameters: { name: string; value: string }[]
 }
 
+export enum PermissionLevel {
+  // This tool is completely safe
+  None = 0,
+  // This tool can read files
+  Read = 1,
+  // This tool can write files
+  Write = 2,
+  // This tool can perform arbitrary action
+  Arbitrary = 3,
+}
+
 export type ToolInfo = {
   name: string
   description: string
   parameters: ToolParameter[]
   examples?: ToolExample[]
+  permissionLevel: PermissionLevel
 }
 
 export type FullToolInfo = ToolInfo & {
@@ -104,21 +114,3 @@ export type ToolHandler<T extends ToolInfo, P> = (
   provider: P,
   args: Partial<Record<T['parameters'][number]['name'], string>>,
 ) => Promise<ToolResponse>
-
-export const getAvailableTools = (provider: any, allTools: FullToolInfo[], hasAgent: boolean) => {
-  const tools: FullToolInfo[] = []
-  for (const tool of allTools) {
-    // disable agent tools if no agents available
-    if (!hasAgent) {
-      switch (tool.name) {
-        case handOver.name:
-        case delegate.name:
-          continue
-      }
-    }
-    if (tool.isAvailable(provider)) {
-      tools.push(tool)
-    }
-  }
-  return tools
-}
