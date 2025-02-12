@@ -117,7 +117,7 @@ providers:
       ])
       .opts()
 
-    const result = parseOptions(options, testDir, testDir)
+    const result = parseOptions(options, testDir, testDir, {})
     expect(result.verbose).toBe(1)
     expect(result.providerConfig.getConfigForCommand('chat')).toMatchSnapshot()
   })
@@ -149,26 +149,22 @@ rules:
     addSharedOptions(command)
     const options = command.parse(['node', 'test', '--config', configPath1, '--config', configPath2]).opts()
 
-    const result = parseOptions(options, testDir, testDir)
+    const result = parseOptions(options, testDir, testDir, {})
     expect(result.config).toMatchSnapshot()
   })
 
   test('merges environment variables with config', () => {
-    process.env.POLKA_API_PROVIDER = 'deepseek'
-    process.env.POLKA_MODEL = 'deepseek-chat'
-    process.env.POLKA_API_KEY = 'cli-key'
+    const env = {
+      POLKA_API_PROVIDER: AiServiceProvider.DeepSeek,
+      POLKA_MODEL: 'deepseek-chat',
+      POLKA_API_KEY: 'cli-key',
+    }
     const command = new Command()
     addSharedOptions(command)
     const options = command.parse(['node', 'test']).opts()
 
-    const result = parseOptions(options, testDir, testDir)
+    const result = parseOptions(options, testDir, testDir, env)
     expect(result.providerConfig.getConfigForCommand('chat')).toMatchSnapshot()
-    // biome-ignore lint/performance/noDelete: <explanation>
-    delete process.env.POLKA_API_PROVIDER
-    // biome-ignore lint/performance/noDelete: <explanation>
-    delete process.env.POLKA_MODEL
-    // biome-ignore lint/performance/noDelete: <explanation>
-    delete process.env.POLKA_API_KEY
   })
 
   test('throws error when apiKey provided without provider', () => {
@@ -176,16 +172,34 @@ rules:
     addSharedOptions(command)
     const options = command.parse(['node', 'test', '--api-key', 'invalid-key']).opts()
 
-    expect(() => parseOptions(options, testDir, testDir)).toThrow('Must specify a provider')
+    expect(() => parseOptions(options, testDir, testDir, {})).toThrow('Must specify a provider')
   })
 
   test('handles provider-specific environment variables', () => {
-    process.env.ANTHROPIC_API_KEY = 'provider-env-key'
+    const env = {
+      ANTHROPIC_API_KEY: 'provider-env-key',
+      DEEPSEEK_API_KEY: 'deepseek-key',
+      OPENROUTER_API_KEY: 'openrouter-key',
+    }
     const command = new Command()
     addSharedOptions(command)
     const options = command.parse(['node', 'test']).opts()
 
-    const result = parseOptions(options, testDir, testDir)
+    const result = parseOptions(options, testDir, testDir, env)
     expect(result.providerConfig.providers.anthropic?.apiKey).toBe('provider-env-key')
+    expect(result.providerConfig.providers.deepseek?.apiKey).toBe('deepseek-key')
+    expect(result.providerConfig.providers.openrouter?.apiKey).toBe('openrouter-key')
+  })
+
+  test('handles budget from environment', () => {
+    const env = {
+      POLKA_BUDGET: '500',
+    }
+    const command = new Command()
+    addSharedOptions(command)
+    const options = command.parse(['node', 'test']).opts()
+
+    const result = parseOptions(options, testDir, testDir, env)
+    expect(result.budget).toBe(500)
   })
 })

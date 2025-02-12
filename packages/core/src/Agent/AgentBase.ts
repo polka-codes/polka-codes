@@ -234,6 +234,10 @@ export abstract class AgentBase {
   }
 
   async #request(userMessage: string) {
+    if (!userMessage) {
+      throw new Error('userMessage is missing')
+    }
+
     await this.#callback({ kind: TaskEventKind.StartRequest, agent: this, userMessage })
 
     this.messages.push({
@@ -371,8 +375,8 @@ export abstract class AgentBase {
       }
     }
 
-    if (toolReponses.length === 0 && !this.config.interactive) {
-      // always require a tool usage in non-interactive mode
+    if (toolReponses.length === 0) {
+      // always require a tool usage
       return { replay: responsePrompts.requireUseTool }
     }
 
