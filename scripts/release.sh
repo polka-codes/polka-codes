@@ -15,6 +15,8 @@ if [ -n "$(git status --porcelain)" ]; then
   exit 1
 fi
 
+git pull
+
 # Find package.json files under packages directory and update version
 find ./packages -name package.json -not -path "*/node_modules/*" | while read -r file; do
   sed -i.bak -E "s/\"version\": \"[^\"]+\"/\"version\": \"$VERSION\"/" "$file" && rm "$file.bak"
