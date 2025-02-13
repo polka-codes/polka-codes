@@ -31,6 +31,7 @@ const agentSchema = providerModelSchema.extend({
 
 export const configSchema = z
   .object({
+    agent: z.string().optional(),
     providers: z
       .record(
         z.string(),

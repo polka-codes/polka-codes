@@ -18,6 +18,7 @@ export interface CliOptions {
   budget?: number
   verbose?: number
   baseDir?: string
+  agent?: string
 }
 
 export function addSharedOptions(command: Command) {
@@ -30,6 +31,7 @@ export function addSharedOptions(command: Command) {
     .option('--budget <budget>', 'Budget for the AI service. Default to $10', Number.parseFloat)
     .option('-v --verbose', 'Enable verbose output. Use -v for level 1, -vv for level 2', (value, prev) => prev + 1, 0)
     .option('-d --base-dir <path>', 'Base directory to run commands in')
+    .option('--agent <agent>', 'Initial agent to use (default: architect)')
 }
 
 export function parseOptions(options: CliOptions, cwdArg?: string, home: string = os.homedir(), env: Partial<Env> = getEnv()) {
@@ -82,5 +84,6 @@ export function parseOptions(options: CliOptions, cwdArg?: string, home: string 
     verbose: options.verbose ?? 0,
     config,
     providerConfig,
+    agent: options.agent ?? config.agent ?? 'architect',
   }
 }
