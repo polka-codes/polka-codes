@@ -1,7 +1,10 @@
 import { execSync, spawnSync } from 'node:child_process'
-import { UsageMeter, createService, generateGithubPullRequestDetails } from '@polka-codes/core'
+import { streamObject } from 'ai'
 import { Command } from 'commander'
 import ora from 'ora'
+import { z } from 'zod'
+
+import { UsageMeter, getModel } from '@polka-codes/core'
 
 import { parseOptions } from '../options'
 
@@ -19,7 +22,7 @@ export const prCommand = new Command('pr')
     console.log('Provider:', provider)
     console.log('Model:', model)
 
-    if (!provider) {
+    if (!provider || !model) {
       console.error('Error: No provider specified. Please run "pokla config" to configure your AI provider.')
       process.exit(1)
     }
@@ -66,26 +69,52 @@ export const prCommand = new Command('pr')
 
       const usage = new UsageMeter()
 
-      const ai = createService(provider, {
-        apiKey,
-        model,
-        usageMeter: usage,
-      })
-
       spinner.text = 'Generating pull request details...'
 
-      const prDetails = await generateGithubPullRequestDetails(ai, {
-        branchName: branchName,
-        context: message,
-        commitMessages: commits,
-        commitDiff: diff,
+      const stream = streamObject({
+        model: getModel({
+          provider: provider as any,
+          model,
+          apiKey,
+        }),
+        schema: z.object({
+          title: z.string().describe('The title of the pull request'),
+          description: z.string().describe('The description of the pull request'),
+        }),
+        messages: [
+          {
+            role: 'system',
+            content: prompt,
+          },
+          {
+            role: 'user',
+            content: `<tool_diff>
+${diff}
+</tool_diff>
+<tool_context>
+${message}
+</tool_context>
+<tool_commig_messages>
+${commits}
+</tool_commig_messages>
+<tool_branch_name>
+${branchName}
+</tool_branch_name>`,
+          },
+        ],
       })
+
+      // consume the stream but ignore the output
+      for await (const _ of stream.textStream) {
+      }
+
+      const prDetails = await stream.object
 
       spinner.succeed('Pull request details generated')
       // wait for 10ms to let the spinner stop
       await new Promise((resolve) => setTimeout(resolve, 10))
 
-      spawnSync('gh', ['pr', 'create', '--title', prDetails.response.title.trim(), '--body', prDetails.response.description.trim()], {
+      spawnSync('gh', ['pr', 'create', '--title', prDetails.title.trim(), '--body', prDetails.description.trim()], {
         stdio: 'inherit',
       })
 
@@ -95,3 +124,22 @@ export const prCommand = new Command('pr')
       process.exit(1)
     }
   })
+
+const prompt = `
+# Generate Github Pull Request Details
+
+You are given:
+- A branch name in <tool_input_branch_name>.
+- An optional context message in <tool_input_context> (which may or may not be present).
+- All commit messages combined in <tool_input_commit_messages>.
+- All diffs combined in <tool_input_commit_diff>.
+
+Your task:
+1. Consider the optional context (if provided).
+   - If an issue number is found, add "Closes #xxx" at the beginning of the PR description
+   - IMPORTANT: Use ONLY the exact format "Closes #xxx" at the beginning of the description
+   - DO NOT use variations like "Closes issue #xxx" or other formats
+2. Analyze the combined commit messages and diffs.
+3. Produce a single GitHub Pull Request title.
+4. Produce a Pull Request description that explains the changes.
+`

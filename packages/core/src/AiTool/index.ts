@@ -2,7 +2,6 @@ import type { MultiAgent } from '../Agent'
 import type { AiServiceBase, ApiUsage } from '../AiService'
 import { ToolResponseType } from '../tool'
 import createNewProjectDef from './createNewProject'
-import generateGithubPullRequestDetailsDef from './generateGithubPullRequestDetails'
 import generateProjectConfigDef from './generateProjectConfig'
 import type { AiToolDefinition, GetInput, GetOutput } from './types'
 
@@ -55,7 +54,6 @@ export const makeAgentTool = <T extends AiToolDefinition<any, any>>(definition: 
   }
 }
 
-export const generateGithubPullRequestDetails = makeTool(generateGithubPullRequestDetailsDef)
 export const generateProjectConfig = makeAgentTool(generateProjectConfigDef)
 export const createNewProject = makeAgentTool(createNewProjectDef)
 
