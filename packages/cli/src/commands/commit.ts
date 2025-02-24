@@ -1,6 +1,6 @@
 import { execSync, spawnSync } from 'node:child_process'
 import { confirm } from '@inquirer/prompts'
-import { generateText } from 'ai'
+import { streamText } from 'ai'
 import { Command } from 'commander'
 import ora from 'ora'
 
@@ -62,10 +62,8 @@ export const commitCommand = new Command('commit')
       spinner.text = 'Generating commit message...'
 
       // Generate commit message
-      const resp = await generateText({
-        onStepFinish: (step) => {
-          console.log(222, step.providerMetadata)
-        },
+      // use streamText so it is possible to get openrouter genId
+      const stream = streamText({
         model: getModel({
           provider: provider as any,
           model,
@@ -88,21 +86,41 @@ ${message}
         ],
       })
 
-      // TODO: add resp.usage to usage meter
-      console.log(1111, resp.response, resp.providerMetadata)
+      // consume the stream but ignore the output
+      for await (const _ of stream.textStream) {
+      }
+
+      // TODO: bake this code into usage meter
+      // const resp = await stream.response
+      // const genId = resp.id
+      // const controller = new AbortController()
+      // const timeout = setTimeout(() => controller.abort(), 5000) // 5 seconds
+      // const response = await fetch(`https://openrouter.ai/api/v1/generation?id=${genId}`, {
+      //   headers: {
+      //     Authorization: `Bearer ${apiKey}`,
+      //   },
+      //   signal: controller.signal, // this request hangs sometimes
+      // })
+      // const responseBody = await response.json()
+
+      // console.log(responseBody)
+
+      const streamUsage = await stream.usage
       usage.addUsage({
-        inputTokens: resp.usage.promptTokens,
-        outputTokens: resp.usage.completionTokens,
+        inputTokens: streamUsage.promptTokens,
+        outputTokens: streamUsage.completionTokens,
       })
       usage.printUsage()
 
       spinner.succeed('Commit message generated')
 
-      console.log(`\nCommit message:\n${resp.text}`)
+      const commitMessage = await stream.text
+
+      console.log(`\nCommit message:\n${commitMessage}`)
 
       // Make the commit
       try {
-        spawnSync('git', ['commit', '-m', resp.text], { stdio: 'inherit' })
+        spawnSync('git', ['commit', '-m', commitMessage], { stdio: 'inherit' })
       } catch {
         console.error('Error: Commit failed')
         process.exit(1)
