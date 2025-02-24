@@ -63,6 +63,9 @@ export const commitCommand = new Command('commit')
 
       // Generate commit message
       const resp = await generateText({
+        onStepFinish: (step) => {
+          console.log(222, step.providerMetadata)
+        },
         model: getModel({
           provider: provider as any,
           model,
@@ -85,6 +88,12 @@ ${message}
         ],
       })
 
+      // TODO: add resp.usage to usage meter
+      console.log(1111, resp.response, resp.providerMetadata)
+      usage.addUsage({
+        inputTokens: resp.usage.promptTokens,
+        outputTokens: resp.usage.completionTokens,
+      })
       usage.printUsage()
 
       spinner.succeed('Commit message generated')
