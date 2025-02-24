@@ -15,7 +15,15 @@
     "build": "bun build src/index.ts --outdir dist"
   },
   "dependencies": {
+    "@ai-sdk/amazon-bedrock": "^2.0.3",
+    "@ai-sdk/anthropic": "^1.1.9",
+    "@ai-sdk/deepseek": "^0.1.11",
+    "@ai-sdk/openai": "^1.1.13",
     "@anthropic-ai/sdk": "^0.36.2",
-    "openai": "^4.80.0"
+    "@mastra/core": "0.4.0",
+    "@openrouter/ai-sdk-provider": "^0.2.2",
+    "ollama-ai-provider": "^1.2.0",
+    "openai": "^4.80.0",
+    "zod": "^3.24.2"
   }
 }
