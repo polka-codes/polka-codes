@@ -14,10 +14,10 @@ export enum AiServiceProvider {
 }
 
 export const defaultModels = {
-  [AiServiceProvider.Anthropic]: 'claude-3-5-sonnet-20241022',
+  [AiServiceProvider.Anthropic]: 'claude-3-7-sonnet-20250219',
   [AiServiceProvider.Ollama]: 'maryasov/qwen2.5-coder-cline:7b',
   [AiServiceProvider.DeepSeek]: 'deepseek-chat',
-  [AiServiceProvider.OpenRouter]: 'anthropic/claude-3.5-sonnet',
+  [AiServiceProvider.OpenRouter]: 'anthropic/claude-3.7-sonnet',
 }
 
 export const createService = (provider: AiServiceProvider, options: AiServiceOptions) => {

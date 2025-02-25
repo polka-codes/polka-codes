@@ -9,7 +9,6 @@ You will produce a single commit message enclosed within <tool_output> tags. The
 
 Here’s an example of the input and the expected output format:
 
-\`\`\`
 <tool_input>
 --- a/example_file.py
 +++ b/example_file.py
@@ -20,15 +19,12 @@ Here’s an example of the input and the expected output format:
 <tool_input_context>
 Changing print statement to update the user-facing message.
 </tool_input_context>
-\`\`\`
 
 Example Output:
 
-\`\`\`
 <tool_output>
 Update print statement for revised user-facing message
 </tool_output>
-\`\`\`
 
 Follow the same structure for any new input. Never repeat questions; focus on generating a concise commit message that captures the essence of the changes.
 `

@@ -11,7 +11,7 @@ providers:
   # Anthropic configuration
   anthropic:
     apiKey: "sk-ant-..." # Your Anthropic API key
-    defaultModel: "claude-3-5-sonnet-20241022" # Default model for this provider
+    defaultModel: "claude-3-7-sonnet-20250219" # Default model for this provider
 
   # Local Ollama configuration
   ollama:
@@ -68,7 +68,7 @@ agents:
 
   coder:
     provider: "anthropic"
-    model: "claude-3-5-sonnet-20241022"
+    model: "claude-3-7-sonnet-20250219"
 
   architect:
     provider: "deepseek"

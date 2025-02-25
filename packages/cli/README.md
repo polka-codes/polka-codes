@@ -117,7 +117,7 @@ POLKA_API_KEY=your_api_key_here
 
 # Optional - override defaults
 POLKA_API_PROVIDER=deepseek  # or anthropic, openrouter, ollama
-POLKA_AI_MODEL_ID=deepseek-chat  # or claude-3-sonnet-20240229
+POLKA_AI_MODEL_ID=deepseek-chat  # or claude-3-7-sonnet-20250219
 ```
 
 ### Project Configuration
