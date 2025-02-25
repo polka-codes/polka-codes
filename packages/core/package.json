@@ -12,7 +12,7 @@
   },
   "files": ["dist"],
   "scripts": {
-    "build": "bun build src/index.ts --outdir dist"
+    "build": "bun build src/index.ts --outdir dist --target node"
   },
   "dependencies": {
     "@ai-sdk/amazon-bedrock": "^2.0.3",
@@ -20,7 +20,7 @@
     "@ai-sdk/deepseek": "^0.1.11",
     "@ai-sdk/openai": "^1.1.13",
     "@anthropic-ai/sdk": "^0.36.2",
-    "@mastra/core": "0.4.0",
+    "@mastra/core": "^0.4.1",
     "@openrouter/ai-sdk-provider": "^0.2.2",
     "ollama-ai-provider": "^1.2.0",
     "openai": "^4.80.0",

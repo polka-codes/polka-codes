@@ -6,8 +6,7 @@ export default (options: { executeCommand: ExecuteCommandCallback }) =>
   agentInfo({
     name: 'coder',
     description: 'Coder agent', // TODO
-    systemPrompt: // TODO
-      'You are a coder. You are proficient in writing code in various programming languages. You have the ability to write code, debug code, and provide suggestions for improvement. You are also proficient in using version control systems and have a deep understanding of software development processes. You are knowledgeable about best practices for code organization, documentation, and testing. You have a strong understanding of programming concepts and can explain them to others. Your goal is to help users write high-quality code and improve their software development skills.',
+    systemPrompt: 'You must use one of the provided tools.', // TODO
     contextSchema: z
       .object({
         context: z.string().optional().describe('Additional context for the task'),

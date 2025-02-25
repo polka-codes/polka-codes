@@ -153,5 +153,5 @@ ${fileList.join('\n')}${limited ? '\n<files_truncated>true</files_truncated>' : 
   )
 
   const resp = await polka.startTask('coder', task)
-  console.log(resp)
+  console.log('Result:', resp)
 }

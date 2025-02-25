@@ -1,4 +1,5 @@
-import { Agent, Mastra, createTool } from '@mastra/core'
+import { Mastra, createTool } from '@mastra/core'
+import { Agent } from '@mastra/core/agent'
 import { z } from 'zod'
 
 import { Memory } from '@mastra/memory'
@@ -98,11 +99,17 @@ export class PolkaAgent<TName extends string = string, TCtx extends z.ZodSchema 
       })
     }
 
+    // TODO: manual control of memory
     this.agent = new Agent({
       name: options.info.name,
       instructions: options.info.systemPrompt,
       model: getModel(options.model),
       tools,
+      memory: new Memory({
+        options: {
+          semanticRecall: false,
+        },
+      }),
     })
   }
 
@@ -145,14 +152,8 @@ export class Polka<TAgents extends Record<string, AgentOptions<any, any>>> imple
     }
     this.agents = obj as Record<keyof TAgents, PolkaAgent>
 
-    // TODO: manual control of the memory
     this.mastra = new Mastra({
       agents: mastraAgents,
-      memory: new Memory({
-        options: {
-          semanticRecall: false,
-        },
-      }),
     })
   }
 
@@ -167,7 +168,7 @@ export class Polka<TAgents extends Record<string, AgentOptions<any, any>>> imple
     await this.#callbacks.onStartTask?.(agentName as string, task, options.context)
 
     const agent = this.agents[agentName]
-    const resp = await agent.startTask(task, options.context)
+    const resp = await agent.startTask(task, options)
 
     switch (resp.reason) {
       case 'success':
