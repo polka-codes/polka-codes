@@ -16,7 +16,7 @@ export type ModelConfig = {
   baseUrl?: string
 }
 
-export type AgentTool<TAgents extends Record<string, AgentInfo>, TInput extends z.ZodSchema, TOutput extends z.ZodSchema> = {
+export type AgentTool<TAgents extends Record<string, z.ZodSchema>, TInput extends z.ZodSchema, TOutput extends z.ZodSchema> = {
   id: string
   description: string
   inputSchema?: TInput
@@ -27,17 +27,17 @@ export type AgentTool<TAgents extends Record<string, AgentInfo>, TInput extends 
   ) => Promise<z.infer<TOutput extends z.ZodSchema ? TOutput : never>>
 }
 
-export type AgentTools = Record<string, AgentTool<any, any, any>>
+export type AgentTools = Record<string, AgentTool<Record<string, z.ZodSchema>, z.ZodSchema, z.ZodSchema>>
 
 export function agentTool<
-  TAgents extends Record<string, AgentInfo> = Record<string, AgentInfo>,
-  TInput extends z.ZodSchema = z.ZodObject<any>,
-  TOutput extends z.ZodSchema = z.ZodObject<any>,
+  TAgents extends Record<string, z.ZodSchema> = Record<string, z.ZodSchema>,
+  TInput extends z.ZodSchema = z.ZodSchema,
+  TOutput extends z.ZodSchema = z.ZodSchema,
 >(def: AgentTool<TAgents, TInput, TOutput>): AgentTool<TAgents, TInput, TOutput> {
   return def
 }
 
-export type AgentInfo<TName extends string = string, TCtx extends z.ZodSchema = z.ZodObject<any>> = {
+export type AgentInfo<TName extends string = string, TCtx extends z.ZodSchema = z.ZodSchema> = {
   name: TName
   description: string
   systemPrompt: string
@@ -45,12 +45,16 @@ export type AgentInfo<TName extends string = string, TCtx extends z.ZodSchema = 
   tools: AgentTools
 }
 
-export interface IPolka<TAgents extends Record<string, AgentInfo> = Record<string, AgentInfo>> {
+export function agentInfo<TName extends string, TCtx extends z.ZodSchema>(def: AgentInfo<TName, TCtx>): AgentInfo<TName, TCtx> {
+  return def
+}
+
+export interface IPolka<TAgents extends Record<string, z.ZodSchema> = Record<string, z.ZodSchema>> {
   startTask<TOutput extends z.ZodSchema = z.ZodString>(
     agentName: keyof TAgents,
     task: string,
     options: {
-      context?: z.infer<TAgents[keyof TAgents]['contextSchema']>
+      context?: z.infer<TAgents[keyof TAgents]>
       outputSchema?: TOutput
     },
   ): Promise<z.infer<TOutput> | { error: string }>

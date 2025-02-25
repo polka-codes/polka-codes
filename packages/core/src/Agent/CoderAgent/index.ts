@@ -3,7 +3,7 @@ import { PermissionLevel, type ToolResponse, ToolResponseType } from '../../tool
 import { allTools, attemptCompletion } from '../../tools'
 import { AgentBase } from '../AgentBase'
 import { responsePrompts } from '../prompts'
-import type { AgentInfo, SharedAgentOptions } from './../AgentBase'
+import type { AgentInfo2, SharedAgentOptions } from './../AgentBase'
 import { fullSystemPrompt } from './prompts'
 
 export type CoderAgentOptions = SharedAgentOptions
@@ -106,4 +106,4 @@ export const coderAgentInfo = {
     'Running tests and analyzing test results.',
     'Maintaining coding standards, lint rules, and general code quality.',
   ],
-} as const satisfies AgentInfo
+} as const satisfies AgentInfo2

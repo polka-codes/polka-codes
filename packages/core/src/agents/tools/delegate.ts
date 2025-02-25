@@ -2,9 +2,26 @@ import { z } from 'zod'
 
 import { type AgentInfo, agentTool } from '../types'
 
-export const delegateTool = (agents: AgentInfo[]) => {
+type Test1 = {
+  agentName: 'test1'
+  context: string
+}
+
+type Test2 = {
+  agentName: 'test2'
+  context: number
+}
+
+type Base = {
+  task: string
+}
+
+type Combined = (Base & Test1) | (Base & Test2)
+
+export default (agents: AgentInfo[]) => {
   const agentInputSchemas = agents.map((agent) =>
     z.object({
+      reasoning: z.string().optional().describe('The reasoning for the tool use'),
       agentName: z.literal(agent.name),
       task: z.string().describe('The task to be completed by the target agent'),
       ...(agent.contextSchema ? { context: agent.contextSchema.describe('The context information for the task') } : {}),
@@ -18,7 +35,7 @@ export const delegateTool = (agents: AgentInfo[]) => {
   if (agents.length === 1) {
     inputSchema = agentInputSchemas[0]
   } else {
-    inputSchema = z.union(agentInputSchemas as any)
+    inputSchema = z.discriminatedUnion('agentName', [agentInputSchemas as any])
   }
 
   return agentTool({

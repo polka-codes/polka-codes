@@ -1,5 +1,5 @@
 import type { ToolExample, ToolInfo } from '../tool'
-import type { AgentInfo } from './AgentBase'
+import type { AgentInfo2 } from './AgentBase'
 
 const toolInfoPrompt = (tool: ToolInfo, toolNamePrefix: string, parameterPrefix: string) => `
 ## ${toolNamePrefix}${tool.name}
@@ -93,7 +93,7 @@ By adhering to these guidelines:
 - You provide only the necessary information in user-facing replies to prevent re-interpretation as new commands.`
 }
 
-export const agentsPrompt = (agents: Readonly<AgentInfo[]>, name: string) => `
+export const agentsPrompt = (agents: Readonly<AgentInfo2[]>, name: string) => `
 ====
 
 AVAILABLE AGENTS

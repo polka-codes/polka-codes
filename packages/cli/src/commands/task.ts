@@ -1,7 +1,10 @@
+import { readFile } from 'node:fs/promises'
+import { agentOptions, createPolka } from '@polka-codes/core'
 import type { Command } from 'commander'
-import { Runner } from '../Runner'
+import coder from '../agents/coder'
 import { parseOptions } from '../options'
-import { printEvent } from '../utils/eventHandler'
+import type { ExecuteCommandCallback } from '../tools/executeCommand'
+import { listFiles } from '../utils/listFiles'
 import { runChat } from './chat'
 
 const readStdin = async (timeoutMs = 30000): Promise<string> => {
@@ -65,7 +68,7 @@ export async function runTask(taskArg: string | undefined, _options: any, comman
 
   const { config, providerConfig, verbose, maxMessageCount, budget, agent } = parseOptions(command.opts())
 
-  const { provider, model } = providerConfig.getConfigForAgent(agent) ?? {}
+  const { provider, model, apiKey } = providerConfig.getConfigForAgent(agent) ?? {}
 
   if (!provider || !model) {
     console.error('Provider and model must be configured')
@@ -75,16 +78,80 @@ export async function runTask(taskArg: string | undefined, _options: any, comman
   console.log('Provider:', provider)
   console.log('Model:', model)
 
-  const runner = new Runner({
-    providerConfig,
-    config,
-    maxMessageCount,
-    budget,
-    interactive: process.stdin.isTTY,
-    eventCallback: printEvent(verbose),
-    enableCache: true,
-  })
+  const executeCommandHandler: ExecuteCommandCallback = {
+    onStarted(command) {
+      console.log(`$ >>>> $ ${command}`)
+    },
+    onStdout(data) {
+      process.stdout.write(data)
+    },
+    onStderr(data) {
+      process.stderr.write(data)
+    },
+    onExit(code) {
+      console.log(`$ <<<< $ Command exited with code: ${code}`)
+    },
+    onError(error) {
+      console.log(`$ <<<< $ Command error: ${error}`)
+    },
+  }
 
-  await runner.startTask(task, agent)
-  runner.printUsage()
+  const cwd = process.cwd()
+  const [fileList, limited] = await listFiles(cwd, true, 200, cwd, [])
+
+  const polka = createPolka(
+    {
+      coder: agentOptions({
+        info: coder({ executeCommand: executeCommandHandler }),
+        model: {
+          provider: provider as any,
+          model,
+          apiKey,
+        },
+        contextProvider: async (context) => {
+          let ret = `<files>
+${fileList.join('\n')}${limited ? '\n<files_truncated>true</files_truncated>' : ''}
+</files>`
+          const unreadableFiles: string[] = []
+          if (context?.relevantFiles) {
+            for (const file of context.relevantFiles) {
+              try {
+                const fileContent = await readFile(file, 'utf8')
+                ret += `\n<file_content path="${file}">\n${fileContent}\n</file_content>`
+              } catch (error) {
+                console.warn(`Failed to read file: ${file}`, error)
+                unreadableFiles.push(file)
+              }
+            }
+
+            if (unreadableFiles.length > 0) {
+              ret += '\n<relevant_unreadable_files>\n'
+              for (const file of unreadableFiles) {
+                ret += `${file}\n`
+              }
+              ret += '</relevant_unreadable_files>'
+            }
+          }
+          if (context?.context) {
+            ret += `\n\n${context.context}`
+          }
+          return ret
+        },
+      }),
+    },
+    {
+      onStartTask(agentName, task, context) {
+        console.log(`Agent ${agentName} started task ${task}`)
+        if (context) {
+          console.log(`Context: ${context}`)
+        }
+      },
+      onToolUse(tool, args) {
+        console.log(`Tool ${tool} used with args: ${JSON.stringify(args)}`)
+      },
+    },
+  )
+
+  const resp = await polka.startTask('coder', task)
+  console.log(resp)
 }

@@ -5,7 +5,7 @@
 
 import { describe, expect, test } from 'bun:test'
 import { PermissionLevel, type ToolInfo } from '../tool'
-import type { AgentInfo } from './AgentBase'
+import type { AgentInfo2 } from './AgentBase'
 import { agentsPrompt, responsePrompts, toolUsePrompt } from './prompts'
 
 describe('Agent prompts', () => {
@@ -54,7 +54,7 @@ describe('Agent prompts', () => {
 
   describe('agentsPrompt', () => {
     test('should generate agents documentation', () => {
-      const agents: AgentInfo[] = [
+      const agents: AgentInfo2[] = [
         {
           name: 'TestAgent',
           responsibilities: ['Test responsibility 1', 'Test responsibility 2'],
@@ -70,7 +70,7 @@ describe('Agent prompts', () => {
     })
 
     test('should include current agent name', () => {
-      const agents: AgentInfo[] = [
+      const agents: AgentInfo2[] = [
         {
           name: 'TestAgent',
           responsibilities: ['Test responsibility'],

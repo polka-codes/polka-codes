@@ -144,7 +144,7 @@ export type SharedAgentOptions = {
   additionalTools?: FullToolInfo[]
   customInstructions?: string[]
   scripts?: Record<string, string | { command: string; description: string }>
-  agents?: Readonly<AgentInfo[]>
+  agents?: Readonly<AgentInfo2[]>
   callback?: TaskEventCallback
 }
 
@@ -154,12 +154,12 @@ export type AgentBaseConfig = {
   toolNamePrefix: string
   provider: ToolProvider
   interactive: boolean
-  agents?: Readonly<AgentInfo[]>
+  agents?: Readonly<AgentInfo2[]>
   scripts?: Record<string, string | { command: string; description: string }>
   callback?: TaskEventCallback
 }
 
-export type AgentInfo = {
+export type AgentInfo2 = {
   name: string
   responsibilities: string[]
 }

@@ -5,10 +5,15 @@ import { Memory } from '@mastra/memory'
 import { getModel } from './model'
 import type { AgentInfo, IPolka, ModelConfig } from './types'
 
-export interface AgentOptions<TName extends string = string, TCtx extends z.ZodSchema = z.ZodObject<any>> extends AgentInfo<TName, TCtx> {
+export interface AgentOptions<TName extends string, TCtx extends z.ZodSchema> {
+  info: AgentInfo<TName, TCtx>
   model: ModelConfig
   contextProvider: (context: z.infer<TCtx>) => Promise<string>
-  agents?: Record<string, AgentOptions>
+  agents?: Record<string, AgentInfo>
+}
+
+export function agentOptions<TName extends string, TCtx extends z.ZodSchema>(def: AgentOptions<TName, TCtx>): AgentOptions<TName, TCtx> {
+  return def
 }
 
 const exitReasonSuccess = z.object({
@@ -25,7 +30,7 @@ const exitReasonHandoverBase = z.object({
   task: z.string().describe('The task to be completed by the target agent'),
 })
 
-const exitReasonHandOver = (agents?: Record<string, AgentOptions>) => {
+const exitReasonHandOver = (agents?: Record<string, AgentInfo>) => {
   if (!agents) {
     return undefined
   }
@@ -47,7 +52,7 @@ const exitReasonHandOver = (agents?: Record<string, AgentOptions>) => {
   return z.union(schemas as any)
 }
 
-const agentOutputSchema = (agents?: Record<string, AgentOptions>, outputSchema: z.ZodSchema = z.string()) => {
+const agentOutputSchema = (agents?: Record<string, AgentInfo>, outputSchema: z.ZodSchema = z.string()) => {
   const handoverSchema = exitReasonHandOver(agents)
 
   return z.union([
@@ -64,31 +69,39 @@ type ExitReasonFailure = z.infer<typeof exitReasonFailure>
 type ExitReasonHandOver = z.infer<typeof exitReasonHandoverBase> & { agentName: string; context: any }
 type ExitReason = ExitReasonSuccess | ExitReasonFailure | ExitReasonHandOver
 
-export class PolkaAgent<TName extends string = string, TCtx extends z.ZodSchema = z.ZodObject<any>> {
-  readonly info: AgentOptions<TName, TCtx>
+export class PolkaAgent<TName extends string = string, TCtx extends z.ZodSchema = z.ZodSchema> {
+  readonly options: AgentOptions<TName, TCtx>
   readonly agent: Agent
 
-  constructor(info: AgentOptions<TName, TCtx>, polka: IPolka) {
-    this.info = info
+  constructor(options: AgentOptions<TName, TCtx>, polka: IPolka, callbacks: PolkaCallbacks) {
+    this.options = options
 
     const tools = {} as Record<string, ReturnType<typeof createTool>>
 
-    for (const [name, tool] of Object.entries(info.tools)) {
+    for (const [name, tool] of Object.entries(options.info.tools)) {
+      let inputSchema = tool.inputSchema
+      if (inputSchema && inputSchema instanceof z.ZodObject) {
+        inputSchema = inputSchema.extend({
+          reasoning: z.string().optional().describe('The reasoning for the tool use'),
+        })
+      }
+
       tools[name] = createTool({
         id: name,
         description: tool.description,
-        inputSchema: tool.inputSchema,
+        inputSchema,
         outputSchema: tool.outputSchema,
         execute: async (input) => {
+          await callbacks.onToolUse?.(name, input)
           return tool.execute(input, polka)
         },
       })
     }
 
     this.agent = new Agent({
-      name: info.name,
-      instructions: info.systemPrompt,
-      model: getModel(info.model),
+      name: options.info.name,
+      instructions: options.info.systemPrompt,
+      model: getModel(options.model),
       tools,
     })
   }
@@ -96,26 +109,39 @@ export class PolkaAgent<TName extends string = string, TCtx extends z.ZodSchema 
   async startTask(task: string, options: { context?: z.infer<TCtx>; outputSchema?: z.ZodSchema } = {}): Promise<ExitReason> {
     let fullMessage = `<task>${task}</task>`
     if (options.context) {
-      fullMessage += `\n<context>${await this.info.contextProvider(options.context)}</context>`
+      fullMessage += `\n<context>${await this.options.contextProvider(options.context)}</context>`
     }
 
     const resp = await this.agent.generate(task, {
-      output: agentOutputSchema(this.info.agents, options.outputSchema),
+      output: agentOutputSchema(this.options.agents, options.outputSchema),
     })
 
     return resp.object
   }
 }
 
-export class Polka<TAgents extends Record<string, AgentOptions> = Record<string, AgentOptions>> implements IPolka<TAgents> {
+type GetSchema<TAgents extends Record<string, AgentOptions<any, any>>> = {
+  [K in keyof TAgents]: TAgents[K]['info']['contextSchema']
+}
+
+export type PolkaCallbacks = {
+  onStartTask?(agentName: string, task: string, context: any): Promise<void> | void
+  onToolUse?(tool: string, args: any): Promise<void> | void
+}
+
+export class Polka<TAgents extends Record<string, AgentOptions<any, any>>> implements IPolka<GetSchema<TAgents>> {
+  readonly #callbacks: PolkaCallbacks
+
   readonly agents: Record<keyof TAgents, PolkaAgent>
   readonly mastra: Mastra
 
-  constructor(agents: TAgents) {
+  constructor(agents: TAgents, callbacks: PolkaCallbacks) {
+    this.#callbacks = callbacks
+
     const mastraAgents: Record<string, Agent> = {}
     const obj: Record<string, PolkaAgent> = {}
     for (const [name, info] of Object.entries(agents)) {
-      obj[name] = new PolkaAgent(info, this)
+      obj[name] = new PolkaAgent(info, this, callbacks)
     }
     this.agents = obj as Record<keyof TAgents, PolkaAgent>
 
@@ -134,10 +160,12 @@ export class Polka<TAgents extends Record<string, AgentOptions> = Record<string,
     agentName: keyof TAgents,
     task: string,
     options: {
-      context?: z.infer<TAgents[keyof TAgents]['contextSchema']>
+      context?: z.infer<TAgents[keyof TAgents]['info']['contextSchema']>
       outputSchema?: TOutput
     } = {},
   ): Promise<z.infer<TOutput> | { error: string }> {
+    await this.#callbacks.onStartTask?.(agentName as string, task, options.context)
+
     const agent = this.agents[agentName]
     const resp = await agent.startTask(task, options.context)
 
@@ -152,6 +180,13 @@ export class Polka<TAgents extends Record<string, AgentOptions> = Record<string,
         return await this.startTask(resp.agentName, resp.task, { context: resp.context, outputSchema: options.outputSchema })
     }
   }
+}
+
+export function createPolka<TAgents extends Record<string, AgentOptions<any, any>>>(
+  agents: TAgents,
+  callbacks: PolkaCallbacks = {},
+): Polka<TAgents> {
+  return new Polka<TAgents>(agents, callbacks)
 }
 
 export type GetAgentNames<T> = T extends Polka<infer TAgents> ? keyof TAgents : never

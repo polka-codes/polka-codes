@@ -1,7 +1,7 @@
 import { getAvailableTools } from '../../getAvailableTools'
 import { PermissionLevel } from '../../tool'
 import { allTools } from '../../tools'
-import { AgentBase, type AgentInfo, type SharedAgentOptions } from '../AgentBase'
+import { AgentBase, type AgentInfo2, type SharedAgentOptions } from '../AgentBase'
 import { fullSystemPrompt } from './prompts'
 
 export type ArchitectAgentOptions = SharedAgentOptions
@@ -47,4 +47,4 @@ export const architectAgentInfo = {
     'Reviewing and analyzing existing code or components for maintainability and scalability.',
     'Laying out the roadmap for implementation.',
   ],
-} as const satisfies AgentInfo
+} as const satisfies AgentInfo2

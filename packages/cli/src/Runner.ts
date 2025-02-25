@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises'
 import os from 'node:os'
 import {
   type AgentBase,
-  type AgentInfo,
+  type AgentInfo2,
   type AgentNameType,
   type AiServiceBase,
   AnalyzerAgent,
@@ -33,7 +33,7 @@ export type RunnerOptions = {
   interactive: boolean
   eventCallback: TaskEventCallback
   enableCache: boolean
-  availableAgents?: AgentInfo[] // empty to enable all agents
+  availableAgents?: AgentInfo2[] // empty to enable all agents
 }
 
 export class Runner {

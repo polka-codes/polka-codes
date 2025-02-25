@@ -7,7 +7,7 @@ import { getAvailableTools } from '../../getAvailableTools'
 import { PermissionLevel, type ToolResponse, ToolResponseType } from '../../tool'
 import { allTools, attemptCompletion } from '../../tools'
 import { AgentBase } from '../AgentBase'
-import type { AgentInfo, SharedAgentOptions } from '../AgentBase'
+import type { AgentInfo2, SharedAgentOptions } from '../AgentBase'
 import { responsePrompts } from '../prompts'
 import { fullSystemPrompt } from './prompts'
 
@@ -112,4 +112,4 @@ export const codeFixerAgentInfo = {
     'Addressing code quality issues',
     'Tracking and reporting unfixed issues',
   ],
-} as const satisfies AgentInfo
+} as const satisfies AgentInfo2
