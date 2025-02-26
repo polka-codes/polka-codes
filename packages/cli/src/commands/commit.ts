@@ -14,7 +14,7 @@ export const commitCommand = new Command('commit')
     const spinner = ora('Gathering information...').start()
 
     const options = command.parent?.opts() ?? {}
-    const { providerConfig } = parseOptions(options)
+    const { providerConfig, config } = parseOptions(options)
 
     const { provider, model, apiKey } = providerConfig.getConfigForCommand('commit') ?? {}
 
@@ -26,7 +26,9 @@ export const commitCommand = new Command('commit')
       process.exit(1)
     }
 
-    const usage = new UsageMeter()
+    const usage = new UsageMeter({
+      prices: config.prices,
+    })
 
     const ai = createService(provider, {
       apiKey,

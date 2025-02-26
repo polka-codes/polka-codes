@@ -45,6 +45,7 @@ export class Runner {
   constructor(options: RunnerOptions) {
     this.#options = options
     this.#usageMeter = new UsageMeter({
+      prices: options.config.prices,
       maxCost: options.budget,
       maxMessageCount: options.maxMessageCount,
     })
