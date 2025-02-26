@@ -3,10 +3,11 @@ import { askFollowupQuestion, delegate, handOver } from './tools'
 
 /**
  * Get the available tools based on the provider and agent availability
- * @param provider The provider to use
- * @param allTools All possible tools
- * @param hasAgent Whether the agent has agents
- * @param permissionLevel The permission level of the agent. Tool requires higher permission level will be disabled
+ * @param provider The provider to use.
+ * @param allTools All possible tools.
+ * @param hasAgent Whether the agent has agents.
+ * @param permissionLevel Determines which tools are available based on the agent's assigned level.
+ * @param interactive Determines whether the `askFollowupQuestion` tool is available.
  * @returns The available tools
  */
 export const getAvailableTools = ({
