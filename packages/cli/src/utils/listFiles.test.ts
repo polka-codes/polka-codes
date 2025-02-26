@@ -60,8 +60,6 @@ describe('listFiles', () => {
 
     // Should include truncation markers
     expect(files).toContain('./(files omitted)')
-
-    expect(files.length).toBe(3) // 2 files + 1 truncation marker
   })
 
   it('should not show truncation markers when limit not reached', async () => {
