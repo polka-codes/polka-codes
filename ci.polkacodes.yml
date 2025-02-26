@@ -4,3 +4,5 @@ commands:
   default:
     provider: openrouter
     model: deepseek/deepseek-chat
+maxMessageCount: 150
+budget: 2
