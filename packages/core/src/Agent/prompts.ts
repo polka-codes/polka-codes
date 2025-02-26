@@ -56,6 +56,8 @@ For example:
 
 Always adhere to this format for the tool use to ensure proper parsing and execution.
 
+NEVER surround tool use with triple backticks (\`\`\`).
+
 # Tools
 ${tools.map((tool) => toolInfoPrompt(tool, toolNamePrefix, parameterPrefix)).join('\n')}
 
