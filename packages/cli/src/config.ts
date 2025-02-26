@@ -41,6 +41,17 @@ export const configSchema = z
         }),
       )
       .optional(),
+    modelPricing: z
+      .record(
+        z.string(),
+        z.object({
+          inputPrice: z.number().nonnegative().optional(),
+          outputPrice: z.number().nonnegative().optional(),
+          cacheWritesPrice: z.number().nonnegative().optional(),
+          cacheReadsPrice: z.number().nonnegative().optional(),
+        }),
+      )
+      .optional(),
     defaultProvider: z.string().optional(),
     defaultModel: z.string().optional(),
     maxMessageCount: z.number().int().positive().optional(),

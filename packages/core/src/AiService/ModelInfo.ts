@@ -106,3 +106,30 @@ export const deepSeekModels = {
     cacheReadsPrice: 0.14,
   },
 } as const satisfies Record<string, ModelInfo>
+
+export interface ModelPricing {
+  inputPrice?: number
+  outputPrice?: number
+  cacheWritesPrice?: number
+  cacheReadsPrice?: number
+}
+
+export type ModelPricingConfig = Record<string, ModelPricing>
+
+/**
+ * Apply custom pricing from config to a model info object
+ */
+export function applyCustomPricing(modelInfo: ModelInfo, modelId: string, pricingConfig?: ModelPricingConfig): ModelInfo {
+  if (!pricingConfig || !pricingConfig[modelId]) {
+    return modelInfo
+  }
+
+  const customPricing = pricingConfig[modelId]
+  return {
+    ...modelInfo,
+    inputPrice: customPricing.inputPrice ?? modelInfo.inputPrice,
+    outputPrice: customPricing.outputPrice ?? modelInfo.outputPrice,
+    cacheWritesPrice: customPricing.cacheWritesPrice ?? modelInfo.cacheWritesPrice,
+    cacheReadsPrice: customPricing.cacheReadsPrice ?? modelInfo.cacheReadsPrice,
+  }
+}
