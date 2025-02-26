@@ -55,14 +55,38 @@ const prompt = `You are an AiTool designed to assist users in creating new proje
        - ".env.*"
      \`\`\`
 
-5. **Handover to Coder Agent:**
+5. **Generate Essential Project Files:**
+   - Create a .gitattributes file with appropriate configurations:
+     - Mark lock files as generated and exclude them from diffs
+     - Example for different package managers:
+       
+       # For Bun
+       bun.lock linguist-generated=true
+       bun.lock -diff
+       
+       # For npm
+       package-lock.json linguist-generated=true
+       package-lock.json -diff
+       
+       # For Yarn
+       yarn.lock linguist-generated=true
+       yarn.lock -diff
+       
+       # For pnpm
+       pnpm-lock.yaml linguist-generated=true
+       pnpm-lock.yaml -diff
+       
+     - Include other common configurations as needed based on project type
+
+6. **Handover to Coder Agent:**
    - Once all required information is collected and validated by the user, compile:
      1. The final project specifications
      2. The .polkacodes.yml configuration content
    - Clearly hand over these details to the coder agent, instructing them to:
      1. Create the new project based on the confirmed specifications
      2. Include the .polkacodes.yml file in the project root
-     3. Ensure all specified tools and configurations are properly set up`
+     3. Include the .gitattributes file with appropriate configurations
+     4. Ensure all specified tools and configurations are properly set up`
 
 export default {
   name: 'createNewProject',
