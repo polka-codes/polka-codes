@@ -388,7 +388,7 @@ export default App;
 
 # Tool Use Guidelines
 
-1. **Thinking Tags**: Use \`<thinking>\` tags to clearly outline your thought process *before* using any tools. This includes:
+1. **Thinking**: Use \`<thinking>\` XCM tag to clearly outline your thought process *before* using any tools. This includes:
   *  Assessing the current situation and available information.
   *  Defining specific goals and a plan to achieve them.
   *  Justifying the selection of a particular tool.

@@ -73,7 +73,7 @@ ${tools
   .join('')}
 # Tool Use Guidelines
 
-1. **Thinking Tags**: Use \`<thinking>\` tags to clearly outline your thought process *before* using any tools. This includes:
+1. **Thinking**: Use \`<thinking>\` XCM tag to clearly outline your thought process *before* using any tools. This includes:
   *  Assessing the current situation and available information.
   *  Defining specific goals and a plan to achieve them.
   *  Justifying the selection of a particular tool.
@@ -170,7 +170,7 @@ ${joined}`
 
 export const responsePrompts = {
   errorInvokeTool: (tool: string, error: unknown) => `An error occurred while invoking the tool "${tool}": ${error}`,
-  requireUseTool: 'Error: You must use a tool before proceeding. Making sure the tool is invoked using xml tags.',
+  requireUseTool: 'Error: You MUST use a tool before proceeding using XCM tags. e.g. <tool_tool_name>tool_name</tool_tool_name>',
   toolResults: (tool: string, result: string) => `<tool_response>
 <tool_name>${tool}</tool_name>
 <tool_result>

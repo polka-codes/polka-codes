@@ -91,9 +91,9 @@ export const deepSeekModels = {
     supportsImages: false,
     supportsPromptCache: true, // supports context caching, but not in the way anthropic does it (deepseek reports input tokens and reads/writes in the same usage report) FIXME: we need to show users cache stats how deepseek does it
     inputPrice: 0, // technically there is no input price, it's all either a cache hit or miss (ApiOptions will not show this)
-    outputPrice: 0.28,
-    cacheWritesPrice: 0.14,
-    cacheReadsPrice: 0.014,
+    outputPrice: 1.1,
+    cacheWritesPrice: 0.27,
+    cacheReadsPrice: 0.07,
   },
   'deepseek-reasoner': {
     maxTokens: 8_000,
@@ -106,3 +106,8 @@ export const deepSeekModels = {
     cacheReadsPrice: 0.14,
   },
 } as const satisfies Record<string, ModelInfo>
+
+export const modelInfos = {
+  anthropic: anthropicModels,
+  deepseek: deepSeekModels,
+}

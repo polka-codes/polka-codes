@@ -45,7 +45,7 @@ export abstract class AiServiceBase {
     this.usageMeter = usageMeter
   }
 
-  abstract get model(): { id: string; info: ModelInfo }
+  abstract get model(): { provider: string; id: string; info: ModelInfo }
 
   abstract sendImpl(systemPrompt: string, messages: MessageParam[]): ApiStream
 
@@ -57,7 +57,7 @@ export abstract class AiServiceBase {
     for await (const chunk of stream) {
       switch (chunk.type) {
         case 'usage':
-          this.usageMeter.addUsage(chunk, this.model.info)
+          this.usageMeter.addUsage(chunk, this.model)
           break
       }
       yield chunk
@@ -97,7 +97,7 @@ export abstract class AiServiceBase {
     }
 
     // Track usage metrics
-    this.usageMeter.addUsage(usage, this.model.info)
+    this.usageMeter.addUsage(usage, this.model)
 
     return {
       response: resp,
