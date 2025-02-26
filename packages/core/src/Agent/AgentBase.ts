@@ -246,7 +246,7 @@ export abstract class AgentBase {
 
     let currentAssistantMessage = ''
 
-    const retryCount = 3 // TODO: make this configurable
+    const retryCount = 5 // TODO: make this configurable
 
     for (let i = 0; i < retryCount; i++) {
       currentAssistantMessage = ''
