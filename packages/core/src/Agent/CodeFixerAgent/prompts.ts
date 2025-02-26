@@ -4,7 +4,7 @@
  */
 
 import type { ToolInfo } from '../../tool'
-import { capabilities, customInstructions, customScripts, interactiveMode, systemInformation, toolUsePrompt } from '../prompts'
+import { capabilities, customInstructions, customScripts, systemInformation, toolUsePrompt } from '../prompts'
 
 export const basePrompt = `You are a highly skilled software engineer specializing in debugging and fixing code issues. You have extensive experience with:
 - Type systems and type checking
@@ -89,5 +89,4 @@ ${retryGuidelines}
 ${capabilities(toolNamePrefix)}
 ${systemInformation(info)}
 ${customInstructions(instructions)}
-${customScripts(scripts)}
-${interactiveMode(interactive)}`
+${customScripts(scripts)}`

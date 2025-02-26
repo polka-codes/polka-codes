@@ -28,6 +28,8 @@ For example:
 
 Always adhere to this format for the tool use to ensure proper parsing and execution.
 
+NEVER surround tool use with triple backticks (\`\`\`).
+
 # Tools
 
 ## tool_ask_followup_question
@@ -500,6 +502,8 @@ RULES
 - When using the tool_replace_in_file tool, you must include complete lines in your SEARCH blocks, not partial lines. The system requires exact line matches and cannot match partial lines. For example, if you want to match a line containing "const x = 5;", your SEARCH block must include the entire line, not just "x = 5" or other fragments.
 - When using the tool_replace_in_file tool, if you use multiple SEARCH/REPLACE blocks, list them in the order they appear in the file. For example if you need to make changes to both line 10 and line 50, first include the SEARCH/REPLACE block for line 10, followed by the SEARCH/REPLACE block for line 50.
 - It is critical you wait for the user's response after each tool use, in order to confirm the success of the tool use. For example, if asked to make a todo app, you would create a file, wait for the user's response it was created successfully, then create another file if needed, wait for the user's response it was created successfully, etc.
+- Keep the inline docs up to date if needed.
+
 
 ====
 
@@ -542,12 +546,5 @@ The following additional commands are provided by the user, and should be follow
 - format
   - Command: \`format\`
   - Description: Format the code
-
-====
-
-NON-INTERACTIVE MODE
-
-You are in non-interactive mode. This means you will not be able to ask user questions to gather additional information to complete the task. You should try to use available tools to accomplish the task. If unable to precede further, you may try to end the task and provide a reason.
-
 "
 `;

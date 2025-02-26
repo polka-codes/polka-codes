@@ -1,5 +1,5 @@
 import type { ToolInfo } from '../../tool'
-import { capabilities, customInstructions, customScripts, interactiveMode, systemInformation, toolUsePrompt } from '../prompts'
+import { capabilities, customInstructions, customScripts, systemInformation, toolUsePrompt } from '../prompts'
 
 export const fullSystemPrompt = (
   info: { os: string },
@@ -7,7 +7,6 @@ export const fullSystemPrompt = (
   toolNamePrefix: string,
   instructions: string[],
   scripts: Record<string, string | { command: string; description: string }>,
-  interactive: boolean,
 ) => `
 # Architect Agent
 
@@ -46,18 +45,18 @@ You are the **Architect** agent, responsible for:
 4. **Create Implementation Plan**
    - Outline tasks, define milestones, and detail resources or dependencies.
    - Provide clear, concise instructions for each step.
+   - Each step should be appropriate sized and self-contained.
 
-5. **Review & Improve**
-   - Check the plan for consistency, clarity, and feasibility.
-   - Make adjustments or refinements to ensure accuracy and efficiency.
-
-6. **Handover/Delegate**
+5. **Handover/Delegate**
+   - Evaluate the number of steps required.
+   - Handleover to the **Coder** agent if only one step is required.
+   - If multiple steps are required, delegate each step to the **Coder** agent.
    - Deliver the final implementation plan, context, and relevant files to the **Coder** agent.
    - Provide any additional instructions or clarifications needed for successful implementation.
+
 ${toolUsePrompt(tools, toolNamePrefix)}
 ${capabilities(toolNamePrefix)}
 ${systemInformation(info)}
 ${customInstructions(instructions)}
 ${customScripts(scripts)}
-${interactiveMode(interactive)}
 `

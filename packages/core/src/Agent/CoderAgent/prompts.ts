@@ -1,7 +1,7 @@
 // source: https://github.com/cline/cline/blob/f6c19c29a64ca84e9360df7ab2c07d128dcebe64/src/core/prompts/system.ts#L1
 
 import type { ToolInfo } from '../../tool'
-import { capabilities, customInstructions, customScripts, interactiveMode, systemInformation, toolUsePrompt } from '../prompts'
+import { capabilities, customInstructions, customScripts, systemInformation, toolUsePrompt } from '../prompts'
 
 // TODO: restructure the prompts to avoid duplications
 
@@ -95,7 +95,9 @@ RULES
 - When presented with images, utilize your vision capabilities to thoroughly examine them and extract meaningful information. Incorporate these insights into your thought process as you accomplish the user's task.
 - When using the ${toolNamePrefix}replace_in_file tool, you must include complete lines in your SEARCH blocks, not partial lines. The system requires exact line matches and cannot match partial lines. For example, if you want to match a line containing "const x = 5;", your SEARCH block must include the entire line, not just "x = 5" or other fragments.
 - When using the ${toolNamePrefix}replace_in_file tool, if you use multiple SEARCH/REPLACE blocks, list them in the order they appear in the file. For example if you need to make changes to both line 10 and line 50, first include the SEARCH/REPLACE block for line 10, followed by the SEARCH/REPLACE block for line 50.
-- It is critical you wait for the user's response after each tool use, in order to confirm the success of the tool use. For example, if asked to make a todo app, you would create a file, wait for the user's response it was created successfully, then create another file if needed, wait for the user's response it was created successfully, etc.`
+- It is critical you wait for the user's response after each tool use, in order to confirm the success of the tool use. For example, if asked to make a todo app, you would create a file, wait for the user's response it was created successfully, then create another file if needed, wait for the user's response it was created successfully, etc.
+- Keep the inline docs up to date if needed.
+`
 
 export const objectives = (toolNamePrefix: string) => `
 ====
@@ -116,7 +118,6 @@ export const fullSystemPrompt = (
   toolNamePrefix: string,
   instructions: string[],
   scripts: Record<string, string | { command: string; description: string }>,
-  interactive: boolean,
 ) => `
 ${basePrompt}
 ${toolUsePrompt(tools, toolNamePrefix)}
@@ -127,5 +128,4 @@ ${objectives(toolNamePrefix)}
 ${systemInformation(info)}
 ${customInstructions(instructions)}
 ${customScripts(scripts)}
-${interactiveMode(interactive)}
 `

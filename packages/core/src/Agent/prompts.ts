@@ -56,6 +56,8 @@ For example:
 
 Always adhere to this format for the tool use to ensure proper parsing and execution.
 
+NEVER surround tool use with triple backticks (\`\`\`).
+
 # Tools
 ${tools.map((tool) => toolInfoPrompt(tool, toolNamePrefix, parameterPrefix)).join('\n')}
 
@@ -98,7 +100,7 @@ export const agentsPrompt = (agents: Readonly<AgentInfo[]>, name: string) => `
 
 AVAILABLE AGENTS
 
-The following agents are available for task handover:
+The following agents are available for task handover/delegate:
 ${agents
   .map(
     (agent) => `
@@ -109,7 +111,7 @@ ${agent.responsibilities.map((resp) => `    - ${resp}`).join('\n')}`,
   .join('\n')}
 
 - **Current Agent Role**
-  You are currently acting as **${name}**. If you identify the task is beyond your current scope, use the handover tool to transition to the other agent. Include sufficient context so the new agent can seamlessly continue the work.
+  You are currently acting as **${name}**. If you identify the task is beyond your current scope, use the handover or delegate tool to transition to the other agent. Include sufficient context so the new agent can seamlessly continue the work.
 `
 
 export const capabilities = (toolNamePrefix: string) => `
@@ -126,26 +128,6 @@ export const systemInformation = (info: { os: string }) => `
 SYSTEM INFORMATION
 
 Operating System: ${info.os}`
-
-export const interactiveMode = (interactive: boolean) => {
-  if (interactive) {
-    return `
-====
-
-INTERACTIVE MODE
-
-You are in interactive mode. This means you may ask user questions to gather additional information to complete the task.
-`
-  }
-
-  return `
-====
-
-NON-INTERACTIVE MODE
-
-You are in non-interactive mode. This means you will not be able to ask user questions to gather additional information to complete the task. You should try to use available tools to accomplish the task. If unable to precede further, you may try to end the task and provide a reason.
-`
-}
 
 export const customInstructions = (customInstructions: string[]) => {
   const joined = customInstructions.join('\n')

@@ -120,6 +120,7 @@ export class Runner {
           case coderAgentInfo.name:
             return new CoderAgent({
               ...args,
+              interactive: false,
               provider: getProvider(agentName, options.config, providerOptions),
             })
           case architectAgentInfo.name:
@@ -130,6 +131,7 @@ export class Runner {
           case analyzerAgentInfo.name:
             return new AnalyzerAgent({
               ...args,
+              interactive: false,
               provider: getProvider(agentName, options.config, providerOptions),
             })
           case codeFixerAgentInfo.name:

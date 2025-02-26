@@ -36,7 +36,13 @@ describe('getAvailableTools', () => {
   ]
 
   it('should filter out agent tools when no agents available', () => {
-    const result = getAvailableTools(mockProvider, mockTools, false, 3)
+    const result = getAvailableTools({
+      provider: mockProvider,
+      allTools: mockTools,
+      hasAgent: false,
+      permissionLevel: 3,
+      interactive: true,
+    })
 
     // Should not include delegate and handOver
     expect(result.some((tool) => tool.name === delegate.name)).toBe(false)
@@ -49,7 +55,7 @@ describe('getAvailableTools', () => {
   })
 
   it('should include agent tools when agents are available', () => {
-    const result = getAvailableTools(mockProvider, mockTools, true, 3)
+    const result = getAvailableTools({ provider: mockProvider, allTools: mockTools, hasAgent: true, permissionLevel: 3, interactive: true })
 
     // Should include delegate and handOver
     expect(result.some((tool) => tool.name === delegate.name)).toBe(true)
@@ -59,7 +65,7 @@ describe('getAvailableTools', () => {
   })
 
   it('should filter based on provider availability', () => {
-    const result = getAvailableTools(mockProvider, mockTools, true, 3)
+    const result = getAvailableTools({ provider: mockProvider, allTools: mockTools, hasAgent: true, permissionLevel: 3, interactive: true })
 
     // Should include available tools
     expect(result.some((tool) => tool.name === 'tool1')).toBe(true)
@@ -71,7 +77,7 @@ describe('getAvailableTools', () => {
   })
 
   it('should filter based on permission level', () => {
-    const result = getAvailableTools(mockProvider, mockTools, true, 2)
+    const result = getAvailableTools({ provider: mockProvider, allTools: mockTools, hasAgent: true, permissionLevel: 2, interactive: true })
 
     // Should include tools with permissionLevel <= 2
     expect(result.some((tool) => tool.name === 'tool1')).toBe(true)
@@ -84,7 +90,13 @@ describe('getAvailableTools', () => {
   })
 
   it('should correctly apply all filters together', () => {
-    const result = getAvailableTools(mockProvider, mockTools, false, 1)
+    const result = getAvailableTools({
+      provider: mockProvider,
+      allTools: mockTools,
+      hasAgent: false,
+      permissionLevel: 1,
+      interactive: true,
+    })
 
     // Should exclude agent tools (no agents)
     expect(result.some((tool) => tool.name === delegate.name)).toBe(false)

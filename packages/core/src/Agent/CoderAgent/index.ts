@@ -15,7 +15,13 @@ export type CoderAgentOptions = SharedAgentOptions
 export class CoderAgent extends AgentBase {
   constructor(options: CoderAgentOptions) {
     const combinedTools = [...(options.additionalTools ?? []), ...Object.values(allTools)]
-    const tools = getAvailableTools(options.provider, combinedTools, (options.agents?.length ?? 0) > 0, PermissionLevel.Arbitrary)
+    const tools = getAvailableTools({
+      provider: options.provider,
+      allTools: combinedTools,
+      hasAgent: (options.agents?.length ?? 0) > 0,
+      permissionLevel: PermissionLevel.Arbitrary,
+      interactive: true,
+    })
     const toolNamePrefix = 'tool_'
     const systemPrompt = fullSystemPrompt(
       {
@@ -25,7 +31,6 @@ export class CoderAgent extends AgentBase {
       toolNamePrefix,
       options.customInstructions ?? [],
       options.scripts ?? {},
-      options.interactive,
     )
 
     super(coderAgentInfo.name, options.ai, {

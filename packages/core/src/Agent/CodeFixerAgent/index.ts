@@ -25,7 +25,13 @@ export class CodeFixerAgent extends AgentBase {
 
   constructor(options: CodeFixerAgentOptions) {
     const combinedTools = [...(options.additionalTools ?? []), ...Object.values(allTools)]
-    const tools = getAvailableTools(options.provider, combinedTools, (options.agents?.length ?? 0) > 0, PermissionLevel.Arbitrary)
+    const tools = getAvailableTools({
+      provider: options.provider,
+      allTools: combinedTools,
+      hasAgent: (options.agents?.length ?? 0) > 0,
+      permissionLevel: PermissionLevel.Arbitrary,
+      interactive: true,
+    })
     const toolNamePrefix = 'tool_'
     const systemPrompt = fullSystemPrompt(
       {
