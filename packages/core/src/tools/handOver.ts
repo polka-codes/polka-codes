@@ -8,7 +8,7 @@ import { getString, getStringArray } from './utils'
 
 export const toolInfo = {
   name: 'hand_over',
-  description: 'Hand over the current task to another agent to complete',
+  description: 'Hand over the current task to another agent to complete. This tool MUST NOT to be used with any other tool.',
   parameters: [
     {
       name: 'agent_name',
