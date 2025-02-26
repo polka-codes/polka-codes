@@ -97,6 +97,42 @@ rules:
   - "Follow the project's coding style"
   - "Add JSDoc comments for public APIs"
 
+# Pricing information for AI models
+# Cost per million tokens in USD
+prices:
+  # DeepSeek models pricing
+  deepseek:
+    # DeepSeek Chat model pricing
+    "deepseek-chat":
+      inputPrice: 0.0      # Cost per million input tokens
+      outputPrice: 1.1     # Cost per million output tokens
+      cacheWritesPrice: 0.27  # Cost per million tokens for cache writes
+      cacheReadsPrice: 0.07   # Cost per million tokens for cache reads
+
+    # DeepSeek Reasoner model pricing
+    "deepseek-reasoner":
+      inputPrice: 0.0
+      outputPrice: 2.19
+      cacheWritesPrice: 0.55
+      cacheReadsPrice: 0.14
+
+  # Anthropic models pricing
+  anthropic:
+    # Claude 3.7 Sonnet model pricing
+    "claude-3-7-sonnet-20250219":
+      inputPrice: 3.0
+      outputPrice: 15.0
+      cacheWritesPrice: 3.75
+      cacheReadsPrice: 0.3
+
+  # OpenRouter models pricing (estimated values)
+  openrouter:
+    "openai/gpt-4o":
+      inputPrice: 10.0     # Estimated cost per million input tokens
+      outputPrice: 30.0    # Estimated cost per million output tokens
+      cacheWritesPrice: 5.0  # Estimated cost for cache writes
+      cacheReadsPrice: 1.0   # Estimated cost for cache reads
+
 # Files to exclude from AI operations
 # Supports glob patterns
 excludeFiles:
