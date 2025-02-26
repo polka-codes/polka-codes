@@ -98,7 +98,7 @@ export const agentsPrompt = (agents: Readonly<AgentInfo[]>, name: string) => `
 
 AVAILABLE AGENTS
 
-The following agents are available for task handover:
+The following agents are available for task handover/delegate:
 ${agents
   .map(
     (agent) => `
@@ -109,7 +109,7 @@ ${agent.responsibilities.map((resp) => `    - ${resp}`).join('\n')}`,
   .join('\n')}
 
 - **Current Agent Role**
-  You are currently acting as **${name}**. If you identify the task is beyond your current scope, use the handover tool to transition to the other agent. Include sufficient context so the new agent can seamlessly continue the work.
+  You are currently acting as **${name}**. If you identify the task is beyond your current scope, use the handover or delegate tool to transition to the other agent. Include sufficient context so the new agent can seamlessly continue the work.
 `
 
 export const capabilities = (toolNamePrefix: string) => `
