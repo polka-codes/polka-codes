@@ -25,7 +25,6 @@ export class CoderAgent extends AgentBase {
       toolNamePrefix,
       options.customInstructions ?? [],
       options.scripts ?? {},
-      options.interactive,
     )
 
     super(coderAgentInfo.name, options.ai, {

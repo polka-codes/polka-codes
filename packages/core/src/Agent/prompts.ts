@@ -127,26 +127,6 @@ SYSTEM INFORMATION
 
 Operating System: ${info.os}`
 
-export const interactiveMode = (interactive: boolean) => {
-  if (interactive) {
-    return `
-====
-
-INTERACTIVE MODE
-
-You are in interactive mode. This means you may ask user questions to gather additional information to complete the task.
-`
-  }
-
-  return `
-====
-
-NON-INTERACTIVE MODE
-
-You are in non-interactive mode. This means you will not be able to ask user questions to gather additional information to complete the task. You should try to use available tools to accomplish the task. If unable to precede further, you may try to end the task and provide a reason.
-`
-}
-
 export const customInstructions = (customInstructions: string[]) => {
   const joined = customInstructions.join('\n')
   if (joined.trim() === '') {

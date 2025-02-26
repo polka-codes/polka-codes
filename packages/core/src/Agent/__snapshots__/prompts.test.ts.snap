@@ -81,7 +81,7 @@ exports[`Agent prompts agentsPrompt should generate agents documentation 1`] = `
 
 AVAILABLE AGENTS
 
-The following agents are available for task handover:
+The following agents are available for task handover/delegate:
 
 - **TestAgent**
   - Responsibilities:
@@ -93,7 +93,7 @@ The following agents are available for task handover:
     - Another responsibility
 
 - **Current Agent Role**
-  You are currently acting as **CurrentAgent**. If you identify the task is beyond your current scope, use the handover tool to transition to the other agent. Include sufficient context so the new agent can seamlessly continue the work.
+  You are currently acting as **CurrentAgent**. If you identify the task is beyond your current scope, use the handover or delegate tool to transition to the other agent. Include sufficient context so the new agent can seamlessly continue the work.
 "
 `;
 
@@ -103,14 +103,14 @@ exports[`Agent prompts agentsPrompt should include current agent name 1`] = `
 
 AVAILABLE AGENTS
 
-The following agents are available for task handover:
+The following agents are available for task handover/delegate:
 
 - **TestAgent**
   - Responsibilities:
     - Test responsibility
 
 - **Current Agent Role**
-  You are currently acting as **CurrentAgent**. If you identify the task is beyond your current scope, use the handover tool to transition to the other agent. Include sufficient context so the new agent can seamlessly continue the work.
+  You are currently acting as **CurrentAgent**. If you identify the task is beyond your current scope, use the handover or delegate tool to transition to the other agent. Include sufficient context so the new agent can seamlessly continue the work.
 "
 `;
 

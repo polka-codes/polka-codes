@@ -1,7 +1,7 @@
 // source: https://github.com/cline/cline/blob/f6c19c29a64ca84e9360df7ab2c07d128dcebe64/src/core/prompts/system.ts#L1
 
 import type { ToolInfo } from '../../tool'
-import { capabilities, customInstructions, customScripts, interactiveMode, systemInformation, toolUsePrompt } from '../prompts'
+import { capabilities, customInstructions, customScripts, systemInformation, toolUsePrompt } from '../prompts'
 
 // TODO: restructure the prompts to avoid duplications
 
@@ -116,7 +116,6 @@ export const fullSystemPrompt = (
   toolNamePrefix: string,
   instructions: string[],
   scripts: Record<string, string | { command: string; description: string }>,
-  interactive: boolean,
 ) => `
 ${basePrompt}
 ${toolUsePrompt(tools, toolNamePrefix)}
@@ -127,5 +126,4 @@ ${objectives(toolNamePrefix)}
 ${systemInformation(info)}
 ${customInstructions(instructions)}
 ${customScripts(scripts)}
-${interactiveMode(interactive)}
 `

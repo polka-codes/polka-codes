@@ -1,5 +1,5 @@
 import type { ToolInfo } from '../../tool'
-import { capabilities, customInstructions, customScripts, interactiveMode, systemInformation, toolUsePrompt } from '../prompts'
+import { capabilities, customInstructions, customScripts, systemInformation, toolUsePrompt } from '../prompts'
 
 export const fullSystemPrompt = (
   info: { os: string },
@@ -7,7 +7,6 @@ export const fullSystemPrompt = (
   toolNamePrefix: string,
   instructions: string[],
   scripts: Record<string, string | { command: string; description: string }>,
-  interactive: boolean,
 ) => `
 # Architect Agent
 
@@ -62,5 +61,4 @@ ${capabilities(toolNamePrefix)}
 ${systemInformation(info)}
 ${customInstructions(instructions)}
 ${customScripts(scripts)}
-${interactiveMode(interactive)}
 `

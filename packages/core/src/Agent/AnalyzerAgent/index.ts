@@ -22,7 +22,6 @@ export class AnalyzerAgent extends AgentBase {
       toolNamePrefix,
       options.customInstructions ?? [],
       options.scripts ?? {},
-      options.interactive,
     )
 
     super(analyzerAgentInfo.name, options.ai, {

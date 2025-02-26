@@ -22,7 +22,6 @@ test('fullSystemPrompt', () => {
         description: 'Format the code',
       },
     },
-    false,
   )
 
   expect(prompt).toMatchSnapshot()

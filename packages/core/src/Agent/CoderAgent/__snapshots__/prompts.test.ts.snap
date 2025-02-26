@@ -542,12 +542,5 @@ The following additional commands are provided by the user, and should be follow
 - format
   - Command: \`format\`
   - Description: Format the code
-
-====
-
-NON-INTERACTIVE MODE
-
-You are in non-interactive mode. This means you will not be able to ask user questions to gather additional information to complete the task. You should try to use available tools to accomplish the task. If unable to precede further, you may try to end the task and provide a reason.
-
 "
 `;

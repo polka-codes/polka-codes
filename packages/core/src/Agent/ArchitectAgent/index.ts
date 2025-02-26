@@ -19,7 +19,6 @@ export class ArchitectAgent extends AgentBase {
       toolNamePrefix,
       options.customInstructions ?? [],
       options.scripts ?? {},
-      options.interactive,
     )
 
     super(architectAgentInfo.name, options.ai, {
