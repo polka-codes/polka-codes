@@ -32,6 +32,20 @@ const agentSchema = providerModelSchema.extend({
 export const configSchema = z
   .object({
     agent: z.string().optional(),
+    prices: z
+      .record(
+        z.string(), // provider
+        z.record(
+          z.string(), // model
+          z.object({
+            inputPrice: z.number().optional(),
+            outputPrice: z.number().optional(),
+            cacheWritesPrice: z.number().optional(),
+            cacheReadsPrice: z.number().optional(),
+          }),
+        ),
+      )
+      .optional(),
     providers: z
       .record(
         z.string(),

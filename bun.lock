@@ -14,7 +14,7 @@
     },
     "packages/cli": {
       "name": "@polka-codes/cli",
-      "version": "0.5.4",
+      "version": "0.6.8",
       "bin": {
         "polka": "cli.mjs"
       },
@@ -39,9 +39,10 @@
     },
     "packages/core": {
       "name": "@polka-codes/core",
-      "version": "0.5.4",
+      "version": "0.6.8",
       "dependencies": {
         "@anthropic-ai/sdk": "^0.36.2",
+        "lodash": "^4.17.21",
         "openai": "^4.80.0",
       },
     },

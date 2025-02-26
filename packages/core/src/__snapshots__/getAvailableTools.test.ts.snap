@@ -32,7 +32,7 @@ exports[`getAvailableTools should filter out agent tools when no agents availabl
 exports[`getAvailableTools should include agent tools when agents are available 1`] = `
 [
   {
-    "description": "Temporarily delegate a task to another agent and receive the result back",
+    "description": "Temporarily delegate a task to another agent and receive the result back. This tool MUST NOT to be used with any other tool.",
     "examples": [
       {
         "description": "Delegate a code analysis task to the analyzer agent",
@@ -88,7 +88,7 @@ exports[`getAvailableTools should include agent tools when agents are available 
     "permissionLevel": 0,
   },
   {
-    "description": "Hand over the current task to another agent to complete",
+    "description": "Hand over the current task to another agent to complete. This tool MUST NOT to be used with any other tool.",
     "examples": [
       {
         "description": "Hand over a coding task to the coder agent",
@@ -173,7 +173,7 @@ exports[`getAvailableTools should include agent tools when agents are available 
 exports[`getAvailableTools should filter based on provider availability 1`] = `
 [
   {
-    "description": "Temporarily delegate a task to another agent and receive the result back",
+    "description": "Temporarily delegate a task to another agent and receive the result back. This tool MUST NOT to be used with any other tool.",
     "examples": [
       {
         "description": "Delegate a code analysis task to the analyzer agent",
@@ -229,7 +229,7 @@ exports[`getAvailableTools should filter based on provider availability 1`] = `
     "permissionLevel": 0,
   },
   {
-    "description": "Hand over the current task to another agent to complete",
+    "description": "Hand over the current task to another agent to complete. This tool MUST NOT to be used with any other tool.",
     "examples": [
       {
         "description": "Hand over a coding task to the coder agent",
@@ -314,7 +314,7 @@ exports[`getAvailableTools should filter based on provider availability 1`] = `
 exports[`getAvailableTools should filter based on permission level 1`] = `
 [
   {
-    "description": "Temporarily delegate a task to another agent and receive the result back",
+    "description": "Temporarily delegate a task to another agent and receive the result back. This tool MUST NOT to be used with any other tool.",
     "examples": [
       {
         "description": "Delegate a code analysis task to the analyzer agent",
@@ -370,7 +370,7 @@ exports[`getAvailableTools should filter based on permission level 1`] = `
     "permissionLevel": 0,
   },
   {
-    "description": "Hand over the current task to another agent to complete",
+    "description": "Hand over the current task to another agent to complete. This tool MUST NOT to be used with any other tool.",
     "examples": [
       {
         "description": "Hand over a coding task to the coder agent",

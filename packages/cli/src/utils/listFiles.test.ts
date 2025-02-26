@@ -42,9 +42,9 @@ describe('listFiles', () => {
     expect(limitReached).toBe(true)
 
     // Should include files up to the limit
-    expect(files.includes('.gitignore')).toBe(true)
-    expect(files.includes('file1.txt')).toBe(true)
-    expect(files.includes('file2.txt')).toBe(true)
+    expect(files).toContain('.gitignore')
+    expect(files).toContain('file1.txt')
+    expect(files).toContain('file2.txt')
 
     // Should include the truncation marker for subdir
     expect(files.includes('subdir/(files omitted)')).toBe(true)
@@ -53,26 +53,13 @@ describe('listFiles', () => {
     expect(files.length).toBe(4) // 3 files + 1 truncation marker
   })
 
-  it('should show truncation markers for multiple directories', async () => {
-    // Create additional nested directories
-    const nestedDir1 = join(testDir, 'nested1')
-    const nestedDir2 = join(testDir, 'nested2')
-    await fs.mkdir(nestedDir1, { recursive: true })
-    await fs.mkdir(nestedDir2, { recursive: true })
-    await fs.writeFile(join(nestedDir1, 'nested-file1.txt'), '')
-    await fs.writeFile(join(nestedDir2, 'nested-file2.txt'), '')
-
+  it('should show truncation markers for root directories', async () => {
     // Set a low maxCount to force truncation
     const [files, limitReached] = await listFiles(testDir, true, 2, testDir)
     expect(limitReached).toBe(true)
 
     // Should include truncation markers
-    const markers = files.filter((f) => f.includes('/(files omitted)'))
-    expect(markers.length).toBeGreaterThan(0)
-
-    // Clean up
-    await fs.rm(nestedDir1, { recursive: true, force: true })
-    await fs.rm(nestedDir2, { recursive: true, force: true })
+    expect(files).toContain('./(files omitted)')
   })
 
   it('should not show truncation markers when limit not reached', async () => {
@@ -95,5 +82,10 @@ describe('listFiles', () => {
 
   it('should handle non-existent directory', async () => {
     expect(listFiles(join(testDir, 'nonexistent'), false, 10, testDir)).rejects.toThrow()
+  })
+
+  it('should exclude files matching excludeFiles patterns', async () => {
+    const [files] = await listFiles(testDir, true, 10, testDir, ['file2.txt', 'subdir/*'])
+    expect(files).toEqual(['.gitignore', 'file1.txt'])
   })
 })

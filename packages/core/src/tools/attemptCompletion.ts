@@ -5,7 +5,7 @@ import { getString } from './utils'
 export const toolInfo = {
   name: 'attempt_completion',
   description:
-    'Use this tool when you believe the user’s requested task is complete. Indicate that your work is finished, but acknowledge the user may still provide additional instructions or questions if they want to continue.',
+    'Use this tool when you believe the user’s requested task is complete. Indicate that your work is finished, but acknowledge the user may still provide additional instructions or questions if they want to continue. This tool MUST NOT to be used with any other tool.',
   parameters: [
     {
       name: 'result',

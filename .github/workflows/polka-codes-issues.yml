@@ -20,7 +20,7 @@ concurrency:
 
 jobs:
   handle:
-    timeout-minutes: 10
+    timeout-minutes: 15
     if: |
       (github.event_name == 'issues' && contains(github.event.issue.labels.*.name, 'polka.codes')) ||
       github.event_name == 'workflow_dispatch'

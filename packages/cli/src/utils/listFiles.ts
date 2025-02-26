@@ -127,7 +127,7 @@ export async function listFiles(
             (e) => !e.isDirectory() && !folderIg.ignores(relative(cwd, join(currentPath, e.name)).replace(/\\/g, '/')),
           )
 
-          if (hasRemainingFiles && currentRelPath !== '.') {
+          if (hasRemainingFiles) {
             const marker = `${currentRelPath}/(files omitted)`
             results.push(marker)
           }

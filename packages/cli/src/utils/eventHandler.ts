@@ -1,9 +1,8 @@
 import { type TaskEvent, TaskEventKind, ToolResponseType } from '@polka-codes/core'
 import chalk from 'chalk'
 
+let hadReasoning = false
 export const printEvent = (verbose: number) => (event: TaskEvent) => {
-  let hadReasoning = false
-
   switch (event.kind) {
     case TaskEventKind.StartTask:
       if (verbose > 1) {

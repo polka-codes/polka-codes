@@ -45,6 +45,7 @@ export class Runner {
   constructor(options: RunnerOptions) {
     this.#options = options
     this.#usageMeter = new UsageMeter({
+      prices: options.config.prices,
       maxCost: options.budget,
       maxMessageCount: options.maxMessageCount,
     })
@@ -181,10 +182,8 @@ export class Runner {
     const maxFileCount = agentConfig.initialContext?.maxFileCount ?? 200
     const excludes = agentConfig.initialContext?.excludes ?? []
     const finalExcludes = excludes.concat(this.#options.config.excludeFiles ?? [])
-    const [fileList, limited] = await listFiles(cwd, true, maxFileCount, cwd, finalExcludes)
-    const fileContext = `<files>
-${fileList.join('\n')}${limited ? '\n<files_truncated>true</files_truncated>' : ''}
-</files>`
+    const [fileList] = await listFiles(cwd, true, maxFileCount, cwd, finalExcludes)
+    const fileContext = `<files>\n${fileList.join('\n')}\n</files>`
     return `<now_date>${new Date().toISOString()}</now_date>${fileContext}`
   }
 

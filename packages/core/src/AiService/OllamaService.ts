@@ -9,7 +9,7 @@ import { convertToOpenAiMessages } from './utils'
 export class OllamaService extends AiServiceBase {
   #client: OpenAI
 
-  readonly model: { id: string; info: ModelInfo }
+  readonly model: { provider: string; id: string; info: ModelInfo }
 
   constructor(options: AiServiceOptions) {
     super(options.usageMeter)
@@ -20,6 +20,7 @@ export class OllamaService extends AiServiceBase {
     })
 
     this.model = {
+      provider: 'ollama',
       id: options.model || 'maryasov/qwen2.5-coder-cline:7b',
       info: openAiModelInfoSaneDefaults,
     }

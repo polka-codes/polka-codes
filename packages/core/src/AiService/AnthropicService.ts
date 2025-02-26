@@ -10,7 +10,7 @@ export class AnthropicService extends AiServiceBase {
   #options: AiServiceOptions
   #client: Anthropic
 
-  readonly model: { id: AnthropicModelId; info: ModelInfo }
+  readonly model: { provider: 'anthropic'; id: AnthropicModelId; info: ModelInfo }
 
   constructor(options: AiServiceOptions) {
     super(options.usageMeter)
@@ -23,6 +23,7 @@ export class AnthropicService extends AiServiceBase {
 
     const id = (this.#options.model ?? anthropicDefaultModelId) as AnthropicModelId
     this.model = {
+      provider: 'anthropic',
       id,
       info: anthropicModels[id] ?? anthropicModels[anthropicDefaultModelId],
     }

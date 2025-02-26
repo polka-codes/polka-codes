@@ -8,7 +8,8 @@ import { getString, getStringArray } from './utils'
 
 export const toolInfo = {
   name: 'delegate',
-  description: 'Temporarily delegate a task to another agent and receive the result back',
+  description:
+    'Temporarily delegate a task to another agent and receive the result back. This tool MUST NOT to be used with any other tool.',
   parameters: [
     {
       name: 'agent_name',

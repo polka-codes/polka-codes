@@ -12,7 +12,7 @@ export const prCommand = new Command('pr')
     const spinner = ora('Gathering information...').start()
 
     const options = command.parent?.opts() ?? {}
-    const { providerConfig } = parseOptions(options)
+    const { providerConfig, config } = parseOptions(options)
 
     const { provider, model, apiKey } = providerConfig.getConfigForCommand('pr') ?? {}
 
@@ -64,7 +64,9 @@ export const prCommand = new Command('pr')
 
       const diff = execSync(`git diff --cached -U50 ${defaultBranch}`, { encoding: 'utf-8' })
 
-      const usage = new UsageMeter()
+      const usage = new UsageMeter({
+        prices: config.prices,
+      })
 
       const ai = createService(provider, {
         apiKey,

@@ -9,7 +9,7 @@ import { convertToOpenAiMessages } from './utils'
 export class DeepSeekService extends AiServiceBase {
   #client: OpenAI
 
-  readonly model: { id: string; info: ModelInfo }
+  readonly model: { provider: string; id: string; info: ModelInfo }
 
   constructor(options: AiServiceOptions) {
     super(options.usageMeter)
@@ -21,6 +21,7 @@ export class DeepSeekService extends AiServiceBase {
 
     const id = (options.model || deepSeekDefaultModelId) as DeepSeekModelId
     this.model = {
+      provider: 'deepseek',
       id,
       info: deepSeekModels[id] ?? deepSeekModels[deepSeekDefaultModelId],
     }

@@ -11,7 +11,7 @@ export class OpenRouterService extends AiServiceBase {
   readonly #apiKey: string
   readonly #options: AiServiceOptions
 
-  readonly model: { id: string; info: ModelInfo }
+  readonly model: { provider: string; id: string; info: ModelInfo }
 
   constructor(options: AiServiceOptions) {
     super(options.usageMeter)
@@ -38,6 +38,7 @@ export class OpenRouterService extends AiServiceBase {
     this.#options = options
 
     this.model = {
+      provider: 'openrouter',
       id: options.model,
       info: {},
     }

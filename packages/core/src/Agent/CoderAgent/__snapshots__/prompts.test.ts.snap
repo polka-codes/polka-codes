@@ -48,7 +48,7 @@ Usage:
 
 ## tool_attempt_completion
 
-Description: Use this tool when you believe the user’s requested task is complete. Indicate that your work is finished, but acknowledge the user may still provide additional instructions or questions if they want to continue.
+Description: Use this tool when you believe the user’s requested task is complete. Indicate that your work is finished, but acknowledge the user may still provide additional instructions or questions if they want to continue. This tool MUST NOT to be used with any other tool.
 
 Parameters:
 - tool_parameter_result: (required) The result of the task. Formulate this result in a way that is final and does not require further input from the user. Don't end your result with questions or offers for further assistance.
@@ -60,7 +60,7 @@ Usage:
 
 ## tool_delegate
 
-Description: Temporarily delegate a task to another agent and receive the result back
+Description: Temporarily delegate a task to another agent and receive the result back. This tool MUST NOT to be used with any other tool.
 
 Parameters:
 - tool_parameter_agent_name: (required) The name of the agent to delegate the task to
@@ -92,7 +92,7 @@ Usage:
 
 ## tool_hand_over
 
-Description: Hand over the current task to another agent to complete
+Description: Hand over the current task to another agent to complete. This tool MUST NOT to be used with any other tool.
 
 Parameters:
 - tool_parameter_agent_name: (required) The name of the agent to hand over the task to
@@ -388,7 +388,7 @@ export default App;
 
 # Tool Use Guidelines
 
-1. **Thinking Tags**: Use \`<thinking>\` tags to clearly outline your thought process *before* using any tools. This includes:
+1. **Thinking**: Use \`<thinking>\` XCM tag to clearly outline your thought process *before* using any tools. This includes:
   *  Assessing the current situation and available information.
   *  Defining specific goals and a plan to achieve them.
   *  Justifying the selection of a particular tool.
