@@ -4,6 +4,7 @@
  */
 
 import { describe, expect, test } from 'bun:test'
+import type { ModelInfo, ModelPricingConfig } from './ModelInfo'
 import { UsageMeter } from './UsageMeter'
 
 describe('UsageMeter', () => {
@@ -42,6 +43,63 @@ describe('UsageMeter', () => {
     meter.addUsage({ inputTokens: 50, outputTokens: 25 })
     meter.addUsage({ inputTokens: 30, cacheReadTokens: 10 })
     meter.addUsage({ outputTokens: 15, totalCost: 0.001 })
+
+    expect(meter.usage).toMatchSnapshot()
+  })
+
+  test('should calculate cost based on model info', () => {
+    const meter = new UsageMeter()
+    const modelInfo: ModelInfo = {
+      inputPrice: 1.0, // $1 per million tokens
+      outputPrice: 2.0, // $2 per million tokens
+      cacheWritesPrice: 0.5, // $0.5 per million tokens
+      cacheReadsPrice: 0.1, // $0.1 per million tokens
+    }
+
+    meter.addUsage(
+      {
+        inputTokens: 1000000, // 1 million tokens
+        outputTokens: 500000, // 0.5 million tokens
+        cacheWriteTokens: 200000, // 0.2 million tokens
+        cacheReadTokens: 100000, // 0.1 million tokens
+      },
+      modelInfo,
+    )
+
+    expect(meter.usage).toMatchSnapshot()
+  })
+
+  test('should apply custom pricing from config', () => {
+    const modelPricingConfig: ModelPricingConfig = {
+      'test-provider': {
+        'test-model': {
+          inputPrice: 2.0, // $2 per million tokens
+          outputPrice: 4.0, // $4 per million tokens
+          cacheWritesPrice: 1.0, // $1 per million tokens
+          cacheReadsPrice: 0.2, // $0.2 per million tokens
+        },
+      },
+    }
+
+    const meter = new UsageMeter({ modelPricingConfig })
+    const modelInfo: ModelInfo = {
+      inputPrice: 1.0, // $1 per million tokens (default)
+      outputPrice: 2.0, // $2 per million tokens (default)
+      cacheWritesPrice: 0.5, // $0.5 per million tokens (default)
+      cacheReadsPrice: 0.1, // $0.1 per million tokens (default)
+    }
+
+    meter.addUsage(
+      {
+        inputTokens: 1000000, // 1 million tokens
+        outputTokens: 500000, // 0.5 million tokens
+        cacheWriteTokens: 200000, // 0.2 million tokens
+        cacheReadTokens: 100000, // 0.1 million tokens
+      },
+      modelInfo,
+      'test-provider',
+      'test-model',
+    )
 
     expect(meter.usage).toMatchSnapshot()
   })

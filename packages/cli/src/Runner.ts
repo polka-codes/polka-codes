@@ -47,6 +47,7 @@ export class Runner {
     this.#usageMeter = new UsageMeter({
       maxCost: options.budget,
       maxMessageCount: options.maxMessageCount,
+      modelPricingConfig: options.config.modelPricing,
     })
 
     let rules = options.config.rules
