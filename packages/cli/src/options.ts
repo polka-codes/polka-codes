@@ -79,7 +79,7 @@ export function parseOptions(options: CliOptions, cwdArg?: string, home: string 
   })
 
   return {
-    maxMessageCount: options.maxMessageCount ?? config.maxMessageCount ?? 30,
+    maxMessageCount: options.maxMessageCount ?? config.maxMessageCount ?? 100,
     budget: options.budget ?? (env.POLKA_BUDGET ? Number.parseFloat(env.POLKA_BUDGET) : undefined) ?? config.budget ?? 10,
     verbose: options.verbose ?? 0,
     config,
