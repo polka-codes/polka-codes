@@ -17,7 +17,6 @@ import { Runner } from '../Runner'
 import { type Config, getGlobalConfigPath, loadConfigAtPath, localConfigFileName } from '../config'
 import { type ProviderConfig, configPrompt } from '../configPrompt'
 import { parseOptions } from '../options'
-import { printEvent } from '../utils/eventHandler'
 
 export const initCommand = new Command('init')
   .description('Initialize polkacodes configuration')
@@ -158,7 +157,7 @@ initCommand.action(async (options, command: Command) => {
         maxMessageCount,
         budget,
         interactive: true,
-        eventCallback: printEvent(verbose),
+        verbose,
         enableCache: true,
         availableAgents: [analyzerAgentInfo],
       })

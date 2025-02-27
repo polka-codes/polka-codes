@@ -14,7 +14,6 @@ import { ApiProviderConfig } from '../ApiProviderConfig'
 import { Runner } from '../Runner'
 import { configPrompt } from '../configPrompt'
 import { parseOptions } from '../options'
-import { printEvent } from '../utils/eventHandler'
 
 const askForPath = async (projectName: string) => {
   let targetPath = join(process.cwd(), projectName)
@@ -95,7 +94,7 @@ export const createCommand = new Command('create')
       maxMessageCount,
       budget,
       interactive: true,
-      eventCallback: printEvent(verbose),
+      verbose,
       enableCache: true,
       availableAgents: [architectAgentInfo, coderAgentInfo],
     })
