@@ -6,10 +6,24 @@ import { AiServiceBase, type AiServiceOptions, type ApiStream, type MessageParam
 import type { ModelInfo } from './ModelInfo'
 import { convertToOpenAiMessages } from './utils'
 
+type ModelProviderInfo = {
+  endpoints: {
+    provider_name: string
+    pricing: {
+      request: number
+      image: number
+      prompt: number
+      completion: number
+    }
+  }[]
+}
+
 export class OpenRouterService extends AiServiceBase {
   readonly #client: OpenAI
   readonly #apiKey: string
   readonly #options: AiServiceOptions
+
+  #modelProviderInfo: ModelProviderInfo | undefined
 
   readonly model: { provider: string; id: string; info: ModelInfo }
 
@@ -42,6 +56,12 @@ export class OpenRouterService extends AiServiceBase {
       id: options.model,
       info: {},
     }
+
+    fetch(`https://openrouter.ai/api/v1/models/${this.model.id}/endpoints`)
+      .then((res) => res.json())
+      .then((data) => {
+        this.#modelProviderInfo = data.data
+      })
   }
 
   override async *sendImpl(systemPrompt: string, messages: MessageParam[]): ApiStream {
@@ -190,15 +210,30 @@ export class OpenRouterService extends AiServiceBase {
       })
       const responseBody = await response.json()
 
-      const generation = responseBody.data
+      const generation = responseBody.data ?? {}
+
+      let totalCost = generation.total_cost || 0
+
+      if (generation.is_byok && this.#modelProviderInfo) {
+        // total cost is only openrouter platform fee
+        // so need to calculate the upstream provider cost and add it
+
+        const price = this.#modelProviderInfo.endpoints.find((e) => e.provider_name === generation.provider_name)?.pricing
+
+        if (price) {
+          totalCost += (generation.native_tokens_prompt || 0) * price.request
+          totalCost += (generation.native_tokens_completion || 0) * price.completion
+        }
+      }
+
       yield {
         type: 'usage',
         // cacheWriteTokens: 0,
         // cacheReadTokens: 0,
         // openrouter generation endpoint fails often
-        inputTokens: generation?.native_tokens_prompt || 0,
-        outputTokens: generation?.native_tokens_completion || 0,
-        totalCost: generation?.total_cost || 0,
+        inputTokens: generation.native_tokens_prompt || 0,
+        outputTokens: generation.native_tokens_completion || 0,
+        totalCost: totalCost,
       }
     } catch (error) {
       // ignore if fails
