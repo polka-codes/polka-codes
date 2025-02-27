@@ -1,7 +1,6 @@
 import type { Command } from 'commander'
 import { Runner } from '../Runner'
 import { parseOptions } from '../options'
-import { printEvent } from '../utils/eventHandler'
 import { runChat } from './chat'
 
 const readStdin = async (timeoutMs = 30000): Promise<string> => {
@@ -81,7 +80,7 @@ export async function runTask(taskArg: string | undefined, _options: any, comman
     maxMessageCount,
     budget,
     interactive: process.stdin.isTTY,
-    eventCallback: printEvent(verbose),
+    verbose,
     enableCache: true,
   })
 

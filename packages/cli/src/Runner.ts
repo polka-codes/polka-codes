@@ -10,7 +10,6 @@ import {
   CodeFixerAgent,
   CoderAgent,
   MultiAgent,
-  type TaskEventCallback,
   UsageMeter,
   allAgents,
   analyzerAgentInfo,
@@ -23,6 +22,7 @@ import {
 import type { ApiProviderConfig } from './ApiProviderConfig'
 import type { Config } from './config'
 import { type ProviderOptions, getProvider } from './provider'
+import { printEvent } from './utils/eventHandler'
 import { listFiles } from './utils/listFiles'
 
 export type RunnerOptions = {
@@ -31,7 +31,7 @@ export type RunnerOptions = {
   maxMessageCount: number
   budget: number
   interactive: boolean
-  eventCallback: TaskEventCallback
+  verbose: number
   enableCache: boolean
   availableAgents?: AgentInfo[] // empty to enable all agents
 }
@@ -105,6 +105,8 @@ export class Runner {
       return service
     }
 
+    const callback = printEvent(options.verbose, this.#usageMeter)
+
     this.multiAgent = new MultiAgent({
       createAgent: async (name: string): Promise<AgentBase> => {
         const agentName = name.trim().toLowerCase()
@@ -115,7 +117,7 @@ export class Runner {
           scripts: options.config.scripts,
           interactive: options.interactive,
           agents: this.#options.availableAgents ?? allAgents,
-          callback: this.#options.eventCallback,
+          callback,
         }
         switch (agentName) {
           case coderAgentInfo.name:
