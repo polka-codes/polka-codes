@@ -14,7 +14,7 @@
     }
   },
   "scripts": {
-    "build": "bun build src/index.ts --outdir dist --target node"
+    "build": "tsup-node src/index.ts --experimental-dts"
   },
   "dependencies": {
     "@inquirer/prompts": "^7.2.3",
