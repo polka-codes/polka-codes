@@ -19,10 +19,12 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
+    "@microsoft/api-extractor": "^7.51.1",
     "bun-types": "^1.2.0",
     "husky": "^9.1.7",
     "lint-staged": "^15.4.2",
     "tslib": "^2.8.1",
+    "tsup": "^8.4.0",
     "typescript": "^5.7.3"
   },
   "lint-staged": {
