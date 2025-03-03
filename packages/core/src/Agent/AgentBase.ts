@@ -254,19 +254,23 @@ export abstract class AgentBase {
       // TODO: use a truncated messages if needed to avoid exceeding the token limit
       const stream = this.ai.send(this.config.systemPrompt, this.messages)
 
-      for await (const chunk of stream) {
-        switch (chunk.type) {
-          case 'usage':
-            await this.#callback({ kind: TaskEventKind.Usage, agent: this })
-            break
-          case 'text':
-            currentAssistantMessage += chunk.text
-            await this.#callback({ kind: TaskEventKind.Text, agent: this, newText: chunk.text })
-            break
-          case 'reasoning':
-            await this.#callback({ kind: TaskEventKind.Reasoning, agent: this, newText: chunk.text })
-            break
+      try {
+        for await (const chunk of stream) {
+          switch (chunk.type) {
+            case 'usage':
+              await this.#callback({ kind: TaskEventKind.Usage, agent: this })
+              break
+            case 'text':
+              currentAssistantMessage += chunk.text
+              await this.#callback({ kind: TaskEventKind.Text, agent: this, newText: chunk.text })
+              break
+            case 'reasoning':
+              await this.#callback({ kind: TaskEventKind.Reasoning, agent: this, newText: chunk.text })
+              break
+          }
         }
+      } catch (error) {
+        console.error('Error in stream:', error)
       }
 
       if (currentAssistantMessage) {
