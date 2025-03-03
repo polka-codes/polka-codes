@@ -86,10 +86,18 @@ export function convertToOpenAiMessages(anthropicMessages: Anthropic.Messages.Me
             role: 'user',
             content: nonToolMessages.map((part) => {
               if (part.type === 'image') {
+                if (part.source.type === 'base64') {
+                  return {
+                    type: 'image_url',
+                    image_url: {
+                      url: `data:${part.source.media_type};base64,${part.source.data}`,
+                    },
+                  }
+                }
                 return {
                   type: 'image_url',
                   image_url: {
-                    url: `data:${part.source.media_type};base64,${part.source.data}`,
+                    url: part.source.url,
                   },
                 }
               }
