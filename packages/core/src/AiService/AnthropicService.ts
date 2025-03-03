@@ -34,6 +34,14 @@ export class AnthropicService extends AiServiceBase {
     const modelId = this.model.id
 
     const cacheControl = this.#options.enableCache ? { type: 'ephemeral' as const } : undefined
+    let temperature: number | undefined = 0
+    let thinkingBudgetTokens = 0
+    if (this.model.info.reasoning) {
+      thinkingBudgetTokens = this.#options.parameters.thinkingBudgetTokens ?? 0
+    }
+    if (thinkingBudgetTokens > 0) {
+      temperature = undefined
+    }
 
     switch (modelId) {
       // 'latest' alias does not support cache_control
@@ -56,7 +64,8 @@ export class AnthropicService extends AiServiceBase {
         stream = await this.#client.messages.create({
           model: modelId,
           max_tokens: this.model.info.maxTokens || 8192,
-          temperature: 0,
+          thinking: thinkingBudgetTokens ? { type: 'enabled', budget_tokens: thinkingBudgetTokens } : undefined,
+          temperature,
           system: [
             {
               text: systemPrompt,
@@ -100,8 +109,6 @@ export class AnthropicService extends AiServiceBase {
           temperature: 0,
           system: [{ text: systemPrompt, type: 'text' }],
           messages,
-          // tools,
-          // tool_choice: { type: "auto" },
           stream: true,
         })
         break
@@ -149,6 +156,18 @@ export class AnthropicService extends AiServiceBase {
                 text: chunk.content_block.text,
               }
               break
+            case 'thinking':
+              yield {
+                type: 'reasoning',
+                text: chunk.content_block.thinking,
+              }
+              break
+            case 'redacted_thinking':
+              yield {
+                type: 'reasoning',
+                text: '[Redacted by providered]',
+              }
+              break
           }
           break
         case 'content_block_delta':
@@ -157,6 +176,12 @@ export class AnthropicService extends AiServiceBase {
               yield {
                 type: 'text',
                 text: chunk.delta.text,
+              }
+              break
+            case 'thinking_delta':
+              yield {
+                type: 'reasoning',
+                text: chunk.delta.thinking,
               }
               break
           }

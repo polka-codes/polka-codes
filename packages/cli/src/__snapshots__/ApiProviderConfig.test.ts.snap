@@ -1,0 +1,96 @@
+// Bun Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`ApiProviderConfig getConfigForCommand resolves parameters correctly 1`] = `
+{
+  "apiKey": "test-api-key",
+  "model": "claude-3-opus",
+  "parameters": {
+    "max_tokens": 3000,
+    "temperature": 0.6,
+  },
+  "provider": "anthropic",
+}
+`;
+
+exports[`ApiProviderConfig getConfigForCommand resolves parameters correctly 2`] = `
+{
+  "apiKey": "test-api-key",
+  "model": "claude-3-sonnet",
+  "parameters": {
+    "temperature": 0.8,
+  },
+  "provider": "anthropic",
+}
+`;
+
+exports[`ApiProviderConfig getConfigForCommand resolves parameters correctly 3`] = `
+{
+  "apiKey": "test-api-key",
+  "model": "claude-3-opus",
+  "parameters": {
+    "max_tokens": 3000,
+    "temperature": 0.6,
+  },
+  "provider": "anthropic",
+}
+`;
+
+exports[`ApiProviderConfig getConfigForAgent resolves parameters correctly 1`] = `
+{
+  "apiKey": "test-api-key",
+  "model": "claude-3-opus",
+  "parameters": {
+    "max_tokens": 3000,
+    "temperature": 0.6,
+  },
+  "provider": "anthropic",
+}
+`;
+
+exports[`ApiProviderConfig getConfigForAgent resolves parameters correctly 2`] = `
+{
+  "apiKey": "test-api-key",
+  "model": "claude-3-sonnet",
+  "parameters": {
+    "temperature": 0.8,
+  },
+  "provider": "anthropic",
+}
+`;
+
+exports[`ApiProviderConfig getConfigForAgent resolves parameters correctly 3`] = `
+{
+  "apiKey": undefined,
+  "model": "anthropic/claude-3.7-sonnet",
+  "parameters": {
+    "frequency_penalty": 0.3,
+  },
+  "provider": "openrouter",
+}
+`;
+
+exports[`ApiProviderConfig getConfigForAgent resolves parameters correctly 4`] = `
+{
+  "apiKey": "test-api-key",
+  "model": "claude-3-opus",
+  "parameters": {
+    "max_tokens": 3000,
+    "temperature": 0.6,
+  },
+  "provider": "anthropic",
+}
+`;
+
+exports[`ApiProviderConfig parameters inherit correctly from different levels 1`] = `
+{
+  "presence_penalty": 0.1,
+  "temperature": 0.5,
+}
+`;
+
+exports[`ApiProviderConfig parameters inherit correctly from different levels 2`] = `
+{
+  "presence_penalty": 0.1,
+  "temperature": 0.5,
+}
+`;

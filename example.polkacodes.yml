@@ -12,6 +12,8 @@ providers:
   anthropic:
     apiKey: "sk-ant-..." # Your Anthropic API key
     defaultModel: "claude-3-7-sonnet-20250219" # Default model for this provider
+    defaultParameters:
+      thinkingBudgetTokens: 8192 # enable extended thinking mode, with a budget of 8192 tokens
 
   # Local Ollama configuration
   ollama:
@@ -26,6 +28,9 @@ defaultProvider: "deepseek"
 
 # Default model to use when not specified for a provider
 defaultModel: "deepseek-chat"
+
+defaultParameters: # Default parameters for the default model
+  thinkingBudgetTokens: 8192 # unrecognized parameters will be ignored
 
 # Maximum number of messages for AI operations
 # Helps prevent infinite loops and excessive API calls

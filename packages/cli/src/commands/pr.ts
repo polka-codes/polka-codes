@@ -14,7 +14,7 @@ export const prCommand = new Command('pr')
     const options = command.parent?.opts() ?? {}
     const { providerConfig, config } = parseOptions(options)
 
-    const { provider, model, apiKey } = providerConfig.getConfigForCommand('pr') ?? {}
+    const { provider, model, apiKey, parameters } = providerConfig.getConfigForCommand('pr') ?? {}
 
     console.log('Provider:', provider)
     console.log('Model:', model)
@@ -71,6 +71,7 @@ export const prCommand = new Command('pr')
       const ai = createService(provider, {
         apiKey,
         model,
+        parameters,
         usageMeter: usage,
       })
 

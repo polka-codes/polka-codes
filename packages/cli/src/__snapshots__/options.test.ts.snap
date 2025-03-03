@@ -4,6 +4,7 @@ exports[`ApiProviderConfig getConfigForCommand with command-specific config 1`] 
 {
   "apiKey": undefined,
   "model": "deepseek-chat",
+  "parameters": {},
   "provider": "deepseek",
 }
 `;
@@ -12,6 +13,7 @@ exports[`ApiProviderConfig getConfigForCommand falls back to default provider 1`
 {
   "apiKey": "test-key",
   "model": "claude-3-opus",
+  "parameters": {},
   "provider": "anthropic",
 }
 `;
@@ -20,6 +22,7 @@ exports[`ApiProviderConfig getConfigForAgent with agent-specific config 1`] = `
 {
   "apiKey": "test-key",
   "model": "claude-3-sonnet",
+  "parameters": {},
   "provider": "anthropic",
 }
 `;
@@ -28,6 +31,7 @@ exports[`parseOptions prioritizes CLI flags over env vars and config 1`] = `
 {
   "apiKey": "cli-key",
   "model": "deepseek-chat-32k",
+  "parameters": {},
   "provider": "deepseek",
 }
 `;
@@ -53,6 +57,7 @@ exports[`parseOptions merges environment variables with config 1`] = `
 {
   "apiKey": "cli-key",
   "model": "deepseek-chat",
+  "parameters": {},
   "provider": "deepseek",
 }
 `;

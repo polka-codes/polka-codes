@@ -148,6 +148,21 @@ export class OpenRouterService extends AiServiceBase {
         break
     }
 
+    let reasoning: { max_tokens?: number } = {}
+    switch (this.model.id) {
+      case 'anthropic/claude-3.7-sonnet':
+      case 'anthropic/claude-3.7-sonnet:beta':
+      case 'anthropic/claude-3.7-sonnet:thinking':
+      case 'anthropic/claude-3-7-sonnet':
+      case 'anthropic/claude-3-7-sonnet:beta': {
+        const budget_tokens = this.#options.parameters.thinkingBudgetTokens || 0
+        if (budget_tokens > 0) {
+          reasoning = { max_tokens: budget_tokens }
+        }
+        break
+      }
+    }
+
     // Removes messages in the middle when close to context window limit. Should not be applied to models that support prompt caching since it would continuously break the cache.
     let shouldApplyMiddleOutTransform = !this.model.info.supportsPromptCache
     // except for deepseek (which we set supportsPromptCache to true for), where because the context window is so small our truncation algo might miss and we should use openrouter's middle-out transform as a fallback to ensure we don't exceed the context window (FIXME: once we have a more robust token estimator we should not rely on this)
@@ -164,6 +179,7 @@ export class OpenRouterService extends AiServiceBase {
       stream: true,
       transforms: shouldApplyMiddleOutTransform ? ['middle-out'] : undefined,
       include_reasoning: true,
+      ...reasoning,
     })
 
     let genId: string | undefined
