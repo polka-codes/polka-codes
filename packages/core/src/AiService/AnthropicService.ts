@@ -156,6 +156,18 @@ export class AnthropicService extends AiServiceBase {
                 text: chunk.content_block.text,
               }
               break
+            case 'thinking':
+              yield {
+                type: 'reasoning',
+                text: chunk.content_block.thinking,
+              }
+              break
+            case 'redacted_thinking':
+              yield {
+                type: 'reasoning',
+                text: '[Redacted by providered]',
+              }
+              break
           }
           break
         case 'content_block_delta':
@@ -164,6 +176,12 @@ export class AnthropicService extends AiServiceBase {
               yield {
                 type: 'text',
                 text: chunk.delta.text,
+              }
+              break
+            case 'thinking_delta':
+              yield {
+                type: 'reasoning',
+                text: chunk.delta.thinking,
               }
               break
           }
