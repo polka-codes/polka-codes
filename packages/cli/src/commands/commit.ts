@@ -16,7 +16,7 @@ export const commitCommand = new Command('commit')
     const options = command.parent?.opts() ?? {}
     const { providerConfig, config } = parseOptions(options)
 
-    const { provider, model, apiKey } = providerConfig.getConfigForCommand('commit') ?? {}
+    const { provider, model, apiKey, parameters } = providerConfig.getConfigForCommand('commit') ?? {}
 
     console.log('Provider:', provider)
     console.log('Model:', model)
@@ -34,6 +34,7 @@ export const commitCommand = new Command('commit')
       apiKey,
       model,
       usageMeter: usage,
+      parameters,
     })
 
     try {

@@ -64,7 +64,7 @@ export async function runTask(taskArg: string | undefined, _options: any, comman
 
   const { config, providerConfig, verbose, maxMessageCount, budget, agent } = parseOptions(command.opts())
 
-  const { provider, model } = providerConfig.getConfigForAgent(agent) ?? {}
+  const { provider, model, parameters } = providerConfig.getConfigForAgent(agent) ?? {}
 
   if (!provider || !model) {
     console.error('Provider and model must be configured')
@@ -73,6 +73,9 @@ export async function runTask(taskArg: string | undefined, _options: any, comman
 
   console.log('Provider:', provider)
   console.log('Model:', model)
+  for (const [key, value] of Object.entries(parameters ?? {})) {
+    console.log(`${key}:`, value)
+  }
 
   const runner = new Runner({
     providerConfig,

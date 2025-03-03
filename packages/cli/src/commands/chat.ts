@@ -15,7 +15,7 @@ export const runChat = async (opts: any, command?: Command) => {
     process.exit(1)
   }
 
-  let { provider, model, apiKey } = providerConfig.getConfigForAgent(agent) ?? {}
+  let { provider, model, apiKey, parameters } = providerConfig.getConfigForAgent(agent) ?? {}
 
   if (!provider) {
     // new user? ask for config
@@ -28,6 +28,9 @@ export const runChat = async (opts: any, command?: Command) => {
   console.log('Starting chat session...')
   console.log('Provider:', provider)
   console.log('Model:', model)
+  for (const [key, value] of Object.entries(parameters ?? {})) {
+    console.log(`${key}:`, value)
+  }
   console.log('Type ".help" for more information.')
   console.log('What can I do for you?')
 

@@ -81,7 +81,7 @@ initCommand.action(async (options, command: Command) => {
     }
 
     const { providerConfig, verbose, maxMessageCount, budget } = parseOptions(cmdOptions)
-    let { provider, model, apiKey } = providerConfig.getConfigForCommand('init') ?? {}
+    let { provider, model, apiKey, parameters } = providerConfig.getConfigForCommand('init') ?? {}
 
     // Get provider configuration
     let newConfig: ProviderConfig | undefined
@@ -152,7 +152,12 @@ initCommand.action(async (options, command: Command) => {
     let generatedConfig = {}
     if (shouldAnalyze) {
       const runner = new Runner({
-        providerConfig: new ApiProviderConfig({ defaultProvider: provider, defaultModel: model, providers: { [provider]: { apiKey } } }),
+        providerConfig: new ApiProviderConfig({
+          defaultProvider: provider,
+          defaultModel: model,
+          defaultParameters: parameters,
+          providers: { [provider]: { apiKey } },
+        }),
         config: {},
         maxMessageCount,
         budget,

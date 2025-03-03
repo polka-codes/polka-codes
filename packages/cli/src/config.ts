@@ -18,6 +18,7 @@ const agentNameOrDefault = z.union([agentNames, z.literal('default')])
 const providerModelSchema = z.object({
   provider: z.string().optional(),
   model: z.string().optional(),
+  parameters: z.record(z.string(), z.any()).optional(),
 })
 
 const agentSchema = providerModelSchema.extend({
@@ -52,11 +53,13 @@ export const configSchema = z
         z.object({
           apiKey: z.string().optional(),
           defaultModel: z.string().optional(),
+          defaultParameters: z.record(z.string(), z.any()).optional(),
         }),
       )
       .optional(),
     defaultProvider: z.string().optional(),
     defaultModel: z.string().optional(),
+    defaultParameters: z.record(z.string(), z.any()).optional(),
     maxMessageCount: z.number().int().positive().optional(),
     budget: z.number().positive().optional(),
     scripts: z

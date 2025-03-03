@@ -91,12 +91,13 @@ export class Runner {
         }
         throw new Error(`No provider configured for agent: ${agentName}`)
       }
-      const { provider, model, apiKey } = config
+      const { provider, model, apiKey, parameters } = config
       let service = services[provider]?.[model]
       if (!service) {
         service = createService(provider, {
           apiKey,
           model,
+          parameters,
           usageMeter: this.#usageMeter,
           enableCache: options.enableCache,
         })

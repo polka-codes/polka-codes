@@ -10,6 +10,7 @@ export interface ModelInfo {
   outputPrice?: number
   cacheWritesPrice?: number
   cacheReadsPrice?: number
+  reasoning?: boolean
 }
 
 // Anthropic
@@ -27,6 +28,7 @@ export const anthropicModels = {
     outputPrice: 15.0,
     cacheWritesPrice: 3.75,
     cacheReadsPrice: 0.3,
+    reasoning: true,
   },
   'claude-3-5-sonnet-20241022': {
     maxTokens: 8192,
