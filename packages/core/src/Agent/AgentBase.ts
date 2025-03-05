@@ -199,16 +199,10 @@ export abstract class AgentBase {
     await this.config.callback?.(event)
   }
 
-  async startTask({ task, context }: { task: string; context?: string }): Promise<ExitReason> {
-    let text = `<task>${task}</task>`
-
-    if (context) {
-      text += `\n<context>${context}</context>`
-    }
-
+  async start(prompt: string): Promise<ExitReason> {
     this.#callback({ kind: TaskEventKind.StartTask, agent: this, systemPrompt: this.config.systemPrompt })
 
-    return await this.#processLoop(text)
+    return await this.#processLoop(prompt)
   }
 
   async #processLoop(userMessage: string): Promise<ExitReason> {
