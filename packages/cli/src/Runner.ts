@@ -147,7 +147,7 @@ export class Runner {
             throw new Error(`Unknown agent: ${name}`)
         }
       },
-      getContext: async (name, context, files) => {
+      getPrompt: async (name, task, context, files) => {
         let ret = await this.#defaultContext(name)
         const unreadableFiles: string[] = []
 
@@ -174,7 +174,7 @@ export class Runner {
         if (context) {
           ret += `\n\n${context}`
         }
-        return ret
+        return `<task>${task}</task>\n<context>${ret}</context>`
       },
     })
   }
@@ -191,10 +191,10 @@ export class Runner {
   }
 
   async startTask(task: string, agentName: string = architectAgentInfo.name, context?: string) {
+    const finalContext = context ?? (await this.#defaultContext(agentName))
     const exitReason = await this.multiAgent.startTask({
       agentName: agentName,
-      task,
-      context: context ?? (await this.#defaultContext(agentName)),
+      task: `<task>${task}</task>\n<context>${finalContext}</context>`,
     })
 
     return exitReason

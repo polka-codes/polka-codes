@@ -3,7 +3,7 @@ import type { AgentBase, ExitReason } from './AgentBase'
 
 export type MultiAgentConfig = {
   createAgent: (name: string) => Promise<AgentBase>
-  getContext?: (name: string, context?: string, files?: string[]) => Promise<string>
+  getPrompt?: (name: string, task: string, context?: string, files?: string[]) => Promise<string>
 }
 
 export class MultiAgent {
@@ -20,12 +20,14 @@ export class MultiAgent {
         // remove the current agent
         this.#agents.pop()
 
-        const newContext = await this.#config.getContext?.(exitReason.agentName, exitReason.context, exitReason.files)
-        return await this.#startTask(exitReason.agentName, exitReason.task, newContext)
+        const prompt =
+          (await this.#config.getPrompt?.(exitReason.agentName, exitReason.task, exitReason.context, exitReason.files)) ?? exitReason.task
+        return await this.#startTask(exitReason.agentName, prompt)
       }
       case ToolResponseType.Delegate: {
-        const newContext = await this.#config.getContext?.(exitReason.agentName, exitReason.context, exitReason.files)
-        const delegateResult = await this.#startTask(exitReason.agentName, exitReason.task, newContext)
+        const prompt =
+          (await this.#config.getPrompt?.(exitReason.agentName, exitReason.task, exitReason.context, exitReason.files)) ?? exitReason.task
+        const delegateResult = await this.#startTask(exitReason.agentName, prompt)
         switch (delegateResult.type) {
           case ToolResponseType.HandOver:
           case ToolResponseType.Delegate:
@@ -48,15 +50,12 @@ export class MultiAgent {
     }
   }
 
-  async #startTask(agentName: string, task: string, context: string | undefined): Promise<ExitReason> {
+  async #startTask(agentName: string, task: string): Promise<ExitReason> {
     const newAgent = await this.#config.createAgent(agentName)
 
     this.#agents.push(newAgent)
 
-    const exitReason = await newAgent.startTask({
-      task,
-      context,
-    })
+    const exitReason = await newAgent.start(task)
 
     return await this.#handleTaskResult(exitReason)
   }
@@ -64,12 +63,11 @@ export class MultiAgent {
   async startTask(options: {
     agentName: string
     task: string
-    context?: string
   }): Promise<ExitReason> {
     if (this.#agents.length > 0) {
       throw new Error('An active agent already exists')
     }
-    return this.#startTask(options.agentName, options.task, options.context)
+    return this.#startTask(options.agentName, options.task)
   }
 
   async continueTask(userMessage: string): Promise<ExitReason> {

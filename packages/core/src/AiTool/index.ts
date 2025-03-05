@@ -32,8 +32,7 @@ export const executeAgentTool = async <T extends AiToolDefinition<any, any>>(
 
   const exitReason = await agent.startTask({
     agentName: definition.agent,
-    task: definition.prompt,
-    context: definition.formatInput(params),
+    task: `<task>${definition.prompt}</task>\n<context>${definition.formatInput(params)}</context>`,
   })
 
   // Check if we have a successful completion
