@@ -40,7 +40,7 @@ export async function searchFiles(
   // Add custom ignore patterns
   if (excludeFiles) {
     for (const pattern of excludeFiles) {
-      args.push('--ignore-file', pattern)
+      args.push('--glob', `!${pattern}`)
     }
   }
 
@@ -58,14 +58,6 @@ export async function searchFiles(
     rg.stdout.on('data', (data) => {
       const lines = data.toString().split('\n').filter(Boolean)
       results.push(...lines)
-    })
-
-    rg.stderr.on('data', (data) => {
-      // Only log actual errors, not warnings
-      const err = data.toString()
-      if (!err.startsWith('WARNING:')) {
-        console.warn(err)
-      }
     })
 
     rg.on('error', (error) => {
