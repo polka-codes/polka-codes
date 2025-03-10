@@ -1,2 +1,4 @@
 bun.lock linguist-generated=true
 bun.lock -diff
+packages/github/schema.docs.graphql linguist-generated=true
+packages/github/schema.docs.graphql -diff

@@ -1,0 +1,63 @@
+query fetchPR($owner: String!, $repo: String!, $prNumber: Int!) {
+  repository(owner: $owner, name: $repo) {
+    pullRequest(number: $prNumber) {
+      number
+      title
+      body
+      author {
+        login
+      }
+      createdAt
+      comments(last: 100) {
+        totalCount
+        nodes {
+          author {
+            login
+          }
+          body
+          createdAt
+          minimizedReason
+        }
+      }
+      reviews(last: 100) {
+        totalCount
+        nodes {
+          author {
+            login
+          }
+          body
+          createdAt
+          comments(last: 100) {
+            totalCount
+            nodes {
+              ...ReviewCommentFields
+            }
+          }
+        }
+      }
+      reviewThreads(last: 100) {
+        totalCount
+        nodes {
+          isResolved
+          comments(last: 100) {
+            totalCount
+            nodes {
+              ...ReviewCommentFields
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+fragment ReviewCommentFields on PullRequestReviewComment {
+  author {
+    login
+  }
+  body
+  createdAt
+  diffHunk
+  minimizedReason
+  outdated
+}

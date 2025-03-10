@@ -15,7 +15,8 @@
     "clean": "rm -rf packages/*/dist packages/*/tsconfig.tsbuildinfo",
     "cli": "bun run --no-check packages/cli/src/index.ts",
     "pr": "bun cli pr",
-    "commit": "bun cli commit"
+    "commit": "bun cli commit",
+    "codegen": "cd packages/github; graphql-codegen"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
@@ -30,5 +31,8 @@
   "lint-staged": {
     "*.{js,ts,cjs,mjs,d.cts,d.mts,jsx,tsx,json,jsonc}": ["biome check --write --no-errors-on-unmatched"]
   },
-  "packageManager": "bun@1.2.0"
+  "packageManager": "bun@1.2.0",
+  "dependencies": {
+    "@graphql-codegen/cli": "^5.0.5"
+  }
 }

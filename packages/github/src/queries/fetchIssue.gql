@@ -1,0 +1,23 @@
+query fetchIssue($owner: String!, $repo: String!, $issueNumber: Int!) {
+  repository(owner: $owner, name: $repo) {
+    issue(number: $issueNumber) {
+      number
+      title
+      body
+      author {
+        login
+      }
+      createdAt
+      comments(last: 100) {
+        totalCount
+        nodes {
+          author {
+            login
+          }
+          body
+          createdAt
+        }
+      }
+    }
+  }
+}

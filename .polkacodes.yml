@@ -4,10 +4,12 @@ agents:
       excludes:
         - __snapshots__
         - .husky
+        - packages/github/src/types/github-types.ts
 excludeFiles:
   - .env
   - bun.lock
   - packages/cli/cli.mjs
+  - packages/github/schema.docs.graphql
 scripts:
   test:
     command: bun test -u
