@@ -1,7 +1,7 @@
 import type { Octokit } from '@octokit/core'
 import { processBody } from './processBody'
-import fetchIssueQuery from './queries/fetchIssue.gql' with { type: 'text' }
-import fetchPRQuery from './queries/fetchPR.gql' with { type: 'text' }
+import fetchIssueQuery from './queries/fetchIssue.gql'
+import fetchPRQuery from './queries/fetchPR.gql'
 import type { FetchIssueQuery, FetchPrQuery } from './types/github-types'
 
 const query = (octokit: Octokit) => octokit.graphql

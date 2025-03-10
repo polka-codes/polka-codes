@@ -12,7 +12,7 @@
   },
   "files": ["dist"],
   "scripts": {
-    "build": "tsup src/index.ts --experimental-dts --format esm --clean"
+    "build": "tsup src/index.ts --experimental-dts --format esm --clean --loader .gql=text"
   },
   "dependencies": {
     "@octokit/core": "^6.1.4",
