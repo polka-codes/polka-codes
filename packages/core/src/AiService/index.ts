@@ -1,4 +1,5 @@
-import type { AiServiceBase, AiServiceOptions, ApiStream, ApiStreamChunk, ApiUsage, MessageParam } from './AiServiceBase'
+import type { AiServiceOptions, ApiStream, ApiStreamChunk, ApiUsage, MessageParam } from './AiServiceBase'
+import { AiServiceBase } from './AiServiceBase'
 import { AnthropicService } from './AnthropicService'
 import { DeepSeekService } from './DeepSeekService'
 import type { ModelInfo } from './ModelInfo'
@@ -34,6 +35,6 @@ export const createService = (provider: AiServiceProvider, options: AiServiceOpt
   }
 }
 
-export { UsageMeter }
+export { UsageMeter, AiServiceBase }
 
-export type { MessageParam, AiServiceOptions, AiServiceBase, ModelInfo, ApiUsage, ApiStream, ApiStreamChunk }
+export type { MessageParam, AiServiceOptions, ModelInfo, ApiUsage, ApiStream, ApiStreamChunk }
