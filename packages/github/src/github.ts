@@ -6,7 +6,14 @@ import type { FetchIssueQuery, FetchPrQuery } from './types/github-types'
 
 const query = (octokit: Octokit) => octokit.graphql
 
-export async function fetchIssue(owner: string, repo: string, issueNumber: number, octokit: Octokit) {
+type FetchIssueParams = {
+  octokit: Octokit
+  owner: string
+  repo: string
+  issueNumber: number
+}
+
+export async function fetchIssue({ octokit, owner, repo, issueNumber }: FetchIssueParams) {
   const resp = await query(octokit)<FetchIssueQuery>(fetchIssueQuery, { owner, repo, issueNumber })
   const issue = resp.repository?.issue
   if (!issue) {
@@ -45,7 +52,14 @@ ${commentBody}
   return text
 }
 
-export async function fetchPR(owner: string, repo: string, prNumber: number, octokit: Octokit) {
+type FetchPRParams = {
+  octokit: Octokit
+  owner: string
+  repo: string
+  prNumber: number
+}
+
+export async function fetchPR({ octokit, owner, repo, prNumber }: FetchPRParams) {
   const resp = await query(octokit)<FetchPrQuery>(fetchPRQuery, { owner, repo, prNumber })
   const pr = resp.repository?.pullRequest
   if (!pr) {

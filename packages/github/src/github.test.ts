@@ -7,7 +7,7 @@ describe.skipIf(!process.env.GITHUB_TOKEN)('github', () => {
     const octokit = new Octokit({
       auth: process.env.GITHUB_TOKEN,
     })
-    const issue = await fetchIssue('polka-codes', 'action', 1, octokit)
+    const issue = await fetchIssue({ octokit, owner: 'polka-codes', repo: 'action', issueNumber: 1 })
     expect(issue).toMatchSnapshot()
   })
 
@@ -15,7 +15,7 @@ describe.skipIf(!process.env.GITHUB_TOKEN)('github', () => {
     const octokit = new Octokit({
       auth: process.env.GITHUB_TOKEN,
     })
-    const pr = await fetchPR('polka-codes', 'polka-codes', 95, octokit)
+    const pr = await fetchPR({ octokit, owner: 'polka-codes', repo: 'polka-codes', prNumber: 95 })
     expect(pr).toMatchSnapshot()
   })
 })
