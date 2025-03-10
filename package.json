@@ -6,7 +6,6 @@
   "license": "AGPL-3.0",
   "scripts": {
     "build": "bun --filter './packages/**' build",
-    "publish": "bun run clean && bun run build && bun publish --cwd packages/core --access public && bun publish --cwd packages/cli --access public",
     "lint": "biome check .",
     "fix": "biome check --write",
     "check": "tsc --noEmit && biome check",

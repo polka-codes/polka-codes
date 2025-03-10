@@ -29,7 +29,11 @@ git add .
 git commit -m "chore: release $VERSION"
 
 git tag v$VERSION
-bun run publish
+bun run clean
+bun run build
+bun publish --cwd packages/core --access public
+bun publish --cwd packages/github --access public
+bun publish --cwd packages/cli --access public
 git push origin v$VERSION
 git push
 gh release create v$VERSION --generate-notes
