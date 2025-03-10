@@ -40,6 +40,9 @@ ${issueBody}
         continue
       }
       const commentBody = await processBody(comment.body)
+      if (commentBody.trim().length === 0) {
+        continue
+      }
 
       const author = comment.author?.login ?? 'unknown'
 
@@ -102,6 +105,9 @@ ${diff.data}
         continue
       }
       const commentBody = await processBody(comment.body)
+      if (commentBody.trim().length === 0) {
+        continue
+      }
 
       const author = comment.author?.login ?? 'unknown'
 
