@@ -1,0 +1,25 @@
+{
+  "name": "@polka-codes/github",
+  "version": "0.7.7",
+  "license": "AGPL-3.0",
+  "author": "github@polka.codes",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup src/index.ts --experimental-dts --format esm --clean"
+  },
+  "dependencies": {
+    "@octokit/core": "^6.1.4",
+    "remark-gfm": "^4.0.1",
+    "remark-parse": "^11.0.0",
+    "remark-stringify": "^11.0.0",
+    "unified": "^11.0.5",
+    "unist-util-visit": "^5.0.0"
+  }
+}

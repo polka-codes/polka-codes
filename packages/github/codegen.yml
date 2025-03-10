@@ -1,0 +1,7 @@
+schema: ./schema.docs.graphql
+documents: "src/**/*.(graphql|gql)"
+generates:
+  src/types/github-types.ts:
+    plugins:
+      - "typescript"
+      - "typescript-operations"

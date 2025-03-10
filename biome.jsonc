@@ -5,6 +5,9 @@
     "clientKind": "git",
     "useIgnoreFile": true
   },
+  "files": {
+    "ignore": ["packages/github/src/types/github-types.ts", "packages/github/schema.docs.graphql"]
+  },
   "organizeImports": {
     "enabled": true
   },
