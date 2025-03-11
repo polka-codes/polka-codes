@@ -237,11 +237,11 @@ export abstract class AgentBase {
       }
       const response = await this.#request(nextRequest)
       const resp = await this.#handleResponse(response)
-      if ('exit' in resp) {
-        this.#callback({ kind: TaskEventKind.EndTask, agent: this, exitReason: resp.exit })
-        return resp.exit
+      if (resp.type === 'exit') {
+        this.#callback({ kind: TaskEventKind.EndTask, agent: this, exitReason: resp.reason })
+        return resp.reason
       }
-      nextRequest = resp.replay
+      nextRequest = resp.message
     }
   }
 
@@ -314,7 +314,9 @@ export abstract class AgentBase {
     return ret
   }
 
-  async #handleResponse(response: AssistantMessageContent[]): Promise<{ replay: string } | { exit: ExitReason }> {
+  async #handleResponse(
+    response: AssistantMessageContent[],
+  ): Promise<{ type: 'reply'; message: string } | { type: 'exit'; reason: ExitReason }> {
     const toolReponses: { tool: string; response: string }[] = []
     outer: for (const content of response) {
       switch (content.type) {
@@ -337,7 +339,7 @@ export abstract class AgentBase {
                 break outer
               }
               // task completed
-              return { exit: toolResp }
+              return { type: 'exit', reason: toolResp }
             case ToolResponseType.Invalid:
               // tell AI about the invalid arguments
               await this.#callback({ kind: TaskEventKind.ToolInvalid, agent: this, tool: content.name })
@@ -351,7 +353,7 @@ export abstract class AgentBase {
             case ToolResponseType.Interrupted:
               // the execution is killed
               await this.#callback({ kind: TaskEventKind.ToolInterrupted, agent: this, tool: content.name })
-              return { exit: toolResp }
+              return { type: 'exit', reason: toolResp }
             case ToolResponseType.HandOver:
               if (toolReponses.length > 0) {
                 // agent is trying run too many tools in a single request
@@ -368,7 +370,7 @@ export abstract class AgentBase {
                 context: toolResp.context,
                 files: toolResp.files,
               })
-              return { exit: toolResp }
+              return { type: 'exit', reason: toolResp }
             case ToolResponseType.Delegate:
               if (toolReponses.length > 0) {
                 // agent is trying run too many tools in a single request
@@ -385,7 +387,7 @@ export abstract class AgentBase {
                 context: toolResp.context,
                 files: toolResp.files,
               })
-              return { exit: toolResp }
+              return { type: 'exit', reason: toolResp }
           }
           break
         }
@@ -394,11 +396,11 @@ export abstract class AgentBase {
 
     if (toolReponses.length === 0) {
       // always require a tool usage
-      return { replay: responsePrompts.requireUseTool }
+      return { type: 'reply', message: responsePrompts.requireUseTool }
     }
 
     const finalResp = toolReponses.map(({ tool, response }) => responsePrompts.toolResults(tool, response)).join('\n\n')
-    return { replay: finalResp }
+    return { type: 'reply', message: finalResp }
   }
 
   async #invokeTool(name: string, args: Record<string, string>): Promise<ToolResponse> {
