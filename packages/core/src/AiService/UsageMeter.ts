@@ -53,6 +53,18 @@ export class UsageMeter {
     this.#usage.totalCost += usage.totalCost ?? 0
   }
 
+  setUsage(usage: Partial<ApiUsage>, messageCount?: number) {
+    this.#usage.inputTokens = usage.inputTokens ?? this.#usage.inputTokens
+    this.#usage.outputTokens = usage.outputTokens ?? this.#usage.outputTokens
+    this.#usage.cacheWriteTokens = usage.cacheWriteTokens ?? this.#usage.cacheWriteTokens
+    this.#usage.cacheReadTokens = usage.cacheReadTokens ?? this.#usage.cacheReadTokens
+    this.#usage.totalCost = usage.totalCost ?? this.#usage.totalCost
+
+    if (messageCount !== undefined) {
+      this.#messageCount = messageCount
+    }
+  }
+
   incrementMessageCount(count = 1) {
     this.#messageCount += count
   }
@@ -81,8 +93,8 @@ export class UsageMeter {
   /**
    * Get current usage totals
    */
-  get usage(): ApiUsage {
-    return { ...this.#usage }
+  get usage() {
+    return { ...this.#usage, messageCount: this.#messageCount }
   }
 
   printUsage() {
