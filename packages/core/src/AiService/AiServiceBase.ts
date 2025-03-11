@@ -51,6 +51,8 @@ export abstract class AiServiceBase {
   abstract sendImpl(systemPrompt: string, messages: MessageParam[]): ApiStream
 
   async *send(systemPrompt: string, messages: MessageParam[]): ApiStream {
+    this.usageMeter.checkLimit()
+
     this.usageMeter.incrementMessageCount()
 
     const stream = this.sendImpl(systemPrompt, messages)
@@ -66,6 +68,8 @@ export abstract class AiServiceBase {
   }
 
   async request(systemPrompt: string, messages: MessageParam[]) {
+    this.usageMeter.checkLimit()
+
     this.usageMeter.incrementMessageCount()
 
     const stream = this.sendImpl(systemPrompt, messages)

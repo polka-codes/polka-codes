@@ -62,8 +62,19 @@ export class UsageMeter {
     const cost = this.#usage.totalCost >= this.maxCost
     return {
       messageCount,
+      maxMessageCount: this.maxMessageCount,
       cost,
+      maxCost: this.maxCost,
       result: messageCount || cost,
+    }
+  }
+
+  checkLimit() {
+    const result = this.isLimitExceeded()
+    if (result.result) {
+      throw new Error(
+        `Usage limit exceeded. Message count: ${result.messageCount}/${result.maxMessageCount}, cost: ${result.cost}/${result.maxCost}`,
+      )
     }
   }
 
