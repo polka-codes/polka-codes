@@ -55,6 +55,7 @@ export type ToolResponseReply = {
 export type ToolResponseExit = {
   type: ToolResponseType.Exit
   message: string
+  object?: any
 }
 
 // The tool arguments are invalid

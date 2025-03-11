@@ -175,10 +175,11 @@ export abstract class AgentBase {
   protected readonly ai: AiServiceBase
   protected readonly config: Readonly<AgentBaseConfig>
   protected readonly handlers: Record<string, FullToolInfo>
-  protected readonly messages: MessageParam[] = []
+  protected readonly messages: MessageParam[]
 
-  constructor(name: string, ai: AiServiceBase, config: AgentBaseConfig) {
+  constructor(name: string, ai: AiServiceBase, config: AgentBaseConfig, messages: MessageParam[] = []) {
     this.ai = ai
+    this.messages = messages
 
     // If agents are provided, add them to the system prompt
     if (config.agents && config.agents.length > 0) {
@@ -203,6 +204,23 @@ export abstract class AgentBase {
     this.#callback({ kind: TaskEventKind.StartTask, agent: this, systemPrompt: this.config.systemPrompt })
 
     return await this.#processLoop(prompt)
+  }
+
+  async step(promp: string) {
+    if (this.messages.length === 0) {
+      this.#callback({ kind: TaskEventKind.StartTask, agent: this, systemPrompt: this.config.systemPrompt })
+    }
+
+    if (this.ai.usageMeter.isLimitExceeded().result) {
+      this.#callback({ kind: TaskEventKind.UsageExceeded, agent: this })
+      return { type: 'UsageExceeded' }
+    }
+
+    return await this.#request(promp)
+  }
+
+  async handleStepResponse(response: AssistantMessageContent[]) {
+    return this.#handleResponse(response)
   }
 
   async #processLoop(userMessage: string): Promise<ExitReason> {

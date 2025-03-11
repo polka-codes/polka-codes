@@ -9,8 +9,6 @@ export const prCommand = new Command('pr')
   .description('Create a GitHub pull request')
   .argument('[message]', 'Optional context for the commit message generation')
   .action(async (message, _options, command: Command) => {
-    const spinner = ora('Gathering information...').start()
-
     const options = command.parent?.opts() ?? {}
     const { providerConfig, config } = parseOptions(options)
 
@@ -18,6 +16,8 @@ export const prCommand = new Command('pr')
 
     console.log('Provider:', provider)
     console.log('Model:', model)
+
+    const spinner = ora('Gathering information...').start()
 
     if (!provider) {
       console.error('Error: No provider specified. Please run "pokla config" to configure your AI provider.')
@@ -85,6 +85,10 @@ export const prCommand = new Command('pr')
       })
 
       spinner.succeed('Pull request details generated')
+
+      console.log('Title:', prDetails.response.title)
+      console.log(prDetails.response.description)
+
       // wait for 10ms to let the spinner stop
       await new Promise((resolve) => setTimeout(resolve, 10))
 
