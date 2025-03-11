@@ -5,6 +5,7 @@ exports[`UsageMeter should initialize with zero values 1`] = `
   "cacheReadTokens": 0,
   "cacheWriteTokens": 0,
   "inputTokens": 0,
+  "messageCount": 0,
   "outputTokens": 0,
   "totalCost": 0,
 }
@@ -15,6 +16,7 @@ exports[`UsageMeter should correctly add usage metrics 1`] = `
   "cacheReadTokens": 10,
   "cacheWriteTokens": 25,
   "inputTokens": 100,
+  "messageCount": 0,
   "outputTokens": 50,
   "totalCost": 0.002,
 }
@@ -25,6 +27,7 @@ exports[`UsageMeter should handle partial usage updates 1`] = `
   "cacheReadTokens": 0,
   "cacheWriteTokens": 0,
   "inputTokens": 100,
+  "messageCount": 0,
   "outputTokens": 50,
   "totalCost": 0.001,
 }
@@ -35,6 +38,7 @@ exports[`UsageMeter should handle multiple consecutive updates 1`] = `
   "cacheReadTokens": 10,
   "cacheWriteTokens": 0,
   "inputTokens": 80,
+  "messageCount": 0,
   "outputTokens": 40,
   "totalCost": 0.001,
 }
@@ -45,6 +49,7 @@ exports[`UsageMeter should calculate cost when not provided but model info is av
   "cacheReadTokens": 50,
   "cacheWriteTokens": 100,
   "inputTokens": 1000,
+  "messageCount": 0,
   "outputTokens": 500,
   "totalCost": 0.0009065,
 }
@@ -55,6 +60,7 @@ exports[`UsageMeter should not calculate cost when model info is not available 1
   "cacheReadTokens": 0,
   "cacheWriteTokens": 0,
   "inputTokens": 1000,
+  "messageCount": 0,
   "outputTokens": 500,
   "totalCost": 0,
 }
@@ -65,6 +71,7 @@ exports[`UsageMeter should use custom pricing configuration 1`] = `
   "cacheReadTokens": 100,
   "cacheWriteTokens": 200,
   "inputTokens": 1000,
+  "messageCount": 0,
   "outputTokens": 500,
   "totalCost": 0.0105,
 }
@@ -75,6 +82,7 @@ exports[`UsageMeter should override existing pricing with custom configuration 1
   "cacheReadTokens": 100,
   "cacheWriteTokens": 200,
   "inputTokens": 1000,
+  "messageCount": 0,
   "outputTokens": 500,
   "totalCost": 0.00211,
 }
