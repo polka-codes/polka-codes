@@ -175,11 +175,11 @@ export abstract class AgentBase {
   protected readonly ai: AiServiceBase
   protected readonly config: Readonly<AgentBaseConfig>
   protected readonly handlers: Record<string, FullToolInfo>
-  protected readonly messages: MessageParam[]
+  #messages: MessageParam[]
 
   constructor(name: string, ai: AiServiceBase, config: AgentBaseConfig, messages: MessageParam[] = []) {
     this.ai = ai
-    this.messages = messages
+    this.#messages = messages
 
     // If agents are provided, add them to the system prompt
     if (config.agents && config.agents.length > 0) {
@@ -196,6 +196,10 @@ export abstract class AgentBase {
     this.handlers = handlers
   }
 
+  get messages(): Readonly<MessageParam[]> {
+    return this.#messages
+  }
+
   async #callback(event: TaskEvent) {
     await this.config.callback?.(event)
   }
@@ -206,8 +210,11 @@ export abstract class AgentBase {
     return await this.#processLoop(prompt)
   }
 
-  async step(promp: string) {
-    if (this.messages.length === 0) {
+  async step(promp: string, messages?: MessageParam[]) {
+    if (messages) {
+      this.#messages = messages
+    }
+    if (this.#messages.length === 0) {
       this.#callback({ kind: TaskEventKind.StartTask, agent: this, systemPrompt: this.config.systemPrompt })
     }
 
@@ -219,7 +226,10 @@ export abstract class AgentBase {
     return await this.#request(promp)
   }
 
-  async handleStepResponse(response: AssistantMessageContent[]) {
+  async handleStepResponse(response: AssistantMessageContent[], messages?: MessageParam[]) {
+    if (messages) {
+      this.#messages = messages
+    }
     return this.#handleResponse(response)
   }
 
@@ -251,7 +261,7 @@ export abstract class AgentBase {
 
     await this.#callback({ kind: TaskEventKind.StartRequest, agent: this, userMessage })
 
-    this.messages.push({
+    this.#messages.push({
       role: 'user',
       content: userMessage,
     })
@@ -264,7 +274,7 @@ export abstract class AgentBase {
       currentAssistantMessage = ''
 
       // TODO: use a truncated messages if needed to avoid exceeding the token limit
-      const stream = this.ai.send(this.config.systemPrompt, this.messages)
+      const stream = this.ai.send(this.config.systemPrompt, this.#messages)
 
       try {
         for await (const chunk of stream) {
@@ -297,7 +307,7 @@ export abstract class AgentBase {
       throw new Error('No assistant message received')
     }
 
-    this.messages.push({
+    this.#messages.push({
       role: 'assistant',
       content: currentAssistantMessage,
     })
