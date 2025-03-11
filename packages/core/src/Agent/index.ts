@@ -10,6 +10,7 @@ export * from './AnalyzerAgent'
 export * from './CodeFixerAgent'
 export * from './MultiAgent'
 export * from './prompts'
+export * from './parseAssistantMessage'
 
 export const allAgents = [architectAgentInfo, coderAgentInfo, analyzerAgentInfo, codeFixerAgentInfo] as const
 export type AgentNameType = (typeof allAgents)[number]['name']

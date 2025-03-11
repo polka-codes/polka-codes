@@ -213,7 +213,7 @@ export abstract class AgentBase {
 
     if (this.ai.usageMeter.isLimitExceeded().result) {
       this.#callback({ kind: TaskEventKind.UsageExceeded, agent: this })
-      return { type: 'UsageExceeded' }
+      return { type: 'UsageExceeded' } as const
     }
 
     return await this.#request(promp)
