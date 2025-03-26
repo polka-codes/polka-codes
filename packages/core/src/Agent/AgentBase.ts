@@ -102,6 +102,7 @@ export interface TaskEventToolHandOverDelegate extends TaskEventBase {
   task: string
   context?: string
   files?: string[]
+  originalTask?: string
 }
 
 /**
@@ -176,6 +177,7 @@ export abstract class AgentBase {
   protected readonly config: Readonly<AgentBaseConfig>
   protected readonly handlers: Record<string, FullToolInfo>
   #messages: MessageParam[]
+  #originalTask?: string
 
   constructor(name: string, ai: AiServiceBase, config: AgentBaseConfig, messages: MessageParam[] = []) {
     this.ai = ai
@@ -205,6 +207,7 @@ export abstract class AgentBase {
   }
 
   async start(prompt: string): Promise<ExitReason> {
+    this.#originalTask = prompt
     this.#callback({ kind: TaskEventKind.StartTask, agent: this, systemPrompt: this.config.systemPrompt })
 
     return await this.#processLoop(prompt)
@@ -354,40 +357,52 @@ export abstract class AgentBase {
               // the execution is killed
               await this.#callback({ kind: TaskEventKind.ToolInterrupted, agent: this, tool: content.name })
               return { type: 'exit', reason: toolResp }
-            case ToolResponseType.HandOver:
+            case ToolResponseType.HandOver: {
               if (toolReponses.length > 0) {
                 // agent is trying run too many tools in a single request
                 // stop the tool execution
                 break outer
               }
               // hand over the task to another agent
+              const handOverResp = {
+                ...toolResp,
+                originalTask: this.#originalTask,
+              }
               await this.#callback({
                 kind: TaskEventKind.ToolHandOver,
                 agent: this,
                 tool: content.name,
-                agentName: toolResp.agentName,
-                task: toolResp.task,
-                context: toolResp.context,
-                files: toolResp.files,
+                agentName: handOverResp.agentName,
+                task: handOverResp.task,
+                context: handOverResp.context,
+                files: handOverResp.files,
+                originalTask: handOverResp.originalTask,
               })
-              return { type: 'exit', reason: toolResp }
-            case ToolResponseType.Delegate:
+              return { type: 'exit', reason: handOverResp }
+            }
+            case ToolResponseType.Delegate: {
               if (toolReponses.length > 0) {
                 // agent is trying run too many tools in a single request
                 // stop the tool execution
                 continue
               }
               // delegate the task to another agent
+              const delegateResp = {
+                ...toolResp,
+                originalTask: this.#originalTask,
+              }
               await this.#callback({
                 kind: TaskEventKind.ToolDelegate,
                 agent: this,
                 tool: content.name,
-                agentName: toolResp.agentName,
-                task: toolResp.task,
-                context: toolResp.context,
-                files: toolResp.files,
+                agentName: delegateResp.agentName,
+                task: delegateResp.task,
+                context: delegateResp.context,
+                files: delegateResp.files,
+                originalTask: delegateResp.originalTask,
               })
-              return { type: 'exit', reason: toolResp }
+              return { type: 'exit', reason: delegateResp }
+            }
           }
           break
         }

@@ -74,6 +74,7 @@ export const handler: ToolHandler<typeof toolInfo, any> = async (_provider, args
     task,
     context,
     files,
+    // originalTask will be set by AgentBase
   }
 }
 
