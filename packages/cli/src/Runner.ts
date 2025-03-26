@@ -150,7 +150,7 @@ export class Runner {
             throw new Error(`Unknown agent: ${name}`)
         }
       },
-      getPrompt: async (name, task, context, files) => {
+      getPrompt: async (name, task, context, files, originalTask) => {
         let ret = await this.#defaultContext(name)
         const unreadableFiles: string[] = []
 
@@ -176,6 +176,9 @@ export class Runner {
 
         if (context) {
           ret += `\n\n${context}`
+        }
+        if (originalTask) {
+          ret += `\n\n<original_user_prompt>${originalTask}</original_user_prompt>`
         }
         return `<task>${task}</task>\n<context>${ret}</context>`
       },
