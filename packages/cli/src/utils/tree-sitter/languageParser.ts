@@ -66,7 +66,7 @@ async function loadLanguage(langName: string) {
     case 'tsx':
       return await Language.load(treeSitterTsxWasm)
     default:
-      return await Language.load(path.join(__dirname, `tree-sitter-${langName}.wasm`))
+      throw new Error(`Unsupported language: ${langName}`)
   }
 }
 
