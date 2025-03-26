@@ -3,7 +3,7 @@ import type { AgentBase, ExitReason } from './AgentBase'
 
 export type MultiAgentConfig = {
   createAgent: (name: string) => Promise<AgentBase>
-  getPrompt?: (name: string, task: string, context?: string, files?: string[]) => Promise<string>
+  getPrompt?: (name: string, task: string, context?: string, files?: string[], originalTask?: string) => Promise<string>
 }
 
 export class MultiAgent {
@@ -21,12 +21,24 @@ export class MultiAgent {
         this.#agents.pop()
 
         const prompt =
-          (await this.#config.getPrompt?.(exitReason.agentName, exitReason.task, exitReason.context, exitReason.files)) ?? exitReason.task
+          (await this.#config.getPrompt?.(
+            exitReason.agentName,
+            exitReason.task,
+            exitReason.context,
+            exitReason.files,
+            exitReason.originalTask,
+          )) ?? exitReason.task
         return await this.#startTask(exitReason.agentName, prompt)
       }
       case ToolResponseType.Delegate: {
         const prompt =
-          (await this.#config.getPrompt?.(exitReason.agentName, exitReason.task, exitReason.context, exitReason.files)) ?? exitReason.task
+          (await this.#config.getPrompt?.(
+            exitReason.agentName,
+            exitReason.task,
+            exitReason.context,
+            exitReason.files,
+            exitReason.originalTask,
+          )) ?? exitReason.task
         const delegateResult = await this.#startTask(exitReason.agentName, prompt)
         switch (delegateResult.type) {
           case ToolResponseType.HandOver:
