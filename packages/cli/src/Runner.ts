@@ -36,12 +36,14 @@ export type RunnerOptions = {
   availableAgents?: AgentInfo[] // empty to enable all agents
 }
 
+/** Core orchestrator managing AI agents, service provisioning, and task execution lifecycle */
 export class Runner {
   readonly #options: RunnerOptions
   readonly #usageMeter: UsageMeter
 
   readonly multiAgent: MultiAgent
 
+  /** Initialize core components including usage tracking and agent service provisioning */
   constructor(options: RunnerOptions) {
     this.#options = options
     this.#usageMeter = new UsageMeter({
@@ -81,6 +83,7 @@ export class Runner {
 
     const services: Record<string, Record<string, AiServiceBase>> = {}
 
+    // Cache AI services by provider+model to reuse connections and track costs
     const getOrCreateService = (agentName: string) => {
       const config = this.#options.providerConfig.getConfigForAgent(agentName)
       if (!config) {
@@ -179,6 +182,7 @@ export class Runner {
     })
   }
 
+  // Generate initial context with project structure and agent-specific exclusions
   async #defaultContext(name: string) {
     const cwd = process.cwd()
     const agentConfig = this.#options.config.agents?.[name as AgentNameType] ?? this.#options.config.agents?.default ?? {}
@@ -190,6 +194,7 @@ export class Runner {
     return `<now_date>${new Date().toISOString()}</now_date>${fileContext}`
   }
 
+  /** Execute a task through the agent system, initializing context if not provided */
   async startTask(task: string, agentName: string = architectAgentInfo.name, context?: string) {
     const finalContext = context ?? (await this.#defaultContext(agentName))
     const exitReason = await this.multiAgent.startTask({
