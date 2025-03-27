@@ -3,9 +3,8 @@
   "compilerOptions": {
     "composite": true,
     "outDir": "dist",
-    "rootDir": "src",
-    "declarationMap": true
+    "rootDir": "src"
   },
   "include": ["src"],
-  "references": [{ "path": "../core" }, { "path": "../cli-shared" }]
+  "references": [{ "path": "../core" }]
 }

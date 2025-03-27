@@ -1,6 +1,6 @@
+import type { Root } from 'mdast'
 import remarkGfm from 'remark-gfm'
 import remarkParse from 'remark-parse'
-import type { Root } from 'remark-parse/lib'
 import remarkStringify from 'remark-stringify'
 import { type Transformer, unified } from 'unified'
 import { SKIP, visit } from 'unist-util-visit'

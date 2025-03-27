@@ -1,34 +1,27 @@
 {
-  "name": "@polka-codes/cli",
+  "name": "@polka-codes/cli-shared",
   "version": "0.7.17",
   "license": "AGPL-3.0",
   "author": "github@polka.codes",
   "type": "module",
-  "bin": {
-    "polka": "cli.mjs"
-  },
   "exports": {
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     }
   },
+  "files": ["dist"],
   "scripts": {
     "build": "bun build src/index.ts --outdir dist --target node"
   },
   "dependencies": {
-    "@inquirer/prompts": "^7.2.3",
     "@polka-codes/core": "workspace:*",
-    "@polka-codes/cli-shared": "workspace:*",
-    "commander": "^13.0.0",
-    "dotenv": "^16.4.7",
+    "@vscode/ripgrep": "^1.15.10",
+    "ignore": "^7.0.3",
     "lodash": "^4.17.21",
-    "ora": "^8.1.1",
+    "tree-sitter-wasms": "^0.1.12",
+    "web-tree-sitter": "^0.25.1",
     "yaml": "^2.7.0",
     "zod": "^3.24.1"
-  },
-  "files": ["dist", "cli.mjs"],
-  "devDependencies": {
-    "@types/lodash": "^4.17.14"
   }
 }

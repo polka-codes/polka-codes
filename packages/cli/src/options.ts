@@ -5,8 +5,8 @@ import { AiServiceProvider, type Config } from '@polka-codes/core'
 import type { Command } from 'commander'
 import { set } from 'lodash'
 
+import { loadConfig } from '@polka-codes/cli-shared'
 import { ApiProviderConfig } from './ApiProviderConfig'
-import { loadConfig } from './config'
 import { type Env, getEnv } from './env'
 
 export interface CliOptions {

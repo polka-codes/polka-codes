@@ -1,5 +1,5 @@
+import type { Config } from '@polka-codes/cli-shared'
 import { type AiServiceProvider, defaultModels } from '@polka-codes/core'
-import type { Config } from './config'
 
 export class ApiProviderConfig {
   readonly defaultProvider?: AiServiceProvider

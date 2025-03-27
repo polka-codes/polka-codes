@@ -18,7 +18,9 @@
     "paths": {
       "@polka-codes/core": ["./packages/core/src"],
       "@polka-codes/cli": ["./packages/cli/src"],
-      "@polka-codes/action": ["./packages/action/src"]
+      "@polka-codes/action": ["./packages/action/src"],
+      "@polka-codes/runner": ["./packages/runner/src"],
+      "@polka-codes/cli-shared": ["./packages/cli-shared/src"]
     }
   }
 }
