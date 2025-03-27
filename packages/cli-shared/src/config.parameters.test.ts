@@ -4,7 +4,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } fr
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { loadConfig, mergeConfigs } from '@polka-codes/cli-shared'
+import { loadConfig, mergeConfigs } from './config'
 
 describe('config parameters', () => {
   let testDir: string

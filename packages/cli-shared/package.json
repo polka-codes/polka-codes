@@ -12,7 +12,7 @@
   },
   "files": ["dist"],
   "scripts": {
-    "build": "tsup src/index.ts --experimental-dts --format esm --clean"
+    "build": "bun build src/index.ts --outdir dist --target node"
   },
   "dependencies": {
     "@polka-codes/core": "workspace:*",

@@ -17,17 +17,16 @@
     "build": "bun build src/index.ts --outdir dist --target node"
   },
   "dependencies": {
-    "@inquirer/prompts": "^7.2.3",
     "@polka-codes/core": "workspace:*",
+    "@polka-codes/cli-shared": "workspace:*",
     "@vscode/ripgrep": "^1.15.10",
     "chalk": "^5.4.1",
     "commander": "^13.0.0",
     "dotenv": "^16.4.7",
     "ignore": "^7.0.3",
     "lodash": "^4.17.21",
-    "ora": "^8.1.1",
     "tree-sitter-wasms": "^0.1.12",
-    "web-tree-sitter": "^0.25.1",
+    "web-tree-sitter": "^0.25.3",
     "yaml": "^2.7.0",
     "zod": "^3.24.1"
   },
