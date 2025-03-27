@@ -19,11 +19,8 @@ import {
   createService,
 } from '@polka-codes/core'
 
+import { type Config, type ProviderOptions, getProvider, listFiles, printEvent } from '@polka-codes/cli-shared'
 import type { ApiProviderConfig } from './ApiProviderConfig'
-import type { Config } from './config'
-import { type ProviderOptions, getProvider } from './provider'
-import { printEvent } from './utils/eventHandler'
-import { listFiles } from './utils/listFiles'
 
 export type RunnerOptions = {
   providerConfig: ApiProviderConfig

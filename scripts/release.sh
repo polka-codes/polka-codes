@@ -33,6 +33,7 @@ bun run clean
 bun run build
 bun publish --cwd packages/core --access public
 bun publish --cwd packages/github --access public
+bun publish --cwd packages/cli-shared --access public
 bun publish --cwd packages/cli --access public
 bun publish --cwd packages/runner --access public
 git push origin v$VERSION

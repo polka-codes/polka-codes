@@ -1,0 +1,27 @@
+{
+  "name": "@polka-codes/cli-shared",
+  "version": "0.7.17",
+  "license": "AGPL-3.0",
+  "author": "github@polka.codes",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup src/index.ts --experimental-dts --format esm --clean"
+  },
+  "dependencies": {
+    "@polka-codes/core": "workspace:*",
+    "@vscode/ripgrep": "^1.15.10",
+    "ignore": "^7.0.3",
+    "lodash": "^4.17.21",
+    "tree-sitter-wasms": "^0.1.12",
+    "web-tree-sitter": "^0.25.1",
+    "yaml": "^2.7.0",
+    "zod": "^3.24.1"
+  }
+}

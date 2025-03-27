@@ -19,7 +19,7 @@
     },
     "packages/cli": {
       "name": "@polka-codes/cli",
-      "version": "0.7.16",
+      "version": "0.7.17",
       "bin": {
         "polka": "cli.mjs",
       },
@@ -42,9 +42,23 @@
         "@types/lodash": "^4.17.14",
       },
     },
+    "packages/cli-shared": {
+      "name": "@polka-codes/cli-shared",
+      "version": "0.7.17",
+      "dependencies": {
+        "@polka-codes/core": "workspace:*",
+        "@vscode/ripgrep": "^1.15.10",
+        "ignore": "^7.0.3",
+        "lodash": "^4.17.21",
+        "tree-sitter-wasms": "^0.1.12",
+        "web-tree-sitter": "^0.25.1",
+        "yaml": "^2.7.0",
+        "zod": "^3.24.1",
+      },
+    },
     "packages/core": {
       "name": "@polka-codes/core",
-      "version": "0.7.16",
+      "version": "0.7.17",
       "dependencies": {
         "@anthropic-ai/sdk": "0.39.0",
         "lodash": "^4.17.21",
@@ -54,7 +68,7 @@
     },
     "packages/github": {
       "name": "@polka-codes/github",
-      "version": "0.7.16",
+      "version": "0.7.17",
       "dependencies": {
         "@octokit/core": "^6.1.4",
         "remark-gfm": "^4.0.1",
@@ -62,6 +76,31 @@
         "remark-stringify": "^11.0.0",
         "unified": "^11.0.5",
         "unist-util-visit": "^5.0.0",
+      },
+    },
+    "packages/runner": {
+      "name": "@polka-codes/runner",
+      "version": "0.7.17",
+      "bin": {
+        "polka-runner": "cli.mjs",
+      },
+      "dependencies": {
+        "@inquirer/prompts": "^7.2.3",
+        "@polka-codes/core": "workspace:*",
+        "@vscode/ripgrep": "^1.15.10",
+        "chalk": "^5.4.1",
+        "commander": "^13.0.0",
+        "dotenv": "^16.4.7",
+        "ignore": "^7.0.3",
+        "lodash": "^4.17.21",
+        "ora": "^8.1.1",
+        "tree-sitter-wasms": "^0.1.12",
+        "web-tree-sitter": "^0.25.1",
+        "yaml": "^2.7.0",
+        "zod": "^3.24.1",
+      },
+      "devDependencies": {
+        "@types/lodash": "^4.17.14",
       },
     },
   },
@@ -330,9 +369,13 @@
 
     "@polka-codes/cli": ["@polka-codes/cli@workspace:packages/cli"],
 
+    "@polka-codes/cli-shared": ["@polka-codes/cli-shared@workspace:packages/cli-shared"],
+
     "@polka-codes/core": ["@polka-codes/core@workspace:packages/core"],
 
     "@polka-codes/github": ["@polka-codes/github@workspace:packages/github"],
+
+    "@polka-codes/runner": ["@polka-codes/runner@workspace:packages/runner"],
 
     "@repeaterjs/repeater": ["@repeaterjs/repeater@3.0.6", "", {}, "sha512-Javneu5lsuhwNCryN+pXH93VPQ8g0dBX7wItHFgYiwQmzE1sVdg5tWHiOgHywzL2W21XQopa7IwIEnNbmeUJYA=="],
 
@@ -1258,7 +1301,11 @@
 
     "@isaacs/cliui/wrap-ansi": ["wrap-ansi@8.1.0", "", { "dependencies": { "ansi-styles": "^6.1.0", "string-width": "^5.0.1", "strip-ansi": "^7.0.1" } }, "sha512-si7QWI6zUMq56bESFvagtmzMdGOtoxfR+Sez11Mobfc7tm+VkUckk9bW2UeffTGVUbOksxmSw0AA2gs8g71NCQ=="],
 
+    "@polka-codes/cli-shared/zod": ["zod@3.24.2", "", {}, "sha512-lY7CDW43ECgW9u1TcT3IoXHflywfVqDYze4waEz812jR/bZ8FHDsl7pFQoSZTz5N+2NqRXs8GBwnAwo3ZNxqhQ=="],
+
     "@polka-codes/core/zod": ["zod@3.24.2", "", {}, "sha512-lY7CDW43ECgW9u1TcT3IoXHflywfVqDYze4waEz812jR/bZ8FHDsl7pFQoSZTz5N+2NqRXs8GBwnAwo3ZNxqhQ=="],
+
+    "@polka-codes/runner/zod": ["zod@3.24.2", "", {}, "sha512-lY7CDW43ECgW9u1TcT3IoXHflywfVqDYze4waEz812jR/bZ8FHDsl7pFQoSZTz5N+2NqRXs8GBwnAwo3ZNxqhQ=="],
 
     "@rushstack/node-core-library/ajv": ["ajv@8.13.0", "", { "dependencies": { "fast-deep-equal": "^3.1.3", "json-schema-traverse": "^1.0.0", "require-from-string": "^2.0.2", "uri-js": "^4.4.1" } }, "sha512-PRA911Blj99jR5RMeTunVbNXMF6Lp4vZXnk5GQjcnUWUTsrXtekg/pnmFFI2u/I36Y/2bITGS30GZCXei6uNkA=="],
 
