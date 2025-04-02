@@ -42,6 +42,7 @@ export enum ToolResponseType {
   Interrupted = 'Interrupted',
   HandOver = 'HandOver',
   Delegate = 'Delegate',
+  Pause = 'Pause',
 }
 
 // Reply to the tool use
@@ -104,6 +105,11 @@ export type ToolResponseDelegate = {
   originalTask?: string
 }
 
+export type ToolResponsePause = {
+  type: ToolResponseType.Pause
+  object: any
+}
+
 export type ToolResponse =
   | ToolResponseReply
   | ToolResponseExit
@@ -112,6 +118,7 @@ export type ToolResponse =
   | ToolResponseInterrupted
   | ToolResponseHandOver
   | ToolResponseDelegate
+  | ToolResponsePause
 
 export type ToolHandler<T extends ToolInfo, P> = (
   provider: P,
