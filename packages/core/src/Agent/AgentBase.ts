@@ -29,6 +29,7 @@ export enum TaskEventKind {
   ToolInterrupted = 'ToolInterrupted',
   ToolHandOver = 'ToolHandOver',
   ToolDelegate = 'ToolDelegate',
+  ToolPause = 'ToolPause',
   UsageExceeded = 'UsageExceeded',
   EndTask = 'EndTask',
 }
@@ -92,6 +93,12 @@ export interface TaskEventTool extends TaskEventBase {
   tool: string
 }
 
+export interface TaskEventToolPause extends TaskEventBase {
+  kind: TaskEventKind.ToolPause
+  tool: string
+  object: any
+}
+
 /**
  * Event for tool handover
  */
@@ -130,6 +137,7 @@ export type TaskEvent =
   | TaskEventUsage
   | TaskEventText
   | TaskEventTool
+  | TaskEventToolPause
   | TaskEventToolHandOverDelegate
   | TaskEventUsageExceeded
   | TaskEventEndTask
@@ -164,6 +172,8 @@ export type AgentInfo = {
   responsibilities: string[]
 }
 
+export type ToolResponseOrToolPause = { type: 'response'; tool: string; response: string } | { type: 'pause'; tool: string; object: any }
+
 export type ExitReason =
   | { type: 'UsageExceeded' }
   | { type: 'WaitForUserInput' }
@@ -171,6 +181,10 @@ export type ExitReason =
   | ToolResponseInterrupted
   | ToolResponseHandOver
   | ToolResponseDelegate
+  | {
+      type: 'Pause'
+      responses: ToolResponseOrToolPause[]
+    }
 
 export abstract class AgentBase {
   protected readonly ai: AiServiceBase
@@ -320,7 +334,8 @@ export abstract class AgentBase {
   async #handleResponse(
     response: AssistantMessageContent[],
   ): Promise<{ type: 'reply'; message: string } | { type: 'exit'; reason: ExitReason }> {
-    const toolReponses: { tool: string; response: string }[] = []
+    const toolReponses: ToolResponseOrToolPause[] = []
+    let hasPause = false
     outer: for (const content of response) {
       switch (content.type) {
         case 'text':
@@ -333,7 +348,7 @@ export abstract class AgentBase {
             case ToolResponseType.Reply:
               // reply to the tool use
               await this.#callback({ kind: TaskEventKind.ToolReply, agent: this, tool: content.name })
-              toolReponses.push({ tool: content.name, response: toolResp.message })
+              toolReponses.push({ type: 'response', tool: content.name, response: toolResp.message })
               break
             case ToolResponseType.Exit:
               if (toolReponses.length > 0) {
@@ -346,12 +361,12 @@ export abstract class AgentBase {
             case ToolResponseType.Invalid:
               // tell AI about the invalid arguments
               await this.#callback({ kind: TaskEventKind.ToolInvalid, agent: this, tool: content.name })
-              toolReponses.push({ tool: content.name, response: toolResp.message })
+              toolReponses.push({ type: 'response', tool: content.name, response: toolResp.message })
               break outer
             case ToolResponseType.Error:
               // tell AI about the error
               await this.#callback({ kind: TaskEventKind.ToolError, agent: this, tool: content.name })
-              toolReponses.push({ tool: content.name, response: toolResp.message })
+              toolReponses.push({ type: 'response', tool: content.name, response: toolResp.message })
               break outer
             case ToolResponseType.Interrupted:
               // the execution is killed
@@ -403,10 +418,20 @@ export abstract class AgentBase {
               })
               return { type: 'exit', reason: delegateResp }
             }
+            case ToolResponseType.Pause: {
+              // pause the execution
+              await this.#callback({ kind: TaskEventKind.ToolPause, agent: this, tool: content.name, object: toolResp.object })
+              toolReponses.push({ type: 'pause', tool: content.name, object: toolResp.object })
+              hasPause = true
+            }
           }
           break
         }
       }
+    }
+
+    if (hasPause) {
+      return { type: 'exit', reason: { type: 'Pause', responses: toolReponses } }
     }
 
     if (toolReponses.length === 0) {
@@ -414,7 +439,10 @@ export abstract class AgentBase {
       return { type: 'reply', message: responsePrompts.requireUseTool }
     }
 
-    const finalResp = toolReponses.map(({ tool, response }) => responsePrompts.toolResults(tool, response)).join('\n\n')
+    const finalResp = toolReponses
+      .filter((resp) => resp.type === 'response')
+      .map(({ tool, response }) => responsePrompts.toolResults(tool, response))
+      .join('\n\n')
     return { type: 'reply', message: finalResp }
   }
 
