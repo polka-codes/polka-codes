@@ -45,6 +45,11 @@ export const wsOutgoingMessageSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('get_files_completed'),
   }),
+  z.object({
+    type: z.literal('error'),
+    message: z.string(),
+    details: z.string().optional(),
+  }),
 ])
 
 export type WsOutgoingMessage = z.infer<typeof wsOutgoingMessageSchema>

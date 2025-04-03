@@ -84,9 +84,7 @@
       "dependencies": {
         "@polka-codes/cli-shared": "workspace:*",
         "@polka-codes/core": "workspace:*",
-        "@types/ws": "^8.18.1",
         "@vscode/ripgrep": "^1.15.10",
-        "chalk": "^5.4.1",
         "commander": "^13.0.0",
         "dotenv": "^16.4.7",
         "ignore": "^7.0.3",
@@ -99,6 +97,7 @@
       },
       "devDependencies": {
         "@types/lodash": "^4.17.14",
+        "@types/ws": "^8.18.1",
       },
     },
   },
