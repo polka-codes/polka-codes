@@ -17,21 +17,22 @@
     "build": "bun build src/index.ts --outdir dist --target node"
   },
   "dependencies": {
-    "@polka-codes/core": "workspace:*",
     "@polka-codes/cli-shared": "workspace:*",
+    "@polka-codes/core": "workspace:*",
     "@vscode/ripgrep": "^1.15.10",
-    "chalk": "^5.4.1",
     "commander": "^13.0.0",
     "dotenv": "^16.4.7",
     "ignore": "^7.0.3",
     "lodash": "^4.17.21",
     "tree-sitter-wasms": "^0.1.12",
     "web-tree-sitter": "^0.25.3",
+    "ws": "^8.18.1",
     "yaml": "^2.7.0",
     "zod": "^3.24.1"
   },
   "files": ["dist", "cli.mjs"],
   "devDependencies": {
-    "@types/lodash": "^4.17.14"
+    "@types/lodash": "^4.17.14",
+    "@types/ws": "^8.18.1"
   }
 }

@@ -1,0 +1,38 @@
+name: Polka Codes Remote Runner
+
+on:
+  workflow_dispatch:
+    inputs:
+      id:
+        description: 'Task ID'
+        required: true
+        type: string
+      sessionToken:
+        description: 'Session token for authentication'
+        required: true
+        type: string
+
+concurrency:
+  group: runner-${{ github.event.inputs.id }}
+
+jobs:
+  handle:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run
+        run: bun run packages/runner/src/index.ts --task-id ${{ github.event.inputs.id }} --session-token ${{ github.event.inputs.sessionToken }} --github-token ${{ github.token }}
+
