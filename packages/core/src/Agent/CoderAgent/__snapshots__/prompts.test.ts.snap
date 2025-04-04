@@ -218,7 +218,7 @@ Description: Request to perform a regex search across files in a specified direc
 Parameters:
 - tool_parameter_path: (required) The path of the directory to search in (relative to the current working directory). This directory will be recursively searched.
 - tool_parameter_regex: (required) The regular expression pattern to search for. Uses Rust regex syntax.
-- tool_parameter_file_pattern: (optional) Glob pattern to filter files (e.g., "*.ts" for TypeScript files). If not provided, it will search all files (*).
+- tool_parameter_file_pattern: (optional) Comma-separated glob pattern to filter files (e.g., "*.ts" for TypeScript files or "*.ts,*.js" for both TypeScript and JavaScript files). If not provided, it will search all files (*).
 
 Usage:
 <tool_search_files>
@@ -365,7 +365,7 @@ return (
 <tool_search_files>
 <tool_parameter_path>src</tool_parameter_path>
 <tool_parameter_regex>^components/</tool_parameter_regex>
-<tool_parameter_file_pattern>*.ts</tool_parameter_file_pattern>
+<tool_parameter_file_pattern>*.ts,*.tsx</tool_parameter_file_pattern>
 </tool_search_files>
 
 ## Example 15: Request to write content to a file

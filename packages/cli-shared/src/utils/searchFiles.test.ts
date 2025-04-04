@@ -10,7 +10,7 @@ import { join } from 'node:path'
 import { searchFiles } from './searchFiles'
 
 describe('searchFiles with mocks', () => {
-  it('should execute ripgrep with correct arguments', async () => {
+  it('should execute ripgrep with correct arguments for a single pattern', async () => {
     const mockSpawn = spyOn(child_process, 'spawn')
 
     // Create mock process
@@ -63,6 +63,15 @@ describe('searchFiles with mocks', () => {
     afterAll(async () => {
       // Clean up test directory
       await fs.rm(testDir, { recursive: true, force: true })
+    })
+
+    it('should search with comma-separated glob patterns in real files', async () => {
+      const results = await searchFiles(testDir, 'SEARCHABLE', 'file1.txt,file2.txt', testDir)
+
+      const fileMatches = results.join('\n')
+      expect(fileMatches).toContain('file1.txt')
+      expect(fileMatches).toContain('file2.txt')
+      expect(fileMatches).not.toContain('excluded.txt')
     })
 
     it('should find all files with searchable content when no exclusions specified', async () => {

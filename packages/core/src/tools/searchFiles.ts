@@ -22,7 +22,8 @@ export const toolInfo = {
     },
     {
       name: 'file_pattern',
-      description: 'Glob pattern to filter files (e.g., "*.ts" for TypeScript files). If not provided, it will search all files (*).',
+      description:
+        'Comma-separated glob pattern to filter files (e.g., "*.ts" for TypeScript files or "*.ts,*.js" for both TypeScript and JavaScript files). If not provided, it will search all files (*).',
       required: false,
       usageValue: 'file pattern here (optional)',
     },
@@ -41,7 +42,7 @@ export const toolInfo = {
         },
         {
           name: 'file_pattern',
-          value: '*.ts',
+          value: '*.ts,*.tsx',
         },
       ],
     },
