@@ -11,7 +11,7 @@ import { rgPath } from '@vscode/ripgrep'
  *
  * @param path - Directory to search in
  * @param regex - Regular expression pattern to search for
- * @param filePattern - Optional glob pattern to filter files
+ * @param filePattern - Optional glob pattern to filter files. Can be a comma-separated string (e.g., "*.ts,*.js")
  * @param cwd - Working directory for relative paths
  * @param excludeFiles - Additional patterns to exclude
  * @returns Array of search results with context
@@ -34,7 +34,18 @@ export async function searchFiles(
 
   // Add file pattern filter if specified
   if (filePattern && filePattern !== '*') {
-    args.push('--glob', filePattern)
+    // Handle comma-separated patterns
+    const patterns = filePattern
+      .split(',')
+      .map((p) => p.trim())
+      .filter(Boolean)
+
+    // Add each pattern as a separate --glob argument
+    for (const pattern of patterns) {
+      if (pattern) {
+        args.push('--glob', pattern)
+      }
+    }
   }
 
   // Add custom ignore patterns
