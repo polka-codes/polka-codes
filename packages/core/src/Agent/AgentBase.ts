@@ -231,12 +231,12 @@ export abstract class AgentBase {
     return await this.#processLoop(prompt)
   }
 
-  async step(promp: string) {
+  async step(prompt: string) {
     if (this.#messages.length === 0) {
       this.#callback({ kind: TaskEventKind.StartTask, agent: this, systemPrompt: this.config.systemPrompt })
     }
 
-    return await this.#request(promp)
+    return await this.#request(prompt)
   }
 
   async handleStepResponse(response: AssistantMessageContent[]) {
