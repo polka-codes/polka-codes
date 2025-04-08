@@ -63,6 +63,7 @@ export interface TaskEventStartRequest extends TaskEventBase {
  */
 export interface TaskEventEndRequest extends TaskEventBase {
   kind: TaskEventKind.EndRequest
+  message: string
 }
 
 /**
@@ -330,7 +331,7 @@ export abstract class AgentBase {
 
     const ret = parseAssistantMessage(currentAssistantMessage, this.config.tools, this.config.toolNamePrefix)
 
-    await this.#callback({ kind: TaskEventKind.EndRequest, agent: this })
+    await this.#callback({ kind: TaskEventKind.EndRequest, agent: this, message: currentAssistantMessage })
 
     return ret
   }
