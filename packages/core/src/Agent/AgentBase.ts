@@ -191,12 +191,11 @@ export abstract class AgentBase {
   protected readonly ai: AiServiceBase
   protected readonly config: Readonly<AgentBaseConfig>
   protected readonly handlers: Record<string, FullToolInfo>
-  #messages: MessageParam[]
+  #messages: MessageParam[] = []
   #originalTask?: string
 
-  constructor(name: string, ai: AiServiceBase, config: AgentBaseConfig, messages: MessageParam[] = []) {
+  constructor(name: string, ai: AiServiceBase, config: AgentBaseConfig) {
     this.ai = ai
-    this.#messages = messages
 
     // If agents are provided, add them to the system prompt
     if (config.agents && config.agents.length > 0) {
@@ -232,10 +231,7 @@ export abstract class AgentBase {
     return await this.#processLoop(prompt)
   }
 
-  async step(promp: string, messages?: MessageParam[]) {
-    if (messages) {
-      this.#messages = messages
-    }
+  async step(promp: string) {
     if (this.#messages.length === 0) {
       this.#callback({ kind: TaskEventKind.StartTask, agent: this, systemPrompt: this.config.systemPrompt })
     }
@@ -243,10 +239,7 @@ export abstract class AgentBase {
     return await this.#request(promp)
   }
 
-  async handleStepResponse(response: AssistantMessageContent[], messages?: MessageParam[]) {
-    if (messages) {
-      this.#messages = messages
-    }
+  async handleStepResponse(response: AssistantMessageContent[]) {
     return this.#handleResponse(response)
   }
 
