@@ -216,6 +216,10 @@ export abstract class AgentBase {
     return this.#messages
   }
 
+  setMessages(messages: MessageParam[]) {
+    this.#messages = messages
+  }
+
   async #callback(event: TaskEvent) {
     await this.config.callback?.(event)
   }
