@@ -216,8 +216,8 @@ export abstract class AgentBase {
     return this.#messages
   }
 
-  setMessages(messages: MessageParam[]) {
-    this.#messages = messages
+  setMessages(messages: Readonly<MessageParam[]>) {
+    this.#messages = [...messages]
   }
 
   async #callback(event: TaskEvent) {
