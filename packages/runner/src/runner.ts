@@ -233,11 +233,11 @@ export class Runner {
       const statusCode = line.substring(0, 2)
       const path = line.substring(3)
 
-      // Handle renamed files (format: R  new-file -> old-file)
+      // Handle renamed files (format: R  old-file -> new-file)
       if (statusCode.startsWith('R')) {
         const parts = path.split(' -> ')
         if (parts.length === 2) {
-          const [newPath, oldPath] = parts
+          const [oldPath, newPath] = parts
           changes.push({
             status: 'renamed',
             path: newPath,
@@ -281,6 +281,11 @@ export class Runner {
         console.log(`Sent content for file: ${path}`)
       } else {
         console.error(`File not found: ${path}`)
+        this.wsManager.sendMessage({
+          type: 'error',
+          message: 'File not found',
+          details: path,
+        })
       }
     } catch (error) {
       console.error(`Error reading file ${path}:`, error)
