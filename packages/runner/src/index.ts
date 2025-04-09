@@ -23,4 +23,7 @@ program
     })
   })
 
-program.parse()
+program.parse().catch((err) => {
+  console.error(err)
+  process.exit(1)
+})
