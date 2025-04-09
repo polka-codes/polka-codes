@@ -122,31 +122,78 @@ export class Runner {
     const responses: { index: number; tool: string; response: string }[] = []
 
     for (const request of message.requests) {
-      let respMsg: string
-      try {
-        console.log(`Executing tool: ${request.tool} with params:`, request.params)
+      const fn = async () => {
+        try {
+          console.log(`Executing tool: ${request.tool} with params:`, request.params)
 
-        const tool = this.availableTools[request.tool]
-        if (tool) {
-          const resp = await tool.handler(this.provider, request.params)
-          if (resp.type === ToolResponseType.Reply) {
-            respMsg = responsePrompts.toolResults(request.tool, resp.message)
-          } else {
-            respMsg = responsePrompts.errorInvokeTool(request.tool, `Unexpected tool response: ${JSON.stringify(resp)}`)
+          // onBeforeInvokeTool handler override for coder agent
+          if (request.params.overridenAgent === 'coder' && this.provider.executeCommand) {
+            const { foramt, check, test } = request.params
+            if (foramt) {
+              try {
+                // it is ok if format failed
+                // check should provide a better error message
+                await this.provider.executeCommand(foramt, false)
+              } catch (error) {
+                console.warn(`Failed to format code using command: ${foramt}`, error)
+              }
+            }
+            if (check) {
+              try {
+                const { exitCode, stdout, stderr } = await this.provider.executeCommand(check, false)
+                if (exitCode !== 0) {
+                  return responsePrompts.commandResult(check, exitCode, stdout, stderr)
+                }
+              } catch (error) {
+                console.warn(`Failed to check code using command: ${check}`, error)
+              }
+            }
+            if (test) {
+              try {
+                const { exitCode, stdout, stderr } = await this.provider.executeCommand(test, false)
+                if (exitCode !== 0) {
+                  return responsePrompts.commandResult(test, exitCode, stdout, stderr)
+                }
+              } catch (error) {
+                console.warn(`Failed to test code using command: ${test}`, error)
+              }
+            }
+            return {
+              type: 'exit',
+            }
           }
-        } else {
-          respMsg = responsePrompts.errorInvokeTool(request.tool, 'Tool not available')
+          const tool = this.availableTools[request.tool]
+          if (tool) {
+            const resp = await tool.handler(this.provider, request.params)
+            if (resp.type === ToolResponseType.Reply) {
+              return responsePrompts.toolResults(request.tool, resp.message)
+            }
+            return responsePrompts.errorInvokeTool(request.tool, `Unexpected tool response: ${JSON.stringify(resp)}`)
+          }
+          return responsePrompts.errorInvokeTool(request.tool, 'Tool not available')
+        } catch (toolError) {
+          console.error(`Error executing tool ${request.tool}:`, toolError)
+          return responsePrompts.errorInvokeTool(request.tool, toolError)
         }
-      } catch (toolError) {
-        console.error(`Error executing tool ${request.tool}:`, toolError)
-        respMsg = responsePrompts.errorInvokeTool(request.tool, toolError)
       }
 
-      responses.push({
-        index: request.index,
-        tool: request.tool,
-        response: respMsg,
-      })
+      const respMsg = await fn()
+
+      if (typeof respMsg === 'string') {
+        responses.push({
+          index: request.index,
+          tool: request.tool,
+          response: respMsg,
+        })
+      } else if (respMsg.type === 'exit') {
+        this.wsManager.sendMessage({
+          type: 'pending_tools_response_completed',
+          step: message.step,
+          index: request.index,
+        })
+        // ignore remaining tools
+        return
+      }
     }
 
     this.wsManager.sendMessage({

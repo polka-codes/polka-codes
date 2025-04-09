@@ -34,6 +34,11 @@ export const wsOutgoingMessageSchema = z.discriminatedUnion('type', [
     ),
   }),
   z.object({
+    type: z.literal('pending_tools_response_completed'),
+    step: z.number(),
+    index: z.number(),
+  }),
+  z.object({
     type: z.literal('file'),
     path: z.string(),
     content: z.string(),

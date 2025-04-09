@@ -20,7 +20,7 @@ scripts:
       Check the code for type errors.
       Run this command after making changes to the code.
   format:
-    command: bun fix
+    command: bun fix --unsafe
     description: Run code formatter.
 rules: |
   Use `bun` as the package manager
