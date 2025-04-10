@@ -97,6 +97,9 @@ export class Runner {
    * Handle incoming WebSocket messages
    */
   private async handleMessage(message: WsIncomingMessage): Promise<void> {
+    if (process.env.DEBUG) {
+      console.log('[Runner][DEBUG] Received WebSocket message:', message)
+    }
     switch (message.type) {
       case 'pending_tools':
         await this.handlePendingTools(message)
