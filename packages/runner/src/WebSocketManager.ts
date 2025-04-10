@@ -30,7 +30,7 @@ export class WebSocketManager {
    * Connects to the WebSocket server and sets up event handlers
    */
   public connect(): void {
-    console.log(`Attempting to connect to WebSocket: ${this.options.apiUrl}/${this.options.taskId} (Attempt ${this.reconnectAttempts + 1})`)
+    console.log(`[WebSocketManager] Attempting to connect to WebSocket: ${this.options.apiUrl}/${this.options.taskId} (Attempt ${this.reconnectAttempts + 1})`)
 
     this.isClosingExpected = false // Reset flag on new connection attempt
     this.ws = new WebSocket(`${this.options.apiUrl}/${this.options.taskId}`, {
@@ -56,7 +56,7 @@ export class WebSocketManager {
       const messageString = JSON.stringify(message)
       this.ws.send(messageString)
     } catch (error) {
-      console.error('Failed to send message:', error)
+      console.error('[WebSocketManager] Failed to send message:', error)
       try {
         // Attempt to send an error message back if possible
         const errorMsg: WsOutgoingMessage = {
@@ -69,7 +69,7 @@ export class WebSocketManager {
           this.ws.send(JSON.stringify(errorMsg))
         }
       } catch (sendError) {
-        console.error('Failed to send generic error message:', sendError)
+        console.error('[WebSocketManager] Failed to send generic error message:', sendError)
       }
     }
   }
@@ -95,7 +95,7 @@ export class WebSocketManager {
   }
 
   private handleOpen(): void {
-    console.log('WebSocket connection established successfully.')
+    console.log('[WebSocketManager] WebSocket connection established successfully.')
     this.initialConnectionEstablished = true
     this.reconnectAttempts = 0 // Reset attempts on successful connection
 
@@ -115,10 +115,14 @@ export class WebSocketManager {
       const rawMessage = JSON.parse(data.toString())
       const message = wsIncomingMessageSchema.parse(rawMessage)
 
+      if (process.env.DEBUG) {
+        console.log('[WebSocketManager][DEBUG] Incoming message:', message)
+      }
+
       // Delegate message handling to the provided callback
       await this.options.onMessage(message)
     } catch (error) {
-      console.error('Error processing message:', error)
+      console.error('[WebSocketManager] Error processing message:', error)
       // Send an error message back to the server
       this.sendMessage({
         type: 'error',
@@ -129,21 +133,21 @@ export class WebSocketManager {
   }
 
   private handleError(error: Error): void {
-    console.error('WebSocket error occurred:', error)
+    console.error('[WebSocketManager] WebSocket error occurred:', error)
   }
 
   private handleClose(code: number, reason: Buffer): void {
-    console.log(`WebSocket connection closed. Code: ${code}, Reason: ${reason.toString() || 'No reason provided'}`)
+    console.log(`[WebSocketManager] WebSocket connection closed. Code: ${code}, Reason: ${reason.toString() || 'No reason provided'}`)
 
     this.ws = null // Clear the reference
 
     if (this.isClosingExpected) {
-      console.log('Connection closed as expected.')
+      console.log('[WebSocketManager] Connection closed as expected.')
       return // Don't reconnect if closure was intended
     }
 
     if (!this.initialConnectionEstablished) {
-      console.error('Initial WebSocket connection failed or closed unexpectedly before completing handshake.')
+      console.error('[WebSocketManager] Initial WebSocket connection failed or closed unexpectedly before completing handshake.')
       process.exit(1) // Exit if the first connection never fully established and closed
     }
 
@@ -154,15 +158,21 @@ export class WebSocketManager {
       const jitter = Math.random() * this.INITIAL_RECONNECT_DELAY_MS * 0.5 // Add up to 50% jitter
       const delay = this.INITIAL_RECONNECT_DELAY_MS * 2 ** (this.reconnectAttempts - 1) + jitter
 
+      if (process.env.DEBUG) {
+        console.log(
+          `[WebSocketManager][DEBUG] Scheduling reconnect attempt ${this.reconnectAttempts} in ${(delay / 1000).toFixed(2)} seconds`
+        )
+      }
+
       console.log(
-        `Unexpected disconnection. Attempting to reconnect in ${(delay / 1000).toFixed(
+        `[WebSocketManager] Unexpected disconnection. Attempting to reconnect in ${(delay / 1000).toFixed(
           2,
         )} seconds... (Attempt ${this.reconnectAttempts}/${this.MAX_RECONNECT_ATTEMPTS})`,
       )
 
       setTimeout(() => this.connect(), delay)
     } else {
-      console.error(`Maximum reconnection attempts (${this.MAX_RECONNECT_ATTEMPTS}) reached. Exiting.`)
+      console.error(`[WebSocketManager] Maximum reconnection attempts (${this.MAX_RECONNECT_ATTEMPTS}) reached. Exiting.`)
       process.exit(1)
     }
   }
