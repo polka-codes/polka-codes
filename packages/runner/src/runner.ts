@@ -23,7 +23,7 @@ import type { WsIncomingMessage } from './types'
 export interface RunnerOptions {
   taskId: string
   sessionToken: string
-  githubToken?: string
+  githubToken: string
   api: string
 }
 
