@@ -361,7 +361,10 @@ export async function runRunner(options: RunnerOptions): Promise<void> {
     process.exit(1)
   }
   if (!options.githubToken) {
-    console.error('Error: GitHub token is required. Provide it via --github-token or GITHUB_TOKEN environment variable.')
+    options.githubToken = process.env.GITHUB_TOKEN
+  }
+  if (!options.githubToken) {
+    console.error('Error: GitHub token is required. Provide it via --github-token option or set GITHUB_TOKEN environment variable.')
     process.exit(1)
   }
   if (!options.api) {
