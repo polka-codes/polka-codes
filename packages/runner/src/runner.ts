@@ -128,14 +128,14 @@ export class Runner {
 
           // onBeforeInvokeTool handler override for coder agent
           if (request.params.overridenAgent === 'coder' && this.provider.executeCommand) {
-            const { foramt, check, test } = request.params
-            if (foramt) {
+            const { format, check, test } = request.params
+            if (format) {
               try {
                 // it is ok if format failed
                 // check should provide a better error message
-                await this.provider.executeCommand(foramt, false)
+                await this.provider.executeCommand(format, false)
               } catch (error) {
-                console.warn(`Failed to format code using command: ${foramt}`, error)
+                console.warn(`Failed to format code using command: ${format}`, error)
               }
             }
             if (check) {
