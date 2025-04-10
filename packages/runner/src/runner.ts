@@ -355,15 +355,22 @@ export class Runner {
  * Run the runner
  */
 export async function runRunner(options: RunnerOptions): Promise<void> {
-  // Validate required options
+  // Validate required fields
   if (!options.taskId) {
     console.error('Error: Task ID is required.')
     process.exit(1)
   }
+
+  // Resolve GitHub token fallback logic
   if (!options.githubToken) {
-    console.error('Error: GitHub token is required. Provide it via --github-token or GITHUB_TOKEN environment variable.')
+    options.githubToken = process.env.GITHUB_TOKEN
+  }
+
+  if (!options.githubToken) {
+    console.error('GitHub token is required. Provide it via --github-token option or set GITHUB_TOKEN environment variable.')
     process.exit(1)
   }
+
   if (!options.api) {
     console.error('Error: API URL is required.')
     process.exit(1)

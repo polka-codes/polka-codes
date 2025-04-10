@@ -12,7 +12,7 @@ program
   .version(version)
   .requiredOption('--task-id <id>', 'Task ID')
   .requiredOption('--session-token <token>', 'Session token for authentication')
-  .option('--github-token <token>', 'GitHub token for authentication', process.env.GITHUB_TOKEN)
+  .option('--github-token <token>', 'GitHub token for authentication (optional, defaults to GITHUB_TOKEN environment variable)', process.env.GITHUB_TOKEN)
   .option('--api <url>', 'API URL', process.env.API_URL || 'wss://dev-api.polka.codes/api/ws/runner')
   .action(async (options) => {
     await runRunner({
