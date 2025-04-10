@@ -39,7 +39,7 @@ export class Runner {
     this.provider = getProvider('coder', config || {}, {
       command: {
         onStarted(command) {
-          console.log(`$ >>>> $ ${command}`)
+          console.log(`[Runner] $ >>>> $ ${command}`)
         },
         onStdout(data) {
           process.stdout.write(data)
@@ -48,10 +48,10 @@ export class Runner {
           process.stderr.write(data)
         },
         onExit(code) {
-          console.log(`$ <<<< $ Command exited with code: ${code}`)
+          console.log(`[Runner] $ <<<< $ Command exited with code: ${code}`)
         },
         onError(error) {
-          console.log(`$ <<<< $ Command error: ${error}`)
+          console.log(`[Runner] $ <<<< $ Command error: ${error}`)
         },
       },
       excludeFiles: config.excludeFiles,
@@ -85,11 +85,14 @@ export class Runner {
    * Start the runner
    */
   public start(): void {
-    console.log('Runner initialized with:')
-    console.log(`  API URL: ${this.options.api}`)
-    console.log(`  Task ID: ${this.options.taskId}`)
+    console.log('[Runner] Runner initialized with:')
+    console.log(`[Runner]   API URL: ${this.options.api}`)
+    console.log(`[Runner]   Task ID: ${this.options.taskId}`)
 
     // Connect to WebSocket server
+    if (process.env.DEBUG) {
+      console.log('[Runner][DEBUG] Connecting to WebSocket server...')
+    }
     this.wsManager.connect()
   }
 
@@ -115,7 +118,7 @@ export class Runner {
    */
   private async handlePendingTools(message: Extract<WsIncomingMessage, { type: 'pending_tools' }>): Promise<void> {
     console.log(
-      `Received tool requests for step ${message.step}:`,
+      `[Runner] Received tool requests for step ${message.step}:`,
       message.requests.map((r) => r.tool),
     )
 
@@ -124,7 +127,7 @@ export class Runner {
     for (const request of message.requests) {
       const fn = async () => {
         try {
-          console.log(`Executing tool: ${request.tool} with params:`, request.params)
+          console.log(`[Runner] Executing tool: ${request.tool} with params:`, request.params)
 
           // onBeforeInvokeTool handler override for coder agent
           if (request.params.overridenAgent === 'coder' && this.provider.executeCommand) {
@@ -135,7 +138,7 @@ export class Runner {
                 // check should provide a better error message
                 await this.provider.executeCommand(foramt, false)
               } catch (error) {
-                console.warn(`Failed to format code using command: ${foramt}`, error)
+                console.warn(`[Runner] Failed to format code using command: ${foramt}`, error)
               }
             }
             if (check) {
@@ -145,7 +148,7 @@ export class Runner {
                   return responsePrompts.commandResult(check, exitCode, stdout, stderr)
                 }
               } catch (error) {
-                console.warn(`Failed to check code using command: ${check}`, error)
+                console.warn(`[Runner] Failed to check code using command: ${check}`, error)
               }
             }
             if (test) {
@@ -155,7 +158,7 @@ export class Runner {
                   return responsePrompts.commandResult(test, exitCode, stdout, stderr)
                 }
               } catch (error) {
-                console.warn(`Failed to test code using command: ${test}`, error)
+                console.warn(`[Runner] Failed to test code using command: ${test}`, error)
               }
             }
             return {
@@ -172,7 +175,7 @@ export class Runner {
           }
           return responsePrompts.errorInvokeTool(request.tool, 'Tool not available')
         } catch (toolError) {
-          console.error(`Error executing tool ${request.tool}:`, toolError)
+          console.error(`[Runner] Error executing tool ${request.tool}:`, toolError)
           return responsePrompts.errorInvokeTool(request.tool, toolError)
         }
       }
@@ -207,7 +210,7 @@ export class Runner {
    * Handle get files message
    */
   private async handleGetFiles(): Promise<void> {
-    console.log('Received get_files request.')
+    console.log('[Runner] Received get_files request.')
 
     try {
       // Get git status in porcelain format for machine-readable output
@@ -238,9 +241,9 @@ export class Runner {
       // Signal completion of file processing
       this.wsManager.sendMessage({ type: 'get_files_completed' })
 
-      console.log(`Processed ${fileChanges.length} changed files`)
+      console.log(`[Runner] Processed ${fileChanges.length} changed files`)
     } catch (error) {
-      console.error('Error getting changed files:', error)
+      console.error('[Runner] Error getting changed files:', error)
       // Send an error message back if git command fails
       this.wsManager.sendMessage({
         type: 'error',
@@ -254,7 +257,7 @@ export class Runner {
    * Handle done message
    */
   private handleDone(): void {
-    console.log('Received done message. Closing connection.')
+    console.log('[Runner] Received done message. Closing connection.')
     this.wsManager.close(true)
     // Ensure exit happens after potential close event processing
     setImmediate(() => process.exit(0))
@@ -325,9 +328,9 @@ export class Runner {
           path,
           content,
         })
-        console.log(`Sent content for file: ${path}`)
+        console.log(`[Runner] Sent content for file: ${path}`)
       } else {
-        console.error(`File not found: ${path}`)
+        console.error(`[Runner] File not found: ${path}`)
         this.wsManager.sendMessage({
           type: 'error',
           message: 'File not found',
@@ -335,7 +338,7 @@ export class Runner {
         })
       }
     } catch (error) {
-      console.error(`Error reading file ${path}:`, error)
+      console.error(`[Runner] Error reading file ${path}:`, error)
     }
   }
 
@@ -347,7 +350,7 @@ export class Runner {
       type: 'file_deleted',
       path,
     })
-    console.log(`Sent file_deleted for: ${path}`)
+    console.log(`[Runner] Sent file_deleted for: ${path}`)
   }
 }
 
@@ -357,15 +360,15 @@ export class Runner {
 export async function runRunner(options: RunnerOptions): Promise<void> {
   // Validate required options
   if (!options.taskId) {
-    console.error('Error: Task ID is required.')
+    console.error('[Runner] Error: Task ID is required.')
     process.exit(1)
   }
   if (!options.githubToken) {
-    console.error('Error: GitHub token is required. Provide it via --github-token or GITHUB_TOKEN environment variable.')
+    console.error('[Runner] Error: GitHub token is required. Provide it via --github-token or GITHUB_TOKEN environment variable.')
     process.exit(1)
   }
   if (!options.api) {
-    console.error('Error: API URL is required.')
+    console.error('[Runner] Error: API URL is required.')
     process.exit(1)
   }
 
