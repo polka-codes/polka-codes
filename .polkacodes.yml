@@ -30,3 +30,5 @@ rules: |
   When writing unit tests, use `.toMatchSnapshot()` if suitable
   When creating a new file, try to check if there are other files with similar content, and if so, read those files and use them as a reference
   NEVER mock modules
+policies:
+  - KnowledgeManagement

@@ -2,7 +2,7 @@ import { getAvailableTools } from '../../getAvailableTools'
 import { PermissionLevel, type ToolResponse, ToolResponseType } from '../../tool'
 import { allTools, attemptCompletion } from '../../tools'
 import { AgentBase } from '../AgentBase'
-import { responsePrompts } from '../prompts'
+import { knowledgeManagementPrompt, responsePrompts } from '../prompts'
 import type { AgentInfo, SharedAgentOptions } from './../AgentBase'
 import { fullSystemPrompt } from './prompts'
 
@@ -23,7 +23,7 @@ export class CoderAgent extends AgentBase {
       interactive: true,
     })
     const toolNamePrefix = 'tool_'
-    const systemPrompt = fullSystemPrompt(
+    let systemPrompt = fullSystemPrompt(
       {
         os: options.os,
       },
@@ -32,6 +32,15 @@ export class CoderAgent extends AgentBase {
       options.customInstructions ?? [],
       options.scripts ?? {},
     )
+    if (options.policies?.length) {
+      for (const policy of options.policies) {
+        switch (policy.trim().toLowerCase()) {
+          case 'knowledgemanagement':
+            systemPrompt += `\n${knowledgeManagementPrompt}`
+            break
+        }
+      }
+    }
 
     super(coderAgentInfo.name, options.ai, {
       systemPrompt,

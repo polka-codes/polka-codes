@@ -119,6 +119,7 @@ export class Runner {
           interactive: options.interactive,
           agents: this.#options.availableAgents ?? allAgents,
           callback,
+          policies: options.config.policies,
         }
         switch (agentName) {
           case coderAgentInfo.name:

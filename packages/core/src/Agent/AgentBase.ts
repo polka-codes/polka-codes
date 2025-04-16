@@ -155,6 +155,7 @@ export type SharedAgentOptions = {
   scripts?: Record<string, string | { command: string; description: string }>
   agents?: Readonly<AgentInfo[]>
   callback?: TaskEventCallback
+  policies?: string[]
 }
 
 export type AgentBaseConfig = {
