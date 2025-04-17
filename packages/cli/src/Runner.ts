@@ -12,6 +12,7 @@ import {
   CoderAgent,
   KnowledgeManagementPolicy,
   MultiAgent,
+  Policies,
   UsageMeter,
   allAgents,
   analyzerAgentInfo,
@@ -113,7 +114,7 @@ export class Runner {
     const policies: AgentPolicy[] = []
     for (const policy of options.config.policies ?? []) {
       switch (policy.trim().toLowerCase()) {
-        case KnowledgeManagementPolicy.name:
+        case Policies.KnowledgeManagement:
           policies.push(KnowledgeManagementPolicy)
           break
         default:
