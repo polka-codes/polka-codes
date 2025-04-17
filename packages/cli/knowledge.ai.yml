@@ -1,0 +1,43 @@
+files:
+  - path: "src/index.ts"
+    description: "Main CLI entry point"
+    api:
+      functions:
+        - name: "main"
+          params: [{ name: "argv", type: "string[]" }]
+          returns: "Promise<void>"
+  - path: "src/commands/chat.ts"
+    description: "Chat command implementation"
+    api:
+      functions:
+        - name: "chatCommand"
+          params: [{ name: "options", type: "ChatCommandOptions" }]
+          returns: "Promise<void>"
+  - path: "src/commands/commit.ts"
+    description: "Commit command implementation"
+    api:
+      functions:
+        - name: "commitCommand"
+          params: [{ name: "options", type: "CommitCommandOptions" }]
+          returns: "Promise<void>"
+  - path: "src/Runner.ts"
+    description: "Core runner for executing tasks"
+    api:
+      classes:
+        - name: "Runner"
+          methods:
+            - name: "run"
+              params: [{ name: "task", type: "string" }]
+              returns: "Promise<void>"
+
+invariants:
+  - "All commands must be async and return Promises"
+  - "Command options are validated before execution"
+
+patterns:
+  - "Commands follow a consistent structure with options handling"
+  - "Error handling is centralized in the Runner class"
+
+rules:
+  - "Each command must have a corresponding test file"
+  - "All user-facing output must go through the logger"

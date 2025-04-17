@@ -1,0 +1,14 @@
+description: "AI-powered tool implementations"
+files:
+  - path: "createNewProject.ts"
+    description: "Project scaffolding tool"
+  - path: "generateGitCommitMessage.ts"
+    description: "Commit message generation"
+  - path: "generateGithubPullRequestDetails.ts"
+    description: "PR description generation"
+  - path: "generateProjectConfig.ts"
+    description: "Project configuration generation"
+rules:
+  - "Tools should be self-contained"
+  - "Maintain consistent output formats"
+  - "Document expected inputs and outputs"

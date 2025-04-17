@@ -1,0 +1,51 @@
+files:
+  - path: "src/Agent/index.ts"
+    description: "Base agent implementation and agent registry"
+    api:
+      classes:
+        - name: "AgentBase"
+          methods:
+            - name: "run"
+              params: [{ name: "task", type: "string" }]
+              returns: "Promise<void>"
+  - path: "src/Agent/MultiAgent.ts"
+    description: "Multi-agent coordination system"
+    api:
+      classes:
+        - name: "MultiAgent"
+          methods:
+            - name: "delegateTask"
+              params: [{ name: "task", type: "string" }, { name: "context", type: "object" }]
+              returns: "Promise<void>"
+  - path: "src/AiService/index.ts"
+    description: "AI service abstraction layer"
+    api:
+      classes:
+        - name: "AiServiceBase"
+          methods:
+            - name: "complete"
+              params: [{ name: "prompt", type: "string" }]
+              returns: "Promise<string>"
+  - path: "src/tools/index.ts"
+    description: "Tool definitions and registry"
+    api:
+      functions:
+        - name: "getAvailableTools"
+          params: []
+          returns: "Tool[]"
+
+invariants:
+  - "All agents must extend AgentBase"
+  - "AI services must implement AiServiceBase"
+  - "Tools must follow the Tool interface"
+
+patterns:
+  - "Agent implementations use prompt templates"
+  - "AI services follow a provider pattern"
+  - "Tools use XML-style formatting for execution"
+
+rules:
+  - "Each agent must have corresponding prompt templates"
+  - "All tools must have tests"
+  - "AI service calls must be metered"
+  - "Knowledge management policies must be followed"

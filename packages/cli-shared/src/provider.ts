@@ -25,11 +25,15 @@ export type ProviderOptions = {
 export const getProvider = (agentName: AgentNameType, config: Config, options: ProviderOptions = {}): ToolProvider => {
   const ig = ignore().add(options.excludeFiles ?? [])
   const provider = {
-    readFile: async (path: string): Promise<string> => {
+    readFile: async (path: string): Promise<string | undefined> => {
       if (ig.ignores(path)) {
         throw new Error(`Not allow to access file ${path}`)
       }
-      return await readFile(path, 'utf8')
+      try {
+        return await readFile(path, 'utf8')
+      } catch (_e) {
+        return undefined
+      }
     },
     writeFile: async (path: string, content: string): Promise<void> => {
       if (ig.ignores(path)) {

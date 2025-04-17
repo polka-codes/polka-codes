@@ -53,6 +53,7 @@ export class CodeFixerAgent extends AgentBase {
       agents: options.agents,
       scripts: options.scripts,
       callback: options.callback,
+      policies: options.policies,
     })
 
     this.#maxRetries = options.maxRetries ?? 5

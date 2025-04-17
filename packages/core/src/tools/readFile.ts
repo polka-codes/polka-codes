@@ -50,11 +50,15 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
   const resp = []
   for (const path of paths) {
     const fileContent = await provider.readFile(path)
-    const isEmpty = fileContent.trim().length === 0
-    if (isEmpty) {
-      resp.push(`<read_file_file_content path="${path}" is_empty="true" />`)
+    if (!fileContent) {
+      resp.push(`<read_file_file_content path="${path}" file_not_found="true" />`)
     } else {
-      resp.push(`<read_file_file_conten path="${path}">${fileContent}</read_file_file_content>`)
+      const isEmpty = fileContent.trim().length === 0
+      if (isEmpty) {
+        resp.push(`<read_file_file_content path="${path}" is_empty="true" />`)
+      } else {
+        resp.push(`<read_file_file_conten path="${path}">${fileContent}</read_file_file_content>`)
+      }
     }
   }
 

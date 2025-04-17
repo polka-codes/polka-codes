@@ -155,6 +155,7 @@ export type SharedAgentOptions = {
   scripts?: Record<string, string | { command: string; description: string }>
   agents?: Readonly<AgentInfo[]>
   callback?: TaskEventCallback
+  policies: AgentPolicy[]
 }
 
 export type AgentBaseConfig = {
@@ -166,12 +167,22 @@ export type AgentBaseConfig = {
   agents?: Readonly<AgentInfo[]>
   scripts?: Record<string, string | { command: string; description: string }>
   callback?: TaskEventCallback
+  policies: AgentPolicy[]
 }
 
 export type AgentInfo = {
   name: string
   responsibilities: string[]
 }
+
+export type AgentPolicyInstance = {
+  name: string
+  prompt?: string
+  updateResponse?: (response: AssistantMessageContent[]) => Promise<AssistantMessageContent[]>
+  onBeforeInvokeTool?: (name: string, args: Record<string, string>) => Promise<ToolResponse | undefined>
+}
+
+export type AgentPolicy = (tools: Record<string, FullToolInfo>) => AgentPolicyInstance | undefined
 
 export type ToolResponseOrToolPause = { type: 'response'; tool: string; response: string } | { type: 'pause'; tool: string; object: any }
 
@@ -193,6 +204,7 @@ export abstract class AgentBase {
   protected readonly handlers: Record<string, FullToolInfo>
   #messages: MessageParam[] = []
   #originalTask?: string
+  readonly #policies: Readonly<AgentPolicyInstance[]>
 
   constructor(name: string, ai: AiServiceBase, config: AgentBaseConfig) {
     this.ai = ai
@@ -203,13 +215,27 @@ export abstract class AgentBase {
       config.systemPrompt += `\n${agents}`
     }
 
-    this.config = config
-
     const handlers: Record<string, FullToolInfo> = {}
     for (const tool of config.tools) {
       handlers[tool.name] = tool
     }
     this.handlers = handlers
+
+    const policies: AgentPolicyInstance[] = []
+
+    for (const policy of config.policies) {
+      const instance = policy(handlers)
+      if (instance) {
+        policies.push(instance)
+
+        if (instance.prompt) {
+          config.systemPrompt += `\n${instance.prompt}`
+        }
+      }
+    }
+
+    this.config = config
+    this.#policies = policies
   }
 
   get messages(): Readonly<MessageParam[]> {
@@ -332,9 +358,17 @@ export abstract class AgentBase {
   async #handleResponse(
     response: AssistantMessageContent[],
   ): Promise<{ type: 'reply'; message: string } | { type: 'exit'; reason: ExitReason }> {
-    const toolReponses: ToolResponseOrToolPause[] = []
+    const toolResponses: ToolResponseOrToolPause[] = []
     let hasPause = false
-    outer: for (const content of response) {
+
+    let updatedResponse = response
+    for (const hook of this.#policies) {
+      if (hook.updateResponse) {
+        updatedResponse = await hook.updateResponse(updatedResponse)
+      }
+    }
+
+    outer: for (const content of updatedResponse) {
       switch (content.type) {
         case 'text':
           // no need to handle text content
@@ -346,10 +380,10 @@ export abstract class AgentBase {
             case ToolResponseType.Reply:
               // reply to the tool use
               await this.#callback({ kind: TaskEventKind.ToolReply, agent: this, tool: content.name })
-              toolReponses.push({ type: 'response', tool: content.name, response: toolResp.message })
+              toolResponses.push({ type: 'response', tool: content.name, response: toolResp.message })
               break
             case ToolResponseType.Exit:
-              if (toolReponses.length > 0) {
+              if (toolResponses.length > 0) {
                 // agent is trying run too many tools in a single request
                 // stop the tool execution
                 break outer
@@ -359,19 +393,19 @@ export abstract class AgentBase {
             case ToolResponseType.Invalid:
               // tell AI about the invalid arguments
               await this.#callback({ kind: TaskEventKind.ToolInvalid, agent: this, tool: content.name })
-              toolReponses.push({ type: 'response', tool: content.name, response: toolResp.message })
+              toolResponses.push({ type: 'response', tool: content.name, response: toolResp.message })
               break outer
             case ToolResponseType.Error:
               // tell AI about the error
               await this.#callback({ kind: TaskEventKind.ToolError, agent: this, tool: content.name })
-              toolReponses.push({ type: 'response', tool: content.name, response: toolResp.message })
+              toolResponses.push({ type: 'response', tool: content.name, response: toolResp.message })
               break outer
             case ToolResponseType.Interrupted:
               // the execution is killed
               await this.#callback({ kind: TaskEventKind.ToolInterrupted, agent: this, tool: content.name })
               return { type: 'exit', reason: toolResp }
             case ToolResponseType.HandOver: {
-              if (toolReponses.length > 0) {
+              if (toolResponses.length > 0) {
                 // agent is trying run too many tools in a single request
                 // stop the tool execution
                 break outer
@@ -394,7 +428,7 @@ export abstract class AgentBase {
               return { type: 'exit', reason: handOverResp }
             }
             case ToolResponseType.Delegate: {
-              if (toolReponses.length > 0) {
+              if (toolResponses.length > 0) {
                 // agent is trying run too many tools in a single request
                 // stop the tool execution
                 continue
@@ -419,7 +453,7 @@ export abstract class AgentBase {
             case ToolResponseType.Pause: {
               // pause the execution
               await this.#callback({ kind: TaskEventKind.ToolPause, agent: this, tool: content.name, object: toolResp.object })
-              toolReponses.push({ type: 'pause', tool: content.name, object: toolResp.object })
+              toolResponses.push({ type: 'pause', tool: content.name, object: toolResp.object })
               hasPause = true
             }
           }
@@ -429,15 +463,15 @@ export abstract class AgentBase {
     }
 
     if (hasPause) {
-      return { type: 'exit', reason: { type: 'Pause', responses: toolReponses } }
+      return { type: 'exit', reason: { type: 'Pause', responses: toolResponses } }
     }
 
-    if (toolReponses.length === 0) {
+    if (toolResponses.length === 0) {
       // always require a tool usage
       return { type: 'reply', message: responsePrompts.requireUseTool }
     }
 
-    const finalResp = toolReponses
+    const finalResp = toolResponses
       .filter((resp) => resp.type === 'response')
       .map(({ tool, response }) => responsePrompts.toolResults(tool, response))
       .join('\n\n')
@@ -452,6 +486,14 @@ export abstract class AgentBase {
           type: ToolResponseType.Error,
           message: responsePrompts.errorInvokeTool(name, 'Tool not found'),
           canRetry: false,
+        }
+      }
+      for (const instance of this.#policies) {
+        if (instance.onBeforeInvokeTool) {
+          const resp = await instance.onBeforeInvokeTool(name, args)
+          if (resp) {
+            return resp
+          }
         }
       }
       const resp = await this.onBeforeInvokeTool(this.handlers[name].name, args)

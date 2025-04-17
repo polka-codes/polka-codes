@@ -1,0 +1,33 @@
+files:
+  - path: "src/github.ts"
+    description: "GitHub API client implementation"
+    api:
+      classes:
+        - name: "GitHubClient"
+          methods:
+            - name: "getIssue"
+              params: [{ name: "options", type: "GetIssueOptions" }]
+              returns: "Promise<GitHubIssue>"
+            - name: "getPullRequest"
+              params: [{ name: "options", type: "GetPROptions" }]
+              returns: "Promise<GitHubPR>"
+  - path: "src/processBody.ts"
+    description: "GitHub issue/PR body processing utilities"
+    api:
+      functions:
+        - name: "processBody"
+          params: [{ name: "body", type: "string" }]
+          returns: "ProcessedBody"
+
+invariants:
+  - "All GitHub API calls must be authenticated"
+  - "GraphQL queries must be defined in .gql files"
+
+patterns:
+  - "API responses are typed and validated"
+  - "Error handling includes GitHub rate limit awareness"
+
+rules:
+  - "All GraphQL queries must have corresponding types"
+  - "API calls must handle rate limiting"
+  - "Sensitive data must not be logged"

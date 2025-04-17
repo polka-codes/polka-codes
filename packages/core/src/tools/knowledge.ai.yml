@@ -1,0 +1,18 @@
+description: "Tool implementations for agent operations"
+files:
+  - path: "askFollowupQuestion.ts"
+    description: "Tool for asking user follow-up questions"
+  - path: "attemptCompletion.ts"
+    description: "Tool for signaling task completion"
+  - path: "executeCommand.ts"
+    description: "Tool for executing system commands"
+  - path: "readFile.ts"
+    description: "Tool for reading file contents"
+  - path: "writeToFile.ts"
+    description: "Tool for writing file contents"
+  - path: "replaceInFile.ts"
+    description: "Tool for modifying file contents"
+rules:
+  - "Each tool should have clear input/output types"
+  - "Tools should be atomic and focused"
+  - "Maintain consistent error handling"
