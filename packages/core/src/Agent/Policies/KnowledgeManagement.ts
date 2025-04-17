@@ -22,18 +22,22 @@ You are equipped with **Knowledge Management** capabilities:
 
 2. **Where to store it**
    • Save knowledge in a YAML file named \`knowledge.ai.yml\`.
+   • **Create the file in the repository root if it does not yet exist.**
    • One file per directory.
      – The repository root file records knowledge that applies project‑wide (e.g., service responsibilities, global patterns).
      – Each sub‑directory keeps only the knowledge relevant to that directory or package.
-   • Use clear keys such as \`files\`, \`invariants\`, \`patterns\`, \`rules\`.
+   • Use clear keys such as \`description\`, \`files\`, \`rules\`.
 
 3. **When to update**
+   • **Default behaviour:** only create / update knowledge for the files you actively read, create, or modify during the current task.
+     – Operate on other files **only if the user explicitly requests it**.
    • **While working**: after reading, analysing, creating, or modifying code, immediately record any new or changed knowledge.
-   • **On refactor / deletion**: locate and delete or amend obsolete entries so that knowledge never drifts from the codebase.
+   • **On refactor / deletion**: locate and delete or amend obsolete entries so that knowledge never drifts from the codebase.
    • **Granularity**: update only the affected directory’s \`knowledge.ai.yml\`, except when the change has global impact.
 
 4. **How to format (illustrative)**
 \`\`\`yaml
+description: "description of the directory"
 files:
   - path: "src/utils/math.ts"
     description: "Numeric helpers for currency calculations"
@@ -42,12 +46,8 @@ files:
         - name: "add"
           params: [{ name: "a", type: "number" }, { name: "b", type: "number" }]
           returns: "number"
-invariants:
-  - "All currency math uses BigInt to avoid floating‑point errors"
-patterns:
-  - "Prefer functional utilities over classes in utils/"
 rules:
-  - "Every exported function must have JSDoc"
+  - "rules that applies to all files in this directory"
 \`\`\`
 
 5. **Source of truth**
