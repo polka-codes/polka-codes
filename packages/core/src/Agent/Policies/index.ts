@@ -1,1 +1,0 @@
-export { KnowledgeManagementPolicy } from './KnowledgeManagement'
