@@ -1,0 +1,13 @@
+files:
+  - path: "package.json"
+    description: "Main project configuration and dependencies"
+  - path: "bunfig.toml"
+    description: "Bun runtime configuration"
+  - path: "biome.jsonc"
+    description: "Code formatting and linting configuration"
+rules:
+  - "Use bun as package manager"
+  - "Write tests using bun:test"
+  - "Avoid mocking in tests - use spyOn from bun:test if needed"
+  - "Use .toMatchSnapshot() for tests when suitable"
+  - "Keep knowledge files updated in key directories"
