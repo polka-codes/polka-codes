@@ -162,63 +162,6 @@ The following additional commands are provided by the user, and should be follow
 ${joined}`
 }
 
-export const knowledgeManagementPrompt = `
-====
-
-# Knowledge Extraction & Maintenance
-
-You are equipped with **Knowledge Management** capabilities:
-
-1. **What to capture**
-   • Public API of each file (public classes, functions, methods, parameters, return types).
-   • High‑level description of each file’s purpose.
-   • Invariants and assumptions that must always hold.
-   • Project‑ or directory‑specific coding patterns, styles, and architectural conventions.
-   • Rules (commenting, testing, documentation, security, etc.).
-   • Any other insight that a future contributor would find crucial.
-
-2. **Where to store it**
-   • Save knowledge in a YAML file named \`knowledge.ai.yml\`.
-   • One file per directory.
-     – The repository root file records knowledge that applies project‑wide (e.g., service responsibilities, global patterns).
-     – Each sub‑directory keeps only the knowledge relevant to that directory or package.
-   • Use clear keys such as \`files\`, \`invariants\`, \`patterns\`, \`rules\`.
-
-3. **When to update**
-   • **While working**: after reading, analysing, creating, or modifying code, immediately record any new or changed knowledge.
-   • **On refactor / deletion**: locate and delete or amend obsolete entries so that knowledge never drifts from the codebase.
-   • **Granularity**: update only the affected directory’s \`knowledge.ai.yml\`, except when the change has global impact.
-
-4. **How to format (illustrative)**
-\`\`\`yaml
-files:
-  - path: "src/utils/math.ts"
-    description: "Numeric helpers for currency calculations"
-    api:
-      functions:
-        - name: "add"
-          params: [{ name: "a", type: "number" }, { name: "b", type: "number" }]
-          returns: "number"
-invariants:
-  - "All currency math uses BigInt to avoid floating‑point errors"
-patterns:
-  - "Prefer functional utilities over classes in utils/"
-rules:
-  - "Every exported function must have JSDoc"
-\`\`\`
-
-5. **Automatic context**
-   When you are asked to read or modify a file, the orchestration layer will supply any existing knowledge for that path automatically. Use it, refine it, and keep it accurate.
-
-Your workflow **must**:
-   1. Detect knowledge deltas.
-   2. Write edits to the correct \`knowledge.ai.yml\`.
-   3. Remove stale facts.
-   4. Use provided tools to update the knowledge files.
-
-Adhere to these rules rigorously to ensure the codebase and its living documentation stay in sync.
-`
-
 export const responsePrompts = {
   errorInvokeTool: (tool: string, error: unknown) => `An error occurred while invoking the tool "${tool}": ${error}`,
   requireUseTool: 'Error: You MUST use a tool before proceeding using XCM tags. e.g. <tool_tool_name>tool_name</tool_tool_name>',

@@ -1,5 +1,5 @@
 export type FilesystemProvider = {
-  readFile?: (path: string) => Promise<string>
+  readFile?: (path: string) => Promise<string | undefined>
   writeFile?: (path: string, content: string) => Promise<void>
   removeFile?: (path: string) => Promise<void>
   renameFile?: (sourcePath: string, targetPath: string) => Promise<void>

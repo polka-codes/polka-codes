@@ -4,11 +4,13 @@ import {
   type AgentBase,
   type AgentInfo,
   type AgentNameType,
+  type AgentPolicy,
   type AiServiceBase,
   AnalyzerAgent,
   ArchitectAgent,
   CodeFixerAgent,
   CoderAgent,
+  KnowledgeManagementPolicy,
   MultiAgent,
   UsageMeter,
   allAgents,
@@ -108,6 +110,18 @@ export class Runner {
 
     const callback = printEvent(options.verbose, this.#usageMeter)
 
+    const policies: AgentPolicy[] = []
+    for (const policy of options.config.policies ?? []) {
+      switch (policy.trim().toLowerCase()) {
+        case KnowledgeManagementPolicy.name:
+          policies.push(KnowledgeManagementPolicy)
+          break
+        default:
+          console.log('Unknown policy:', policy)
+          break
+      }
+    }
+
     this.multiAgent = new MultiAgent({
       createAgent: async (name: string): Promise<AgentBase> => {
         const agentName = name.trim().toLowerCase()
@@ -119,7 +133,7 @@ export class Runner {
           interactive: options.interactive,
           agents: this.#options.availableAgents ?? allAgents,
           callback,
-          policies: options.config.policies,
+          policies,
         }
         switch (agentName) {
           case coderAgentInfo.name:
