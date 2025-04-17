@@ -40,5 +40,4 @@ patterns:
 
 rules:
   - "Each command must have a corresponding test file"
-  - "Command options must be documented with JSDoc"
   - "All user-facing output must go through the logger"

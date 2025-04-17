@@ -368,7 +368,7 @@ export abstract class AgentBase {
       }
     }
 
-    outer: for (const content of response) {
+    outer: for (const content of updatedResponse) {
       switch (content.type) {
         case 'text':
           // no need to handle text content
