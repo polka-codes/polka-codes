@@ -5,6 +5,7 @@ agents:
         - __snapshots__
         - .husky
         - packages/github/src/types/github-types.ts
+        - knowledge.ai.yml
 excludeFiles:
   - .env
   - bun.lock
