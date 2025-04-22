@@ -36,6 +36,7 @@ export class ArchitectAgent extends AgentBase {
       agents: options.agents,
       scripts: options.scripts,
       callback: options.callback,
+      policies: options.policies,
     })
   }
 

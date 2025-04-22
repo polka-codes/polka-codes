@@ -5,7 +5,7 @@ import { getString } from './utils'
 export const toolInfo = {
   name: 'write_to_file',
   description:
-    "Request to write content to a file at the specified path. If the file exists, it will be overwritten with the provided content. If the file doesn't exist, it will be created. This tool will automatically create any directories needed to write the file.",
+    "Request to write content to a file at the specified path. If the file exists, it will be overwritten with the provided content. If the file doesn't exist, it will be created. This tool will automatically create any directories needed to write the file. Ensure that the output content does not include incorrect escaped character patterns such as `&lt;` and `&gt;`.",
   parameters: [
     {
       name: 'path',

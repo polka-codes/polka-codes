@@ -1,15 +1,20 @@
+import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import os from 'node:os'
+import { join } from 'node:path'
 import {
   type AgentBase,
   type AgentInfo,
   type AgentNameType,
+  type AgentPolicy,
   type AiServiceBase,
   AnalyzerAgent,
   ArchitectAgent,
   CodeFixerAgent,
   CoderAgent,
+  KnowledgeManagementPolicy,
   MultiAgent,
+  Policies,
   UsageMeter,
   allAgents,
   analyzerAgentInfo,
@@ -39,6 +44,8 @@ export class Runner {
   readonly #usageMeter: UsageMeter
 
   readonly multiAgent: MultiAgent
+
+  readonly #hasKnowledgeManagementPolicy: boolean
 
   /** Initialize core components including usage tracking and agent service provisioning */
   constructor(options: RunnerOptions) {
@@ -108,6 +115,22 @@ export class Runner {
 
     const callback = printEvent(options.verbose, this.#usageMeter)
 
+    this.#hasKnowledgeManagementPolicy = false
+
+    const policies: AgentPolicy[] = []
+    for (const policy of options.config.policies ?? []) {
+      switch (policy.trim().toLowerCase()) {
+        case Policies.KnowledgeManagement:
+          policies.push(KnowledgeManagementPolicy)
+          this.#hasKnowledgeManagementPolicy = true
+          console.log('KnowledgeManagementPolicy enabled')
+          break
+        default:
+          console.log('Unknown policy:', policy)
+          break
+      }
+    }
+
     this.multiAgent = new MultiAgent({
       createAgent: async (name: string): Promise<AgentBase> => {
         const agentName = name.trim().toLowerCase()
@@ -119,6 +142,7 @@ export class Runner {
           interactive: options.interactive,
           agents: this.#options.availableAgents ?? allAgents,
           callback,
+          policies,
         }
         switch (agentName) {
           case coderAgentInfo.name:
@@ -191,12 +215,28 @@ export class Runner {
     const finalExcludes = excludes.concat(this.#options.config.excludeFiles ?? [])
     const [fileList] = await listFiles(cwd, true, maxFileCount, cwd, finalExcludes)
     const fileContext = `<files>\n${fileList.join('\n')}\n</files>`
-    return `<now_date>${new Date().toISOString()}</now_date>${fileContext}`
+
+    let knowledgeContent = ''
+
+    // If KnowledgeManagement policy is enabled, try to read knowledge.ai.yml at root
+    if (this.#hasKnowledgeManagementPolicy) {
+      const knowledgeFilePath = join(cwd, 'knowledge.ai.yml')
+      if (existsSync(knowledgeFilePath)) {
+        try {
+          const content = await readFile(knowledgeFilePath, 'utf8')
+          knowledgeContent = `\n<knowledge_file path="knowledge.ai.yml">${content}</knowledge_file>`
+        } catch (error) {
+          console.warn(`Failed to read knowledge file at root: ${error}`)
+        }
+      }
+    }
+
+    return `<now_date>${new Date().toISOString()}</now_date>${fileContext}${knowledgeContent}`
   }
 
   /** Execute a task through the agent system, initializing context if not provided */
-  async startTask(task: string, agentName: string = architectAgentInfo.name, context?: string) {
-    const finalContext = context ?? (await this.#defaultContext(agentName))
+  async startTask(task: string, agentName: string = architectAgentInfo.name) {
+    const finalContext = await this.#defaultContext(agentName)
     const exitReason = await this.multiAgent.startTask({
       agentName: agentName,
       task: `<task>${task}</task>\n<context>${finalContext}</context>`,

@@ -1,0 +1,45 @@
+files:
+  - path: "src/config.ts"
+    description: "Configuration management for CLI tools"
+    api:
+      functions:
+        - name: "getConfig"
+          params: []
+          returns: "Promise<Config>"
+        - name: "setConfig"
+          params: [{ name: "config", type: "Config" }]
+          returns: "Promise<void>"
+  - path: "src/utils/listFiles.ts"
+    description: "Utility for listing files in a directory"
+    api:
+      functions:
+        - name: "listFiles"
+          params: [{ name: "options", type: "ListFilesOptions" }]
+          returns: "Promise<string[]>"
+  - path: "src/utils/searchFiles.ts"
+    description: "Utility for searching files with regex patterns"
+    api:
+      functions:
+        - name: "searchFiles"
+          params: [{ name: "options", type: "SearchFilesOptions" }]
+          returns: "Promise<SearchResult[]>"
+  - path: "src/utils/tree-sitter/index.ts"
+    description: "Tree-sitter based code parsing utilities"
+    api:
+      functions:
+        - name: "parseCode"
+          params: [{ name: "options", type: "ParseCodeOptions" }]
+          returns: "Promise<ParseResult>"
+
+invariants:
+  - "All file system operations are async and return Promises"
+  - "Configuration is always validated before being used"
+
+patterns:
+  - "Utility functions follow a consistent options object pattern"
+  - "Error handling is done through try/catch with specific error types"
+
+rules:
+  - "All exported functions must have JSDoc comments"
+  - "All async operations must be properly awaited"
+  - "File system utilities must handle path normalization"

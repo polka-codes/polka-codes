@@ -1,0 +1,14 @@
+description: "Tree-sitter based language parsing utilities"
+files:
+  - path: "index.ts"
+    description: "Main Tree-sitter parser interface"
+  - path: "languageParser.ts"
+    description: "Language parsing implementation"
+  - path: "queries/index.ts"
+    description: "Language query definitions"
+  - path: "tree-sitter-wasms.d.ts"
+    description: "Type definitions for Tree-sitter WASM modules"
+rules:
+  - "Each language should have its own query file"
+  - "Keep queries optimized for performance"
+  - "Maintain type safety for parsed results"

@@ -3,7 +3,13 @@ import type { AgentBase, ExitReason } from './AgentBase'
 
 export type MultiAgentConfig = {
   createAgent: (name: string) => Promise<AgentBase>
-  getPrompt?: (name: string, task: string, context?: string, files?: string[], originalTask?: string) => Promise<string>
+  getPrompt?: (
+    name: string,
+    task: string,
+    context: string | undefined,
+    files: string[] | undefined,
+    originalTask: string | undefined,
+  ) => Promise<string>
 }
 
 export class MultiAgent {

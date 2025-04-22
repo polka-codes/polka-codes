@@ -1,0 +1,18 @@
+description: "AI service implementations for different providers"
+files:
+  - path: "AiServiceBase.ts"
+    description: "Base class for all AI services"
+  - path: "AnthropicService.ts"
+    description: "Anthropic API service implementation"
+  - path: "DeepSeekService.ts"
+    description: "DeepSeek API service implementation"
+  - path: "OllamaService.ts"
+    description: "Ollama local service implementation"
+  - path: "OpenRouterService.ts"
+    description: "OpenRouter API service implementation"
+  - path: "UsageMeter.ts"
+    description: "Token usage tracking"
+rules:
+  - "Each service should implement the same interface"
+  - "Handle rate limiting and retries consistently"
+  - "Track token usage accurately"

@@ -102,6 +102,13 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
 
   const fileContent = await provider.readFile(path)
 
+  if (fileContent == null) {
+    return {
+      type: ToolResponseType.Error,
+      message: `<error><replace_in_file_path>${path}</replace_in_file_path><error_message>File not found</error_message></error>`,
+    }
+  }
+
   const result = await replaceInFile(fileContent, diff)
 
   await provider.writeFile(path, result)

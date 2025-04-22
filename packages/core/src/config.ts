@@ -67,7 +67,12 @@ export const configSchema = z
       .optional(),
     rules: z.array(z.string()).optional().or(z.string()).optional(),
     excludeFiles: z.array(z.string()).optional(),
+    policies: z.array(z.string()).optional(),
   })
   .strict()
 
 export type Config = z.infer<typeof configSchema>
+
+export enum Policies {
+  KnowledgeManagement = 'knowledgemanagement',
+}
