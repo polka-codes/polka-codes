@@ -41,16 +41,7 @@ describe('listFiles', () => {
     const [files, limitReached] = await listFiles(testDir, true, 3, testDir)
     expect(limitReached).toBe(true)
 
-    // Should include files up to the limit
-    expect(files).toContain('.gitignore')
-    expect(files).toContain('file1.txt')
-    expect(files).toContain('file2.txt')
-
-    // Should include the truncation marker for subdir
-    expect(files.includes('subdir/(files omitted)')).toBe(true)
-
-    // Total should be maxCount + truncation markers
-    expect(files.length).toBe(4) // 3 files + 1 truncation marker
+    expect(files).toMatchSnapshot()
   })
 
   it('should show truncation markers for root directories', async () => {
@@ -58,8 +49,7 @@ describe('listFiles', () => {
     const [files, limitReached] = await listFiles(testDir, true, 2, testDir)
     expect(limitReached).toBe(true)
 
-    // Should include truncation markers
-    expect(files).toContain('./(files omitted)')
+    expect(files).toMatchSnapshot()
   })
 
   it('should not show truncation markers when limit not reached', async () => {
@@ -67,9 +57,7 @@ describe('listFiles', () => {
     const [files, limitReached] = await listFiles(testDir, true, 100, testDir)
     expect(limitReached).toBe(false)
 
-    // Should not include any truncation markers
-    const markers = files.filter((f) => f.includes('/(files omitted)'))
-    expect(markers.length).toBe(0)
+    expect(files).toMatchSnapshot()
   })
 
   it('should handle empty directory', async () => {
