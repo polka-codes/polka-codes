@@ -177,6 +177,7 @@ export type AgentInfo = {
 
 export type AgentPolicyInstance = {
   name: string
+  tools?: FullToolInfo[]
   prompt?: string
   updateResponse?: (response: AssistantMessageContent[]) => Promise<AssistantMessageContent[]>
   onBeforeInvokeTool?: (name: string, args: Record<string, string>) => Promise<ToolResponse | undefined>
@@ -219,7 +220,6 @@ export abstract class AgentBase {
     for (const tool of config.tools) {
       handlers[tool.name] = tool
     }
-    this.handlers = handlers
 
     const policies: AgentPolicyInstance[] = []
 
@@ -231,8 +231,15 @@ export abstract class AgentBase {
         if (instance.prompt) {
           config.systemPrompt += `\n${instance.prompt}`
         }
+        if (instance.tools) {
+          for (const tool of instance.tools) {
+            handlers[tool.name] = tool
+          }
+        }
       }
     }
+
+    this.handlers = handlers
 
     this.config = config
     this.#policies = policies

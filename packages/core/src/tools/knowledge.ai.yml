@@ -1,18 +1,43 @@
-description: "Tool implementations for agent operations"
+description: Tool implementations for agent operations
 files:
-  - path: "askFollowupQuestion.ts"
-    description: "Tool for asking user follow-up questions"
-  - path: "attemptCompletion.ts"
-    description: "Tool for signaling task completion"
-  - path: "executeCommand.ts"
-    description: "Tool for executing system commands"
-  - path: "readFile.ts"
-    description: "Tool for reading file contents"
-  - path: "writeToFile.ts"
-    description: "Tool for writing file contents"
-  - path: "replaceInFile.ts"
-    description: "Tool for modifying file contents"
+  askFollowupQuestion.ts:
+    description: Tool for asking user follow-up questions
+  attemptCompletion.ts:
+    description: Tool for signaling task completion
+  executeCommand.ts:
+    description: Tool for executing system commands
+  readFile.ts:
+    description: Tool for reading file contents
+  writeToFile.ts:
+    description: Tool for writing file contents
+  replaceInFile.ts:
+    description: Tool for modifying file contents
+  updateKnowledge.ts:
+    description: Tool for updating knowledge.ai.yml files with smart merging capabilities
+    api:
+      functions:
+        "1":
+          name: updateKnowledge
+          description: Updates knowledge files with smart merging of YAML content
+          params:
+            "1":
+              name: path
+              type: string
+              description: Directory path where knowledge file is located
+            "2":
+              name: knowledge
+              type: string
+              description: YAML content to merge
+          returns: Promise<ToolResponse>
+    features:
+      "1": Path-keyed dictionaries for files section
+      "2": Numbered dictionaries for ordered data
+      "3": Special directives for dictionary operations ($merge, $remove, $replace)
+      "4": Dot notation for path-based updates
+      "5": Automatic conversion of arrays to numbered dictionaries
+      "6": Smart merging of nested structures
 rules:
-  - "Each tool should have clear input/output types"
-  - "Tools should be atomic and focused"
-  - "Maintain consistent error handling"
+  "1": Each tool should have clear input/output types
+  "2": Tools should be atomic and focused
+  "3": Maintain consistent error handling
+  "4": Use numbered dictionary format instead of arrays in knowledge files

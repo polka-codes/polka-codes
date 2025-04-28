@@ -1,13 +1,14 @@
 files:
-  - path: "package.json"
+  "package.json":
     description: "Main project configuration and dependencies"
-  - path: "bunfig.toml"
+  "bunfig.toml":
     description: "Bun runtime configuration"
-  - path: "biome.jsonc"
+  "biome.jsonc":
     description: "Code formatting and linting configuration"
 rules:
-  - "Use bun as package manager"
-  - "Write tests using bun:test"
-  - "Avoid mocking in tests - use spyOn from bun:test if needed"
-  - "Use .toMatchSnapshot() for tests when suitable"
-  - "Keep knowledge files updated in key directories"
+  1: "Use bun as package manager"
+  2: "Write tests using bun:test"
+  3: "Avoid mocking in tests - use spyOn from bun:test if needed"
+  4: "Use .toMatchSnapshot() for tests when suitable"
+  5: "Keep knowledge files updated in key directories"
+  6: "Use numbered dictionary format instead of arrays in knowledge files"
