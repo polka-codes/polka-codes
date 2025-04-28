@@ -1,11 +1,84 @@
-import { dirname, join } from 'node:path'
-import { Policies } from '../../config'
-import { listFiles, readFile, updateKnowledge, writeToFile } from '../../tools'
-import { getString, getStringArray } from '../../tools/utils'
-import type { AgentPolicy } from '../AgentBase'
-import type { AssistantMessageContent } from '../parseAssistantMessage'
+// Bun Snapshot v1, https://goo.gl/fbAQLP
 
-const prompt = `
+exports[`KnowledgeManagementPolicy with readFile tool updateResponse adds readFile for knowledge files when readFile tool is used 1`] = `
+[
+  {
+    "name": "read_file",
+    "params": {
+      "path": "src/foo/bar.ts",
+    },
+    "type": "tool_use",
+  },
+  {
+    "name": "read_file",
+    "params": {
+      "path": "src/foo/knowledge.ai.yml,src/knowledge.ai.yml",
+    },
+    "type": "tool_use",
+  },
+]
+`;
+
+exports[`KnowledgeManagementPolicy with readFile tool updateResponse adds readFile for knowledge files when listFiles tool is used 1`] = `
+[
+  {
+    "name": "list_files",
+    "params": {
+      "path": "src/foo",
+    },
+    "type": "tool_use",
+  },
+  {
+    "name": "read_file",
+    "params": {
+      "path": "src/knowledge.ai.yml",
+    },
+    "type": "tool_use",
+  },
+]
+`;
+
+exports[`KnowledgeManagementPolicy with readFile tool updateResponse does not add readFile for other tool uses 1`] = `
+[
+  {
+    "name": "write_to_file",
+    "params": {
+      "content": "test",
+      "path": "src/foo/bar.ts",
+    },
+    "type": "tool_use",
+  },
+]
+`;
+
+exports[`KnowledgeManagementPolicy with readFile tool updateResponse combines paths from multiple tool uses 1`] = `
+[
+  {
+    "name": "read_file",
+    "params": {
+      "path": "src/foo/bar.ts",
+    },
+    "type": "tool_use",
+  },
+  {
+    "name": "list_files",
+    "params": {
+      "path": "src/baz",
+    },
+    "type": "tool_use",
+  },
+  {
+    "name": "read_file",
+    "params": {
+      "path": "src/foo/knowledge.ai.yml,src/knowledge.ai.yml",
+    },
+    "type": "tool_use",
+  },
+]
+`;
+
+exports[`KnowledgeManagementPolicy with readFile tool includes prompt when writeToFile tool is available 1`] = `
+"
 ====
 
 # Knowledge Extraction & Maintenance
@@ -77,89 +150,5 @@ Your workflow **must**:
    4. Use provided tools to update the knowledge files.
    5. Record only evidence-based information; do not hallucinate.
    6. Use dictionaries throughout, with numbered dictionaries for ordered data and path-keyed dictionaries for the \`files\` section.
-`
-
-export const KnowledgeManagementPolicy = (tools: Parameters<AgentPolicy>[0]) => {
-  if (!tools[readFile.name]) {
-    return undefined
-  }
-
-  // keep a cache of all knowledge files read to we don't read the same file twice
-  const readFiles = new Set<string>()
-
-  return {
-    name: Policies.KnowledgeManagement,
-    tools: tools[writeToFile.name] ? [tools[updateKnowledge.name]] : [],
-    prompt: tools[writeToFile.name] || tools[updateKnowledge.name] ? prompt : undefined,
-    async getKnowledgeFilePaths(inputFiles: string[]) {
-      const paths = new Set<string>()
-
-      for (const file of inputFiles) {
-        // add all directories to the paths set
-        let dir = dirname(file)
-        paths.add(dir)
-
-        // add all parent directories to the paths set
-        while (dir !== '.') {
-          paths.add(dir)
-          dir = dirname(dir)
-        }
-      }
-
-      const allFullPaths = []
-      for (const path of paths) {
-        if (path === '.') {
-          continue
-        }
-        const fullpath = join(path, 'knowledge.ai.yml')
-        if (!readFiles.has(fullpath)) {
-          allFullPaths.push(fullpath)
-          readFiles.add(fullpath)
-        }
-      }
-
-      return allFullPaths
-    },
-    async updateResponse(response: AssistantMessageContent[]) {
-      const files = new Set<string>()
-
-      for (const content of response) {
-        if (content.type === 'tool_use') {
-          switch (content.name) {
-            case readFile.name: {
-              const paths = getStringArray(content.params, 'path')
-              for (const path of paths) {
-                files.add(path)
-              }
-              break
-            }
-            case listFiles.name: {
-              const path = getString(content.params, 'path')
-              files.add(path)
-              break
-            }
-          }
-        }
-      }
-
-      const allFullPaths = await this.getKnowledgeFilePaths(Array.from(files))
-
-      if (allFullPaths.length === 0) {
-        return response
-      }
-
-      return [
-        ...response,
-        {
-          type: 'tool_use',
-          name: readFile.name,
-          params: {
-            path: allFullPaths.join(','),
-          },
-        } as const,
-      ]
-    },
-  }
-}
-
-export type KnowledgeManagementPolicyInstance = NonNullable<ReturnType<typeof KnowledgeManagementPolicy>>
+"
+`;

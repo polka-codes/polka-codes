@@ -1,51 +1,75 @@
 files:
-  - path: "src/Agent/index.ts"
+  "src/Agent/index.ts":
     description: "Base agent implementation and agent registry"
     api:
       classes:
-        - name: "AgentBase"
+        1:
+          name: "AgentBase"
           methods:
-            - name: "run"
-              params: [{ name: "task", type: "string" }]
+            1:
+              name: "run"
+              params:
+                1: { name: "task", type: "string" }
               returns: "Promise<void>"
-  - path: "src/Agent/MultiAgent.ts"
+  "src/Agent/MultiAgent.ts":
     description: "Multi-agent coordination system"
     api:
       classes:
-        - name: "MultiAgent"
+        1:
+          name: "MultiAgent"
           methods:
-            - name: "delegateTask"
-              params: [{ name: "task", type: "string" }, { name: "context", type: "object" }]
+            1:
+              name: "delegateTask"
+              params:
+                1: { name: "task", type: "string" }
+                2: { name: "context", type: "object" }
               returns: "Promise<void>"
-  - path: "src/AiService/index.ts"
+  "src/AiService/index.ts":
     description: "AI service abstraction layer"
     api:
       classes:
-        - name: "AiServiceBase"
+        1:
+          name: "AiServiceBase"
           methods:
-            - name: "complete"
-              params: [{ name: "prompt", type: "string" }]
+            1:
+              name: "complete"
+              params:
+                1: { name: "prompt", type: "string" }
               returns: "Promise<string>"
-  - path: "src/tools/index.ts"
+  "src/tools/index.ts":
     description: "Tool definitions and registry"
     api:
       functions:
-        - name: "getAvailableTools"
+        1:
+          name: "getAvailableTools"
           params: []
           returns: "Tool[]"
+  "src/tools/updateKnowledge.ts":
+    description: "Tool for updating knowledge.ai.yml files with smart merging capabilities"
+    api:
+      functions:
+        1:
+          name: "updateKnowledge"
+          description: "Updates knowledge files with smart merging of YAML content"
+          params:
+            1: { name: "path", type: "string", description: "Directory path where knowledge file is located" }
+            2: { name: "file", type: "string", description: "Optional specific file path" }
+            3: { name: "knowledge", type: "string", description: "YAML content to merge" }
+          returns: "Promise<ToolResponse>"
 
 invariants:
-  - "All agents must extend AgentBase"
-  - "AI services must implement AiServiceBase"
-  - "Tools must follow the Tool interface"
+  1: "All agents must extend AgentBase"
+  2: "AI services must implement AiServiceBase"
+  3: "Tools must follow the Tool interface"
 
 patterns:
-  - "Agent implementations use prompt templates"
-  - "AI services follow a provider pattern"
-  - "Tools use XML-style formatting for execution"
+  1: "Agent implementations use prompt templates"
+  2: "AI services follow a provider pattern"
+  3: "Tools use XML-style formatting for execution"
 
 rules:
-  - "Each agent must have corresponding prompt templates"
-  - "All tools must have tests"
-  - "AI service calls must be metered"
-  - "Knowledge management policies must be followed"
+  1: "Each agent must have corresponding prompt templates"
+  2: "All tools must have tests"
+  3: "AI service calls must be metered"
+  4: "Knowledge management policies must be followed"
+  5: "Use numbered dictionary format instead of arrays in knowledge files"

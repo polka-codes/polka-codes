@@ -97,6 +97,7 @@ export async function listFiles(
     const folderIg = createIgnore(mergedPatterns)
 
     const entries = await fs.readdir(currentPath, { withFileTypes: true })
+    entries.sort((a, b) => a.name.localeCompare(b.name)) // Sort entries for consistent order
 
     for (const entry of entries) {
       const fullPath = join(currentPath, entry.name)
