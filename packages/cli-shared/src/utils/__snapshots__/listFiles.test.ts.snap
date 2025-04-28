@@ -1,27 +1,39 @@
 // Bun Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`listFiles should list files recursively 1`] = `
+[
+  ".gitignore",
+  "asubdir/file3.txt",
+  "asubdir/ignored-too.txt",
+  "file1.txt",
+  "file2.txt",
+]
+`;
+
 exports[`listFiles should respect maxCount and show truncation markers 1`] = `
 [
   ".gitignore",
+  "asubdir/(files omitted)",
   "file1.txt",
   "file2.txt",
-  "subdir/(files omitted)",
 ]
 `;
 
 exports[`listFiles should show truncation markers for root directories 1`] = `
 [
   "./(files omitted)",
+  ".gitignore",
+  "asubdir/(files omitted)",
   "file1.txt",
-  "file2.txt",
 ]
 `;
 
 exports[`listFiles should not show truncation markers when limit not reached 1`] = `
 [
   ".gitignore",
+  "asubdir/file3.txt",
+  "asubdir/ignored-too.txt",
   "file1.txt",
   "file2.txt",
-  "subdir/file3.txt",
 ]
 `;

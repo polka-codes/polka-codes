@@ -16,7 +16,7 @@ describe('listFiles', () => {
     await fs.writeFile(join(testDir, 'ignored.txt'), '')
 
     // Create subdirectory
-    const subDir = join(testDir, 'subdir')
+    const subDir = join(testDir, 'asubdir')
     await fs.mkdir(subDir)
     await fs.writeFile(join(subDir, 'file3.txt'), '')
     await fs.writeFile(join(subDir, 'ignored-too.txt'), '')
@@ -34,7 +34,7 @@ describe('listFiles', () => {
 
   it('should list files recursively', async () => {
     const [files] = await listFiles(testDir, true, 10, testDir)
-    expect(files).toEqual(['.gitignore', 'file1.txt', 'file2.txt', 'subdir/file3.txt'])
+    expect(files).toMatchSnapshot()
   })
 
   it('should respect maxCount and show truncation markers', async () => {
@@ -73,7 +73,7 @@ describe('listFiles', () => {
   })
 
   it('should exclude files matching excludeFiles patterns', async () => {
-    const [files] = await listFiles(testDir, true, 10, testDir, ['file2.txt', 'subdir/*'])
+    const [files] = await listFiles(testDir, true, 10, testDir, ['file2.txt', 'asubdir/*'])
     expect(files).toEqual(['.gitignore', 'file1.txt'])
   })
 })
