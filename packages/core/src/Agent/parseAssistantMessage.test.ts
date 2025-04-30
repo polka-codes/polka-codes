@@ -13,6 +13,27 @@ describe('parseAssistantMessage', () => {
       ],
       permissionLevel: PermissionLevel.None,
     },
+    {
+      name: 'read_file',
+      description: 'Read file tool',
+      parameters: [{ name: 'path', description: 'File path', required: true, usageValue: 'path/to/file' }],
+      permissionLevel: PermissionLevel.Read,
+    },
+    {
+      name: 'nested_tool',
+      description: 'Tool with nested parameters',
+      parameters: [{ name: 'config', description: 'Configuration object', required: true, usageValue: 'config' }],
+      permissionLevel: PermissionLevel.None,
+    },
+    {
+      name: 'combined_tool',
+      description: 'Tool with both array and nested parameters',
+      parameters: [
+        { name: 'paths', description: 'File paths', required: true, usageValue: 'paths' },
+        { name: 'options', description: 'Options object', required: true, usageValue: 'options' },
+      ],
+      permissionLevel: PermissionLevel.None,
+    },
   ]
   const toolPrefix = 'tool_'
 
@@ -241,6 +262,112 @@ describe('parseAssistantMessage', () => {
       {
         type: 'text',
         content: 'Ending text',
+      },
+    ])
+  })
+
+  // New tests for array mode
+  test('should handle array mode with multiple occurrences of the same parameter', () => {
+    const message = `<tool_read_file>
+      <tool_parameter_path>test.ts</tool_parameter_path>
+      <tool_parameter_path>main.ts</tool_parameter_path>
+    </tool_read_file>`
+    const result = parseAssistantMessage(message, mockTools, toolPrefix)
+
+    expect(result).toEqual([
+      {
+        type: 'tool_use',
+        name: 'read_file',
+        params: {
+          path: ['test.ts', 'main.ts'],
+        },
+      },
+    ])
+  })
+
+  // New tests for nested objects
+  test('should handle nested objects in parameters', () => {
+    const message = `<tool_nested_tool>
+      <tool_parameter_config>
+        <tool_parameter_key1>value1</tool_parameter_key1>
+        <tool_parameter_key2>value2</tool_parameter_key2>
+      </tool_parameter_config>
+    </tool_nested_tool>`
+    const result = parseAssistantMessage(message, mockTools, toolPrefix)
+
+    expect(result).toEqual([
+      {
+        type: 'tool_use',
+        name: 'nested_tool',
+        params: {
+          config: {
+            key1: 'value1',
+            key2: 'value2',
+          },
+        },
+      },
+    ])
+  })
+
+  // Test for deeply nested objects
+  test('should handle deeply nested objects in parameters', () => {
+    const message = `<tool_nested_tool>
+      <tool_parameter_config>
+        <tool_parameter_level1>
+          <tool_parameter_level2>
+            <tool_parameter_level3>deep value</tool_parameter_level3>
+          </tool_parameter_level2>
+        </tool_parameter_level1>
+      </tool_parameter_config>
+    </tool_nested_tool>`
+    const result = parseAssistantMessage(message, mockTools, toolPrefix)
+
+    expect(result).toEqual([
+      {
+        type: 'tool_use',
+        name: 'nested_tool',
+        params: {
+          config: {
+            level1: {
+              level2: {
+                level3: 'deep value',
+              },
+            },
+          },
+        },
+      },
+    ])
+  })
+
+  // Test for combined array mode and nested objects
+  test('should handle both array mode and nested objects together', () => {
+    const message = `<tool_combined_tool>
+      <tool_parameter_paths>path1.ts</tool_parameter_paths>
+      <tool_parameter_paths>path2.ts</tool_parameter_paths>
+      <tool_parameter_options>
+        <tool_parameter_recursive>true</tool_parameter_recursive>
+        <tool_parameter_filter>
+          <tool_parameter_include>*.ts</tool_parameter_include>
+          <tool_parameter_exclude>node_modules</tool_parameter_exclude>
+        </tool_parameter_filter>
+      </tool_parameter_options>
+    </tool_combined_tool>`
+    const result = parseAssistantMessage(message, mockTools, toolPrefix)
+
+    expect(result).toEqual([
+      {
+        type: 'tool_use',
+        name: 'combined_tool',
+        params: {
+          paths: ['path1.ts', 'path2.ts'],
+          options: {
+            recursive: 'true',
+            filter: {
+              include: '*.ts',
+              exclude: 'node_modules',
+            },
+          },
+        },
       },
     ])
   })

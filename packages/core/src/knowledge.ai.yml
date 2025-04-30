@@ -1,0 +1,130 @@
+files:
+  tool.ts:
+    description: Defines types for tools, tool parameters, and tool responses
+    api:
+      types:
+        "1":
+          name: ToolParameter
+          description: Defines a parameter for a tool, including support for nested
+            objects and arrays
+          properties:
+            "1":
+              name: name
+              type: string
+            "2":
+              name: description
+              type: string
+            "3":
+              name: required
+              type: boolean
+            "4":
+              name: usageValue
+              type: string
+            "5":
+              name: canNest
+              type: boolean
+              optional: true
+              description: Indicates if parameter can accept nested objects
+            "6":
+              name: canBeArray
+              type: boolean
+              optional: true
+              description: Indicates if parameter can accept multiple values (array)
+        "2":
+          name: ToolExampleParameterValue
+          description: Type for example parameter values that can be strings, objects, or
+            arrays
+        "3":
+          name: ToolParameterValue
+          description: Type for parameter values that can be strings, objects, or arrays
+        "4":
+          name: ToolExample
+          description: Defines an example for a tool, including support for complex
+            parameter values
+          properties:
+            "1":
+              name: description
+              type: string
+            "2":
+              name: parameters
+              type: "{ name: string; value: ToolExampleParameterValue }[]"
+        "5":
+          name: ToolHandler
+          description: Handler function for tool execution, maintaining backward
+            compatibility with string parameters
+          params:
+            "1":
+              name: provider
+              type: P
+            "2":
+              name: args
+              type: Partial<Record<T['parameters'][number]['name'], string>>
+          returns: Promise<ToolResponse>
+  Agent/parseAssistantMessage.ts:
+    description: Parses assistant messages to extract tool uses and parameters,
+      supporting nested objects and arrays
+    api:
+      functions:
+        "1":
+          name: parseAssistantMessage
+          description: Parses an assistant's message into text content and tool use
+            content, supporting nested objects and arrays
+          params:
+            "1":
+              name: assistantMessage
+              type: string
+            "2":
+              name: tools
+              type: ToolInfo[]
+            "3":
+              name: toolNamePrefix
+              type: string
+          returns: AssistantMessageContent[]
+  tools/examples/nestedParameterExample.ts:
+    description: Example demonstrating how to define and use tools with nested
+      parameters and array values
+  tools/utils/parameterValueConverter.ts:
+    description: Utilities for converting between string and complex parameter values
+    api:
+      functions:
+        "1":
+          name: toStringValue
+          description: Converts a parameter value to a string representation
+          params:
+            "1":
+              name: value
+              type: ToolParameterValue | undefined
+          returns: string | undefined
+        "2":
+          name: parseComplexValue
+          description: Attempts to parse a string value as JSON, falling back to the
+            original string if parsing fails
+          params:
+            "1":
+              name: value
+              type: string | undefined
+          returns: ToolParameterValue | undefined
+        "3":
+          name: isStringValue
+          description: Type guard to check if a value is a string
+          params:
+            "1":
+              name: value
+              type: ToolParameterValue | undefined
+          returns: value is string | undefined
+        "4":
+          name: isArrayValue
+          description: Type guard to check if a value is an array
+          params:
+            "1":
+              name: value
+              type: ToolParameterValue | undefined
+          returns: value is any[] | undefined
+        "5":
+          name: isObjectValue
+          description: Type guard to check if a value is an object (not an array)
+          params:
+            "1":
+              name: value
+              type: ToolParameterValue | undefined
+          returns: value is Record<string, any> | undefined

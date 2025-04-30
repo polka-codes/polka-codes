@@ -1,46 +1,80 @@
 import { type FullToolInfo, PermissionLevel, type ToolHandler, type ToolInfo, ToolResponseType } from '../tool'
 import type { InteractionProvider } from './provider'
-import { getString, getStringArray } from './utils'
+import { getArray, getString } from './utils'
 
 export const toolInfo = {
   name: 'ask_followup_question',
   description:
-    'Whenever you need extra details or clarification to complete the task, pose a direct question to the user. Use this tool sparingly to avoid excessive back-and-forth. If helpful, offer multiple-choice options or examples to guide the user’s response.',
+    'Call this when vital details are missing. Pose each follow-up as one direct, unambiguous question. If it speeds the reply, add up to five short, mutually-exclusive answer options. Group any related questions in the same call to avoid a back-and-forth chain.',
   parameters: [
     {
-      name: 'question',
-      description: 'The question to ask the user. This should be a clear, specific question that addresses the information you need.',
+      name: 'questions',
+      description: 'One or more follow-up questions you need answered before you can continue.',
       required: true,
-      usageValue: 'Your question here',
-    },
-    {
-      name: 'options',
-      description:
-        'A comma separated list of possible answers to the question. Ordered by preference. If not provided, the user will be prompted to provide an answer.',
-      required: false,
-      usageValue: 'A comma separated list of possible answers (optional)',
+      allowMultiple: true,
+      children: [
+        {
+          name: 'prompt',
+          description: 'The text of the question.',
+          required: true,
+          usageValue: 'question text here',
+        },
+        {
+          name: 'options',
+          description: 'Ordered list of suggested answers (omit if none).',
+          required: false,
+          allowMultiple: true,
+          usageValue: 'suggested answer here',
+        },
+      ],
     },
   ],
   examples: [
     {
-      description: 'Request to ask a question',
+      description: 'Single clarifying question (no options)',
       parameters: [
         {
-          name: 'question',
-          value: 'What is the name of the project?',
+          name: 'questions',
+          value: { prompt: 'What is the target deployment environment?' },
         },
       ],
     },
     {
-      description: 'Request to ask a question with options',
+      description: 'Single question with multiple-choice options',
       parameters: [
         {
-          name: 'question',
-          value: 'What framework do you use?',
+          name: 'questions',
+          value: {
+            prompt: 'Which frontend framework are you using?',
+            options: ['React', 'Angular', 'Vue', 'Svelte'],
+          },
         },
+      ],
+    },
+    {
+      description: 'Two related questions in one call',
+      parameters: [
         {
-          name: 'options',
-          value: 'React,Angular,Vue,Svelte',
+          name: 'questions',
+          value: [
+            { prompt: 'What type of application are you building?' },
+            {
+              prompt: 'Preferred programming language?',
+              options: ['JavaScript', 'TypeScript', 'Python', 'Java'],
+            },
+          ],
+        },
+      ],
+    },
+    {
+      description: 'Binary (yes/no) confirmation',
+      parameters: [
+        {
+          name: 'questions',
+          value: {
+            prompt: 'Is it acceptable to refactor existing tests to improve performance?',
+            options: ['Yes', 'No'],
+          },
         },
       ],
     },
@@ -56,15 +90,27 @@ export const handler: ToolHandler<typeof toolInfo, InteractionProvider> = async 
     }
   }
 
-  const question = getString(args, 'question')
-  const options = getStringArray(args, 'options', [])
+  const questions = getArray(args, 'questions')
+  if (!questions || questions.length === 0) {
+    return {
+      type: ToolResponseType.Error,
+      message: 'No questions provided',
+    }
+  }
 
-  const answer = await provider.askFollowupQuestion(question, options)
+  const answers = []
+  for (const question of questions) {
+    const prompt = getString(question, 'prompt')
+    const options = getArray(question, 'options', []) as string[]
+    const answer = await provider.askFollowupQuestion(prompt, options)
+    answers.push(`<ask_followup_question_answer question="${prompt}">
+${answer}
+</ask_followup_question_answer>`)
+  }
 
   return {
     type: ToolResponseType.Reply,
-    message: `<ask_followup_question_question>${question}</ask_followup_question_question>
-<ask_followup_question_answer>${answer}</ask_followup_question_answer>`,
+    message: answers.join('\n'),
   }
 }
 
