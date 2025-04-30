@@ -1,20 +1,122 @@
-description: "Agent implementations for different roles"
+description: Agent implementations for different roles
 files:
-  - path: "AgentBase.ts"
-    description: "Base class for all agents"
-  - path: "AnalyzerAgent/index.ts"
-    description: "Code analysis agent implementation"
-  - path: "ArchitectAgent/index.ts"
-    description: "System design agent implementation"
-  - path: "CodeFixerAgent/index.ts"
-    description: "Code fixing agent implementation"
-  - path: "CoderAgent/index.ts"
-    description: "Coding agent implementation"
-  - path: "MultiAgent.ts"
-    description: "Multi-agent coordination"
-  - path: "policies/KnowledgeManagement.ts"
-    description: "Knowledge management policy"
+  AgentBase.ts:
+    description: Base class for all agents
+  AnalyzerAgent/index.ts:
+    description: Code analysis agent implementation
+  ArchitectAgent/index.ts:
+    description: System design agent implementation
+  CodeFixerAgent/index.ts:
+    description: Code fixing agent implementation
+  CoderAgent/index.ts:
+    description: Coding agent implementation
+  MultiAgent.ts:
+    description: Multi-agent coordination
+  parseAssistantMessage.ts:
+    description: Parses assistant messages to extract text content and tool use with
+      parameters, supporting array mode and nested objects
+    api:
+      interfaces:
+        "1":
+          name: TextContent
+          properties:
+            "1":
+              name: type
+              type: "'text'"
+            "2":
+              name: content
+              type: string
+        "2":
+          name: ToolUse
+          properties:
+            "1":
+              name: type
+              type: "'tool_use'"
+            "2":
+              name: name
+              type: string
+            "3":
+              name: params
+              type: Record<string, any>
+      functions:
+        "1":
+          name: parseAssistantMessage
+          description: Parses an assistant's message into an array of text content and
+            tool use content, supporting array mode and nested objects
+          params:
+            "1":
+              name: assistantMessage
+              type: string
+            "2":
+              name: tools
+              type: ToolInfo[]
+            "3":
+              name: toolNamePrefix
+              type: string
+          returns: AssistantMessageContent[]
+  policies/KnowledgeManagement.ts:
+    description: Knowledge management policy
+  prompts.ts:
+    description: Provides functions to generate prompts for AI agents
+    api:
+      functions:
+        "1":
+          name: toolUsePrompt
+          description: Generates a prompt that explains how to use tools with XML-style
+            tags, including support for array parameters and nested objects
+          params:
+            "1":
+              name: tools
+              type: ToolInfo[]
+            "2":
+              name: toolNamePrefix
+              type: string
+          returns: string
+        "2":
+          name: agentsPrompt
+          description: Generates a prompt that explains available agents and their
+            responsibilities
+          params:
+            "1":
+              name: agents
+              type: Readonly<AgentInfo[]>
+            "2":
+              name: name
+              type: string
+          returns: string
+        "3":
+          name: capabilities
+          description: Generates a prompt that explains the capabilities of the AI
+          params:
+            "1":
+              name: toolNamePrefix
+              type: string
+          returns: string
+        "4":
+          name: systemInformation
+          description: Generates a prompt that provides system information
+          params:
+            "1":
+              name: info
+              type: "{ os: string }"
+          returns: string
+        "5":
+          name: customInstructions
+          description: Generates a prompt that provides custom instructions
+          params:
+            "1":
+              name: customInstructions
+              type: string[]
+          returns: string
+        "6":
+          name: customScripts
+          description: Generates a prompt that provides custom scripts
+          params:
+            "1":
+              name: commands
+              type: "Record<string, string | { command: string; description: string }>"
+          returns: string
 rules:
-  - "Each agent should implement a clear responsibility"
-  - "Follow consistent prompt engineering patterns"
-  - "Maintain separation of concerns between agents"
+  "1": Each agent should implement a clear responsibility
+  "2": Follow consistent prompt engineering patterns
+  "3": Maintain separation of concerns between agents

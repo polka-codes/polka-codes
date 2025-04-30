@@ -1,5 +1,19 @@
-import type { ToolExample, ToolInfo } from '../tool'
+import type { ToolExample, ToolInfo, ToolParameterValue } from '../tool'
 import type { AgentInfo } from './AgentBase'
+
+const renderParameterValue = (key: string, value: ToolParameterValue, parameterPrefix: string): string => {
+  if (typeof value === 'string') {
+    return `<${parameterPrefix}${key}>${value}</${parameterPrefix}${key}>`
+  }
+  if (Array.isArray(value)) {
+    return value.map((v) => renderParameterValue(key, v, parameterPrefix)).join('\n')
+  }
+
+  const inner = Object.entries(value)
+    .map(([key, v]) => renderParameterValue(key, v, parameterPrefix))
+    .join('\n')
+  return `<${parameterPrefix}${key}>\n${inner}\n</${parameterPrefix}${key}>`
+}
 
 const toolInfoPrompt = (tool: ToolInfo, toolNamePrefix: string, parameterPrefix: string) => `
 ## ${toolNamePrefix}${tool.name}
@@ -14,11 +28,11 @@ Usage:
 ${tool.parameters.map((param) => `<${parameterPrefix}${param.name}>${param.usageValue}</${parameterPrefix}${param.name}>`).join('\n')}
 </${toolNamePrefix}${tool.name}>`
 
-const toolInfoExamplesPrompt = (idx: number, tool: ToolInfo, example: ToolExample, toolNamePrefix: string, parameterPrefix: string) => `
-## Example ${idx + 1}: ${example.description}
+const toolInfoExamplesPrompt = (tool: ToolInfo, example: ToolExample, toolNamePrefix: string, parameterPrefix: string) => `
+## Example: ${example.description}
 
 <${toolNamePrefix}${tool.name}>
-${example.parameters.map((param) => `<${parameterPrefix}${param.name}>${param.value}</${parameterPrefix}${param.name}>`).join('\n')}
+${example.parameters.map((param) => `${renderParameterValue(param.name, param.value, parameterPrefix)}`).join('\n')}
 </${toolNamePrefix}${tool.name}>
 `
 
@@ -28,8 +42,6 @@ export const toolUsePrompt = (tools: ToolInfo[], toolNamePrefix: string) => {
   }
 
   const parameterPrefix = `${toolNamePrefix}parameter_`
-
-  let exampleIndex = 0
 
   return `
 ====
@@ -48,11 +60,39 @@ Tool use is formatted using XML-style tags. The tool name is enclosed in opening
 ...
 </${toolNamePrefix}tool_name>
 
-For example:
+## Array Parameters
 
-<${toolNamePrefix}read_file>
-<${parameterPrefix}path>src/main.js</${parameterPrefix}path>
-</${toolNamePrefix}read_file>
+To create an array of values for a parameter, repeat the parameter tag multiple times:
+
+<${toolNamePrefix}process_file>
+<${parameterPrefix}path>test.ts</${parameterPrefix}path>
+<${parameterPrefix}path>main.ts</${parameterPrefix}path>
+</${toolNamePrefix}process_file>
+
+## Nested Object Parameters
+
+To create nested objects, nest parameter tags within other parameter tags:
+
+<${toolNamePrefix}example_tool>
+<${parameterPrefix}key>
+<${parameterPrefix}key2>value</${parameterPrefix}key2>
+<${parameterPrefix}key3>value2</${parameterPrefix}key3>
+</${parameterPrefix}key>
+</${toolNamePrefix}example_tool>
+
+You can also combine array parameters with nested objects:
+
+<${toolNamePrefix}example_tool>
+<${parameterPrefix}key>
+<${parameterPrefix}key2>value</${parameterPrefix}key2>
+<${parameterPrefix}key3>value2</${parameterPrefix}key3>
+</${parameterPrefix}key>
+<${parameterPrefix}key>
+<${parameterPrefix}key2>value3</${parameterPrefix}key2>
+<${parameterPrefix}key3>value4</${parameterPrefix}key3>
+<${parameterPrefix}key3>value5</${parameterPrefix}key3>
+</${parameterPrefix}key>
+</${toolNamePrefix}example_tool>
 
 Always adhere to this format for the tool use to ensure proper parsing and execution.
 
@@ -66,7 +106,7 @@ ${tools
   .map((tool) => {
     let promp = ''
     for (const example of tool.examples ?? []) {
-      promp += toolInfoExamplesPrompt(exampleIndex++, tool, example, toolNamePrefix, parameterPrefix)
+      promp += toolInfoExamplesPrompt(tool, example, toolNamePrefix, parameterPrefix)
     }
     return promp
   })

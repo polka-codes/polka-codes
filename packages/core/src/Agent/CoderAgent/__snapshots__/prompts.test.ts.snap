@@ -20,11 +20,39 @@ Tool use is formatted using XML-style tags. The tool name is enclosed in opening
 ...
 </tool_tool_name>
 
-For example:
+## Array Parameters
 
-<tool_read_file>
-<tool_parameter_path>src/main.js</tool_parameter_path>
-</tool_read_file>
+To create an array of values for a parameter, repeat the parameter tag multiple times:
+
+<tool_process_file>
+<tool_parameter_path>test.ts</tool_parameter_path>
+<tool_parameter_path>main.ts</tool_parameter_path>
+</tool_process_file>
+
+## Nested Object Parameters
+
+To create nested objects, nest parameter tags within other parameter tags:
+
+<tool_example_tool>
+<tool_parameter_key>
+<tool_parameter_key2>value</tool_parameter_key2>
+<tool_parameter_key3>value2</tool_parameter_key3>
+</tool_parameter_key>
+</tool_example_tool>
+
+You can also combine array parameters with nested objects:
+
+<tool_example_tool>
+<tool_parameter_key>
+<tool_parameter_key2>value</tool_parameter_key2>
+<tool_parameter_key3>value2</tool_parameter_key3>
+</tool_parameter_key>
+<tool_parameter_key>
+<tool_parameter_key2>value3</tool_parameter_key2>
+<tool_parameter_key3>value4</tool_parameter_key3>
+<tool_parameter_key3>value5</tool_parameter_key3>
+</tool_parameter_key>
+</tool_example_tool>
 
 Always adhere to this format for the tool use to ensure proper parsing and execution.
 
@@ -34,16 +62,14 @@ NEVER surround tool use with triple backticks (\`\`\`).
 
 ## tool_ask_followup_question
 
-Description: Whenever you need extra details or clarification to complete the task, pose a direct question to the user. Use this tool sparingly to avoid excessive back-and-forth. If helpful, offer multiple-choice options or examples to guide the user’s response.
+Description: Call this when vital details are missing. Pose each follow-up as one direct, unambiguous question. If it speeds the reply, add up to five short, mutually-exclusive answer options. Group any related questions in the same call to avoid a back-and-forth chain.
 
 Parameters:
-- tool_parameter_question: (required) The question to ask the user. This should be a clear, specific question that addresses the information you need.
-- tool_parameter_options: (optional) A comma separated list of possible answers to the question. Ordered by preference. If not provided, the user will be prompted to provide an answer.
+- tool_parameter_questions: (required) One or more follow-up questions you need answered before you can continue.
 
 Usage:
 <tool_ask_followup_question>
-<tool_parameter_question>Your question here</tool_parameter_question>
-<tool_parameter_options>A comma separated list of possible answers (optional)</tool_parameter_options>
+<tool_parameter_questions>undefined</tool_parameter_questions>
 </tool_ask_followup_question>
 
 ## tool_attempt_completion
@@ -78,16 +104,16 @@ Usage:
 
 ## tool_execute_command
 
-Description: Request to execute a CLI command on the system. Use this when you need to perform system operations or run specific commands to accomplish any step in the user's task. You must tailor your command to the user's system and provide a clear explanation of what the command does. Prefer to execute complex CLI commands over creating executable scripts, as they are more flexible and easier to run. Commands will also be executed in the project root directory regardless of executed commands in previous tool uses.
+Description: Run a single CLI command. The command is always executed in the project-root working directory (regardless of earlier commands). Prefer one-off shell commands over wrapper scripts for flexibility. After an \`execute_command\` call, no other tool calls are allowed in the same assistant response.
 
 Parameters:
-- tool_parameter_command: (required) The CLI command to execute. This should be valid for the current operating system. Ensure the command is properly formatted and does not contain any harmful instructions.
-- tool_parameter_requires_approval: (optional) A boolean indicating whether this command requires explicit user approval before execution in case the user has auto-approve mode enabled. Set to 'true' for potentially impactful operations like installing/uninstalling packages, deleting/overwriting files, system configuration changes, network operations, or any commands that could have unintended side effects. Set to 'false' for safe operations like reading files/directories, running development servers, building projects, and other non-destructive operations.
+- tool_parameter_command: (required) The exact command to run (valid for the current OS). It must be correctly formatted and free of harmful instructions.
+- tool_parameter_requires_approval: (optional) Set to \`true\` for commands that install/uninstall software, modify or delete files, change system settings, perform network operations, or have other side effects. Use \`false\` for safe, read-only, or purely local development actions (e.g., listing files, make a build, running tests).
 
 Usage:
 <tool_execute_command>
-<tool_parameter_command>Your command here</tool_parameter_command>
-<tool_parameter_requires_approval>true or false</tool_parameter_requires_approval>
+<tool_parameter_command>your-command-here</tool_parameter_command>
+<tool_parameter_requires_approval>true | false</tool_parameter_requires_approval>
 </tool_execute_command>
 
 ## tool_hand_over
@@ -257,26 +283,58 @@ Usage:
 
 # Tool Use Examples
 
-## Example 1: Request to ask a question
+## Example: Single clarifying question (no options)
 
 <tool_ask_followup_question>
-<tool_parameter_question>What is the name of the project?</tool_parameter_question>
+<tool_parameter_questions>
+<tool_parameter_prompt>What is the target deployment environment?</tool_parameter_prompt>
+</tool_parameter_questions>
 </tool_ask_followup_question>
 
-## Example 2: Request to ask a question with options
+## Example: Single question with multiple-choice options
 
 <tool_ask_followup_question>
-<tool_parameter_question>What framework do you use?</tool_parameter_question>
-<tool_parameter_options>React,Angular,Vue,Svelte</tool_parameter_options>
+<tool_parameter_questions>
+<tool_parameter_prompt>Which frontend framework are you using?</tool_parameter_prompt>
+<tool_parameter_options>React</tool_parameter_options>
+<tool_parameter_options>Angular</tool_parameter_options>
+<tool_parameter_options>Vue</tool_parameter_options>
+<tool_parameter_options>Svelte</tool_parameter_options>
+</tool_parameter_questions>
 </tool_ask_followup_question>
 
-## Example 3: Request to present the result of the task
+## Example: Two related questions in one call
+
+<tool_ask_followup_question>
+<tool_parameter_questions>
+<tool_parameter_prompt>What type of application are you building?</tool_parameter_prompt>
+</tool_parameter_questions>
+<tool_parameter_questions>
+<tool_parameter_prompt>Preferred programming language?</tool_parameter_prompt>
+<tool_parameter_options>JavaScript</tool_parameter_options>
+<tool_parameter_options>TypeScript</tool_parameter_options>
+<tool_parameter_options>Python</tool_parameter_options>
+<tool_parameter_options>Java</tool_parameter_options>
+</tool_parameter_questions>
+</tool_ask_followup_question>
+
+## Example: Binary (yes/no) confirmation
+
+<tool_ask_followup_question>
+<tool_parameter_questions>
+<tool_parameter_prompt>Is it acceptable to refactor existing tests to improve performance?</tool_parameter_prompt>
+<tool_parameter_options>Yes</tool_parameter_options>
+<tool_parameter_options>No</tool_parameter_options>
+</tool_parameter_questions>
+</tool_ask_followup_question>
+
+## Example: Request to present the result of the task
 
 <tool_attempt_completion>
 <tool_parameter_result>Your final result description here</tool_parameter_result>
 </tool_attempt_completion>
 
-## Example 4: Delegate a code analysis task to the analyzer agent
+## Example: Delegate a code analysis task to the analyzer agent
 
 <tool_delegate>
 <tool_parameter_agent_name>analyzer</tool_parameter_agent_name>
@@ -285,14 +343,14 @@ Usage:
 <tool_parameter_files>src/auth/login.ts,src/auth/types.ts</tool_parameter_files>
 </tool_delegate>
 
-## Example 5: Request to execute a command
+## Example: Make a build
 
 <tool_execute_command>
-<tool_parameter_command>npm run dev</tool_parameter_command>
+<tool_parameter_command>npm run build</tool_parameter_command>
 <tool_parameter_requires_approval>false</tool_parameter_requires_approval>
 </tool_execute_command>
 
-## Example 6: Hand over a coding task to the coder agent
+## Example: Hand over a coding task to the coder agent
 
 <tool_hand_over>
 <tool_parameter_agent_name>coder</tool_parameter_agent_name>
@@ -301,45 +359,45 @@ Usage:
 <tool_parameter_files>src/auth/login.ts,src/auth/types.ts</tool_parameter_files>
 </tool_hand_over>
 
-## Example 7: Request to list code definition names in a directory
+## Example: Request to list code definition names in a directory
 
 <tool_list_code_definition_names>
 <tool_parameter_path>src/utils</tool_parameter_path>
 </tool_list_code_definition_names>
 
-## Example 8: Request to list files
+## Example: Request to list files
 
 <tool_list_files>
 <tool_parameter_path>src</tool_parameter_path>
 <tool_parameter_max_count>100</tool_parameter_max_count>
 </tool_list_files>
 
-## Example 9: Request to read the contents of a file
+## Example: Request to read the contents of a file
 
 <tool_read_file>
 <tool_parameter_path>src/main.js</tool_parameter_path>
 </tool_read_file>
 
-## Example 10: Request to read multiple files
+## Example: Request to read multiple files
 
 <tool_read_file>
 <tool_parameter_path>src/main.js,src/index.js</tool_parameter_path>
 </tool_read_file>
 
-## Example 11: Request to remove a file
+## Example: Request to remove a file
 
 <tool_remove_file>
 <tool_parameter_path>src/main.js</tool_parameter_path>
 </tool_remove_file>
 
-## Example 12: Request to rename a file
+## Example: Request to rename a file
 
 <tool_rename_file>
 <tool_parameter_sourcePath>src/old-name.js</tool_parameter_sourcePath>
 <tool_parameter_targetPath>src/new-name.js</tool_parameter_targetPath>
 </tool_rename_file>
 
-## Example 13: Request to replace sections of content in a file
+## Example: Request to replace sections of content in a file
 
 <tool_replace_in_file>
 <tool_parameter_path>src/main.js</tool_parameter_path>
@@ -374,7 +432,7 @@ return (
 </tool_parameter_diff>
 </tool_replace_in_file>
 
-## Example 14: Request to perform a regex search across files
+## Example: Request to perform a regex search across files
 
 <tool_search_files>
 <tool_parameter_path>src</tool_parameter_path>
@@ -382,7 +440,7 @@ return (
 <tool_parameter_file_pattern>*.ts,*.tsx</tool_parameter_file_pattern>
 </tool_search_files>
 
-## Example 15: Add a new file entry
+## Example: Add a new file entry
 
 <tool_update_knowledge>
 <tool_parameter_path>src/utils</tool_parameter_path>
@@ -398,7 +456,7 @@ return (
           returns: "object"</tool_parameter_knowledge>
 </tool_update_knowledge>
 
-## Example 16: Update an existing file description
+## Example: Update an existing file description
 
 <tool_update_knowledge>
 <tool_parameter_path>src/utils</tool_parameter_path>
@@ -407,7 +465,7 @@ return (
     description: "Updated description for the file"</tool_parameter_knowledge>
 </tool_update_knowledge>
 
-## Example 17: Add a new rule
+## Example: Add a new rule
 
 <tool_update_knowledge>
 <tool_parameter_path>src</tool_parameter_path>
@@ -415,7 +473,7 @@ return (
     10: "New rule to follow"</tool_parameter_knowledge>
 </tool_update_knowledge>
 
-## Example 18: Remove a rule
+## Example: Remove a rule
 
 <tool_update_knowledge>
 <tool_parameter_path>src</tool_parameter_path>
@@ -423,14 +481,14 @@ return (
     5: null</tool_parameter_knowledge>
 </tool_update_knowledge>
 
-## Example 19: Update nested properties using dot notation
+## Example: Update nested properties using dot notation
 
 <tool_update_knowledge>
 <tool_parameter_path>src/components</tool_parameter_path>
 <tool_parameter_knowledge>files.Button.tsx.api.functions.1.description: "Updated function description"</tool_parameter_knowledge>
 </tool_update_knowledge>
 
-## Example 20: Request to write content to a file
+## Example: Request to write content to a file
 
 <tool_write_to_file>
 <tool_parameter_path>src/main.js</tool_parameter_path>

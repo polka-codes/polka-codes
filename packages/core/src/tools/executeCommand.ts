@@ -4,34 +4,30 @@ import { getBoolean, getString } from './utils'
 
 export const toolInfo = {
   name: 'execute_command',
-  description: `Request to execute a CLI command on the system. Use this when you need to perform system operations or run specific commands to accomplish any step in the user's task. You must tailor your command to the user's system and provide a clear explanation of what the command does. Prefer to execute complex CLI commands over creating executable scripts, as they are more flexible and easier to run. Commands will also be executed in the project root directory regardless of executed commands in previous tool uses.`,
+  description:
+    'Run a single CLI command. The command is always executed in the project-root working directory (regardless of earlier commands). Prefer one-off shell commands over wrapper scripts for flexibility. After an `execute_command` call, no other tool calls are allowed in the same assistant response.',
+
   parameters: [
     {
       name: 'command',
-      description:
-        'The CLI command to execute. This should be valid for the current operating system. Ensure the command is properly formatted and does not contain any harmful instructions.',
+      description: 'The exact command to run (valid for the current OS). It must be correctly formatted and free of harmful instructions.',
       required: true,
-      usageValue: 'Your command here',
+      usageValue: 'your-command-here',
     },
     {
       name: 'requires_approval',
-      description: `A boolean indicating whether this command requires explicit user approval before execution in case the user has auto-approve mode enabled. Set to 'true' for potentially impactful operations like installing/uninstalling packages, deleting/overwriting files, system configuration changes, network operations, or any commands that could have unintended side effects. Set to 'false' for safe operations like reading files/directories, running development servers, building projects, and other non-destructive operations.`,
+      description:
+        'Set to `true` for commands that install/uninstall software, modify or delete files, change system settings, perform network operations, or have other side effects. Use `false` for safe, read-only, or purely local development actions (e.g., listing files, make a build, running tests).',
       required: false,
-      usageValue: 'true or false',
+      usageValue: 'true | false',
     },
   ],
   examples: [
     {
-      description: 'Request to execute a command',
+      description: 'Make a build',
       parameters: [
-        {
-          name: 'command',
-          value: 'npm run dev',
-        },
-        {
-          name: 'requires_approval',
-          value: 'false',
-        },
+        { name: 'command', value: 'npm run build' },
+        { name: 'requires_approval', value: 'false' },
       ],
     },
   ],

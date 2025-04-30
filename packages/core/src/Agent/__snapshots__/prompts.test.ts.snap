@@ -18,11 +18,39 @@ Tool use is formatted using XML-style tags. The tool name is enclosed in opening
 ...
 </tool_tool_name>
 
-For example:
+## Array Parameters
 
-<tool_read_file>
-<tool_parameter_path>src/main.js</tool_parameter_path>
-</tool_read_file>
+To create an array of values for a parameter, repeat the parameter tag multiple times:
+
+<tool_process_file>
+<tool_parameter_path>test.ts</tool_parameter_path>
+<tool_parameter_path>main.ts</tool_parameter_path>
+</tool_process_file>
+
+## Nested Object Parameters
+
+To create nested objects, nest parameter tags within other parameter tags:
+
+<tool_example_tool>
+<tool_parameter_key>
+<tool_parameter_key2>value</tool_parameter_key2>
+<tool_parameter_key3>value2</tool_parameter_key3>
+</tool_parameter_key>
+</tool_example_tool>
+
+You can also combine array parameters with nested objects:
+
+<tool_example_tool>
+<tool_parameter_key>
+<tool_parameter_key2>value</tool_parameter_key2>
+<tool_parameter_key3>value2</tool_parameter_key3>
+</tool_parameter_key>
+<tool_parameter_key>
+<tool_parameter_key2>value3</tool_parameter_key2>
+<tool_parameter_key3>value4</tool_parameter_key3>
+<tool_parameter_key3>value5</tool_parameter_key3>
+</tool_parameter_key>
+</tool_example_tool>
 
 Always adhere to this format for the tool use to ensure proper parsing and execution.
 
@@ -46,7 +74,7 @@ Usage:
 
 # Tool Use Examples
 
-## Example 1: Example usage
+## Example: Example usage
 
 <tool_test_tool>
 <tool_parameter_param1>test1</tool_parameter_param1>

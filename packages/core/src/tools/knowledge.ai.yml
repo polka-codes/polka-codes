@@ -2,6 +2,34 @@ description: Tool implementations for agent operations
 files:
   askFollowupQuestion.ts:
     description: Tool for asking user follow-up questions
+    api:
+      functions:
+        "1":
+          name: handler
+          description: Handles the askFollowupQuestion tool execution
+          params:
+            "1":
+              name: provider
+              type: InteractionProvider
+            "2":
+              name: args
+              type: object
+              description: Object containing questions array with prompt and options
+          returns: Promise<ToolResponse>
+      parameters:
+        "1":
+          name: questions
+          description: Array of question objects with prompt and options
+          required: true
+          children:
+            "1":
+              name: prompt
+              description: The text of the question
+              required: true
+            "2":
+              name: options
+              description: Array of suggested answers
+              required: false
   attemptCompletion.ts:
     description: Tool for signaling task completion
   executeCommand.ts:

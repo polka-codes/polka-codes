@@ -2,12 +2,16 @@ export type ToolParameter = {
   name: string
   description: string
   required: boolean
-  usageValue: string
+  usageValue?: string
+  allowMultiple?: boolean
+  children?: ToolParameter[]
 }
+
+export type ToolParameterValue = string | { [key: string]: ToolParameterValue } | ToolParameterValue[]
 
 export type ToolExample = {
   description: string
-  parameters: { name: string; value: string }[]
+  parameters: { name: string; value: ToolParameterValue }[]
 }
 
 export enum PermissionLevel {
@@ -122,5 +126,5 @@ export type ToolResponse =
 
 export type ToolHandler<T extends ToolInfo, P> = (
   provider: P,
-  args: Partial<Record<T['parameters'][number]['name'], string>>,
+  args: Partial<Record<T['parameters'][number]['name'], ToolParameterValue>>,
 ) => Promise<ToolResponse>
