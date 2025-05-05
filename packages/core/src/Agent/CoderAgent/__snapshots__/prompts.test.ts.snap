@@ -65,11 +65,12 @@ NEVER surround tool use with triple backticks (\`\`\`).
 Description: Call this when vital details are missing. Pose each follow-up as one direct, unambiguous question. If it speeds the reply, add up to five short, mutually-exclusive answer options. Group any related questions in the same call to avoid a back-and-forth chain.
 
 Parameters:
-- tool_parameter_questions: (required) One or more follow-up questions you need answered before you can continue.
+- tool_parameter_questions: (required) (multiple allowed) One or more follow-up questions you need answered before you can continue.
 
 Usage:
 <tool_ask_followup_question>
-<tool_parameter_questions>undefined</tool_parameter_questions>
+<tool_parameter_questions>questions here</tool_parameter_questions>
+<tool_parameter_questions>questions here</tool_parameter_questions>
 </tool_ask_followup_question>
 
 ## tool_attempt_completion

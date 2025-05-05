@@ -1,4 +1,4 @@
-import type { ToolInfo } from '../tool'
+import type { ToolInfo, ToolParameter } from '../tool'
 
 export interface TextContent {
   type: 'text'
@@ -14,9 +14,19 @@ export interface ToolUse {
 export type AssistantMessageContent = TextContent | ToolUse
 
 // Helper function to parse nested parameters
-function parseNestedParameters(content: string, parameterPrefix: string): Record<string, any> {
+function parseNestedParameters(content: string, parameterPrefix: string, childrenParams?: ToolParameter[]): Record<string, any> {
   const result: Record<string, any> = {}
   const nestedParamRegex = new RegExp(`<${parameterPrefix}([^>]+)>([\\s\\S]*?)<\\/${parameterPrefix}\\1>`, 'gs')
+
+  // Track parameters that can be arrays
+  const arrayParams = new Set<string>()
+  if (childrenParams) {
+    for (const param of childrenParams) {
+      if (param.allowMultiple) {
+        arrayParams.add(param.name)
+      }
+    }
+  }
 
   while (true) {
     const match = nestedParamRegex.exec(content)
@@ -25,10 +35,39 @@ function parseNestedParameters(content: string, parameterPrefix: string): Record
     const paramName = match[1]
     const paramContent = match[2].trim()
 
-    // Check if the content has nested parameters
-    if (paramContent.includes(`<${parameterPrefix}`)) {
+    // Find the child parameter definition if available
+    const childParam = childrenParams?.find((p) => p.name === paramName)
+
+    // Check if the content has nested parameters and if we have children defined
+    if (paramContent.includes(`<${parameterPrefix}`) && childParam?.children) {
       // Recursively parse nested parameters
-      result[paramName] = parseNestedParameters(paramContent, parameterPrefix)
+      const nestedResult = parseNestedParameters(paramContent, parameterPrefix, childParam.children)
+
+      if (arrayParams.has(paramName)) {
+        // This parameter should be an array
+        if (!result[paramName]) {
+          result[paramName] = []
+        }
+
+        if (Array.isArray(result[paramName])) {
+          result[paramName].push(nestedResult)
+        } else {
+          result[paramName] = [nestedResult]
+        }
+      } else {
+        result[paramName] = nestedResult
+      }
+    } else if (arrayParams.has(paramName)) {
+      // This is an array parameter
+      if (!result[paramName]) {
+        result[paramName] = []
+      }
+
+      if (Array.isArray(result[paramName])) {
+        result[paramName].push(paramContent)
+      } else {
+        result[paramName] = [paramContent]
+      }
     } else {
       result[paramName] = paramContent
     }
@@ -152,20 +191,39 @@ export function parseAssistantMessage(assistantMessage: string, tools: ToolInfo[
         }
 
         if (paramMatches.length > 0) {
-          if (paramMatches.length === 1) {
+          if (paramMatches.length === 1 && !param.allowMultiple) {
             const paramContent = paramMatches[0]
 
             // Check if the parameter has nested content
-            if (paramContent.includes(`<${parameterPrefix}`)) {
+            if (paramContent.includes(`<${parameterPrefix}`) && param.children) {
               // Parse nested parameters
-              params[param.name] = parseNestedParameters(paramContent, parameterPrefix)
+              params[param.name] = parseNestedParameters(paramContent, parameterPrefix, param.children)
             } else {
               // Regular parameter
               params[param.name] = paramContent
             }
           } else {
-            // Array mode - multiple occurrences of the same parameter
-            params[param.name] = paramMatches
+            // Array mode - multiple occurrences of the same parameter or allowMultiple is true
+            if (param.allowMultiple) {
+              params[param.name] = paramMatches.map((paramContent) => {
+                // Check if each array element has nested content
+                if (paramContent.includes(`<${parameterPrefix}`) && param.children) {
+                  // Parse nested parameters for each array element
+                  return parseNestedParameters(paramContent, parameterPrefix, param.children)
+                }
+                // Regular array element
+                return paramContent
+              })
+            } else {
+              // Multiple occurrences but not allowed to be an array - use first occurrence
+              const paramContent = paramMatches[0]
+
+              if (paramContent.includes(`<${parameterPrefix}`) && param.children) {
+                params[param.name] = parseNestedParameters(paramContent, parameterPrefix, param.children)
+              } else {
+                params[param.name] = paramContent
+              }
+            }
           }
         }
       }

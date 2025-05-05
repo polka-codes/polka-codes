@@ -21,11 +21,23 @@ const toolInfoPrompt = (tool: ToolInfo, toolNamePrefix: string, parameterPrefix:
 Description: ${tool.description}
 
 Parameters:
-${tool.parameters.map((param) => `- ${parameterPrefix}${param.name}: (${param.required ? 'required' : 'optional'}) ${param.description}`).join('\n')}
+${tool.parameters
+  .map(
+    (param) =>
+      `- ${parameterPrefix}${param.name}: (${param.required ? 'required' : 'optional'})${param.allowMultiple ? ' (multiple allowed)' : ''} ${param.description}`,
+  )
+  .join('\n')}
 
 Usage:
 <${toolNamePrefix}${tool.name}>
-${tool.parameters.map((param) => `<${parameterPrefix}${param.name}>${param.usageValue}</${parameterPrefix}${param.name}>`).join('\n')}
+${tool.parameters
+  .map((param) =>
+    param.allowMultiple
+      ? `<${parameterPrefix}${param.name}>${param.usageValue}</${parameterPrefix}${param.name}>
+<${parameterPrefix}${param.name}>${param.usageValue}</${parameterPrefix}${param.name}>`
+      : `<${parameterPrefix}${param.name}>${param.usageValue}</${parameterPrefix}${param.name}>`,
+  )
+  .join('\n')}
 </${toolNamePrefix}${tool.name}>`
 
 const toolInfoExamplesPrompt = (tool: ToolInfo, example: ToolExample, toolNamePrefix: string, parameterPrefix: string) => `
