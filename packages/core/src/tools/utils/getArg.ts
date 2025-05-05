@@ -33,6 +33,14 @@ export const getStringArray = <T extends string>(
   if (ret === '') {
     return []
   }
+  if (Array.isArray(ret)) {
+    for (const item of ret) {
+      if (typeof item !== 'string') {
+        throw new Error(`Invalid argument type: ${name} ${item}`)
+      }
+    }
+    return ret as string[]
+  }
   if (typeof ret !== 'string') {
     throw new Error(`Invalid argument type: ${name} ${ret}`)
   }
