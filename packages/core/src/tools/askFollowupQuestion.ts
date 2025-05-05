@@ -12,6 +12,7 @@ export const toolInfo = {
       description: 'One or more follow-up questions you need answered before you can continue.',
       required: true,
       allowMultiple: true,
+      usageValue: 'questions here',
       children: [
         {
           name: 'prompt',

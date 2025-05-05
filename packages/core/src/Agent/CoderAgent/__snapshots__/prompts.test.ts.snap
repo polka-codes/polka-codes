@@ -69,7 +69,7 @@ Parameters:
 
 Usage:
 <tool_ask_followup_question>
-<tool_parameter_questions>undefined</tool_parameter_questions>
+<tool_parameter_questions>questions here</tool_parameter_questions>
 </tool_ask_followup_question>
 
 ## tool_attempt_completion
