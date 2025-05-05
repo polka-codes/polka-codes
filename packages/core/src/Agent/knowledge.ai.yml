@@ -13,8 +13,8 @@ files:
   MultiAgent.ts:
     description: Multi-agent coordination
   parseAssistantMessage.ts:
-    description: Parses assistant messages to extract text content and tool use with
-      parameters, supporting array mode and nested objects
+    description: Parses assistant messages to extract tool usage and parameters,
+      with improved support for array parameters with nested objects
     api:
       interfaces:
         "1":
@@ -26,6 +26,7 @@ files:
             "2":
               name: content
               type: string
+          description: Represents plain text content in an assistant message
         "2":
           name: ToolUse
           properties:
@@ -38,21 +39,29 @@ files:
             "3":
               name: params
               type: Record<string, any>
+          description: Represents a tool use in an assistant message
+        "3":
+          name: AssistantMessageContent
+          description: Union type of TextContent and ToolUse
       functions:
         "1":
           name: parseAssistantMessage
-          description: Parses an assistant's message into an array of text content and
-            tool use content, supporting array mode and nested objects
+          description: Parses an assistant's message into text content and tool use
+            content, with improved support for array parameters with nested
+            objects
           params:
             "1":
               name: assistantMessage
               type: string
+              description: The message to parse
             "2":
               name: tools
               type: ToolInfo[]
+              description: Available tools
             "3":
               name: toolNamePrefix
               type: string
+              description: Prefix for tool names in XML tags
           returns: AssistantMessageContent[]
   policies/KnowledgeManagement.ts:
     description: Knowledge management policy
@@ -117,6 +126,7 @@ files:
               type: "Record<string, string | { command: string; description: string }>"
           returns: string
 rules:
-  "1": Each agent should implement a clear responsibility
-  "2": Follow consistent prompt engineering patterns
-  "3": Maintain separation of concerns between agents
+  "1": Tool parameters can be arrays if allowMultiple is true
+  "2": Tool parameters can have nested structure if children is defined
+  "3": When parsing nested parameters, respect the children definition
+  "4": When parsing array parameters, respect the allowMultiple flag
