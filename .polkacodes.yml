@@ -30,9 +30,7 @@ rules: |
   DO NOT use mock in tests. Use spyOn imported bun 'bun:test' if needed
   When writing unit tests, use `.toMatchSnapshot()` if suitable.
   In tests, ensure no redundant assertions. i.e. if `.toMatchSnapshot()` is used, then there is no need to have other assertions.
-  When creating a new file, try to check if there are other files with similar content, and if so, read those files and use them as a reference
   NEVER mock modules
   Prefer ASCII over Unicode
-  NEVER in comments describe the change made to the code
 policies:
   - KnowledgeManagement
