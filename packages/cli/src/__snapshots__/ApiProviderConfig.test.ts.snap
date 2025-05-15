@@ -94,3 +94,47 @@ exports[`ApiProviderConfig parameters inherit correctly from different levels 2`
   "temperature": 0.5,
 }
 `;
+
+exports[`ApiProviderConfig handles global default parameters correctly: agent default - global params 1`] = `
+{
+  "frequency_penalty": 0.2,
+  "temperature": 0.2,
+  "top_p": 0.2,
+}
+`;
+
+exports[`ApiProviderConfig handles global default parameters correctly: agent coder - anthropic params override global 1`] = `
+{
+  "max_tokens": 1000,
+  "temperature": 0.5,
+}
+`;
+
+exports[`ApiProviderConfig handles global default parameters correctly: agent analyzer - agent params override global 1`] = `
+{
+  "temperature": 0.3,
+  "top_p": 0.3,
+}
+`;
+
+exports[`ApiProviderConfig handles global default parameters correctly: command default - global params 1`] = `
+{
+  "frequency_penalty": 0.2,
+  "temperature": 0.2,
+  "top_p": 0.2,
+}
+`;
+
+exports[`ApiProviderConfig handles global default parameters correctly: command task - command params override anthropic and global 1`] = `
+{
+  "max_tokens": 1500,
+  "temperature": 0.6,
+}
+`;
+
+exports[`ApiProviderConfig handles global default parameters correctly: agent default - only global params 1`] = `
+{
+  "max_tokens": 500,
+  "temperature": 0.1,
+}
+`;

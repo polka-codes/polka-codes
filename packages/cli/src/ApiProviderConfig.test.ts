@@ -198,4 +198,104 @@ describe('ApiProviderConfig', () => {
     expect(apiConfig.getConfigForAgent('coder')).toBeUndefined()
     expect(apiConfig.getConfigForCommand('task')).toBeUndefined()
   })
+
+  test('handles global default parameters correctly', () => {
+    const configWithGlobalDefaults: Config = {
+      defaultProvider: AiServiceProvider.OpenRouter,
+      defaultModel: 'gpt-4', // Assuming OpenRouter can use gpt-4
+      defaultParameters: {
+        temperature: 0.2,
+        top_p: 0.2,
+        frequency_penalty: 0.2,
+      },
+      providers: {
+        openrouter: {
+          // Changed from openai to openrouter
+          apiKey: 'test-openrouter-key',
+          // No defaultParameters here to test global override
+        },
+        anthropic: {
+          apiKey: 'test-anthropic-key',
+          defaultModel: 'claude-3-sonnet',
+          defaultParameters: {
+            temperature: 0.5, // This should override global temperature for Anthropic
+            max_tokens: 1000, // This is specific to Anthropic
+          },
+        },
+      },
+      agents: {
+        default: {
+          // Uses OpenRouter by default, should inherit global params
+        },
+        coder: {
+          provider: AiServiceProvider.Anthropic,
+          // Uses Anthropic, should use Anthropic's params, overriding global temp
+        },
+        analyzer: {
+          provider: AiServiceProvider.OpenRouter, // Changed from OpenAI
+          parameters: {
+            temperature: 0.3, // This should override global and provider temperature for this agent
+            top_p: 0.3, // This should override global and provider top_p for this agent
+          },
+        },
+      },
+      commands: {
+        default: {
+          // Uses OpenRouter by default, should inherit global params
+        },
+        task: {
+          provider: AiServiceProvider.Anthropic,
+          parameters: {
+            temperature: 0.6, // This should override global and Anthropic's temperature
+            max_tokens: 1500, // This should override Anthropic's max_tokens
+          },
+        },
+      },
+    }
+
+    const apiConfig = new ApiProviderConfig(configWithGlobalDefaults)
+
+    // Agent: default (OpenRouter with global defaults)
+    const defaultAgentConfig = apiConfig.getConfigForAgent('default')
+    expect(defaultAgentConfig?.parameters).toMatchSnapshot('agent default - global params')
+
+    // Agent: coder (Anthropic, merging global and Anthropic defaults)
+    const coderAgentConfig = apiConfig.getConfigForAgent('coder')
+    expect(coderAgentConfig?.parameters).toMatchSnapshot('agent coder - anthropic params override global')
+
+    // Agent: analyzer (OpenRouter, with agent-specific overrides)
+    const analyzerAgentConfig = apiConfig.getConfigForAgent('analyzer')
+    expect(analyzerAgentConfig?.parameters).toMatchSnapshot('agent analyzer - agent params override global')
+
+    // Command: default (OpenRouter with global defaults)
+    const defaultCommandConfig = apiConfig.getConfigForCommand('default')
+    expect(defaultCommandConfig?.parameters).toMatchSnapshot('command default - global params')
+
+    // Command: task (Anthropic, with command-specific overrides)
+    const taskCommandConfig = apiConfig.getConfigForCommand('task')
+    expect(taskCommandConfig?.parameters).toMatchSnapshot('command task - command params override anthropic and global')
+
+    // Test with only global defaults and no provider specific params
+    const configOnlyGlobal: Config = {
+      defaultProvider: AiServiceProvider.OpenRouter, // Changed from OpenAI
+      defaultModel: 'gpt-3.5-turbo', // Assuming OpenRouter can use this
+      defaultParameters: {
+        temperature: 0.1,
+        max_tokens: 500,
+      },
+      providers: {
+        openrouter: {
+          // Changed from openai to openrouter
+          apiKey: 'another-openrouter-key',
+          // No defaultParameters
+        },
+      },
+      agents: {
+        default: {}, // Should use global defaults
+      },
+    }
+    const apiConfigOnlyGlobal = new ApiProviderConfig(configOnlyGlobal)
+    const agentOnlyGlobalConfig = apiConfigOnlyGlobal.getConfigForAgent('default')
+    expect(agentOnlyGlobalConfig?.parameters).toMatchSnapshot('agent default - only global params')
+  })
 })

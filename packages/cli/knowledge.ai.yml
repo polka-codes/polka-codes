@@ -1,43 +1,117 @@
 files:
-  - path: "src/index.ts"
-    description: "Main CLI entry point"
+  "1":
+    path: src/index.ts
+    description: Main CLI entry point
     api:
       functions:
-        - name: "main"
-          params: [{ name: "argv", type: "string[]" }]
-          returns: "Promise<void>"
-  - path: "src/commands/chat.ts"
-    description: "Chat command implementation"
+        - name: main
+          params:
+            - name: argv
+              type: string[]
+          returns: Promise<void>
+  "2":
+    path: src/commands/chat.ts
+    description: Chat command implementation
     api:
       functions:
-        - name: "chatCommand"
-          params: [{ name: "options", type: "ChatCommandOptions" }]
-          returns: "Promise<void>"
-  - path: "src/commands/commit.ts"
-    description: "Commit command implementation"
+        - name: chatCommand
+          params:
+            - name: options
+              type: ChatCommandOptions
+          returns: Promise<void>
+  "3":
+    path: src/commands/commit.ts
+    description: Commit command implementation
     api:
       functions:
-        - name: "commitCommand"
-          params: [{ name: "options", type: "CommitCommandOptions" }]
-          returns: "Promise<void>"
-  - path: "src/Runner.ts"
-    description: "Core runner for executing tasks"
+        - name: commitCommand
+          params:
+            - name: options
+              type: CommitCommandOptions
+          returns: Promise<void>
+  "4":
+    path: src/Runner.ts
+    description: Core runner for executing tasks
     api:
       classes:
-        - name: "Runner"
+        - name: Runner
           methods:
-            - name: "run"
-              params: [{ name: "task", type: "string" }]
-              returns: "Promise<void>"
-
+            - name: run
+              params:
+                - name: task
+                  type: string
+              returns: Promise<void>
+  src/ApiProviderConfig.ts:
+    description: Manages API provider configurations, resolving appropriate settings
+      for commands and agents by merging global, provider-specific, and
+      command/agent-specific parameters.
+    api:
+      classes:
+        "1":
+          name: ApiProviderConfig
+          constructor:
+            params:
+              "1":
+                name: config
+                type: Config
+            description: Initializes with a Config object, setting up default provider,
+              provider-specific settings, command/agent configurations, and
+              global default parameters.
+          properties:
+            "1":
+              name: defaultProvider
+              type: AiServiceProvider | undefined
+              access: readonly
+            "2":
+              name: providers
+              type: "Readonly<Partial<Record<AiServiceProvider, { apiKey: string;
+                defaultModel?: string; defaultParameters: any }>>>"
+              access: readonly
+            "3":
+              name: commands
+              type: "Partial<Record<string, { provider?: AiServiceProvider; model?: string;
+                parameters: any }>> | undefined"
+              access: readonly
+            "4":
+              name: agents
+              type: "Partial<Record<string, { provider?: AiServiceProvider; model?: string;
+                parameters: any }>> | undefined"
+              access: readonly
+            "5":
+              name: defaultParameters
+              type: any
+              access: readonly
+              description: Global default parameters, used if not overridden at provider or
+                command/agent level.
+          methods:
+            "1":
+              name: getConfigForCommand
+              params:
+                "1":
+                  name: command
+                  type: string
+              returns: "{ provider: AiServiceProvider; model: string; apiKey: string |
+                undefined; parameters: any } | undefined"
+              description: Resolves the configuration for a given command, merging global
+                defaults, provider defaults, and command-specific settings.
+                Returns undefined if no provider can be determined.
+            "2":
+              name: getConfigForAgent
+              params:
+                "1":
+                  name: agent
+                  type: string
+              returns: "{ provider: AiServiceProvider; model: string; apiKey: string |
+                undefined; parameters: any } | undefined"
+              description: Resolves the configuration for a given agent, merging global
+                defaults, provider defaults, and agent-specific settings.
+                Returns undefined if no provider can be determined.
 invariants:
-  - "All commands must be async and return Promises"
-  - "Command options are validated before execution"
-
+  - All commands must be async and return Promises
+  - Command options are validated before execution
 patterns:
-  - "Commands follow a consistent structure with options handling"
-  - "Error handling is centralized in the Runner class"
-
+  - Commands follow a consistent structure with options handling
+  - Error handling is centralized in the Runner class
 rules:
-  - "Each command must have a corresponding test file"
-  - "All user-facing output must go through the logger"
+  - Each command must have a corresponding test file
+  - All user-facing output must go through the logger

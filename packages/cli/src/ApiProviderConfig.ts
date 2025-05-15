@@ -6,9 +6,11 @@ export class ApiProviderConfig {
   readonly providers: Readonly<Partial<Record<AiServiceProvider, { apiKey: string; defaultModel?: string; defaultParameters: any }>>>
   readonly commands?: Partial<Record<string, { provider?: AiServiceProvider; model?: string; parameters: any }>>
   readonly agents?: Partial<Record<string, { provider?: AiServiceProvider; model?: string; parameters: any }>>
+  readonly defaultParameters: any
 
   constructor(config: Config) {
     this.defaultProvider = config.defaultProvider as AiServiceProvider | undefined
+    this.defaultParameters = config.defaultParameters ?? {}
     this.providers = config.providers ?? {}
     this.commands = config.commands as Partial<Record<string, { provider?: AiServiceProvider; model?: string; parameters: any }>>
     this.agents = config.agents as Partial<Record<string, { provider?: AiServiceProvider; model?: string; parameters: any }>>
@@ -23,7 +25,7 @@ export class ApiProviderConfig {
     }
     const finalModel = model ?? this.providers[finalProvider]?.defaultModel ?? defaultModels[finalProvider]
     const apiKey = this.providers[finalProvider]?.apiKey
-    const finalParameters = parameters ?? this.providers[finalProvider]?.defaultParameters ?? {}
+    const finalParameters = parameters ?? this.providers[finalProvider]?.defaultParameters ?? this.defaultParameters ?? {}
     return {
       provider: finalProvider,
       model: finalModel,
@@ -41,7 +43,7 @@ export class ApiProviderConfig {
     }
     const finalModel = model ?? this.providers[finalProvider]?.defaultModel ?? defaultModels[finalProvider]
     const apiKey = this.providers[finalProvider]?.apiKey
-    const finalParameters = parameters ?? this.providers[finalProvider]?.defaultParameters ?? {}
+    const finalParameters = parameters ?? this.providers[finalProvider]?.defaultParameters ?? this.defaultParameters ?? {}
     return {
       provider: finalProvider,
       model: finalModel,
