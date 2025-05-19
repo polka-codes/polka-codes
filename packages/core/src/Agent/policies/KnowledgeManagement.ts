@@ -89,7 +89,7 @@ export const KnowledgeManagementPolicy = (tools: Parameters<AgentPolicy>[0]) => 
 
   return {
     name: Policies.KnowledgeManagement,
-    tools: tools[writeToFile.name] ? [tools[updateKnowledge.name]] : [],
+    tools: tools[writeToFile.name] ? [updateKnowledge] : [],
     prompt: tools[writeToFile.name] || tools[updateKnowledge.name] ? prompt : undefined,
     async getKnowledgeFilePaths(inputFiles: string[]) {
       const paths = new Set<string>()
