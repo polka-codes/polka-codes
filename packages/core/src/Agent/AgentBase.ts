@@ -181,6 +181,7 @@ export type AgentPolicyInstance = {
   prompt?: string
   updateResponse?: (response: AssistantMessageContent[]) => Promise<AssistantMessageContent[]>
   onBeforeInvokeTool?: (name: string, args: Record<string, string>) => Promise<ToolResponse | undefined>
+  onBeforeRequest?: (agent: AgentBase, messages: MessageParam[]) => Promise<MessageParam[]>
 }
 
 export type AgentPolicy = (tools: Record<string, FullToolInfo>) => AgentPolicyInstance | undefined
@@ -316,8 +317,15 @@ export abstract class AgentBase {
     for (let i = 0; i < retryCount; i++) {
       currentAssistantMessage = ''
 
-      // TODO: use a truncated messages if needed to avoid exceeding the token limit
-      const stream = this.ai.send(this.config.systemPrompt, this.#messages)
+      // Process messages through policy hooks before sending
+      let processedMessages = [...this.#messages]
+      for (const policy of this.#policies) {
+        if (policy.onBeforeRequest) {
+          processedMessages = await policy.onBeforeRequest(this, processedMessages)
+        }
+      }
+
+      const stream = this.ai.send(this.config.systemPrompt, processedMessages)
 
       try {
         for await (const chunk of stream) {

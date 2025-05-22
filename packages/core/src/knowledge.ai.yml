@@ -128,3 +128,16 @@ files:
               name: value
               type: ToolParameterValue | undefined
           returns: value is Record<string, any> | undefined
+  config.ts:
+    description: Configuration schema and types for the application
+    api:
+      enums:
+        "1":
+          name: Policies
+          values:
+            "1":
+              name: KnowledgeManagement
+              value: knowledgemanagement
+            "2":
+              name: TruncateContext
+              value: truncatecontext

@@ -1,0 +1,25 @@
+description: Agent policies that modify agent behavior
+files:
+  TruncateContext.ts:
+    description: Policy to truncate messages when the context window is too large
+    api:
+      constants:
+        "1":
+          name: DEFAULT_TOKEN_LIMIT
+          value: 4000
+          description: Default token limit for context window
+        "2":
+          name: CHARS_PER_TOKEN
+          value: 4
+          description: Approximate token count per character
+        "3":
+          name: PRESERVE_RECENT_MESSAGES
+          value: 4
+          description: Number of messages to preserve at the end when truncating
+      functions:
+        "1":
+          name: TruncateContextPolicy
+          description: Policy to truncate messages when the context window is too large
+          returns: AgentPolicyInstance | undefined
+  index.ts:
+    description: Exports all available agent policies

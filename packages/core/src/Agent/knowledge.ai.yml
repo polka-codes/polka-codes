@@ -1,7 +1,42 @@
 description: Agent implementations for different roles
 files:
   AgentBase.ts:
-    description: Base class for all agents
+    description: Base class for all agents with core functionality
+    api:
+      types:
+        "1":
+          name: AgentPolicyInstance
+          description: Interface for agent policy instances that can modify agent behavior
+          properties:
+            "1":
+              name: name
+              type: string
+              description: Name of the policy
+            "2":
+              name: tools
+              type: FullToolInfo[]
+              description: Additional tools provided by the policy
+              optional: true
+            "3":
+              name: prompt
+              type: string
+              description: Additional prompt text to add to system prompt
+              optional: true
+            "4":
+              name: updateResponse
+              type: function
+              description: Hook to update assistant responses
+              optional: true
+            "5":
+              name: onBeforeInvokeTool
+              type: function
+              description: Hook called before invoking a tool
+              optional: true
+            "6":
+              name: onBeforeRequest
+              type: function
+              description: Hook called before making a request to process messages
+              optional: true
   AnalyzerAgent/index.ts:
     description: Code analysis agent implementation
   ArchitectAgent/index.ts:
