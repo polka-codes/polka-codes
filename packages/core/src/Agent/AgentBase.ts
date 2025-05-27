@@ -181,6 +181,7 @@ export type AgentPolicyInstance = {
   prompt?: string
   updateResponse?: (response: AssistantMessageContent[]) => Promise<AssistantMessageContent[]>
   onBeforeInvokeTool?: (name: string, args: Record<string, string>) => Promise<ToolResponse | undefined>
+  onBeforeRequest?: (agent: AgentBase) => Promise<void>
 }
 
 export type AgentPolicy = (tools: Record<string, FullToolInfo>) => AgentPolicyInstance | undefined
@@ -308,6 +309,13 @@ export abstract class AgentBase {
       role: 'user',
       content: userMessage,
     })
+
+    // Call onBeforeRequest hooks from policies
+    for (const instance of this.#policies) {
+      if (instance.onBeforeRequest) {
+        await instance.onBeforeRequest(this)
+      }
+    }
 
     let currentAssistantMessage = ''
 

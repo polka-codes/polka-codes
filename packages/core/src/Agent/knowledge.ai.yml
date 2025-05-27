@@ -1,7 +1,28 @@
 description: Agent implementations for different roles
 files:
   AgentBase.ts:
-    description: Base class for all agents
+    description: Base class for all agents with LLM communication and tool management
+    api:
+      classes:
+        1:
+          name: "AgentBase"
+          description: "Core agent functionality with LLM communication and tool management"
+          methods:
+            1: { name: "constructor", params: { name: "string", service: "AiServiceBase", tools: "FullToolInfo[]" }, description: "Initialize agent with name, AI service, and available tools" }
+            2: { name: "start", params: { prompt: "string" }, returns: "Promise<ExitReason>", description: "Start agent task execution" }
+            3: { name: "step", params: { prompt: "string" }, returns: "Promise<AssistantMessageContent[]>", description: "Execute single step" }
+            4: { name: "continueTask", params: { userMessage: "string" }, returns: "Promise<ExitReason>", description: "Continue existing task" }
+      types:
+        1:
+          name: "AgentPolicyInstance"
+          description: "Policy configuration for agent behavior"
+          properties:
+            1: { name: "name", type: "string", description: "Policy name" }
+            2: { name: "tools", type: "FullToolInfo[]", optional: true, description: "Additional tools for this policy" }
+            3: { name: "prompt", type: "string", optional: true, description: "Additional prompt for this policy" }
+            4: { name: "updateResponse", type: "(response: AssistantMessageContent[]) => Promise<AssistantMessageContent[]>", optional: true, description: "Hook to modify LLM response" }
+            5: { name: "onBeforeInvokeTool", type: "(name: string, args: Record<string, string>) => Promise<ToolResponse | undefined>", optional: true, description: "Hook called before tool execution" }
+            6: { name: "onBeforeRequest", type: "(agent: AgentBase) => Promise<void>", optional: true, description: "Hook called before making requests to LLM" }
   AnalyzerAgent/index.ts:
     description: Code analysis agent implementation
   ArchitectAgent/index.ts:
