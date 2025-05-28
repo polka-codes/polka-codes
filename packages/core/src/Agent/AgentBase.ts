@@ -446,7 +446,7 @@ export abstract class AgentBase {
               if (toolResponses.length > 0) {
                 // agent is trying run too many tools in a single request
                 // stop the tool execution
-                continue
+                break outer
               }
               // delegate the task to another agent
               const delegateResp = {
