@@ -8,7 +8,6 @@ import { input, select } from '@inquirer/prompts'
 import type { Config } from './config'
 import { listFiles } from './utils/listFiles'
 import { searchFiles } from './utils/searchFiles'
-import { parseSourceCodeForDefinitionsTopLevel } from './utils/tree-sitter'
 
 export type ProviderOptions = {
   command?: {
@@ -61,9 +60,6 @@ export const getProvider = (agentName: AgentNameType, config: Config, options: P
     },
     searchFiles: async (path: string, regex: string, filePattern: string): Promise<string[]> => {
       return await searchFiles(path, regex, filePattern, process.cwd(), options.excludeFiles)
-    },
-    listCodeDefinitionNames: async (path: string): Promise<string> => {
-      return await parseSourceCodeForDefinitionsTopLevel(path, process.cwd(), options.excludeFiles)
     },
 
     executeCommand: (command: string, needApprove: boolean): Promise<{ stdout: string; stderr: string; exitCode: number }> => {

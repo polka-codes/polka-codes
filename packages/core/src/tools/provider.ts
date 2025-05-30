@@ -5,7 +5,6 @@ export type FilesystemProvider = {
   renameFile?: (sourcePath: string, targetPath: string) => Promise<void>
   listFiles?: (path: string, recursive: boolean, maxCount: number) => Promise<[string[], boolean]>
   searchFiles?: (path: string, regex: string, filePattern: string) => Promise<string[]>
-  listCodeDefinitionNames?: (path: string) => Promise<string>
 }
 
 export type CommandProvider = {
@@ -42,10 +41,6 @@ export class MockProvider implements ToolProvider {
 
   async searchFiles(path: string, regex: string, filePattern: string): Promise<string[]> {
     return ['mock-file.txt']
-  }
-
-  async listCodeDefinitionNames(path: string): Promise<string> {
-    return 'mockDefinition'
   }
 
   async executeCommand(command: string, needApprove: boolean): Promise<{ stdout: string; stderr: string; exitCode: number }> {

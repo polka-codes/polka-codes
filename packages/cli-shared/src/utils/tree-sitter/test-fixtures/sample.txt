@@ -1,2 +1,0 @@
-This is a plain text file
-It should be ignored by the parser

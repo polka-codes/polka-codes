@@ -135,18 +135,6 @@ Usage:
 <tool_parameter_files>Relevant files</tool_parameter_files>
 </tool_hand_over>
 
-## tool_list_code_definition_names
-
-Description: Request to list definition names (classes, functions, methods, etc.) used for all files in a directory. This tool provides insights into the codebase structure and important constructs, encapsulating high-level concepts and relationships that are crucial for understanding the overall architecture.
-
-Parameters:
-- tool_parameter_path: (required) The path of a code file to list top level source code definitions for.
-
-Usage:
-<tool_list_code_definition_names>
-<tool_parameter_path>Directory path here</tool_parameter_path>
-</tool_list_code_definition_names>
-
 ## tool_list_files
 
 Description: Request to list files and directories within the specified directory. If recursive is true, it will list all files and directories recursively. If recursive is false or not provided, it will only list the top-level contents. Do not use this tool to confirm the existence of files you may have created, as the user will let you know if the files were created successfully or not.
@@ -359,12 +347,6 @@ Usage:
 <tool_parameter_context>We need a secure login system with email and password</tool_parameter_context>
 <tool_parameter_files>src/auth/login.ts,src/auth/types.ts</tool_parameter_files>
 </tool_hand_over>
-
-## Example: Request to list code definition names in a directory
-
-<tool_list_code_definition_names>
-<tool_parameter_path>src/utils</tool_parameter_path>
-</tool_list_code_definition_names>
 
 ## Example: Request to list files
 

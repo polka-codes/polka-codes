@@ -8,7 +8,6 @@ import {
   type FullToolInfo,
   ToolResponseType,
   executeCommand,
-  listCodeDefinitionNames,
   listFiles,
   readFile,
   removeFile,
@@ -64,7 +63,6 @@ export class Runner {
     // Define available tools
     this.availableTools = {
       [executeCommand.name]: executeCommand,
-      [listCodeDefinitionNames.name]: listCodeDefinitionNames,
       [listFiles.name]: listFiles,
       [readFile.name]: readFile,
       [removeFile.name]: removeFile,

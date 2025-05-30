@@ -6,8 +6,6 @@ files:
     description: "File system operations for listing files"
   - path: "searchFiles.ts"
     description: "File content searching utilities"
-  - path: "tree-sitter/index.ts"
-    description: "Language parsing using Tree-sitter"
 rules:
   - "Utilities should be pure functions where possible"
   - "Follow consistent error handling patterns"

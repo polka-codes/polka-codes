@@ -23,13 +23,6 @@ files:
         - name: "searchFiles"
           params: [{ name: "options", type: "SearchFilesOptions" }]
           returns: "Promise<SearchResult[]>"
-  - path: "src/utils/tree-sitter/index.ts"
-    description: "Tree-sitter based code parsing utilities"
-    api:
-      functions:
-        - name: "parseCode"
-          params: [{ name: "options", type: "ParseCodeOptions" }]
-          returns: "Promise<ParseResult>"
 
 invariants:
   - "All file system operations are async and return Promises"
