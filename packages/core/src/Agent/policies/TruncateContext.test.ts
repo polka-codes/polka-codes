@@ -18,6 +18,7 @@ test('TruncateContextPolicy should truncate messages when over threshold', async
     setMessages: (messages: MessageParam[]) => {
       mockAgent.messages = messages
     },
+    parameters: {},
   }
 
   const policy = TruncateContextPolicy({})
@@ -35,6 +36,7 @@ test('TruncateContextPolicy should not truncate small message lists', async () =
     setMessages: (messages: MessageParam[]) => {
       mockAgent.messages = messages
     },
+    parameters: {},
   }
 
   const setMessagesSpy = spyOn(mockAgent, 'setMessages')
@@ -45,27 +47,117 @@ test('TruncateContextPolicy should not truncate small message lists', async () =
   expect(mockAgent.messages.length).toBe(2)
 })
 
-test('TruncateContextPolicy should preserve recent exchanges', async () => {
+test('TruncateContextPolicy should preserve messages from start and end', async () => {
   const mockAgent = {
     messages: [
       { role: 'user', content: 'Old user message 1'.repeat(300) },
       { role: 'assistant', content: 'Old assistant message 1'.repeat(300) },
       { role: 'user', content: 'Old user message 2'.repeat(300) },
       { role: 'assistant', content: 'Old assistant message 2'.repeat(300) },
-      { role: 'user', content: 'Recent user message 1' },
-      { role: 'assistant', content: 'Recent assistant message 1' },
-      { role: 'user', content: 'Recent user message 2' },
-      { role: 'assistant', content: 'Recent assistant message 2' },
-      { role: 'user', content: 'Most recent user message' },
-      { role: 'assistant', content: 'Most recent assistant message' },
+      { role: 'user', content: 'Middle user message 1'.repeat(300) },
+      { role: 'assistant', content: 'Middle assistant message 1'.repeat(300) },
+      { role: 'user', content: 'Middle user message 2'.repeat(300) },
+      { role: 'assistant', content: 'Middle assistant message 2'.repeat(300) },
+      { role: 'user', content: 'Recent user message' },
+      { role: 'assistant', content: 'Recent assistant message' },
     ] as MessageParam[],
     setMessages: (messages: MessageParam[]) => {
       mockAgent.messages = messages
+    },
+    parameters: {},
+  }
+
+  const policy = TruncateContextPolicy({})
+  await policy.onBeforeRequest(mockAgent as any)
+
+  expect(mockAgent.messages).toMatchSnapshot()
+})
+
+test('TruncateContextPolicy should use maxTokens parameter when provided', async () => {
+  const mockAgent = {
+    messages: [
+      { role: 'user', content: 'User message 1'.repeat(100) },
+      { role: 'assistant', content: 'Assistant message 1'.repeat(100) },
+      { role: 'user', content: 'User message 2' },
+      { role: 'assistant', content: 'Assistant message 2' },
+    ] as MessageParam[],
+    setMessages: (messages: MessageParam[]) => {
+      mockAgent.messages = messages
+    },
+    parameters: { maxTokens: 500 }, // Low threshold to trigger truncation
+  }
+
+  const policy = TruncateContextPolicy({})
+  await policy.onBeforeRequest(mockAgent as any)
+
+  expect(mockAgent.messages).toMatchSnapshot()
+})
+
+test('TruncateContextPolicy should use thinkingBudgetTokens as fallback', async () => {
+  const mockAgent = {
+    messages: [
+      { role: 'user', content: 'User message 1'.repeat(100) },
+      { role: 'assistant', content: 'Assistant message 1'.repeat(100) },
+      { role: 'user', content: 'User message 2' },
+      { role: 'assistant', content: 'Assistant message 2' },
+    ] as MessageParam[],
+    setMessages: (messages: MessageParam[]) => {
+      mockAgent.messages = messages
+    },
+    parameters: { thinkingBudgetTokens: 600 }, // Low threshold to trigger truncation
+  }
+
+  const policy = TruncateContextPolicy({})
+  await policy.onBeforeRequest(mockAgent as any)
+
+  expect(mockAgent.messages).toMatchSnapshot()
+})
+
+test('TruncateContextPolicy should prefer maxTokens over thinkingBudgetTokens', async () => {
+  const mockAgent = {
+    messages: [
+      { role: 'user', content: 'User message 1'.repeat(100) },
+      { role: 'assistant', content: 'Assistant message 1'.repeat(100) },
+      { role: 'user', content: 'User message 2' },
+      { role: 'assistant', content: 'Assistant message 2' },
+    ] as MessageParam[],
+    setMessages: (messages: MessageParam[]) => {
+      mockAgent.messages = messages
+    },
+    parameters: {
+      maxTokens: 500, // Should use this
+      thinkingBudgetTokens: 2000, // Should ignore this
     },
   }
 
   const policy = TruncateContextPolicy({})
   await policy.onBeforeRequest(mockAgent as any)
 
+  expect(mockAgent.messages).toMatchSnapshot()
+})
+
+test('TruncateContextPolicy should truncate exactly half of messages', async () => {
+  const mockAgent = {
+    messages: [
+      { role: 'user', content: 'Message 1'.repeat(200) },
+      { role: 'assistant', content: 'Response 1'.repeat(200) },
+      { role: 'user', content: 'Message 2'.repeat(200) },
+      { role: 'assistant', content: 'Response 2'.repeat(200) },
+      { role: 'user', content: 'Message 3'.repeat(200) },
+      { role: 'assistant', content: 'Response 3'.repeat(200) },
+      { role: 'user', content: 'Message 4'.repeat(200) },
+      { role: 'assistant', content: 'Response 4'.repeat(200) },
+    ] as MessageParam[],
+    setMessages: (messages: MessageParam[]) => {
+      mockAgent.messages = messages
+    },
+    parameters: { maxTokens: 1000 },
+  }
+
+  const policy = TruncateContextPolicy({})
+  await policy.onBeforeRequest(mockAgent as any)
+
+  // Should keep 4 messages (half of 8) plus 1 truncation notice = 5 total
+  expect(mockAgent.messages.length).toBe(5)
   expect(mockAgent.messages).toMatchSnapshot()
 })

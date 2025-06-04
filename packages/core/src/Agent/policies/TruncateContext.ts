@@ -6,7 +6,20 @@ import { Policies } from '../../config'
 import type { AgentBase, AgentPolicy } from '../AgentBase'
 
 // Default max token threshold
-const DEFAULT_MAX_TOKENS_ESTIMATE = 4000
+const DEFAULT_MAX_TOKENS_ESTIMATE = 8000
+
+// Get max tokens from parameters with fallback to thinkingBudgetTokens or default
+function getMaxTokens(agent: AgentBase): number {
+  const params = agent.parameters || {}
+
+  // First try to get maxTokens parameter if it exists
+  if (params.maxTokens && typeof params.maxTokens === 'number' && params.maxTokens > 0) {
+    return params.maxTokens
+  }
+
+  // Final fallback to default
+  return DEFAULT_MAX_TOKENS_ESTIMATE
+}
 
 // Simple token estimation (1 token ≈ 4 characters)
 function estimateTokens(text: string): number {
@@ -39,31 +52,47 @@ export const TruncateContextPolicy = (tools: Parameters<AgentPolicy>[0]) => {
         }
       }
 
+      // Get the max tokens threshold from parameters
+      const maxTokens = getMaxTokens(agent)
+
       // If under threshold, no truncation needed
-      if (totalTokens <= DEFAULT_MAX_TOKENS_ESTIMATE) {
+      if (totalTokens <= maxTokens) {
         return
       }
 
-      // Truncation strategy: preserve recent messages
-      // Keep the most recent messages (last 6 messages = 3 exchanges)
-      const keepLastN = 6
-      const recentMessages = messages.slice(-keepLastN)
+      // Truncation strategy: remove half of messages from the middle
+      // Calculate how many messages to keep (half of total)
+      const totalMessages = messages.length
+      const messagesToKeep = Math.ceil(totalMessages / 2)
+
+      // Ensure we keep at least 2 messages and preserve message pairs
+      const minKeep = Math.max(2, messagesToKeep)
+
+      if (minKeep >= totalMessages) {
+        // If we would keep all messages anyway, no truncation needed
+        return
+      }
+
+      // Calculate how many to keep from start and end
+      const keepFromStart = Math.floor(minKeep / 2)
+      const keepFromEnd = minKeep - keepFromStart
+
+      // Get messages from start and end
+      const startMessages = messages.slice(0, keepFromStart)
+      const endMessages = messages.slice(-keepFromEnd)
 
       // Count how many messages were truncated
-      const truncatedCount = messages.length - recentMessages.length
+      const truncatedCount = totalMessages - minKeep
 
       // Rebuild the truncated message list
       const truncatedMessages: MessageParam[] = [
-        // Add a message explaining truncation if any messages were removed
-        ...(truncatedCount > 0
-          ? [
-              {
-                role: 'user' as const,
-                content: `Note: ${truncatedCount} earlier messages were truncated to prevent context overflow.`,
-              },
-            ]
-          : []),
-        ...recentMessages,
+        ...startMessages,
+        // Add a message explaining truncation
+        {
+          role: 'user' as const,
+          content: `Note: ${truncatedCount} messages were truncated from the middle to prevent context overflow.`,
+        },
+        ...endMessages,
       ]
 
       // Update the agent's messages

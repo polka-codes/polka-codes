@@ -12,7 +12,7 @@ export class OllamaService extends AiServiceBase {
   readonly model: { provider: string; id: string; info: ModelInfo }
 
   constructor(options: AiServiceOptions) {
-    super(options.usageMeter)
+    super(options)
 
     this.#client = new OpenAI({
       baseURL: `${options.baseUrl || 'http://localhost:11434'}/v1`,

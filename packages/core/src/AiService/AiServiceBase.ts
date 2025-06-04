@@ -41,9 +41,11 @@ export type ApiUsage = {
 
 export abstract class AiServiceBase {
   readonly usageMeter: UsageMeter
+  readonly options: AiServiceOptions
 
-  constructor(usageMeter: UsageMeter) {
-    this.usageMeter = usageMeter
+  constructor(options: AiServiceOptions) {
+    this.options = options
+    this.usageMeter = options.usageMeter
   }
 
   abstract get model(): { provider: string; id: string; info: ModelInfo }
