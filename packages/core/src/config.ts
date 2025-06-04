@@ -75,4 +75,5 @@ export type Config = z.infer<typeof configSchema>
 
 export enum Policies {
   KnowledgeManagement = 'knowledgemanagement',
+  TruncateContext = 'truncatecontext',
 }
