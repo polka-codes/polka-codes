@@ -7,6 +7,7 @@ import { getProvider, loadConfig } from '@polka-codes/cli-shared'
 import {
   type FullToolInfo,
   ToolResponseType,
+  editFile,
   executeCommand,
   listFiles,
   readFile,
@@ -68,6 +69,7 @@ export class Runner {
       [removeFile.name]: removeFile,
       [renameFile.name]: renameFile,
       [replaceInFile.name]: replaceInFile,
+      [editFile.name]: editFile,
       [searchFiles.name]: searchFiles,
       [writeToFile.name]: writeToFile,
       [updateKnowledge.name]: updateKnowledge,
