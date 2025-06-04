@@ -44,7 +44,7 @@ describe('editFile tool', () => {
 
     it('should return error when provider lacks capabilities', async () => {
       const provider: FilesystemProvider = {}
-      const args = { path: 'test.txt', operations: [{ newText: 'new' }] }
+      const args = { path: 'test.txt', operations: [{ new_text: 'new' }] }
 
       const result = await handler(provider, args)
 
@@ -53,7 +53,7 @@ describe('editFile tool', () => {
 
     it('should return error when file not found', async () => {
       const provider = createProvider()
-      const args = { path: 'missing.txt', operations: [{ newText: 'new' }] }
+      const args = { path: 'missing.txt', operations: [{ new_text: 'new' }] }
 
       const result = await handler(provider, args)
 
@@ -80,9 +80,9 @@ describe('editFile tool', () => {
       const args = {
         path: 'test.txt',
         operations: {
-          beforeText: 'Hello',
-          afterText: 'world',
-          newText: ' beautiful ',
+          before_text: 'Hello',
+          after_text: 'world',
+          new_text: ' beautiful ',
         },
       }
 
@@ -104,14 +104,14 @@ describe('editFile tool', () => {
         path: 'test.ts',
         operations: [
           {
-            beforeText: 'function test() {',
-            afterText: '\n  return 42;',
-            newText: '\n  console.log("debug");',
+            before_text: 'function test() {',
+            after_text: '\n  return 42;',
+            new_text: '\n  console.log("debug");',
           },
           {
-            beforeText: 'return 42;',
-            afterText: '\n}',
-            newText: '\n\n',
+            before_text: 'return 42;',
+            after_text: '\n}',
+            new_text: '\n\n',
           },
         ],
       }
@@ -133,9 +133,9 @@ describe('editFile tool', () => {
       const args = {
         path: 'test.ts',
         operations: {
-          beforeText: '<<<START_OF_FILE>>>',
-          afterText: 'export',
-          newText: '// Header comment\n',
+          before_text: '<<<START_OF_FILE>>>',
+          after_text: 'export',
+          new_text: '// Header comment\n',
         },
       }
 
@@ -156,9 +156,9 @@ describe('editFile tool', () => {
       const args = {
         path: 'test.ts',
         operations: {
-          beforeText: 'value = 42;',
-          afterText: '<<<END_OF_FILE>>>',
-          newText: '\n// Footer comment',
+          before_text: 'value = 42;',
+          after_text: '<<<END_OF_FILE>>>',
+          new_text: '\n// Footer comment',
         },
       }
 
@@ -179,9 +179,9 @@ describe('editFile tool', () => {
       const args = {
         path: 'test.txt',
         operations: {
-          beforeText: '<<<START_OF_FILE>>>',
-          afterText: '<<<END_OF_FILE>>>',
-          newText: 'completely new content',
+          before_text: '<<<START_OF_FILE>>>',
+          after_text: '<<<END_OF_FILE>>>',
+          new_text: 'completely new content',
         },
       }
 
@@ -196,9 +196,9 @@ describe('editFile tool', () => {
       const args = {
         path: 'test.txt',
         operations: {
-          beforeText: 'missing',
-          afterText: 'text',
-          newText: 'replacement',
+          before_text: 'missing',
+          after_text: 'text',
+          new_text: 'replacement',
         },
       }
 
@@ -207,7 +207,7 @@ describe('editFile tool', () => {
       expect(result).toMatchSnapshot()
     })
 
-    it('should handle insert after beforeText only', async () => {
+    it('should handle insert after before_text only', async () => {
       let writtenContent = ''
       const provider: FilesystemProvider = {
         readFile: async () => 'Hello world',
@@ -218,8 +218,8 @@ describe('editFile tool', () => {
       const args = {
         path: 'test.txt',
         operations: {
-          beforeText: 'Hello',
-          newText: ' beautiful',
+          before_text: 'Hello',
+          new_text: ' beautiful',
         },
       }
 
@@ -229,7 +229,7 @@ describe('editFile tool', () => {
       expect(writtenContent).toBe('Hello beautiful world')
     })
 
-    it('should handle insert before afterText only', async () => {
+    it('should handle insert before after_text only', async () => {
       let writtenContent = ''
       const provider: FilesystemProvider = {
         readFile: async () => 'Hello world',
@@ -240,8 +240,8 @@ describe('editFile tool', () => {
       const args = {
         path: 'test.txt',
         operations: {
-          afterText: 'world',
-          newText: 'beautiful ',
+          after_text: 'world',
+          new_text: 'beautiful ',
         },
       }
 

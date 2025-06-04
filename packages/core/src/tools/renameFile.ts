@@ -10,13 +10,13 @@ export const toolInfo = {
   description: 'Request to rename a file from source path to target path.',
   parameters: [
     {
-      name: 'sourcePath',
+      name: 'source_path',
       description: 'The current path of the file',
       required: true,
       usageValue: 'Source file path here',
     },
     {
-      name: 'targetPath',
+      name: 'target_path',
       description: 'The new path for the file',
       required: true,
       usageValue: 'Target file path here',
@@ -27,11 +27,11 @@ export const toolInfo = {
       description: 'Request to rename a file',
       parameters: [
         {
-          name: 'sourcePath',
+          name: 'source_path',
           value: 'src/old-name.js',
         },
         {
-          name: 'targetPath',
+          name: 'target_path',
           value: 'src/new-name.js',
         },
       ],
@@ -48,8 +48,8 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
     }
   }
 
-  const sourcePath = getString(args, 'sourcePath')
-  const targetPath = getString(args, 'targetPath')
+  const sourcePath = getString(args, 'source_path')
+  const targetPath = getString(args, 'target_path')
 
   await provider.renameFile(sourcePath, targetPath)
 

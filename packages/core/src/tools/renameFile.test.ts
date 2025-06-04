@@ -11,8 +11,8 @@ describe('renameFile', () => {
     spyOn(mockProvider, 'renameFile').mockResolvedValue()
 
     const result = await renameFile.handler(mockProvider, {
-      sourcePath: 'old.txt',
-      targetPath: 'new.txt',
+      source_path: 'old.txt',
+      target_path: 'new.txt',
     })
 
     expect(result).toMatchSnapshot()
@@ -24,8 +24,8 @@ describe('renameFile', () => {
     spyOn(mockProvider, 'renameFile').mockRejectedValue(new Error('Rename error'))
 
     const result = renameFile.handler(mockProvider, {
-      sourcePath: 'error.txt',
-      targetPath: 'new.txt',
+      source_path: 'error.txt',
+      target_path: 'new.txt',
     })
 
     expect(result).rejects.toMatchSnapshot()
@@ -40,8 +40,8 @@ describe('renameFile', () => {
     expect(renameFile.isAvailable(mockProvider)).toBe(false)
 
     const result = await renameFile.handler(mockProvider, {
-      sourcePath: 'test.txt',
-      targetPath: 'new.txt',
+      source_path: 'test.txt',
+      target_path: 'new.txt',
     })
 
     expect(result).toMatchSnapshot()

@@ -64,8 +64,77 @@ files:
       "4": Dot notation for path-based updates
       "5": Automatic conversion of arrays to numbered dictionaries
       "6": Smart merging of nested structures
+  editFile.ts:
+    description: Tool for flexible file editing with before/after text anchors
+    api:
+      parameters:
+        "1":
+          name: path
+          description: The path of the file to edit
+          required: true
+        "2":
+          name: operations
+          description: Edit operations with snake_case parameter names
+          required: true
+          children:
+            "1":
+              name: before_text
+              description: Text to find as the start anchor
+              required: false
+            "2":
+              name: after_text
+              description: Text to find as the end anchor
+              required: false
+            "3":
+              name: new_text
+              description: Text to replace the content between anchors
+              required: true
+            "4":
+              name: before_text_line_start
+              description: Optional line number hint for before_text location
+              required: false
+            "5":
+              name: after_text_line_start
+              description: Optional line number hint for after_text location
+              required: false
+  renameFile.ts:
+    description: Tool for renaming files in the filesystem
+    api:
+      parameters:
+        "1":
+          name: source_path
+          description: The current path of the file
+          required: true
+        "2":
+          name: target_path
+          description: The new path for the file
+          required: true
+  utils/editFile.ts:
+    description: Core logic for flexible file editing with before/after text anchors
+    api:
+      types:
+        "1":
+          name: EditOperation
+          description: Interface for edit operations using snake_case parameter names
+          properties:
+            "1":
+              name: before_text
+              type: string | undefined
+            "2":
+              name: after_text
+              type: string | undefined
+            "3":
+              name: new_text
+              type: string
+            "4":
+              name: before_text_line_start
+              type: number | undefined
+            "5":
+              name: after_text_line_start
+              type: number | undefined
 rules:
   "1": Each tool should have clear input/output types
   "2": Tools should be atomic and focused
   "3": Maintain consistent error handling
   "4": Use numbered dictionary format instead of arrays in knowledge files
+  "7": All tool parameters must use snake_case naming convention for consistency

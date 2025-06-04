@@ -1,6 +1,6 @@
 // Bun Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`editFile basic operations should insert text after beforeText 1`] = `
+exports[`editFile basic operations should insert text after before_text 1`] = `
 "line1
 line2
 inserted line
@@ -9,7 +9,7 @@ line4
 line5"
 `;
 
-exports[`editFile basic operations should insert text before afterText 1`] = `
+exports[`editFile basic operations should insert text before after_text 1`] = `
 "line1
 line2
 inserted line
@@ -18,7 +18,7 @@ line4
 line5"
 `;
 
-exports[`editFile basic operations should replace text between beforeText and afterText 1`] = `
+exports[`editFile basic operations should replace text between before_text and after_text 1`] = `
 "line1
 line2
 replaced content
@@ -84,7 +84,7 @@ duplicate
 line5"
 `;
 
-exports[`editFile line hints should use beforeTextLineStart hint 1`] = `
+exports[`editFile line hints should use before_text_line_start hint 1`] = `
 "line1
 duplicate
 after second duplicate
@@ -93,7 +93,7 @@ duplicate
 line5"
 `;
 
-exports[`editFile edge cases should handle empty newText 1`] = `
+exports[`editFile edge cases should handle empty new_text 1`] = `
 "line1
 line2line4
 line5"
