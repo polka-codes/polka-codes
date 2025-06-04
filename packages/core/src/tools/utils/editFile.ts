@@ -9,8 +9,8 @@ export interface EditOperation {
   afterTextLineStart?: number
 }
 
-const START_OF_FILE = '<<<START_OF_FILE>>>'
-const END_OF_FILE = '<<<END_OF_FILE>>>'
+export const START_OF_FILE = '<<<START_OF_FILE>>>'
+export const END_OF_FILE = '<<<END_OF_FILE>>>'
 
 /**
  * Apply multiple edit operations to file content using before/after text anchors

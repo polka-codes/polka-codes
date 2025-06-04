@@ -4,10 +4,7 @@
 import { type FullToolInfo, PermissionLevel, type ToolHandler, type ToolInfo, ToolResponseType } from '../tool'
 import type { FilesystemProvider } from './provider'
 import { getArray, getString } from './utils'
-import { type EditOperation, editFile } from './utils/editFile'
-
-export const START_OF_FILE = '<<<START_OF_FILE>>>'
-export const END_OF_FILE = '<<<END_OF_FILE>>>'
+import { END_OF_FILE, type EditOperation, START_OF_FILE, editFile } from './utils/editFile'
 
 export const toolInfo = {
   name: 'edit_file',

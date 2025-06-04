@@ -1,0 +1,158 @@
+// Bun Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`editFile basic operations should insert text after beforeText 1`] = `
+"line1
+line2
+inserted line
+line3
+line4
+line5"
+`;
+
+exports[`editFile basic operations should insert text before afterText 1`] = `
+"line1
+line2
+inserted line
+line3
+line4
+line5"
+`;
+
+exports[`editFile basic operations should replace text between beforeText and afterText 1`] = `
+"line1
+line2
+replaced content
+line4
+line5"
+`;
+
+exports[`editFile basic operations should handle multiple operations in sequence 1`] = `
+"line1
+after line1
+line2
+line3
+line4
+before line5
+line5"
+`;
+
+exports[`editFile special markers should insert at start of file with START_OF_FILE 1`] = `
+"new start
+line1
+line2
+line3
+line4
+line5"
+`;
+
+exports[`editFile special markers should insert at end of file with END_OF_FILE 1`] = `
+"line1
+line2
+line3
+line4
+line5
+new end"
+`;
+
+exports[`editFile special markers should replace from START_OF_FILE to specific text 1`] = `
+"new beginning
+line3
+line4
+line5"
+`;
+
+exports[`editFile special markers should replace from specific text to END_OF_FILE 1`] = `
+"line1
+line2
+line3
+new ending"
+`;
+
+exports[`editFile line hints should use line hint to find correct occurrence 1`] = `
+"line1
+duplicate
+found second duplicate
+line5"
+`;
+
+exports[`editFile line hints should fallback to regular search when hint fails 1`] = `
+"line1
+duplicate
+found duplicate
+line3
+duplicate
+line5"
+`;
+
+exports[`editFile line hints should use beforeTextLineStart hint 1`] = `
+"line1
+duplicate
+after second duplicate
+line3
+duplicate
+line5"
+`;
+
+exports[`editFile edge cases should handle empty newText 1`] = `
+"line1
+line2line4
+line5"
+`;
+
+exports[`editFile edge cases should handle whitespace in search text 1`] = `
+"  line1
+    line2
+    inserted
+  line3"
+`;
+
+exports[`editFile edge cases should handle newlines in search text 1`] = `
+"line1
+line2
+line3
+replaced multiline
+line4
+line5"
+`;
+
+exports[`editFile complex scenarios should handle multiple operations with overlapping regions 1`] = `
+"line1
+after line1
+line2
+replaced 2-3
+line3
+line4
+before line5
+line5"
+`;
+
+exports[`editFile complex scenarios should handle operations that create new searchable text 1`] = `
+"line1
+line2
+new marker
+after new marker
+line3
+line4
+line5"
+`;
+
+exports[`editFile complex scenarios should handle code-like content with indentation 1`] = `
+"function test() {
+  const x = 1;
+  const y = 2;
+  const z = 3;
+  const y = 2;
+  return x + y;
+}"
+`;
+
+exports[`editFile complex scenarios should handle JSON-like content 1`] = `
+"{
+  "name": "test",
+  "version": "1.0.0",
+  "dependencies": {}"scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {}
+}"
+`;
