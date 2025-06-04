@@ -246,6 +246,10 @@ export abstract class AgentBase {
     this.#policies = policies
   }
 
+  get parameters(): Readonly<any> {
+    return this.ai.options.parameters
+  }
+
   get messages(): Readonly<MessageParam[]> {
     return this.#messages
   }
