@@ -1,0 +1,204 @@
+// Bun Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`editFile tool toolInfo should have correct tool definition 1`] = `
+{
+  "description": "Request to edit file contents using before/after text anchors with flexible operations. Supports multiple edit operations in a single call.",
+  "examples": [
+    {
+      "description": "Replace content between two text anchors",
+      "parameters": [
+        {
+          "name": "path",
+          "value": "src/main.ts",
+        },
+        {
+          "name": "operations",
+          "value": {
+            "afterText": "}",
+            "beforeText": "function oldFunction() {",
+            "newText": 
+"
+  return "new implementation";
+"
+,
+          },
+        },
+      ],
+    },
+    {
+      "description": "Insert at start of file",
+      "parameters": [
+        {
+          "name": "path",
+          "value": "src/header.ts",
+        },
+        {
+          "name": "operations",
+          "value": {
+            "afterText": "export",
+            "beforeText": "<<<START_OF_FILE>>>",
+            "newText": 
+"// File header comment
+"
+,
+          },
+        },
+      ],
+    },
+    {
+      "description": "Multiple operations in one call",
+      "parameters": [
+        {
+          "name": "path",
+          "value": "src/utils.ts",
+        },
+        {
+          "name": "operations",
+          "value": [
+            {
+              "afterText": "from "react"",
+              "beforeText": "import React",
+              "newText": ", { useState }",
+            },
+            {
+              "afterText": "return (",
+              "beforeText": "function Component() {",
+              "newText": 
+"
+  const [state, setState] = useState(false);
+  "
+,
+            },
+          ],
+        },
+      ],
+    },
+  ],
+  "name": "edit_file",
+  "parameters": [
+    {
+      "description": "The path of the file to edit",
+      "name": "path",
+      "required": true,
+      "usageValue": "File path here",
+    },
+    {
+      "allowMultiple": true,
+      "children": [
+        {
+          "description": "Text to find as the start anchor (use <<<START_OF_FILE>>> for file start)",
+          "name": "beforeText",
+          "required": false,
+          "usageValue": "Text before the edit location",
+        },
+        {
+          "description": "Text to find as the end anchor (use <<<END_OF_FILE>>> for file end)",
+          "name": "afterText",
+          "required": false,
+          "usageValue": "Text after the edit location",
+        },
+        {
+          "description": "Text to replace the content between beforeText and afterText",
+          "name": "newText",
+          "required": true,
+          "usageValue": "New text content",
+        },
+        {
+          "description": "Optional line number hint for beforeText location (1-based)",
+          "name": "beforeTextLineStart",
+          "required": false,
+          "usageValue": "10",
+        },
+        {
+          "description": "Optional line number hint for afterText location (1-based)",
+          "name": "afterTextLineStart",
+          "required": false,
+          "usageValue": "20",
+        },
+      ],
+      "description": "Edit operation with beforeText, afterText, newText, and optional line range hints",
+      "name": "operations",
+      "required": true,
+      "usageValue": "operations here",
+    },
+  ],
+  "permissionLevel": 2,
+}
+`;
+
+exports[`editFile tool handler should return error when provider lacks capabilities 1`] = `
+{
+  "message": "Not possible to edit file. Abort.",
+  "type": "Error",
+}
+`;
+
+exports[`editFile tool handler should return error when file not found 1`] = `
+{
+  "message": "<error><edit_file_path>missing.txt</edit_file_path><error_message>Either beforeText or afterText must be specified</error_message></error>",
+  "type": "Error",
+}
+`;
+
+exports[`editFile tool handler should return error when no operations provided 1`] = `
+{
+  "message": "<error><edit_file_path>test.txt</edit_file_path><error_message>At least one edit operation is required</error_message></error>",
+  "type": "Error",
+}
+`;
+
+exports[`editFile tool handler should handle single operation successfully 1`] = `
+{
+  "message": "<edit_file_path>test.txt</edit_file_path>",
+  "type": "Reply",
+}
+`;
+
+exports[`editFile tool handler should handle multiple operations successfully 1`] = `
+{
+  "message": "<edit_file_path>test.ts</edit_file_path>",
+  "type": "Reply",
+}
+`;
+
+exports[`editFile tool handler should handle start of file marker 1`] = `
+{
+  "message": "<edit_file_path>test.ts</edit_file_path>",
+  "type": "Reply",
+}
+`;
+
+exports[`editFile tool handler should handle end of file marker 1`] = `
+{
+  "message": "<edit_file_path>test.ts</edit_file_path>",
+  "type": "Reply",
+}
+`;
+
+exports[`editFile tool handler should handle entire file replacement 1`] = `
+{
+  "message": "<edit_file_path>test.txt</edit_file_path>",
+  "type": "Reply",
+}
+`;
+
+exports[`editFile tool handler should return error when text not found 1`] = `
+{
+  "message": "<error><edit_file_path>test.txt</edit_file_path><error_message>Could not find text: missing</error_message></error>",
+  "type": "Error",
+}
+`;
+
+exports[`editFile tool handler should handle insert after beforeText only 1`] = `
+{
+  "message": "<edit_file_path>test.txt</edit_file_path>",
+  "type": "Reply",
+}
+`;
+
+exports[`editFile tool handler should handle insert before afterText only 1`] = `
+{
+  "message": "<edit_file_path>test.txt</edit_file_path>",
+  "type": "Reply",
+}
+`;
