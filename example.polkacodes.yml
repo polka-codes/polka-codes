@@ -102,7 +102,7 @@ rules:
   - "Follow the project's coding style"
   - "Add JSDoc comments for public APIs"
 
-# Pricing information for AI models
+# Policy configurations for agent behavior# Pricing information for AI models
 # Cost per million tokens in USD
 prices:
   # DeepSeek models pricing
@@ -146,3 +146,8 @@ excludeFiles:
   - "*.log"
   - ".env"
   - "coverage/**"
+
+# Additional policies to enforce specific behaviors
+policies:
+  - KnowledgeManagement # create and mataintain knowledge.ai.yml file
+  - TruncateContext # truncate context to fit within the model's token limit

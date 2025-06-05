@@ -1,14 +1,44 @@
 files:
-  "package.json":
-    description: "Main project configuration and dependencies"
-  "bunfig.toml":
-    description: "Bun runtime configuration"
-  "biome.jsonc":
-    description: "Code formatting and linting configuration"
+  package.json:
+    description: Main project configuration and dependencies
+  bunfig.toml:
+    description: Bun runtime configuration
+  biome.jsonc:
+    description: Code formatting and linting configuration
+  example.polkacodes.yml:
+    description: Example configuration file showing all available polka.codes
+      configuration options including policies
+    api:
+      sections:
+        "1":
+          name: providers
+          description: AI service provider configurations
+        "2":
+          name: agents
+          description: Agent-specific configurations
+        "3":
+          name: commands
+          description: Command-specific configurations
+        "4":
+          name: scripts
+          description: Custom script definitions
+        "5":
+          name: rules
+          description: Custom rules for AI behavior
+        "6":
+          name: policies
+          description: Policy configurations for agent behavior including
+            KnowledgeManagement and TruncateContext
+        "7":
+          name: prices
+          description: Pricing information for AI models
+        "8":
+          name: excludeFiles
+          description: File exclusion patterns
 rules:
-  1: "Use bun as package manager"
-  2: "Write tests using bun:test"
-  3: "Avoid mocking in tests - use spyOn from bun:test if needed"
-  4: "Use .toMatchSnapshot() for tests when suitable"
-  5: "Keep knowledge files updated in key directories"
-  6: "Use numbered dictionary format instead of arrays in knowledge files"
+  "1": Use bun as package manager
+  "2": Write tests using bun:test
+  "3": Avoid mocking in tests - use spyOn from bun:test if needed
+  "4": Use .toMatchSnapshot() for tests when suitable
+  "5": Keep knowledge files updated in key directories
+  "6": Use numbered dictionary format instead of arrays in knowledge files

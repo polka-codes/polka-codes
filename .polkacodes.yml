@@ -34,3 +34,4 @@ rules: |
   Prefer ASCII over Unicode
 policies:
   - KnowledgeManagement
+  - TruncateContext
