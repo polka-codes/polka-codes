@@ -15,6 +15,7 @@ import {
   KnowledgeManagementPolicy,
   MultiAgent,
   Policies,
+  TruncateContextPolicy,
   UsageMeter,
   allAgents,
   analyzerAgentInfo,
@@ -124,6 +125,10 @@ export class Runner {
           policies.push(KnowledgeManagementPolicy)
           this.#hasKnowledgeManagementPolicy = true
           console.log('KnowledgeManagementPolicy enabled')
+          break
+        case Policies.TruncateContext:
+          policies.push(TruncateContextPolicy)
+          console.log('TruncateContextPolicy enabled')
           break
         default:
           console.log('Unknown policy:', policy)
