@@ -14,7 +14,7 @@
     }
   },
   "scripts": {
-    "build": "bun build src/index.ts --outdir dist --target node"
+    "build": "bun build src/index.ts --outdir dist --target node --external=@vscode/ripgrep"
   },
   "dependencies": {
     "@polka-codes/cli-shared": "workspace:*",
