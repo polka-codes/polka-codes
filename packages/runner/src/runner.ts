@@ -164,7 +164,7 @@ export class Runner {
             }
             return {
               type: 'exit',
-            }
+            } as const
           }
           const tool = this.availableTools[request.tool]
           if (tool) {
@@ -172,12 +172,21 @@ export class Runner {
             if (resp.type === ToolResponseType.Reply) {
               return responsePrompts.toolResults(request.tool, resp.message)
             }
-            return responsePrompts.errorInvokeTool(request.tool, `Unexpected tool response: ${JSON.stringify(resp)}`)
+            return {
+              type: 'error',
+              message: responsePrompts.errorInvokeTool(request.tool, `Unexpected tool response: ${JSON.stringify(resp)}`),
+            } as const
           }
-          return responsePrompts.errorInvokeTool(request.tool, 'Tool not available')
+          return {
+            type: 'error',
+            message: responsePrompts.errorInvokeTool(request.tool, 'Tool not available'),
+          } as const
         } catch (toolError) {
           console.error(`Error executing tool ${request.tool}:`, toolError)
-          return responsePrompts.errorInvokeTool(request.tool, toolError)
+          return {
+            type: 'error',
+            message: responsePrompts.errorInvokeTool(request.tool, toolError),
+          } as const
         }
       }
 
@@ -197,6 +206,14 @@ export class Runner {
         })
         // ignore remaining tools
         return
+      } else if (respMsg.type === 'error') {
+        responses.push({
+          index: request.index,
+          tool: request.tool,
+          response: respMsg.message,
+        })
+        // ignore remaining tools
+        break
       }
     }
 
