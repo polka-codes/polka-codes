@@ -1,13 +1,34 @@
 #!/bin/bash
 
+VERSION=$1
+
 # Check if version argument is provided
 if [ -z "$1" ]; then
-  echo "Error: Version number is required"
-  echo "Usage: $0 <version>"
-  exit 1
-fi
+  # Auto-bump patch version
+  echo "No version specified, auto-bumping patch version..."
 
-VERSION=$1
+  # Get current version from packages/core/package.json
+  CURRENT_VERSION=$(grep '"version":' packages/core/package.json | sed -E 's/.*"version": "([^"]+)".*/\1/')
+
+  if [ -z "$CURRENT_VERSION" ]; then
+    echo "Error: Could not read current version from packages/core/package.json"
+    exit 1
+  fi
+
+  echo "Current version: $CURRENT_VERSION"
+
+  # Parse version components (major.minor.patch)
+  IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+
+  # Increment patch version
+  NEW_PATCH=$((PATCH + 1))
+  VERSION="$MAJOR.$MINOR.$NEW_PATCH"
+
+  echo "Bumping to version: $VERSION"
+else
+  VERSION=$1
+  echo "Using specified version: $VERSION"
+fi
 
 git pull
 
@@ -46,4 +67,3 @@ git tag v$VERSION
 git push origin v$VERSION
 git push
 gh release create v$VERSION --generate-notes
-

@@ -35,6 +35,44 @@ files:
         "8":
           name: excludeFiles
           description: File exclusion patterns
+  scripts/release.sh:
+    description: Release script that handles version bumping, publishing packages,
+      and creating GitHub releases
+    api:
+      functions:
+        "1":
+          name: auto-bump patch version
+          description: When no version argument is provided, automatically increments
+            patch version from packages/core/package.json
+          params:
+            "1":
+              name: version
+              type: string
+              optional: true
+              description: Optional version number. If not provided, patch version is
+                auto-bumped
+          behavior: Reads current version from packages/core/package.json, increments
+            patch number, and uses that for release
+        "2":
+          name: manual version
+          description: When version argument is provided, uses that version for release
+          params:
+            "1":
+              name: version
+              type: string
+              description: Specific version number to use for release
+      checks:
+        "1": Requires clean git working directory (no unstaged changes)
+        "2": Must be on master branch
+        "3": Pulls latest changes before proceeding
+      process:
+        "1": Version determination (auto-bump or manual)
+        "2": Git status and branch validation
+        "3": Update all package.json files under packages directory
+        "4": Git commit with release message
+        "5": Build and publish all packages to npm
+        "6": Create git tag and push
+        "7": Create GitHub release with auto-generated notes
 rules:
   "1": Use bun as package manager
   "2": Write tests using bun:test
