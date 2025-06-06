@@ -5,12 +5,12 @@ import { getBoolean, getString } from './utils'
 export const toolInfo = {
   name: 'execute_command',
   description:
-    'Run a single CLI command. The command is always executed in the project-root working directory (regardless of earlier commands). Prefer one-off shell commands over wrapper scripts for flexibility. After an `execute_command` call, no other tool calls are allowed in the same assistant response.',
+    'Run a single CLI command. The command is always executed in the project-root working directory (regardless of earlier commands). Prefer one-off shell commands over wrapper scripts for flexibility. **IMPORTANT**: After an `execute_command` call, you MUST stop and NOT allowed to make further tool calls in the same message.',
 
   parameters: [
     {
       name: 'command',
-      description: 'The exact command to run (valid for the current OS). It must be correctly formatted and free of harmful instructions.',
+      description: 'The exact command to run  (valid for the current OS). It must be correctly formatted and free of harmful instructions.',
       required: true,
       usageValue: 'your-command-here',
     },

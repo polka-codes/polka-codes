@@ -60,7 +60,7 @@ export const toolUsePrompt = (tools: ToolInfo[], toolNamePrefix: string) => {
 
 TOOL USE
 
-You have access to a set of tools that are executed upon the user's approval. You can use one tool per message, and will receive the result of that tool use in the user's response. You use tools step-by-step to accomplish a given task, with each tool use informed by the result of the previous tool use.
+You have access to a set of tools that are executed upon the user's approval. You can use up to 5 tool calls per message, and will receive the results of those tool uses in the user's response. You use tools step-by-step to accomplish a given task, with each tool use informed by the result of the previous tool use.
 
 # Tool Use Formatting
 
@@ -127,18 +127,16 @@ ${tools
 
 1. **Outline Your Thought Process**
   - Before using a tool, wrap your reasoning inside \`<thinking>\` tags. Be concise—just enough to clarify your plan and the rationale behind selecting a specific tool.
-
 2. **Wait for Feedback**
   - After using a tool, wait for the user's response indicating success/failure or any output logs. Do not assume the result of a tool without explicit confirmation.
-
 3. **Error Handling**
   - If a tool fails or produces an unexpected result, analyze the error, decide on an alternative approach or tool, and proceed carefully.
-
 4. **Avoid Repetition**
   - Do not quote or repeat previous commands or prompts verbatim. Move the conversation forward by focusing on the latest required action.
-
 5. **No Unnecessary Re-invocations**
-  - Only invoke the same tool again if a genuine need arises (e.g., different parameters or updated context).`
+  - Only invoke the same tool again if a genuine need arises (e.g., different parameters or updated context).
+6. **Tool Call Limit**
+  - Do not make more than 5 tool calls in a single message.`
 }
 
 export const agentsPrompt = (agents: Readonly<AgentInfo[]>, name: string) => `
