@@ -13,7 +13,7 @@ export const replaceInFile = async (fileContent: string, diff: string): Promise<
   // =======
   // (some lines)
   // >>>>>>> REPLACE
-  const blockPattern = /<<<<<+ SEARCH\s*\r?\n([\s\S]*?)\r?\n=======[ \t]*\r?\n([\s\S]*?)\r?\n?>>>>>+ REPLACE/g
+  const blockPattern = /<<<<<+ SEARCH>?\s*\r?\n([\s\S]*?)\r?\n=======[ \t]*\r?\n([\s\S]*?)\r?\n?>>>>>+ REPLACE/g
 
   // Parse diff blocks
   const blocks: { search: string; replace: string }[] = []

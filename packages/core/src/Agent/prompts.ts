@@ -125,18 +125,14 @@ ${tools
   .join('')}
 # Tool Use Guidelines
 
-1. **Outline Your Thought Process**
-  - Before using a tool, wrap your reasoning inside \`<thinking>\` tags. Be concise—just enough to clarify your plan and the rationale behind selecting a specific tool.
-2. **Wait for Feedback**
+1. **Wait for Feedback**
   - After using a tool, wait for the user's response indicating success/failure or any output logs. Do not assume the result of a tool without explicit confirmation.
-3. **Error Handling**
+2. **Error Handling**
   - If a tool fails or produces an unexpected result, analyze the error, decide on an alternative approach or tool, and proceed carefully.
-4. **Avoid Repetition**
+3. **Avoid Repetition**
   - Do not quote or repeat previous commands or prompts verbatim. Move the conversation forward by focusing on the latest required action.
-5. **No Unnecessary Re-invocations**
-  - Only invoke the same tool again if a genuine need arises (e.g., different parameters or updated context).
-6. **Tool Call Limit**
-  - Do not make more than 5 tool calls in a single message.`
+4. **Tool Call Limit**
+  - It is **STRIGHTLY FORBIDDEN** to make more than 5 tool calls in a single message.`
 }
 
 export const agentsPrompt = (agents: Readonly<AgentInfo[]>, name: string) => `
