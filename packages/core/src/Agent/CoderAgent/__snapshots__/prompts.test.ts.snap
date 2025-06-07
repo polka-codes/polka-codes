@@ -105,7 +105,7 @@ Usage:
 
 ## tool_edit_file
 
-Description: Request to edit file contents using before/after text anchors with flexible operations. Supports multiple edit operations in a single call.
+Description: Request to edit file contents using start/end text anchors. Anchors are **exclusive** (they remain in the file). Supports multiple edit operations in a single call.
 
 Parameters:
 - tool_parameter_path: (required) The path of the file to edit
@@ -350,6 +350,34 @@ Usage:
 <tool_parameter_new_text>
   const [state, setState] = useState(false);
   </tool_parameter_new_text>
+</tool_parameter_operations>
+</tool_edit_file>
+
+## Example: Append content at end of file
+
+<tool_edit_file>
+<tool_parameter_path>src/footer.ts</tool_parameter_path>
+<tool_parameter_operations>
+<tool_parameter_start_anchor><<<END_OF_FILE>>></tool_parameter_start_anchor>
+<tool_parameter_end_anchor><<<END_OF_FILE>>></tool_parameter_end_anchor>
+<tool_parameter_new_text>
+// End of file appended comment
+</tool_parameter_new_text>
+</tool_parameter_operations>
+</tool_edit_file>
+
+## Example: Replace using line number hints
+
+<tool_edit_file>
+<tool_parameter_path>src/config.ts</tool_parameter_path>
+<tool_parameter_operations>
+<tool_parameter_start_anchor>const config = {</tool_parameter_start_anchor>
+<tool_parameter_end_anchor>}</tool_parameter_end_anchor>
+<tool_parameter_start_anchor_line_start>5</tool_parameter_start_anchor_line_start>
+<tool_parameter_end_anchor_line_start>15</tool_parameter_end_anchor_line_start>
+<tool_parameter_new_text>
+  debug: true,
+</tool_parameter_new_text>
 </tool_parameter_operations>
 </tool_edit_file>
 

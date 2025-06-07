@@ -9,7 +9,7 @@ import { END_OF_FILE, type EditOperation, START_OF_FILE, editFile } from './util
 export const toolInfo = {
   name: 'edit_file',
   description:
-    'Request to edit file contents using before/after text anchors with flexible operations. Supports multiple edit operations in a single call.',
+    'Request to edit file contents using start/end text anchors. Anchors are **exclusive** (they remain in the file). Supports multiple edit operations in a single call.',
   parameters: [
     {
       name: 'path',
@@ -25,19 +25,19 @@ export const toolInfo = {
       children: [
         {
           name: 'start_anchor',
-          description: `Text to find as the start anchor (use ${START_OF_FILE} for file start)`,
+          description: `Text to find as the start anchor (use ${START_OF_FILE} for file start). Anchor is exclusive (preserved).`,
           required: false,
           usageValue: 'Text before the edit location',
         },
         {
           name: 'end_anchor',
-          description: `Text to find as the end anchor (use ${END_OF_FILE} for file end)`,
+          description: `Text to find as the end anchor (use ${END_OF_FILE} for file end). Anchor is exclusive (preserved).`,
           required: false,
           usageValue: 'Text after the edit location',
         },
         {
           name: 'new_text',
-          description: 'Text to replace the content between start_anchor and end_anchor',
+          description: 'Text to insert between start_anchor and end_anchor (anchors are exclusive; they are not replaced)',
           required: true,
           usageValue: 'New text content',
         },
@@ -113,6 +113,42 @@ export const toolInfo = {
               new_text: '\n  const [state, setState] = useState(false);\n  ',
             },
           ],
+        },
+      ],
+    },
+    {
+      description: 'Append content at end of file',
+      parameters: [
+        {
+          name: 'path',
+          value: 'src/footer.ts',
+        },
+        {
+          name: 'operations',
+          value: {
+            start_anchor: END_OF_FILE,
+            end_anchor: END_OF_FILE,
+            new_text: '\n// End of file appended comment\n',
+          },
+        },
+      ],
+    },
+    {
+      description: 'Replace using line number hints',
+      parameters: [
+        {
+          name: 'path',
+          value: 'src/config.ts',
+        },
+        {
+          name: 'operations',
+          value: {
+            start_anchor: 'const config = {',
+            end_anchor: '}',
+            start_anchor_line_start: '5',
+            end_anchor_line_start: '15',
+            new_text: '\n  debug: true,\n',
+          },
         },
       ],
     },

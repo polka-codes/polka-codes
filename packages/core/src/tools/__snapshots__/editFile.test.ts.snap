@@ -2,7 +2,7 @@
 
 exports[`editFile tool toolInfo should have correct tool definition 1`] = `
 {
-  "description": "Request to edit file contents using before/after text anchors with flexible operations. Supports multiple edit operations in a single call.",
+  "description": "Request to edit file contents using start/end text anchors. Anchors are **exclusive** (they remain in the file). Supports multiple edit operations in a single call.",
   "examples": [
     {
       "description": "Replace content between two text anchors",
@@ -73,6 +73,50 @@ exports[`editFile tool toolInfo should have correct tool definition 1`] = `
         },
       ],
     },
+    {
+      "description": "Append content at end of file",
+      "parameters": [
+        {
+          "name": "path",
+          "value": "src/footer.ts",
+        },
+        {
+          "name": "operations",
+          "value": {
+            "end_anchor": "<<<END_OF_FILE>>>",
+            "new_text": 
+"
+// End of file appended comment
+"
+,
+            "start_anchor": "<<<END_OF_FILE>>>",
+          },
+        },
+      ],
+    },
+    {
+      "description": "Replace using line number hints",
+      "parameters": [
+        {
+          "name": "path",
+          "value": "src/config.ts",
+        },
+        {
+          "name": "operations",
+          "value": {
+            "end_anchor": "}",
+            "end_anchor_line_start": "15",
+            "new_text": 
+"
+  debug: true,
+"
+,
+            "start_anchor": "const config = {",
+            "start_anchor_line_start": "5",
+          },
+        },
+      ],
+    },
   ],
   "name": "edit_file",
   "parameters": [
@@ -86,19 +130,19 @@ exports[`editFile tool toolInfo should have correct tool definition 1`] = `
       "allowMultiple": true,
       "children": [
         {
-          "description": "Text to find as the start anchor (use <<<START_OF_FILE>>> for file start)",
+          "description": "Text to find as the start anchor (use <<<START_OF_FILE>>> for file start). Anchor is exclusive (preserved).",
           "name": "start_anchor",
           "required": false,
           "usageValue": "Text before the edit location",
         },
         {
-          "description": "Text to find as the end anchor (use <<<END_OF_FILE>>> for file end)",
+          "description": "Text to find as the end anchor (use <<<END_OF_FILE>>> for file end). Anchor is exclusive (preserved).",
           "name": "end_anchor",
           "required": false,
           "usageValue": "Text after the edit location",
         },
         {
-          "description": "Text to replace the content between start_anchor and end_anchor",
+          "description": "Text to insert between start_anchor and end_anchor (anchors are exclusive; they are not replaced)",
           "name": "new_text",
           "required": true,
           "usageValue": "New text content",
