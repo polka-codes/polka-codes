@@ -74,78 +74,36 @@ export class OpenRouterService extends AiServiceBase {
 
     // prompt caching: https://openrouter.ai/docs/prompt-caching
     // this is specifically for claude models (some models may 'support prompt caching' automatically without this)
-    switch (this.model.id) {
-      case 'anthropic/claude-3.7-sonnet:thinking':
-      case 'anthropic/claude-3.7-sonnet':
-      case 'anthropic/claude-3.7-sonnet:beta':
-      case 'anthropic/claude-3-7-sonnet':
-      case 'anthropic/claude-3-7-sonnet:beta':
-      case 'anthropic/claude-3.5-sonnet':
-      case 'anthropic/claude-3.5-sonnet:beta':
-      case 'anthropic/claude-3.5-sonnet-20240620':
-      case 'anthropic/claude-3.5-sonnet-20240620:beta':
-      case 'anthropic/claude-3-5-haiku':
-      case 'anthropic/claude-3-5-haiku:beta':
-      case 'anthropic/claude-3-5-haiku-20241022':
-      case 'anthropic/claude-3-5-haiku-20241022:beta':
-      case 'anthropic/claude-3-haiku':
-      case 'anthropic/claude-3-haiku:beta':
-      case 'anthropic/claude-3-opus':
-      case 'anthropic/claude-3-opus:beta': {
-        openAiMessages[0] = {
-          role: 'system',
-          content: [
-            {
-              type: 'text',
-              text: systemPrompt,
-              // @ts-ignore-next-line
-              cache_control: cacheControl,
-            },
-          ],
-        }
-        // Add cache_control to the last two user messages
-        // (note: this works because we only ever add one user message at a time, but if we added multiple we'd need to mark the user message before the last assistant message)
-        const lastTwoUserMessages = openAiMessages.filter((msg) => msg.role === 'user').slice(-2)
-        for (const msg of lastTwoUserMessages) {
-          if (typeof msg.content === 'string') {
-            msg.content = [{ type: 'text', text: msg.content }]
-          }
-          if (Array.isArray(msg.content)) {
-            let lastTextPart = msg.content.filter((part) => part.type === 'text').pop()
-
-            if (!lastTextPart) {
-              lastTextPart = { type: 'text', text: '...' }
-              msg.content.push(lastTextPart)
-            }
+    if (this.model.id.startsWith('anthropic/claude')) {
+      openAiMessages[0] = {
+        role: 'system',
+        content: [
+          {
+            type: 'text',
+            text: systemPrompt,
             // @ts-ignore-next-line
-            lastTextPart.cache_control = cacheControl
-          }
-        }
-        break
+            cache_control: cacheControl,
+          },
+        ],
       }
-      default:
-        break
-    }
+      // Add cache_control to the last two user messages
+      // (note: this works because we only ever add one user message at a time, but if we added multiple we'd need to mark the user message before the last assistant message)
+      const lastTwoUserMessages = openAiMessages.filter((msg) => msg.role === 'user').slice(-2)
+      for (const msg of lastTwoUserMessages) {
+        if (typeof msg.content === 'string') {
+          msg.content = [{ type: 'text', text: msg.content }]
+        }
+        if (Array.isArray(msg.content)) {
+          let lastTextPart = msg.content.filter((part) => part.type === 'text').pop()
 
-    // Not sure how openrouter defaults max tokens when no value is provided, but the anthropic api requires this value and since they offer both 4096 and 8192 variants, we should ensure 8192.
-    // (models usually default to max tokens allowed)
-    let maxTokens: number | undefined
-    switch (this.model.id) {
-      case 'anthropic/claude-3.7-sonnet:thinking':
-      case 'anthropic/claude-3.7-sonnet':
-      case 'anthropic/claude-3.7-sonnet:beta':
-      case 'anthropic/claude-3-7-sonnet':
-      case 'anthropic/claude-3-7-sonnet:beta':
-      case 'anthropic/claude-3.5-sonnet':
-      case 'anthropic/claude-3.5-sonnet:beta':
-      case 'anthropic/claude-3.5-sonnet-20240620':
-      case 'anthropic/claude-3.5-sonnet-20240620:beta':
-      case 'anthropic/claude-3-5-haiku':
-      case 'anthropic/claude-3-5-haiku:beta':
-      case 'anthropic/claude-3-5-haiku-20241022':
-      case 'anthropic/claude-3-5-haiku-20241022:beta':
-        maxTokens = 8_192
-        break
+          if (!lastTextPart) {
+            lastTextPart = { type: 'text', text: '...' }
+            msg.content.push(lastTextPart)
+          }
+          // @ts-ignore-next-line
+          lastTextPart.cache_control = cacheControl
+        }
+      }
     }
 
     let reasoning: { max_tokens?: number } = {}
@@ -154,7 +112,9 @@ export class OpenRouterService extends AiServiceBase {
       case 'anthropic/claude-3.7-sonnet:beta':
       case 'anthropic/claude-3.7-sonnet:thinking':
       case 'anthropic/claude-3-7-sonnet':
-      case 'anthropic/claude-3-7-sonnet:beta': {
+      case 'anthropic/claude-3-7-sonnet:beta':
+      case 'anthropic/claude-opus-4':
+      case 'anthropic/claude-sonnet-4': {
         const budget_tokens = this.#options.parameters.thinkingBudgetTokens || 0
         if (budget_tokens > 0) {
           reasoning = { max_tokens: budget_tokens }
@@ -173,7 +133,6 @@ export class OpenRouterService extends AiServiceBase {
     // @ts-ignore-next-line
     const stream = await this.#client.chat.completions.create({
       model: this.model.id,
-      max_completion_tokens: maxTokens,
       messages: openAiMessages,
       temperature: 0,
       stream: true,

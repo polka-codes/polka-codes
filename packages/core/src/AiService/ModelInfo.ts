@@ -18,8 +18,32 @@ export interface ModelInfo {
 export type AnthropicModelId = keyof typeof anthropicModels
 export const anthropicDefaultModelId: AnthropicModelId = 'claude-3-7-sonnet-20250219'
 export const anthropicModels = {
+  'claude-opus-4-20250514': {
+    maxTokens: 32_000,
+    contextWindow: 200_000,
+    supportsImages: true,
+    supportsComputerUse: true,
+    supportsPromptCache: true,
+    inputPrice: 15.0,
+    outputPrice: 75.0,
+    cacheWritesPrice: 18.75,
+    cacheReadsPrice: 1.5,
+    reasoning: true,
+  },
+  'claude-sonnet-4-20250514': {
+    maxTokens: 64_000,
+    contextWindow: 200_000,
+    supportsImages: true,
+    supportsComputerUse: true,
+    supportsPromptCache: true,
+    inputPrice: 3.0,
+    outputPrice: 15.0,
+    cacheWritesPrice: 3.75,
+    cacheReadsPrice: 0.3,
+    reasoning: true,
+  },
   'claude-3-7-sonnet-20250219': {
-    maxTokens: 8192,
+    maxTokens: 64_000,
     contextWindow: 200_000,
     supportsImages: true,
     supportsComputerUse: true,
