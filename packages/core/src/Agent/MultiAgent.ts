@@ -16,6 +16,8 @@ export class MultiAgent {
   readonly #config: MultiAgentConfig
   readonly #agents: AgentBase[] = []
 
+  #originalTask?: string
+
   constructor(config: MultiAgentConfig) {
     this.#config = config
   }
@@ -32,7 +34,7 @@ export class MultiAgent {
             exitReason.task,
             exitReason.context,
             exitReason.files,
-            exitReason.originalTask,
+            this.#originalTask,
           )) ?? exitReason.task
         return await this.#startTask(exitReason.agentName, prompt)
       }
@@ -43,7 +45,7 @@ export class MultiAgent {
             exitReason.task,
             exitReason.context,
             exitReason.files,
-            exitReason.originalTask,
+            this.#originalTask,
           )) ?? exitReason.task
         const delegateResult = await this.#startTask(exitReason.agentName, prompt)
         switch (delegateResult.type) {
@@ -81,11 +83,13 @@ export class MultiAgent {
   async startTask(options: {
     agentName: string
     task: string
+    context: string
   }): Promise<ExitReason> {
     if (this.#agents.length > 0) {
       throw new Error('An active agent already exists')
     }
-    return this.#startTask(options.agentName, options.task)
+    this.#originalTask = options.task
+    return this.#startTask(options.agentName, `<task>${options.task}</task>\n<context>${options.context}</context>`)
   }
 
   async continueTask(userMessage: string): Promise<ExitReason> {

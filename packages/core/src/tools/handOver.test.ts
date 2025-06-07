@@ -32,9 +32,6 @@ describe('handOver tool', () => {
       context: 'test context',
       files: ['file1.ts', 'file2.ts'],
     })
-
-    // originalTask will be set by AgentBase, not by the handler
-    expect((result as any).originalTask).toBeUndefined()
   })
 
   test('handler should throw error if required parameters are missing', async () => {

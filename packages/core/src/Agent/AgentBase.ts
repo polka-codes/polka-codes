@@ -110,7 +110,6 @@ export interface TaskEventToolHandOverDelegate extends TaskEventBase {
   task: string
   context?: string
   files?: string[]
-  originalTask?: string
 }
 
 /**
@@ -205,7 +204,6 @@ export abstract class AgentBase {
   protected readonly config: Readonly<AgentBaseConfig>
   protected readonly handlers: Record<string, FullToolInfo>
   #messages: MessageParam[] = []
-  #originalTask?: string
   readonly #policies: Readonly<AgentPolicyInstance[]>
 
   constructor(name: string, ai: AiServiceBase, config: AgentBaseConfig) {
@@ -263,7 +261,6 @@ export abstract class AgentBase {
   }
 
   async start(prompt: string): Promise<ExitReason> {
-    this.#originalTask = prompt
     this.#callback({ kind: TaskEventKind.StartTask, agent: this, systemPrompt: this.config.systemPrompt })
 
     return await this.#processLoop(prompt)
@@ -430,21 +427,16 @@ export abstract class AgentBase {
                 break outer
               }
               // hand over the task to another agent
-              const handOverResp = {
-                ...toolResp,
-                originalTask: this.#originalTask,
-              }
               await this.#callback({
                 kind: TaskEventKind.ToolHandOver,
                 agent: this,
                 tool: content.name,
-                agentName: handOverResp.agentName,
-                task: handOverResp.task,
-                context: handOverResp.context,
-                files: handOverResp.files,
-                originalTask: handOverResp.originalTask,
+                agentName: toolResp.agentName,
+                task: toolResp.task,
+                context: toolResp.context,
+                files: toolResp.files,
               })
-              return { type: 'exit', reason: handOverResp }
+              return { type: 'exit', reason: toolResp }
             }
             case ToolResponseType.Delegate: {
               if (toolResponses.length > 0) {
@@ -453,21 +445,16 @@ export abstract class AgentBase {
                 break outer
               }
               // delegate the task to another agent
-              const delegateResp = {
-                ...toolResp,
-                originalTask: this.#originalTask,
-              }
               await this.#callback({
                 kind: TaskEventKind.ToolDelegate,
                 agent: this,
                 tool: content.name,
-                agentName: delegateResp.agentName,
-                task: delegateResp.task,
-                context: delegateResp.context,
-                files: delegateResp.files,
-                originalTask: delegateResp.originalTask,
+                agentName: toolResp.agentName,
+                task: toolResp.task,
+                context: toolResp.context,
+                files: toolResp.files,
               })
-              return { type: 'exit', reason: delegateResp }
+              return { type: 'exit', reason: toolResp }
             }
             case ToolResponseType.Pause: {
               // pause the execution

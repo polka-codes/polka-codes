@@ -96,7 +96,6 @@ export type ToolResponseHandOver = {
   task: string
   context?: string
   files?: string[]
-  originalTask?: string
 }
 
 // Delegate the task to another agent
@@ -106,7 +105,6 @@ export type ToolResponseDelegate = {
   task: string
   context?: string
   files?: string[]
-  originalTask?: string
 }
 
 export type ToolResponsePause = {

@@ -243,8 +243,9 @@ export class Runner {
   async startTask(task: string, agentName: string = architectAgentInfo.name) {
     const finalContext = await this.#defaultContext(agentName)
     const exitReason = await this.multiAgent.startTask({
-      agentName: agentName,
-      task: `<task>${task}</task>\n<context>${finalContext}</context>`,
+      agentName,
+      task,
+      context: finalContext,
     })
 
     return exitReason
