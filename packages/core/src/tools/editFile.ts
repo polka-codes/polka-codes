@@ -19,37 +19,37 @@ export const toolInfo = {
     },
     {
       name: 'operations',
-      description: 'Edit operation with before_text, after_text, new_text, and optional line range hints',
+      description: 'Edit operation with start_anchor, end_anchor, new_text, and optional line range hints',
       required: true,
       allowMultiple: true,
       children: [
         {
-          name: 'before_text',
+          name: 'start_anchor',
           description: `Text to find as the start anchor (use ${START_OF_FILE} for file start)`,
           required: false,
           usageValue: 'Text before the edit location',
         },
         {
-          name: 'after_text',
+          name: 'end_anchor',
           description: `Text to find as the end anchor (use ${END_OF_FILE} for file end)`,
           required: false,
           usageValue: 'Text after the edit location',
         },
         {
           name: 'new_text',
-          description: 'Text to replace the content between before_text and after_text',
+          description: 'Text to replace the content between start_anchor and end_anchor',
           required: true,
           usageValue: 'New text content',
         },
         {
-          name: 'before_text_line_start',
-          description: 'Optional line number hint for before_text location (1-based)',
+          name: 'start_anchor_line_start',
+          description: 'Optional line number hint for start_anchor location (1-based)',
           required: false,
           usageValue: '10',
         },
         {
-          name: 'after_text_line_start',
-          description: 'Optional line number hint for after_text location (1-based)',
+          name: 'end_anchor_line_start',
+          description: 'Optional line number hint for end_anchor location (1-based)',
           required: false,
           usageValue: '20',
         },
@@ -68,8 +68,8 @@ export const toolInfo = {
         {
           name: 'operations',
           value: {
-            before_text: 'function oldFunction() {',
-            after_text: '}',
+            start_anchor: 'function oldFunction() {',
+            end_anchor: '}',
             new_text: '\n  return "new implementation";\n',
           },
         },
@@ -85,8 +85,8 @@ export const toolInfo = {
         {
           name: 'operations',
           value: {
-            before_text: START_OF_FILE,
-            after_text: 'export',
+            start_anchor: START_OF_FILE,
+            end_anchor: 'export',
             new_text: '// File header comment\n',
           },
         },
@@ -103,13 +103,13 @@ export const toolInfo = {
           name: 'operations',
           value: [
             {
-              before_text: 'import React',
-              after_text: 'from "react"',
+              start_anchor: 'import React',
+              end_anchor: 'from "react"',
               new_text: ', { useState }',
             },
             {
-              before_text: 'function Component() {',
-              after_text: 'return (',
+              start_anchor: 'function Component() {',
+              end_anchor: 'return (',
               new_text: '\n  const [state, setState] = useState(false);\n  ',
             },
           ],

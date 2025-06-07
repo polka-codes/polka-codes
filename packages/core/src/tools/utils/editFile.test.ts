@@ -13,10 +13,10 @@ line4
 line5`
 
   describe('basic operations', () => {
-    it('should insert text after before_text', async () => {
+    it('should insert text after start_anchor', async () => {
       const operations: EditOperation[] = [
         {
-          before_text: 'line2',
+          start_anchor: 'line2',
           new_text: '\ninserted line',
         },
       ]
@@ -25,10 +25,10 @@ line5`
       expect(result).toMatchSnapshot()
     })
 
-    it('should insert text before after_text', async () => {
+    it('should insert text before end_anchor', async () => {
       const operations: EditOperation[] = [
         {
-          after_text: 'line3',
+          end_anchor: 'line3',
           new_text: 'inserted line\n',
         },
       ]
@@ -37,11 +37,11 @@ line5`
       expect(result).toMatchSnapshot()
     })
 
-    it('should replace text between before_text and after_text', async () => {
+    it('should replace text between start_anchor and end_anchor', async () => {
       const operations: EditOperation[] = [
         {
-          before_text: 'line2',
-          after_text: 'line4',
+          start_anchor: 'line2',
+          end_anchor: 'line4',
           new_text: '\nreplaced content\n',
         },
       ]
@@ -53,11 +53,11 @@ line5`
     it('should handle multiple operations in sequence', async () => {
       const operations: EditOperation[] = [
         {
-          before_text: 'line1',
+          start_anchor: 'line1',
           new_text: '\nafter line1',
         },
         {
-          after_text: 'line5',
+          end_anchor: 'line5',
           new_text: 'before line5\n',
         },
       ]
@@ -71,8 +71,8 @@ line5`
     it('should replace entire file with START_OF_FILE and END_OF_FILE', async () => {
       const operations: EditOperation[] = [
         {
-          before_text: START_OF_FILE,
-          after_text: END_OF_FILE,
+          start_anchor: START_OF_FILE,
+          end_anchor: END_OF_FILE,
           new_text: 'completely new content',
         },
       ]
@@ -84,7 +84,7 @@ line5`
     it('should insert at start of file with START_OF_FILE', async () => {
       const operations: EditOperation[] = [
         {
-          before_text: START_OF_FILE,
+          start_anchor: START_OF_FILE,
           new_text: 'new start\n',
         },
       ]
@@ -96,7 +96,7 @@ line5`
     it('should insert at end of file with END_OF_FILE', async () => {
       const operations: EditOperation[] = [
         {
-          after_text: END_OF_FILE,
+          end_anchor: END_OF_FILE,
           new_text: '\nnew end',
         },
       ]
@@ -108,8 +108,8 @@ line5`
     it('should replace from START_OF_FILE to specific text', async () => {
       const operations: EditOperation[] = [
         {
-          before_text: START_OF_FILE,
-          after_text: 'line3',
+          start_anchor: START_OF_FILE,
+          end_anchor: 'line3',
           new_text: 'new beginning\n',
         },
       ]
@@ -121,8 +121,8 @@ line5`
     it('should replace from specific text to END_OF_FILE', async () => {
       const operations: EditOperation[] = [
         {
-          before_text: 'line3',
-          after_text: END_OF_FILE,
+          start_anchor: 'line3',
+          end_anchor: END_OF_FILE,
           new_text: '\nnew ending',
         },
       ]
@@ -142,9 +142,9 @@ line5`
     it('should use line hint to find correct occurrence', async () => {
       const operations: EditOperation[] = [
         {
-          before_text: 'duplicate',
-          after_text_line_start: 4, // Second occurrence
-          after_text: 'line5',
+          start_anchor: 'duplicate',
+          end_anchor_line_start: 4, // Second occurrence
+          end_anchor: 'line5',
           new_text: '\nfound second duplicate\n',
         },
       ]
@@ -156,8 +156,8 @@ line5`
     it('should fallback to regular search when hint fails', async () => {
       const operations: EditOperation[] = [
         {
-          before_text: 'duplicate',
-          before_text_line_start: 999, // Invalid hint
+          start_anchor: 'duplicate',
+          start_anchor_line_start: 999, // Invalid hint
           new_text: '\nfound duplicate',
         },
       ]
@@ -166,11 +166,11 @@ line5`
       expect(result).toMatchSnapshot()
     })
 
-    it('should use before_text_line_start hint', async () => {
+    it('should use start_anchor_line_start hint', async () => {
       const operations: EditOperation[] = [
         {
-          before_text: 'duplicate',
-          before_text_line_start: 4, // Second occurrence
+          start_anchor: 'duplicate',
+          start_anchor_line_start: 4, // Second occurrence
           new_text: '\nafter second duplicate',
         },
       ]
@@ -184,7 +184,7 @@ line5`
     it('should handle empty file', async () => {
       const operations: EditOperation[] = [
         {
-          before_text: START_OF_FILE,
+          start_anchor: START_OF_FILE,
           new_text: 'new content',
         },
       ]
@@ -196,8 +196,8 @@ line5`
     it('should handle empty new_text', async () => {
       const operations: EditOperation[] = [
         {
-          before_text: 'line2',
-          after_text: 'line4',
+          start_anchor: 'line2',
+          end_anchor: 'line4',
           new_text: '',
         },
       ]
@@ -213,7 +213,7 @@ line5`
 
       const operations: EditOperation[] = [
         {
-          before_text: '    line2',
+          start_anchor: '    line2',
           new_text: '\n    inserted',
         },
       ]
@@ -225,7 +225,7 @@ line5`
     it('should handle newlines in search text', async () => {
       const operations: EditOperation[] = [
         {
-          before_text: 'line2\nline3',
+          start_anchor: 'line2\nline3',
           new_text: '\nreplaced multiline',
         },
       ]
@@ -237,7 +237,7 @@ line5`
     it('should handle single line file', async () => {
       const operations: EditOperation[] = [
         {
-          before_text: 'single',
+          start_anchor: 'single',
           new_text: ' modified',
         },
       ]
@@ -256,10 +256,10 @@ line5`
       expect(editFile(sampleContent, null as any)).rejects.toThrow('At least one edit operation is required')
     })
 
-    it('should throw error when before_text not found', async () => {
+    it('should throw error when start_anchor not found', async () => {
       const operations: EditOperation[] = [
         {
-          before_text: 'nonexistent',
+          start_anchor: 'nonexistent',
           new_text: 'new text',
         },
       ]
@@ -267,10 +267,10 @@ line5`
       expect(editFile(sampleContent, operations)).rejects.toThrow('Could not find text: nonexistent')
     })
 
-    it('should throw error when after_text not found', async () => {
+    it('should throw error when end_anchor not found', async () => {
       const operations: EditOperation[] = [
         {
-          after_text: 'nonexistent',
+          end_anchor: 'nonexistent',
           new_text: 'new text',
         },
       ]
@@ -278,21 +278,21 @@ line5`
       expect(editFile(sampleContent, operations)).rejects.toThrow('Could not find text: nonexistent')
     })
 
-    it('should throw error when neither before_text nor after_text specified', async () => {
+    it('should throw error when neither start_anchor nor end_anchor specified', async () => {
       const operations: EditOperation[] = [
         {
           new_text: 'new text',
         },
       ]
 
-      expect(editFile(sampleContent, operations)).rejects.toThrow('Either before_text or after_text must be specified')
+      expect(editFile(sampleContent, operations)).rejects.toThrow('Either start_anchor or end_anchor must be specified')
     })
 
-    it('should throw error when after_text appears before before_text', async () => {
+    it('should throw error when end_anchor appears before start_anchor', async () => {
       const operations: EditOperation[] = [
         {
-          before_text: 'line4',
-          after_text: 'line2', // This appears before line4
+          start_anchor: 'line4',
+          end_anchor: 'line2', // This appears before line4
           new_text: 'replacement',
         },
       ]
@@ -305,16 +305,16 @@ line5`
     it('should handle multiple operations with overlapping regions', async () => {
       const operations: EditOperation[] = [
         {
-          before_text: 'line1',
+          start_anchor: 'line1',
           new_text: '\nafter line1',
         },
         {
-          before_text: 'line2',
-          after_text: 'line3',
+          start_anchor: 'line2',
+          end_anchor: 'line3',
           new_text: '\nreplaced 2-3\n',
         },
         {
-          after_text: 'line5',
+          end_anchor: 'line5',
           new_text: 'before line5\n',
         },
       ]
@@ -326,11 +326,11 @@ line5`
     it('should handle operations that create new searchable text', async () => {
       const operations: EditOperation[] = [
         {
-          before_text: 'line2',
+          start_anchor: 'line2',
           new_text: '\nnew marker',
         },
         {
-          before_text: 'new marker',
+          start_anchor: 'new marker',
           new_text: '\nafter new marker',
         },
       ]
@@ -348,7 +348,7 @@ line5`
 
       const operations: EditOperation[] = [
         {
-          before_text: 'const y = 2;',
+          start_anchor: 'const y = 2;',
           new_text: '\n  const z = 3;\n  const y = 2;',
         },
       ]
@@ -366,7 +366,7 @@ line5`
 
       const operations: EditOperation[] = [
         {
-          before_text: '"dependencies": {}',
+          start_anchor: '"dependencies": {}',
           new_text: '"scripts": {\n    "test": "bun test"\n  },\n  "dependencies": {}',
         },
       ]

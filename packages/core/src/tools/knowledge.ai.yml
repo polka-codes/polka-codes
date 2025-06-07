@@ -78,11 +78,11 @@ files:
           required: true
           children:
             "1":
-              name: before_text
+              name: start_anchor
               description: Text to find as the start anchor
               required: false
             "2":
-              name: after_text
+              name: end_anchor
               description: Text to find as the end anchor
               required: false
             "3":
@@ -90,12 +90,12 @@ files:
               description: Text to replace the content between anchors
               required: true
             "4":
-              name: before_text_line_start
-              description: Optional line number hint for before_text location
+              name: start_anchor_line_start
+              description: Optional line number hint for start_anchor location
               required: false
             "5":
-              name: after_text_line_start
-              description: Optional line number hint for after_text location
+              name: end_anchor_line_start
+              description: Optional line number hint for end_anchor location
               required: false
   renameFile.ts:
     description: Tool for renaming files in the filesystem
@@ -118,19 +118,19 @@ files:
           description: Interface for edit operations using snake_case parameter names
           properties:
             "1":
-              name: before_text
+              name: start_anchor
               type: string | undefined
             "2":
-              name: after_text
+              name: end_anchor
               type: string | undefined
             "3":
               name: new_text
               type: string
             "4":
-              name: before_text_line_start
+              name: start_anchor_line_start
               type: number | undefined
             "5":
-              name: after_text_line_start
+              name: end_anchor_line_start
               type: number | undefined
 rules:
   "1": Each tool should have clear input/output types

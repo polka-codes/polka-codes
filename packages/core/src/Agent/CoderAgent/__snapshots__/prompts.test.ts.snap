@@ -109,7 +109,7 @@ Description: Request to edit file contents using before/after text anchors with 
 
 Parameters:
 - tool_parameter_path: (required) The path of the file to edit
-- tool_parameter_operations: (required) (multiple allowed) Edit operation with before_text, after_text, new_text, and optional line range hints
+- tool_parameter_operations: (required) (multiple allowed) Edit operation with start_anchor, end_anchor, new_text, and optional line range hints
 
 Usage:
 <tool_edit_file>
@@ -315,8 +315,8 @@ Usage:
 <tool_edit_file>
 <tool_parameter_path>src/main.ts</tool_parameter_path>
 <tool_parameter_operations>
-<tool_parameter_before_text>function oldFunction() {</tool_parameter_before_text>
-<tool_parameter_after_text>}</tool_parameter_after_text>
+<tool_parameter_start_anchor>function oldFunction() {</tool_parameter_start_anchor>
+<tool_parameter_end_anchor>}</tool_parameter_end_anchor>
 <tool_parameter_new_text>
   return "new implementation";
 </tool_parameter_new_text>
@@ -328,8 +328,8 @@ Usage:
 <tool_edit_file>
 <tool_parameter_path>src/header.ts</tool_parameter_path>
 <tool_parameter_operations>
-<tool_parameter_before_text><<<START_OF_FILE>>></tool_parameter_before_text>
-<tool_parameter_after_text>export</tool_parameter_after_text>
+<tool_parameter_start_anchor><<<START_OF_FILE>>></tool_parameter_start_anchor>
+<tool_parameter_end_anchor>export</tool_parameter_end_anchor>
 <tool_parameter_new_text>// File header comment
 </tool_parameter_new_text>
 </tool_parameter_operations>
@@ -340,13 +340,13 @@ Usage:
 <tool_edit_file>
 <tool_parameter_path>src/utils.ts</tool_parameter_path>
 <tool_parameter_operations>
-<tool_parameter_before_text>import React</tool_parameter_before_text>
-<tool_parameter_after_text>from "react"</tool_parameter_after_text>
+<tool_parameter_start_anchor>import React</tool_parameter_start_anchor>
+<tool_parameter_end_anchor>from "react"</tool_parameter_end_anchor>
 <tool_parameter_new_text>, { useState }</tool_parameter_new_text>
 </tool_parameter_operations>
 <tool_parameter_operations>
-<tool_parameter_before_text>function Component() {</tool_parameter_before_text>
-<tool_parameter_after_text>return (</tool_parameter_after_text>
+<tool_parameter_start_anchor>function Component() {</tool_parameter_start_anchor>
+<tool_parameter_end_anchor>return (</tool_parameter_end_anchor>
 <tool_parameter_new_text>
   const [state, setState] = useState(false);
   </tool_parameter_new_text>

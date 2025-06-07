@@ -14,13 +14,13 @@ exports[`editFile tool toolInfo should have correct tool definition 1`] = `
         {
           "name": "operations",
           "value": {
-            "after_text": "}",
-            "before_text": "function oldFunction() {",
+            "end_anchor": "}",
             "new_text": 
 "
   return "new implementation";
 "
 ,
+            "start_anchor": "function oldFunction() {",
           },
         },
       ],
@@ -35,12 +35,12 @@ exports[`editFile tool toolInfo should have correct tool definition 1`] = `
         {
           "name": "operations",
           "value": {
-            "after_text": "export",
-            "before_text": "<<<START_OF_FILE>>>",
+            "end_anchor": "export",
             "new_text": 
 "// File header comment
 "
 ,
+            "start_anchor": "<<<START_OF_FILE>>>",
           },
         },
       ],
@@ -56,18 +56,18 @@ exports[`editFile tool toolInfo should have correct tool definition 1`] = `
           "name": "operations",
           "value": [
             {
-              "after_text": "from "react"",
-              "before_text": "import React",
+              "end_anchor": "from "react"",
               "new_text": ", { useState }",
+              "start_anchor": "import React",
             },
             {
-              "after_text": "return (",
-              "before_text": "function Component() {",
+              "end_anchor": "return (",
               "new_text": 
 "
   const [state, setState] = useState(false);
   "
 ,
+              "start_anchor": "function Component() {",
             },
           ],
         },
@@ -87,36 +87,36 @@ exports[`editFile tool toolInfo should have correct tool definition 1`] = `
       "children": [
         {
           "description": "Text to find as the start anchor (use <<<START_OF_FILE>>> for file start)",
-          "name": "before_text",
+          "name": "start_anchor",
           "required": false,
           "usageValue": "Text before the edit location",
         },
         {
           "description": "Text to find as the end anchor (use <<<END_OF_FILE>>> for file end)",
-          "name": "after_text",
+          "name": "end_anchor",
           "required": false,
           "usageValue": "Text after the edit location",
         },
         {
-          "description": "Text to replace the content between before_text and after_text",
+          "description": "Text to replace the content between start_anchor and end_anchor",
           "name": "new_text",
           "required": true,
           "usageValue": "New text content",
         },
         {
-          "description": "Optional line number hint for before_text location (1-based)",
-          "name": "before_text_line_start",
+          "description": "Optional line number hint for start_anchor location (1-based)",
+          "name": "start_anchor_line_start",
           "required": false,
           "usageValue": "10",
         },
         {
-          "description": "Optional line number hint for after_text location (1-based)",
-          "name": "after_text_line_start",
+          "description": "Optional line number hint for end_anchor location (1-based)",
+          "name": "end_anchor_line_start",
           "required": false,
           "usageValue": "20",
         },
       ],
-      "description": "Edit operation with before_text, after_text, new_text, and optional line range hints",
+      "description": "Edit operation with start_anchor, end_anchor, new_text, and optional line range hints",
       "name": "operations",
       "required": true,
       "usageValue": "operations here",
@@ -135,7 +135,7 @@ exports[`editFile tool handler should return error when provider lacks capabilit
 
 exports[`editFile tool handler should return error when file not found 1`] = `
 {
-  "message": "<error><edit_file_path>missing.txt</edit_file_path><error_message>Either before_text or after_text must be specified</error_message></error>",
+  "message": "<error><edit_file_path>missing.txt</edit_file_path><error_message>Either start_anchor or end_anchor must be specified</error_message></error>",
   "type": "Error",
 }
 `;
@@ -189,14 +189,14 @@ exports[`editFile tool handler should return error when text not found 1`] = `
 }
 `;
 
-exports[`editFile tool handler should handle insert after before_text only 1`] = `
+exports[`editFile tool handler should handle insert after start_anchor only 1`] = `
 {
   "message": "<edit_file_path>test.txt</edit_file_path>",
   "type": "Reply",
 }
 `;
 
-exports[`editFile tool handler should handle insert before after_text only 1`] = `
+exports[`editFile tool handler should handle insert before end_anchor only 1`] = `
 {
   "message": "<edit_file_path>test.txt</edit_file_path>",
   "type": "Reply",

@@ -80,8 +80,8 @@ describe('editFile tool', () => {
       const args = {
         path: 'test.txt',
         operations: {
-          before_text: 'Hello',
-          after_text: 'world',
+          start_anchor: 'Hello',
+          end_anchor: 'world',
           new_text: ' beautiful ',
         },
       }
@@ -104,13 +104,13 @@ describe('editFile tool', () => {
         path: 'test.ts',
         operations: [
           {
-            before_text: 'function test() {',
-            after_text: '\n  return 42;',
+            start_anchor: 'function test() {',
+            end_anchor: '\n  return 42;',
             new_text: '\n  console.log("debug");',
           },
           {
-            before_text: 'return 42;',
-            after_text: '\n}',
+            start_anchor: 'return 42;',
+            end_anchor: '\n}',
             new_text: '\n\n',
           },
         ],
@@ -133,8 +133,8 @@ describe('editFile tool', () => {
       const args = {
         path: 'test.ts',
         operations: {
-          before_text: '<<<START_OF_FILE>>>',
-          after_text: 'export',
+          start_anchor: '<<<START_OF_FILE>>>',
+          end_anchor: 'export',
           new_text: '// Header comment\n',
         },
       }
@@ -156,8 +156,8 @@ describe('editFile tool', () => {
       const args = {
         path: 'test.ts',
         operations: {
-          before_text: 'value = 42;',
-          after_text: '<<<END_OF_FILE>>>',
+          start_anchor: 'value = 42;',
+          end_anchor: '<<<END_OF_FILE>>>',
           new_text: '\n// Footer comment',
         },
       }
@@ -179,8 +179,8 @@ describe('editFile tool', () => {
       const args = {
         path: 'test.txt',
         operations: {
-          before_text: '<<<START_OF_FILE>>>',
-          after_text: '<<<END_OF_FILE>>>',
+          start_anchor: '<<<START_OF_FILE>>>',
+          end_anchor: '<<<END_OF_FILE>>>',
           new_text: 'completely new content',
         },
       }
@@ -196,8 +196,8 @@ describe('editFile tool', () => {
       const args = {
         path: 'test.txt',
         operations: {
-          before_text: 'missing',
-          after_text: 'text',
+          start_anchor: 'missing',
+          end_anchor: 'text',
           new_text: 'replacement',
         },
       }
@@ -207,7 +207,7 @@ describe('editFile tool', () => {
       expect(result).toMatchSnapshot()
     })
 
-    it('should handle insert after before_text only', async () => {
+    it('should handle insert after start_anchor only', async () => {
       let writtenContent = ''
       const provider: FilesystemProvider = {
         readFile: async () => 'Hello world',
@@ -218,7 +218,7 @@ describe('editFile tool', () => {
       const args = {
         path: 'test.txt',
         operations: {
-          before_text: 'Hello',
+          start_anchor: 'Hello',
           new_text: ' beautiful',
         },
       }
@@ -229,7 +229,7 @@ describe('editFile tool', () => {
       expect(writtenContent).toBe('Hello beautiful world')
     })
 
-    it('should handle insert before after_text only', async () => {
+    it('should handle insert before end_anchor only', async () => {
       let writtenContent = ''
       const provider: FilesystemProvider = {
         readFile: async () => 'Hello world',
@@ -240,7 +240,7 @@ describe('editFile tool', () => {
       const args = {
         path: 'test.txt',
         operations: {
-          after_text: 'world',
+          end_anchor: 'world',
           new_text: 'beautiful ',
         },
       }
