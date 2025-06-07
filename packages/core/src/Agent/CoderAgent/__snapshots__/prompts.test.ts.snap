@@ -105,11 +105,11 @@ Usage:
 
 ## tool_edit_file
 
-Description: Request to edit file contents using start/end text anchors. Anchors are **exclusive** (they remain in the file). Supports multiple edit operations in a single call.
+Description: Request to edit file contents using search/replace operations. Supports multiple edit operations in a single call.
 
 Parameters:
 - tool_parameter_path: (required) The path of the file to edit
-- tool_parameter_operations: (required) (multiple allowed) Edit operation with start_anchor, end_anchor, new_text, and optional line range hints
+- tool_parameter_operations: (required) (multiple allowed) Edit operation with search and replace parameters
 
 Usage:
 <tool_edit_file>
@@ -310,16 +310,17 @@ Usage:
 <tool_parameter_files>src/auth/login.ts,src/auth/types.ts</tool_parameter_files>
 </tool_delegate>
 
-## Example: Replace content between two text anchors
+## Example: Replace specific text
 
 <tool_edit_file>
 <tool_parameter_path>src/main.ts</tool_parameter_path>
 <tool_parameter_operations>
-<tool_parameter_start_anchor>function oldFunction() {</tool_parameter_start_anchor>
-<tool_parameter_end_anchor>}</tool_parameter_end_anchor>
-<tool_parameter_new_text>
+<tool_parameter_search>function oldFunction() {
+  return 42;
+}</tool_parameter_search>
+<tool_parameter_replace>function newFunction() {
   return "new implementation";
-</tool_parameter_new_text>
+}</tool_parameter_replace>
 </tool_parameter_operations>
 </tool_edit_file>
 
@@ -328,10 +329,9 @@ Usage:
 <tool_edit_file>
 <tool_parameter_path>src/header.ts</tool_parameter_path>
 <tool_parameter_operations>
-<tool_parameter_start_anchor><<<START_OF_FILE>>></tool_parameter_start_anchor>
-<tool_parameter_end_anchor>export</tool_parameter_end_anchor>
-<tool_parameter_new_text>// File header comment
-</tool_parameter_new_text>
+<tool_parameter_search><<<START_OF_FILE>>></tool_parameter_search>
+<tool_parameter_replace>// File header comment
+</tool_parameter_replace>
 </tool_parameter_operations>
 </tool_edit_file>
 
@@ -340,16 +340,15 @@ Usage:
 <tool_edit_file>
 <tool_parameter_path>src/utils.ts</tool_parameter_path>
 <tool_parameter_operations>
-<tool_parameter_start_anchor>import React</tool_parameter_start_anchor>
-<tool_parameter_end_anchor>from "react"</tool_parameter_end_anchor>
-<tool_parameter_new_text>, { useState }</tool_parameter_new_text>
+<tool_parameter_search>import React from "react"</tool_parameter_search>
+<tool_parameter_replace>import React, { useState } from "react"</tool_parameter_replace>
 </tool_parameter_operations>
 <tool_parameter_operations>
-<tool_parameter_start_anchor>function Component() {</tool_parameter_start_anchor>
-<tool_parameter_end_anchor>return (</tool_parameter_end_anchor>
-<tool_parameter_new_text>
+<tool_parameter_search>function Component() {
+  return (</tool_parameter_search>
+<tool_parameter_replace>function Component() {
   const [state, setState] = useState(false);
-  </tool_parameter_new_text>
+  return (</tool_parameter_replace>
 </tool_parameter_operations>
 </tool_edit_file>
 
@@ -358,26 +357,10 @@ Usage:
 <tool_edit_file>
 <tool_parameter_path>src/footer.ts</tool_parameter_path>
 <tool_parameter_operations>
-<tool_parameter_start_anchor><<<END_OF_FILE>>></tool_parameter_start_anchor>
-<tool_parameter_end_anchor><<<END_OF_FILE>>></tool_parameter_end_anchor>
-<tool_parameter_new_text>
+<tool_parameter_search><<<END_OF_FILE>>></tool_parameter_search>
+<tool_parameter_replace>
 // End of file appended comment
-</tool_parameter_new_text>
-</tool_parameter_operations>
-</tool_edit_file>
-
-## Example: Replace using line number hints
-
-<tool_edit_file>
-<tool_parameter_path>src/config.ts</tool_parameter_path>
-<tool_parameter_operations>
-<tool_parameter_start_anchor>const config = {</tool_parameter_start_anchor>
-<tool_parameter_end_anchor>}</tool_parameter_end_anchor>
-<tool_parameter_start_anchor_line_start>5</tool_parameter_start_anchor_line_start>
-<tool_parameter_end_anchor_line_start>15</tool_parameter_end_anchor_line_start>
-<tool_parameter_new_text>
-  debug: true,
-</tool_parameter_new_text>
+</tool_parameter_replace>
 </tool_parameter_operations>
 </tool_edit_file>
 

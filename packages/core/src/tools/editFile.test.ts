@@ -44,7 +44,7 @@ describe('editFile tool', () => {
 
     it('should return error when provider lacks capabilities', async () => {
       const provider: FilesystemProvider = {}
-      const args = { path: 'test.txt', operations: [{ new_text: 'new' }] }
+      const args = { path: 'test.txt', operations: [{ search: 'old', replace: 'new' }] }
 
       const result = await handler(provider, args)
 
@@ -52,8 +52,8 @@ describe('editFile tool', () => {
     })
 
     it('should return error when file not found', async () => {
-      const provider = createProvider()
-      const args = { path: 'missing.txt', operations: [{ new_text: 'new' }] }
+      const provider = createProvider(undefined)
+      const args = { path: 'missing.txt', operations: [{ search: 'old', replace: 'new' }] }
 
       const result = await handler(provider, args)
 
@@ -80,9 +80,8 @@ describe('editFile tool', () => {
       const args = {
         path: 'test.txt',
         operations: {
-          start_anchor: 'Hello',
-          end_anchor: 'world',
-          new_text: ' beautiful ',
+          search: 'world',
+          replace: 'beautiful world',
         },
       }
 
@@ -104,14 +103,12 @@ describe('editFile tool', () => {
         path: 'test.ts',
         operations: [
           {
-            start_anchor: 'function test() {',
-            end_anchor: '\n  return 42;',
-            new_text: '\n  console.log("debug");',
+            search: 'function test() {',
+            replace: 'function test() {\n  console.log("debug");',
           },
           {
-            start_anchor: 'return 42;',
-            end_anchor: '\n}',
-            new_text: '\n\n',
+            search: 'return 42;',
+            replace: 'return 42;\n  // Added comment',
           },
         ],
       }
@@ -119,7 +116,7 @@ describe('editFile tool', () => {
       const result = await handler(provider, args)
 
       expect(result).toMatchSnapshot()
-      expect(writtenContent).toBe('function test() {\n  console.log("debug");\n  return 42;\n\n\n}')
+      expect(writtenContent).toBe('function test() {\n  console.log("debug");\n  return 42;\n  // Added comment\n}')
     })
 
     it('should handle start of file marker', async () => {
@@ -133,9 +130,8 @@ describe('editFile tool', () => {
       const args = {
         path: 'test.ts',
         operations: {
-          start_anchor: '<<<START_OF_FILE>>>',
-          end_anchor: 'export',
-          new_text: '// Header comment\n',
+          search: '<<<START_OF_FILE>>>',
+          replace: '// Header comment\n',
         },
       }
 
@@ -156,9 +152,8 @@ describe('editFile tool', () => {
       const args = {
         path: 'test.ts',
         operations: {
-          start_anchor: 'value = 42;',
-          end_anchor: '<<<END_OF_FILE>>>',
-          new_text: '\n// Footer comment',
+          search: '<<<END_OF_FILE>>>',
+          replace: '\n// Footer comment',
         },
       }
 
@@ -168,37 +163,13 @@ describe('editFile tool', () => {
       expect(writtenContent).toBe('export const value = 42;\n// Footer comment')
     })
 
-    it('should handle entire file replacement', async () => {
-      let writtenContent = ''
-      const provider: FilesystemProvider = {
-        readFile: async () => 'old content',
-        writeFile: async (path, content) => {
-          writtenContent = content
-        },
-      }
-      const args = {
-        path: 'test.txt',
-        operations: {
-          start_anchor: '<<<START_OF_FILE>>>',
-          end_anchor: '<<<END_OF_FILE>>>',
-          new_text: 'completely new content',
-        },
-      }
-
-      const result = await handler(provider, args)
-
-      expect(result).toMatchSnapshot()
-      expect(writtenContent).toBe('completely new content')
-    })
-
     it('should return error when text not found', async () => {
       const provider = createProvider('Hello world')
       const args = {
         path: 'test.txt',
         operations: {
-          start_anchor: 'missing',
-          end_anchor: 'text',
-          new_text: 'replacement',
+          search: 'missing text',
+          replace: 'replacement',
         },
       }
 
@@ -207,10 +178,10 @@ describe('editFile tool', () => {
       expect(result).toMatchSnapshot()
     })
 
-    it('should handle insert after start_anchor only', async () => {
+    it('should replace only first occurrence', async () => {
       let writtenContent = ''
       const provider: FilesystemProvider = {
-        readFile: async () => 'Hello world',
+        readFile: async () => 'test test test',
         writeFile: async (path, content) => {
           writtenContent = content
         },
@@ -218,37 +189,15 @@ describe('editFile tool', () => {
       const args = {
         path: 'test.txt',
         operations: {
-          start_anchor: 'Hello',
-          new_text: ' beautiful',
+          search: 'test',
+          replace: 'replaced',
         },
       }
 
       const result = await handler(provider, args)
 
       expect(result).toMatchSnapshot()
-      expect(writtenContent).toBe('Hello beautiful world')
-    })
-
-    it('should handle insert before end_anchor only', async () => {
-      let writtenContent = ''
-      const provider: FilesystemProvider = {
-        readFile: async () => 'Hello world',
-        writeFile: async (path, content) => {
-          writtenContent = content
-        },
-      }
-      const args = {
-        path: 'test.txt',
-        operations: {
-          end_anchor: 'world',
-          new_text: 'beautiful ',
-        },
-      }
-
-      const result = await handler(provider, args)
-
-      expect(result).toMatchSnapshot()
-      expect(writtenContent).toBe('Hello beautiful world')
+      expect(writtenContent).toBe('replaced test test')
     })
   })
 })

@@ -2,10 +2,10 @@
 
 exports[`editFile tool toolInfo should have correct tool definition 1`] = `
 {
-  "description": "Request to edit file contents using start/end text anchors. Anchors are **exclusive** (they remain in the file). Supports multiple edit operations in a single call.",
+  "description": "Request to edit file contents using search/replace operations. Supports multiple edit operations in a single call.",
   "examples": [
     {
-      "description": "Replace content between two text anchors",
+      "description": "Replace specific text",
       "parameters": [
         {
           "name": "path",
@@ -14,13 +14,16 @@ exports[`editFile tool toolInfo should have correct tool definition 1`] = `
         {
           "name": "operations",
           "value": {
-            "end_anchor": "}",
-            "new_text": 
-"
+            "replace": 
+"function newFunction() {
   return "new implementation";
-"
+}"
 ,
-            "start_anchor": "function oldFunction() {",
+            "search": 
+"function oldFunction() {
+  return 42;
+}"
+,
           },
         },
       ],
@@ -35,12 +38,11 @@ exports[`editFile tool toolInfo should have correct tool definition 1`] = `
         {
           "name": "operations",
           "value": {
-            "end_anchor": "export",
-            "new_text": 
+            "replace": 
 "// File header comment
 "
 ,
-            "start_anchor": "<<<START_OF_FILE>>>",
+            "search": "<<<START_OF_FILE>>>",
           },
         },
       ],
@@ -56,18 +58,19 @@ exports[`editFile tool toolInfo should have correct tool definition 1`] = `
           "name": "operations",
           "value": [
             {
-              "end_anchor": "from "react"",
-              "new_text": ", { useState }",
-              "start_anchor": "import React",
+              "replace": "import React, { useState } from "react"",
+              "search": "import React from "react"",
             },
             {
-              "end_anchor": "return (",
-              "new_text": 
-"
+              "replace": 
+"function Component() {
   const [state, setState] = useState(false);
-  "
+  return ("
 ,
-              "start_anchor": "function Component() {",
+              "search": 
+"function Component() {
+  return ("
+,
             },
           ],
         },
@@ -83,36 +86,12 @@ exports[`editFile tool toolInfo should have correct tool definition 1`] = `
         {
           "name": "operations",
           "value": {
-            "end_anchor": "<<<END_OF_FILE>>>",
-            "new_text": 
+            "replace": 
 "
 // End of file appended comment
 "
 ,
-            "start_anchor": "<<<END_OF_FILE>>>",
-          },
-        },
-      ],
-    },
-    {
-      "description": "Replace using line number hints",
-      "parameters": [
-        {
-          "name": "path",
-          "value": "src/config.ts",
-        },
-        {
-          "name": "operations",
-          "value": {
-            "end_anchor": "}",
-            "end_anchor_line_start": "15",
-            "new_text": 
-"
-  debug: true,
-"
-,
-            "start_anchor": "const config = {",
-            "start_anchor_line_start": "5",
+            "search": "<<<END_OF_FILE>>>",
           },
         },
       ],
@@ -130,37 +109,19 @@ exports[`editFile tool toolInfo should have correct tool definition 1`] = `
       "allowMultiple": true,
       "children": [
         {
-          "description": "Text to find as the start anchor (use <<<START_OF_FILE>>> for file start). Anchor is exclusive (preserved).",
-          "name": "start_anchor",
-          "required": false,
-          "usageValue": "Text before the edit location",
-        },
-        {
-          "description": "Text to find as the end anchor (use <<<END_OF_FILE>>> for file end). Anchor is exclusive (preserved).",
-          "name": "end_anchor",
-          "required": false,
-          "usageValue": "Text after the edit location",
-        },
-        {
-          "description": "Text to insert between start_anchor and end_anchor (anchors are exclusive; they are not replaced)",
-          "name": "new_text",
+          "description": "Text to search for and replace (use <<<START_OF_FILE>>> to insert at file start, <<<END_OF_FILE>>> to insert at file end)",
+          "name": "search",
           "required": true,
-          "usageValue": "New text content",
+          "usageValue": "Text to find and replace",
         },
         {
-          "description": "Optional line number hint for start_anchor location (1-based)",
-          "name": "start_anchor_line_start",
-          "required": false,
-          "usageValue": "10",
-        },
-        {
-          "description": "Optional line number hint for end_anchor location (1-based)",
-          "name": "end_anchor_line_start",
-          "required": false,
-          "usageValue": "20",
+          "description": "Text to replace the search text with",
+          "name": "replace",
+          "required": true,
+          "usageValue": "Replacement text",
         },
       ],
-      "description": "Edit operation with start_anchor, end_anchor, new_text, and optional line range hints",
+      "description": "Edit operation with search and replace parameters",
       "name": "operations",
       "required": true,
       "usageValue": "operations here",
@@ -179,7 +140,7 @@ exports[`editFile tool handler should return error when provider lacks capabilit
 
 exports[`editFile tool handler should return error when file not found 1`] = `
 {
-  "message": "<error><edit_file_path>missing.txt</edit_file_path><error_message>Either start_anchor or end_anchor must be specified</error_message></error>",
+  "message": "<error><edit_file_path>missing.txt</edit_file_path><error_message>Could not find text: old</error_message></error>",
   "type": "Error",
 }
 `;
@@ -219,28 +180,14 @@ exports[`editFile tool handler should handle end of file marker 1`] = `
 }
 `;
 
-exports[`editFile tool handler should handle entire file replacement 1`] = `
-{
-  "message": "<edit_file_path>test.txt</edit_file_path>",
-  "type": "Reply",
-}
-`;
-
 exports[`editFile tool handler should return error when text not found 1`] = `
 {
-  "message": "<error><edit_file_path>test.txt</edit_file_path><error_message>Could not find text: missing</error_message></error>",
+  "message": "<error><edit_file_path>test.txt</edit_file_path><error_message>Could not find text: missing text</error_message></error>",
   "type": "Error",
 }
 `;
 
-exports[`editFile tool handler should handle insert after start_anchor only 1`] = `
-{
-  "message": "<edit_file_path>test.txt</edit_file_path>",
-  "type": "Reply",
-}
-`;
-
-exports[`editFile tool handler should handle insert before end_anchor only 1`] = `
+exports[`editFile tool handler should replace only first occurrence 1`] = `
 {
   "message": "<edit_file_path>test.txt</edit_file_path>",
   "type": "Reply",

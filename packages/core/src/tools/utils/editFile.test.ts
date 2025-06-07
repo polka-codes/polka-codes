@@ -13,11 +13,11 @@ line4
 line5`
 
   describe('basic operations', () => {
-    it('should insert text after start_anchor', async () => {
+    it('should replace text with new content', async () => {
       const operations: EditOperation[] = [
         {
-          start_anchor: 'line2',
-          new_text: '\ninserted line',
+          search: 'line2',
+          replace: 'replaced line2',
         },
       ]
 
@@ -25,24 +25,11 @@ line5`
       expect(result).toMatchSnapshot()
     })
 
-    it('should insert text before end_anchor', async () => {
+    it('should replace multiline text', async () => {
       const operations: EditOperation[] = [
         {
-          end_anchor: 'line3',
-          new_text: 'inserted line\n',
-        },
-      ]
-
-      const result = await editFile(sampleContent, operations)
-      expect(result).toMatchSnapshot()
-    })
-
-    it('should replace text between start_anchor and end_anchor', async () => {
-      const operations: EditOperation[] = [
-        {
-          start_anchor: 'line2',
-          end_anchor: 'line4',
-          new_text: '\nreplaced content\n',
+          search: 'line2\nline3',
+          replace: 'replaced lines 2 and 3',
         },
       ]
 
@@ -53,39 +40,39 @@ line5`
     it('should handle multiple operations in sequence', async () => {
       const operations: EditOperation[] = [
         {
-          start_anchor: 'line1',
-          new_text: '\nafter line1',
+          search: 'line1',
+          replace: 'first line',
         },
         {
-          end_anchor: 'line5',
-          new_text: 'before line5\n',
+          search: 'line5',
+          replace: 'last line',
         },
       ]
 
       const result = await editFile(sampleContent, operations)
       expect(result).toMatchSnapshot()
     })
-  })
 
-  describe('special markers', () => {
-    it('should replace entire file with START_OF_FILE and END_OF_FILE', async () => {
+    it('should replace only first occurrence', async () => {
+      const contentWithDuplicates = 'test test test'
       const operations: EditOperation[] = [
         {
-          start_anchor: START_OF_FILE,
-          end_anchor: END_OF_FILE,
-          new_text: 'completely new content',
+          search: 'test',
+          replace: 'replaced',
         },
       ]
 
-      const result = await editFile(sampleContent, operations)
-      expect(result).toBe('completely new content')
+      const result = await editFile(contentWithDuplicates, operations)
+      expect(result).toBe('replaced test test')
     })
+  })
 
+  describe('special markers', () => {
     it('should insert at start of file with START_OF_FILE', async () => {
       const operations: EditOperation[] = [
         {
-          start_anchor: START_OF_FILE,
-          new_text: 'new start\n',
+          search: START_OF_FILE,
+          replace: 'new start\n',
         },
       ]
 
@@ -96,8 +83,8 @@ line5`
     it('should insert at end of file with END_OF_FILE', async () => {
       const operations: EditOperation[] = [
         {
-          end_anchor: END_OF_FILE,
-          new_text: '\nnew end',
+          search: END_OF_FILE,
+          replace: '\nnew end',
         },
       ]
 
@@ -105,87 +92,11 @@ line5`
       expect(result).toMatchSnapshot()
     })
 
-    it('should replace from START_OF_FILE to specific text', async () => {
+    it('should handle empty file with START_OF_FILE', async () => {
       const operations: EditOperation[] = [
         {
-          start_anchor: START_OF_FILE,
-          end_anchor: 'line3',
-          new_text: 'new beginning\n',
-        },
-      ]
-
-      const result = await editFile(sampleContent, operations)
-      expect(result).toMatchSnapshot()
-    })
-
-    it('should replace from specific text to END_OF_FILE', async () => {
-      const operations: EditOperation[] = [
-        {
-          start_anchor: 'line3',
-          end_anchor: END_OF_FILE,
-          new_text: '\nnew ending',
-        },
-      ]
-
-      const result = await editFile(sampleContent, operations)
-      expect(result).toMatchSnapshot()
-    })
-  })
-
-  describe('line hints', () => {
-    const contentWithDuplicates = `line1
-duplicate
-line3
-duplicate
-line5`
-
-    it('should use line hint to find correct occurrence', async () => {
-      const operations: EditOperation[] = [
-        {
-          start_anchor: 'duplicate',
-          end_anchor_line_start: 4, // Second occurrence
-          end_anchor: 'line5',
-          new_text: '\nfound second duplicate\n',
-        },
-      ]
-
-      const result = await editFile(contentWithDuplicates, operations)
-      expect(result).toMatchSnapshot()
-    })
-
-    it('should fallback to regular search when hint fails', async () => {
-      const operations: EditOperation[] = [
-        {
-          start_anchor: 'duplicate',
-          start_anchor_line_start: 999, // Invalid hint
-          new_text: '\nfound duplicate',
-        },
-      ]
-
-      const result = await editFile(contentWithDuplicates, operations)
-      expect(result).toMatchSnapshot()
-    })
-
-    it('should use start_anchor_line_start hint', async () => {
-      const operations: EditOperation[] = [
-        {
-          start_anchor: 'duplicate',
-          start_anchor_line_start: 4, // Second occurrence
-          new_text: '\nafter second duplicate',
-        },
-      ]
-
-      const result = await editFile(contentWithDuplicates, operations)
-      expect(result).toMatchSnapshot()
-    })
-  })
-
-  describe('edge cases', () => {
-    it('should handle empty file', async () => {
-      const operations: EditOperation[] = [
-        {
-          start_anchor: START_OF_FILE,
-          new_text: 'new content',
+          search: START_OF_FILE,
+          replace: 'new content',
         },
       ]
 
@@ -193,12 +104,37 @@ line5`
       expect(result).toBe('new content')
     })
 
-    it('should handle empty new_text', async () => {
+    it('should handle empty file with END_OF_FILE', async () => {
       const operations: EditOperation[] = [
         {
-          start_anchor: 'line2',
-          end_anchor: 'line4',
-          new_text: '',
+          search: END_OF_FILE,
+          replace: 'new content',
+        },
+      ]
+
+      const result = await editFile('', operations)
+      expect(result).toBe('new content')
+    })
+  })
+
+  describe('edge cases', () => {
+    it('should handle empty file', async () => {
+      const operations: EditOperation[] = [
+        {
+          search: START_OF_FILE,
+          replace: 'new content',
+        },
+      ]
+
+      const result = await editFile('', operations)
+      expect(result).toBe('new content')
+    })
+
+    it('should handle empty replace text', async () => {
+      const operations: EditOperation[] = [
+        {
+          search: 'line2',
+          replace: '',
         },
       ]
 
@@ -213,8 +149,8 @@ line5`
 
       const operations: EditOperation[] = [
         {
-          start_anchor: '    line2',
-          new_text: '\n    inserted',
+          search: '    line2',
+          replace: '    replaced line2',
         },
       ]
 
@@ -225,8 +161,8 @@ line5`
     it('should handle newlines in search text', async () => {
       const operations: EditOperation[] = [
         {
-          start_anchor: 'line2\nline3',
-          new_text: '\nreplaced multiline',
+          search: 'line2\nline3',
+          replace: 'replaced multiline',
         },
       ]
 
@@ -237,13 +173,13 @@ line5`
     it('should handle single line file', async () => {
       const operations: EditOperation[] = [
         {
-          start_anchor: 'single',
-          new_text: ' modified',
+          search: 'single',
+          replace: 'modified',
         },
       ]
 
       const result = await editFile('single line', operations)
-      expect(result).toBe('single modified line')
+      expect(result).toBe('modified line')
     })
   })
 
@@ -256,66 +192,54 @@ line5`
       expect(editFile(sampleContent, null as any)).rejects.toThrow('At least one edit operation is required')
     })
 
-    it('should throw error when start_anchor not found', async () => {
+    it('should throw error when search text not found', async () => {
       const operations: EditOperation[] = [
         {
-          start_anchor: 'nonexistent',
-          new_text: 'new text',
+          search: 'nonexistent',
+          replace: 'new text',
         },
       ]
 
       expect(editFile(sampleContent, operations)).rejects.toThrow('Could not find text: nonexistent')
     })
 
-    it('should throw error when end_anchor not found', async () => {
+    it('should throw error for invalid special marker combinations', async () => {
       const operations: EditOperation[] = [
         {
-          end_anchor: 'nonexistent',
-          new_text: 'new text',
+          search: START_OF_FILE,
+          replace: END_OF_FILE,
         },
       ]
 
-      expect(editFile(sampleContent, operations)).rejects.toThrow('Could not find text: nonexistent')
+      expect(editFile(sampleContent, operations)).rejects.toThrow('Cannot search for START_OF_FILE and replace with END_OF_FILE')
     })
 
-    it('should throw error when neither start_anchor nor end_anchor specified', async () => {
+    it('should throw error for reverse invalid special marker combinations', async () => {
       const operations: EditOperation[] = [
         {
-          new_text: 'new text',
+          search: END_OF_FILE,
+          replace: START_OF_FILE,
         },
       ]
 
-      expect(editFile(sampleContent, operations)).rejects.toThrow('Either start_anchor or end_anchor must be specified')
-    })
-
-    it('should throw error when end_anchor appears before start_anchor', async () => {
-      const operations: EditOperation[] = [
-        {
-          start_anchor: 'line4',
-          end_anchor: 'line2', // This appears before line4
-          new_text: 'replacement',
-        },
-      ]
-
-      expect(editFile(sampleContent, operations)).rejects.toThrow('Could not find text: line2')
+      expect(editFile(sampleContent, operations)).rejects.toThrow('Cannot search for END_OF_FILE and replace with START_OF_FILE')
     })
   })
 
   describe('complex scenarios', () => {
-    it('should handle multiple operations with overlapping regions', async () => {
+    it('should handle multiple operations with different content', async () => {
       const operations: EditOperation[] = [
         {
-          start_anchor: 'line1',
-          new_text: '\nafter line1',
+          search: 'line1',
+          replace: 'first line',
         },
         {
-          start_anchor: 'line2',
-          end_anchor: 'line3',
-          new_text: '\nreplaced 2-3\n',
+          search: 'line3',
+          replace: 'middle line',
         },
         {
-          end_anchor: 'line5',
-          new_text: 'before line5\n',
+          search: 'line5',
+          replace: 'last line',
         },
       ]
 
@@ -326,12 +250,12 @@ line5`
     it('should handle operations that create new searchable text', async () => {
       const operations: EditOperation[] = [
         {
-          start_anchor: 'line2',
-          new_text: '\nnew marker',
+          search: 'line2',
+          replace: 'line2\nnew marker',
         },
         {
-          start_anchor: 'new marker',
-          new_text: '\nafter new marker',
+          search: 'new marker',
+          replace: 'modified marker',
         },
       ]
 
@@ -348,8 +272,8 @@ line5`
 
       const operations: EditOperation[] = [
         {
-          start_anchor: 'const y = 2;',
-          new_text: '\n  const z = 3;\n  const y = 2;',
+          search: '  const y = 2;',
+          replace: '  const z = 3;\n  const y = 2;',
         },
       ]
 
@@ -366,13 +290,26 @@ line5`
 
       const operations: EditOperation[] = [
         {
-          start_anchor: '"dependencies": {}',
-          new_text: '"scripts": {\n    "test": "bun test"\n  },\n  "dependencies": {}',
+          search: '  "dependencies": {}',
+          replace: '  "scripts": {\n    "test": "bun test"\n  },\n  "dependencies": {}',
         },
       ]
 
       const result = await editFile(jsonContent, operations)
       expect(result).toMatchSnapshot()
+    })
+
+    it('should handle exact string matching', async () => {
+      const content = 'function test() { return "test"; }'
+      const operations: EditOperation[] = [
+        {
+          search: 'function test() { return "test"; }',
+          replace: 'function test() { return "modified"; }',
+        },
+      ]
+
+      const result = await editFile(content, operations)
+      expect(result).toBe('function test() { return "modified"; }')
     })
   })
 })

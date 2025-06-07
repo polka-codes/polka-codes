@@ -65,7 +65,7 @@ files:
       "5": Automatic conversion of arrays to numbered dictionaries
       "6": Smart merging of nested structures
   editFile.ts:
-    description: Tool for flexible file editing with before/after text anchors
+    description: Tool for flexible file editing with search/replace operations
     api:
       parameters:
         "1":
@@ -74,29 +74,17 @@ files:
           required: true
         "2":
           name: operations
-          description: Edit operations with snake_case parameter names
+          description: Edit operations with search and replace parameters
           required: true
           children:
             "1":
-              name: start_anchor
-              description: Text to find as the start anchor
-              required: false
-            "2":
-              name: end_anchor
-              description: Text to find as the end anchor
-              required: false
-            "3":
-              name: new_text
-              description: Text to replace the content between anchors
+              name: search
+              description: Text to search for and replace
               required: true
-            "4":
-              name: start_anchor_line_start
-              description: Optional line number hint for start_anchor location
-              required: false
-            "5":
-              name: end_anchor_line_start
-              description: Optional line number hint for end_anchor location
-              required: false
+            "2":
+              name: replace
+              description: Text to replace the search text with
+              required: true
   renameFile.ts:
     description: Tool for renaming files in the filesystem
     api:
@@ -110,28 +98,21 @@ files:
           description: The new path for the file
           required: true
   utils/editFile.ts:
-    description: Core logic for flexible file editing with before/after text anchors
+    description: Core logic for flexible file editing with search/replace operations
     api:
       types:
         "1":
           name: EditOperation
-          description: Interface for edit operations using snake_case parameter names
+          description: Interface for edit operations using search/replace pattern
           properties:
             "1":
-              name: start_anchor
-              type: string | undefined
-            "2":
-              name: end_anchor
-              type: string | undefined
-            "3":
-              name: new_text
+              name: search
               type: string
-            "4":
-              name: start_anchor_line_start
-              type: number | undefined
-            "5":
-              name: end_anchor_line_start
-              type: number | undefined
+              description: Text to search for and replace
+            "2":
+              name: replace
+              type: string
+              description: Text to replace the search text with
 rules:
   "1": Each tool should have clear input/output types
   "2": Tools should be atomic and focused
