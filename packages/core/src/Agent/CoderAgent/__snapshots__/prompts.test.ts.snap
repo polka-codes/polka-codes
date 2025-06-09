@@ -103,21 +103,6 @@ Usage:
 <tool_parameter_files>Relevant files</tool_parameter_files>
 </tool_delegate>
 
-## tool_edit_file
-
-Description: Request to edit file contents using search/replace operations. Supports multiple edit operations in a single call.
-
-Parameters:
-- tool_parameter_path: (required) The path of the file to edit
-- tool_parameter_operations: (required) (multiple allowed) Edit operation with search and replace parameters
-
-Usage:
-<tool_edit_file>
-<tool_parameter_path>File path here</tool_parameter_path>
-<tool_parameter_operations>operations here</tool_parameter_operations>
-<tool_parameter_operations>operations here</tool_parameter_operations>
-</tool_edit_file>
-
 ## tool_execute_command
 
 Description: Run a single CLI command. The command is always executed in the project-root working directory (regardless of earlier commands). Prefer one-off shell commands over wrapper scripts for flexibility. **IMPORTANT**: After an \`execute_command\` call, you MUST stop and NOT allowed to make further tool calls in the same message.
@@ -203,6 +188,43 @@ Usage:
 <tool_parameter_source_path>Source file path here</tool_parameter_source_path>
 <tool_parameter_target_path>Target file path here</tool_parameter_target_path>
 </tool_rename_file>
+
+## tool_replace_in_file
+
+Description: Request to replace sections of content in an existing file using SEARCH/REPLACE blocks that define exact changes to specific parts of the file. This tool should be used when you need to make targeted changes to specific parts of a file.
+
+Parameters:
+- tool_parameter_path: (required) The path of the file to modify
+- tool_parameter_diff: (required) One or more SEARCH/REPLACE blocks following this exact format:
+  \`\`\`
+  <<<<<<< SEARCH
+  [exact content to find]
+  =======
+  [new content to replace with]
+  >>>>>>> REPLACE
+  \`\`\`
+  Critical rules:
+  1. SEARCH content must match the associated file section to find EXACTLY:
+     * Match character-for-character including whitespace, indentation, line endings
+     * Include all comments, docstrings, etc.
+  2. SEARCH/REPLACE blocks will ONLY replace the first match occurrence.
+     * Including multiple unique SEARCH/REPLACE blocks if you need to make multiple changes.
+     * Include *just* enough lines in each SEARCH section to uniquely match each set of lines that need to change.
+     * When using multiple SEARCH/REPLACE blocks, list them in the order they appear in the file.
+  3. Keep SEARCH/REPLACE blocks concise:
+     * Break large SEARCH/REPLACE blocks into a series of smaller blocks that each change a small portion of the file.
+     * Include just the changing lines, and a few surrounding lines if needed for uniqueness.
+     * Do not include long runs of unchanging lines in SEARCH/REPLACE blocks.
+     * Each line must be complete. Never truncate lines mid-way through as this can cause matching failures.
+  4. Special operations:
+     * To move code: Use two SEARCH/REPLACE blocks (one to delete from original + one to insert at new location)
+     * To delete code: Use empty REPLACE section
+
+Usage:
+<tool_replace_in_file>
+<tool_parameter_path>File path here</tool_parameter_path>
+<tool_parameter_diff>Search and replace blocks here</tool_parameter_diff>
+</tool_replace_in_file>
 
 ## tool_search_files
 
@@ -310,60 +332,6 @@ Usage:
 <tool_parameter_files>src/auth/login.ts,src/auth/types.ts</tool_parameter_files>
 </tool_delegate>
 
-## Example: Replace specific text
-
-<tool_edit_file>
-<tool_parameter_path>src/main.ts</tool_parameter_path>
-<tool_parameter_operations>
-<tool_parameter_search>function oldFunction() {
-  return 42;
-}</tool_parameter_search>
-<tool_parameter_replace>function newFunction() {
-  return "new implementation";
-}</tool_parameter_replace>
-</tool_parameter_operations>
-</tool_edit_file>
-
-## Example: Insert at start of file
-
-<tool_edit_file>
-<tool_parameter_path>src/header.ts</tool_parameter_path>
-<tool_parameter_operations>
-<tool_parameter_search><<<START_OF_FILE>>></tool_parameter_search>
-<tool_parameter_replace>// File header comment
-</tool_parameter_replace>
-</tool_parameter_operations>
-</tool_edit_file>
-
-## Example: Multiple operations in one call
-
-<tool_edit_file>
-<tool_parameter_path>src/utils.ts</tool_parameter_path>
-<tool_parameter_operations>
-<tool_parameter_search>import React from "react"</tool_parameter_search>
-<tool_parameter_replace>import React, { useState } from "react"</tool_parameter_replace>
-</tool_parameter_operations>
-<tool_parameter_operations>
-<tool_parameter_search>function Component() {
-  return (</tool_parameter_search>
-<tool_parameter_replace>function Component() {
-  const [state, setState] = useState(false);
-  return (</tool_parameter_replace>
-</tool_parameter_operations>
-</tool_edit_file>
-
-## Example: Append content at end of file
-
-<tool_edit_file>
-<tool_parameter_path>src/footer.ts</tool_parameter_path>
-<tool_parameter_operations>
-<tool_parameter_search><<<END_OF_FILE>>></tool_parameter_search>
-<tool_parameter_replace>
-// End of file appended comment
-</tool_parameter_replace>
-</tool_parameter_operations>
-</tool_edit_file>
-
 ## Example: Make a build
 
 <tool_execute_command>
@@ -411,6 +379,41 @@ Usage:
 <tool_parameter_source_path>src/old-name.js</tool_parameter_source_path>
 <tool_parameter_target_path>src/new-name.js</tool_parameter_target_path>
 </tool_rename_file>
+
+## Example: Request to replace sections of content in a file
+
+<tool_replace_in_file>
+<tool_parameter_path>src/main.js</tool_parameter_path>
+<tool_parameter_diff>
+<<<<<<< SEARCH
+import React from 'react';
+=======
+import React, { useState } from 'react';
+>>>>>>> REPLACE
+
+<<<<<<< SEARCH
+function handleSubmit() {
+  saveData();
+  setLoading(false);
+}
+
+=======
+>>>>>>> REPLACE
+
+<<<<<<< SEARCH
+return (
+  <div>
+=======
+function handleSubmit() {
+  saveData();
+  setLoading(false);
+}
+
+return (
+  <div>
+>>>>>>> REPLACE
+</tool_parameter_diff>
+</tool_replace_in_file>
 
 ## Example: Request to perform a regex search across files
 
@@ -488,18 +491,14 @@ export default App;
 
 # Tool Use Guidelines
 
-1. **Outline Your Thought Process**
-  - Before using a tool, wrap your reasoning inside \`<thinking>\` tags. Be concise—just enough to clarify your plan and the rationale behind selecting a specific tool.
-2. **Wait for Feedback**
+1. **Wait for Feedback**
   - After using a tool, wait for the user's response indicating success/failure or any output logs. Do not assume the result of a tool without explicit confirmation.
-3. **Error Handling**
+2. **Error Handling**
   - If a tool fails or produces an unexpected result, analyze the error, decide on an alternative approach or tool, and proceed carefully.
-4. **Avoid Repetition**
+3. **Avoid Repetition**
   - Do not quote or repeat previous commands or prompts verbatim. Move the conversation forward by focusing on the latest required action.
-5. **No Unnecessary Re-invocations**
-  - Only invoke the same tool again if a genuine need arises (e.g., different parameters or updated context).
-6. **Tool Call Limit**
-  - Do not make more than 5 tool calls in a single message.
+4. **Tool Call Limit**
+  - It is **STRIGHTLY FORBIDDEN** to make more than 5 tool calls in a single message.
 
 ====
 
