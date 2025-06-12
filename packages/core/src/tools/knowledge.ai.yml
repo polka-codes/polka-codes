@@ -64,27 +64,6 @@ files:
       "4": Dot notation for path-based updates
       "5": Automatic conversion of arrays to numbered dictionaries
       "6": Smart merging of nested structures
-  editFile.ts:
-    description: Tool for flexible file editing with search/replace operations
-    api:
-      parameters:
-        "1":
-          name: path
-          description: The path of the file to edit
-          required: true
-        "2":
-          name: operations
-          description: Edit operations with search and replace parameters
-          required: true
-          children:
-            "1":
-              name: search
-              description: Text to search for and replace
-              required: true
-            "2":
-              name: replace
-              description: Text to replace the search text with
-              required: true
   renameFile.ts:
     description: Tool for renaming files in the filesystem
     api:
@@ -97,22 +76,6 @@ files:
           name: target_path
           description: The new path for the file
           required: true
-  utils/editFile.ts:
-    description: Core logic for flexible file editing with search/replace operations
-    api:
-      types:
-        "1":
-          name: EditOperation
-          description: Interface for edit operations using search/replace pattern
-          properties:
-            "1":
-              name: search
-              type: string
-              description: Text to search for and replace
-            "2":
-              name: replace
-              type: string
-              description: Text to replace the search text with
 rules:
   "1": Each tool should have clear input/output types
   "2": Tools should be atomic and focused
