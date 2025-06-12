@@ -14,7 +14,7 @@
     }
   },
   "scripts": {
-    "build": "bun build src/index.ts --outdir dist --target node --external=@vscode/ripgrep"
+    "build": "bun build src/index.ts --outdir dist --target node"
   },
   "dependencies": {
     "@inquirer/prompts": "^7.2.3",

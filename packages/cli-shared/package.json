@@ -16,7 +16,6 @@
   },
   "dependencies": {
     "@polka-codes/core": "workspace:*",
-    "@vscode/ripgrep": "^1.15.10",
     "ignore": "^7.0.3",
     "lodash": "^4.17.21",
     "yaml": "^2.7.0",

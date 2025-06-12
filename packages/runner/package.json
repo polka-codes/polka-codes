@@ -14,12 +14,11 @@
     }
   },
   "scripts": {
-    "build": "bun build src/index.ts --outdir dist --target node --external=@vscode/ripgrep"
+    "build": "bun build src/index.ts --outdir dist --target node"
   },
   "dependencies": {
     "@polka-codes/cli-shared": "workspace:*",
     "@polka-codes/core": "workspace:*",
-    "@vscode/ripgrep": "^1.15.10",
     "commander": "^13.0.0",
     "dotenv": "^16.4.7",
     "ignore": "^7.0.3",
