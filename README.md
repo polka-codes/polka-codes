@@ -77,6 +77,7 @@ The project is organized as a monorepo with the following packages:
 ### Prerequisites
 
 - [Bun](https://bun.sh/) (v1.0.0 or higher)
+- [ripgrep](https://github.com/BurntSushi/ripgrep#installation) (required for the search tool to work)
 
 ### Development Setup
 
