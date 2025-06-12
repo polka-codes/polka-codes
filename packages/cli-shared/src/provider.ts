@@ -6,6 +6,7 @@ import ignore from 'ignore'
 
 import { input, select } from '@inquirer/prompts'
 import type { Config } from './config'
+import { checkRipgrep } from './utils/checkRipgrep'
 import { listFiles } from './utils/listFiles'
 import { searchFiles } from './utils/searchFiles'
 
@@ -23,7 +24,7 @@ export type ProviderOptions = {
 
 export const getProvider = (agentName: AgentNameType, config: Config, options: ProviderOptions = {}): ToolProvider => {
   const ig = ignore().add(options.excludeFiles ?? [])
-  const provider = {
+  const provider: ToolProvider = {
     readFile: async (path: string): Promise<string | undefined> => {
       if (ig.ignores(path)) {
         throw new Error(`Not allow to access file ${path}`)
@@ -57,9 +58,6 @@ export const getProvider = (agentName: AgentNameType, config: Config, options: P
     },
     listFiles: async (path: string, recursive: boolean, maxCount: number): Promise<[string[], boolean]> => {
       return await listFiles(path, recursive, maxCount, process.cwd(), options.excludeFiles)
-    },
-    searchFiles: async (path: string, regex: string, filePattern: string): Promise<string[]> => {
-      return await searchFiles(path, regex, filePattern, process.cwd(), options.excludeFiles)
     },
 
     executeCommand: (command: string, needApprove: boolean): Promise<{ stdout: string; stderr: string; exitCode: number }> => {
@@ -132,5 +130,16 @@ export const getProvider = (agentName: AgentNameType, config: Config, options: P
       return undefined
     },
   }
+
+  if (checkRipgrep()) {
+    provider.searchFiles = async (path: string, regex: string, filePattern: string): Promise<string[]> => {
+      return await searchFiles(path, regex, filePattern, process.cwd(), options.excludeFiles)
+    }
+  } else {
+    console.error(
+      'Error: ripgrep (rg) is not installed. Search file tool is disabled. Please install it from https://github.com/BurntSushi/ripgrep#installation',
+    )
+  }
+
   return provider
 }
