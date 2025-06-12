@@ -16,29 +16,29 @@ export const toolInfo = {
     {
       name: 'diff',
       description: `One or more SEARCH/REPLACE blocks following this exact format:
-  \`\`\`
-  <<<<<<< SEARCH
-  [exact content to find]
-  =======
-  [new content to replace with]
-  >>>>>>> REPLACE
-  \`\`\`
-  Critical rules:
-  1. SEARCH content must match the associated file section to find EXACTLY:
-     * Match character-for-character including whitespace, indentation, line endings
-     * Include all comments, docstrings, etc.
-  2. SEARCH/REPLACE blocks will ONLY replace the first match occurrence.
-     * Including multiple unique SEARCH/REPLACE blocks if you need to make multiple changes.
-     * Include *just* enough lines in each SEARCH section to uniquely match each set of lines that need to change.
-     * When using multiple SEARCH/REPLACE blocks, list them in the order they appear in the file.
-  3. Keep SEARCH/REPLACE blocks concise:
-     * Break large SEARCH/REPLACE blocks into a series of smaller blocks that each change a small portion of the file.
-     * Include just the changing lines, and a few surrounding lines if needed for uniqueness.
-     * Do not include long runs of unchanging lines in SEARCH/REPLACE blocks.
-     * Each line must be complete. Never truncate lines mid-way through as this can cause matching failures.
-  4. Special operations:
-     * To move code: Use two SEARCH/REPLACE blocks (one to delete from original + one to insert at new location)
-     * To delete code: Use empty REPLACE section`,
+\`\`\`
+<<<<<<< SEARCH
+[exact content to find]
+=======
+[new content to replace with]
+>>>>>>> REPLACE
+\`\`\`
+Critical rules:
+1. SEARCH content must match the associated file section to find EXACTLY:
+    * Match character-for-character including whitespace, indentation, line endings
+    * Include all comments, docstrings, etc.
+2. SEARCH/REPLACE blocks will ONLY replace the first match occurrence.
+    * Including multiple unique SEARCH/REPLACE blocks if you need to make multiple changes.
+    * Include *just* enough lines in each SEARCH section to uniquely match each set of lines that need to change.
+    * When using multiple SEARCH/REPLACE blocks, list them in the order they appear in the file.
+3. Keep SEARCH/REPLACE blocks concise:
+    * Break large SEARCH/REPLACE blocks into a series of smaller blocks that each change a small portion of the file.
+    * Include just the changing lines, and a few surrounding lines if needed for uniqueness.
+    * Do not include long runs of unchanging lines in SEARCH/REPLACE blocks.
+    * Each line must be complete. Never truncate lines mid-way through as this can cause matching failures.
+4. Special operations:
+    * To move code: Use two SEARCH/REPLACE blocks (one to delete from original + one to insert at new location)
+    * To delete code: Use empty REPLACE section`,
       required: true,
       usageValue: 'Search and replace blocks here',
     },
@@ -80,6 +80,73 @@ function handleSubmit() {
 
 return (
   <div>
+>>>>>>> REPLACE
+`,
+        },
+      ],
+    },
+    {
+      description: 'Request to perform a simple, single-line replacement',
+      parameters: [
+        {
+          name: 'path',
+          value: 'src/config.js',
+        },
+        {
+          name: 'diff',
+          value: `
+<<<<<<< SEARCH
+const API_URL = 'https://api.example.com';
+=======
+const API_URL = 'https://api.staging.example.com';
+>>>>>>> REPLACE
+`,
+        },
+      ],
+    },
+    {
+      description: 'Request to add a new function to a file',
+      parameters: [
+        {
+          name: 'path',
+          value: 'src/utils.js',
+        },
+        {
+          name: 'diff',
+          value: `
+<<<<<<< SEARCH
+function helperA() {
+  // ...
+}
+=======
+function helperA() {
+  // ...
+}
+
+function newHelper() {
+  // implementation
+}
+>>>>>>> REPLACE
+`,
+        },
+      ],
+    },
+    {
+      description: 'Request to delete a block of code from a file',
+      parameters: [
+        {
+          name: 'path',
+          value: 'src/app.js',
+        },
+        {
+          name: 'diff',
+          value: `
+<<<<<<< SEARCH
+function oldFeature() {
+  // This is no longer needed
+}
+
+=======
 >>>>>>> REPLACE
 `,
         },
