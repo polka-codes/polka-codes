@@ -72,6 +72,8 @@ Tool use is formatted using XML-style tags. The tool name is enclosed in opening
 ...
 </${toolNamePrefix}tool_name>
 
+**It is crucial that all tags are correctly nested and closed.**
+
 ## Array Parameters
 
 To create an array of values for a parameter, repeat the parameter tag multiple times:
@@ -106,7 +108,7 @@ You can also combine array parameters with nested objects:
 </${parameterPrefix}key>
 </${toolNamePrefix}example_tool>
 
-Always adhere to this format for the tool use to ensure proper parsing and execution.
+Always adhere to this format, ensuring every opening tag has a matching closing tag, to ensure proper parsing and execution.
 
 NEVER surround tool use with triple backticks (\`\`\`).
 
