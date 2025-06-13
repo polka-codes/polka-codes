@@ -1,6 +1,6 @@
 {
   "name": "@polka-codes/github",
-  "version": "0.8.21",
+  "version": "0.8.22",
   "license": "AGPL-3.0",
   "author": "github@polka.codes",
   "type": "module",
