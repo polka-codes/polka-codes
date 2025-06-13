@@ -1,5 +1,5 @@
-import { dirname, join } from 'node:path'
 import { Policies } from '../../config'
+import { dirname, join } from '../../path'
 import { listFiles, readFile, updateKnowledge, writeToFile } from '../../tools'
 import { getString, getStringArray } from '../../tools/utils'
 import type { AgentPolicy } from '../AgentBase'
