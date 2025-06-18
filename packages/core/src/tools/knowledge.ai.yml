@@ -1,4 +1,3 @@
-<![CDATA[
 description: Tool implementations for agent operations
 files:
   provider.ts:
@@ -118,4 +117,3 @@ rules:
   "3": Maintain consistent error handling
   "4": Use numbered dictionary format instead of arrays in knowledge files
   "7": All tool parameters must use snake_case naming convention for consistency
-]]>
