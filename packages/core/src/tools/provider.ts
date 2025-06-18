@@ -16,7 +16,11 @@ export type InteractionProvider = {
   attemptCompletion?: (result: string) => Promise<string | undefined>
 }
 
-export type ToolProvider = FilesystemProvider & CommandProvider & InteractionProvider
+export type WebProvider = {
+  fetchUrl?: (url: string) => Promise<string>
+}
+
+export type ToolProvider = FilesystemProvider & CommandProvider & InteractionProvider & WebProvider
 
 export class MockProvider implements ToolProvider {
   async readFile(path: string): Promise<string> {
