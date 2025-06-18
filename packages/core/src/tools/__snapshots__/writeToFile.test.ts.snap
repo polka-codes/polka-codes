@@ -15,3 +15,24 @@ exports[`writeToFile should handle directory creation 1`] = `
 `;
 
 exports[`writeToFile should handle write errors 1`] = `[Error: Write error]`;
+
+exports[`writeToFile should remove CDATA tags when present 1`] = `
+{
+  "message": "<write_to_file_path>cdata.txt</write_to_file_path><status>Success</status>",
+  "type": "Reply",
+}
+`;
+
+exports[`writeToFile should not modify content without CDATA tags 1`] = `
+{
+  "message": "<write_to_file_path>nocdata.txt</write_to_file_path><status>Success</status>",
+  "type": "Reply",
+}
+`;
+
+exports[`writeToFile should not modify partial CDATA tags 1`] = `
+{
+  "message": "<write_to_file_path>partial.txt</write_to_file_path><status>Success</status>",
+  "type": "Reply",
+}
+`;

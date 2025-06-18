@@ -5,7 +5,7 @@ import { getString } from './utils'
 export const toolInfo = {
   name: 'write_to_file',
   description:
-    "Request to write content to a file at the specified path. If the file exists, it will be overwritten with the provided content. If the file doesn't exist, it will be created. This tool will automatically create any directories needed to write the file. Ensure that the output content does not include incorrect escaped character patterns such as `&lt;` and `&gt;`.",
+    "Request to write content to a file at the specified path. If the file exists, it will be overwritten with the provided content. If the file doesn't exist, it will be created. This tool will automatically create any directories needed to write the file. Ensure that the output content does not include incorrect escaped character patterns such as `&lt;`, `&gt;`, or `&amp;`. Also ensure there is no unwanted CDATA tags in the content.",
   parameters: [
     {
       name: 'path',
@@ -59,7 +59,11 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
   }
 
   const path = getString(args, 'path')
-  const content = getString(args, 'content')
+  let content = getString(args, 'content')
+
+  // Remove CDATA tags if present
+  const trimmedContent = content.trim()
+  if (trimmedContent.startsWith('<![CDATA[') && content.endsWith(']]>')) content = trimmedContent.slice(9, -3)
 
   // Create parent directories if they don't exist
   await provider.writeFile(path, content)
