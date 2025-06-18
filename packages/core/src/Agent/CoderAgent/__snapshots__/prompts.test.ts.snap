@@ -119,6 +119,18 @@ Usage:
 <tool_parameter_requires_approval>true | false</tool_parameter_requires_approval>
 </tool_execute_command>
 
+## tool_fetch_url
+
+Description: Fetch the content located at one or more HTTP(S) URLs and return it in Markdown format. This works for standard web pages as well as raw files (e.g. README.md, source code) hosted on platforms like GitHub.
+
+Parameters:
+- tool_parameter_url: (required) One or more URLs to fetch, separated by commas if multiple.
+
+Usage:
+<tool_fetch_url>
+<tool_parameter_url>undefined</tool_parameter_url>
+</tool_fetch_url>
+
 ## tool_hand_over
 
 Description: Hand over the current task to another agent to complete. This tool MUST NOT to be used with any other tool.
@@ -340,6 +352,24 @@ Usage:
 <tool_parameter_command>npm run build</tool_parameter_command>
 <tool_parameter_requires_approval>false</tool_parameter_requires_approval>
 </tool_execute_command>
+
+## Example: Fetch a single webpage
+
+<tool_fetch_url>
+<tool_parameter_url>https://example.com</tool_parameter_url>
+</tool_fetch_url>
+
+## Example: Fetch multiple webpages
+
+<tool_fetch_url>
+<tool_parameter_url>https://example.com,https://developer.mozilla.org/en-US/docs/Web/HTTP</tool_parameter_url>
+</tool_fetch_url>
+
+## Example: Fetch a raw file from GitHub
+
+<tool_fetch_url>
+<tool_parameter_url>https://raw.githubusercontent.com/user/repo/main/README.md</tool_parameter_url>
+</tool_fetch_url>
 
 ## Example: Hand over a coding task to the coder agent
 
