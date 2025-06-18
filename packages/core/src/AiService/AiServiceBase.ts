@@ -30,6 +30,10 @@ export interface AiServiceOptions {
 }
 
 export type MessageParam = Anthropic.Messages.MessageParam
+export type TextBlockParam = Anthropic.Messages.TextBlockParam
+export type ImageBlockParam = Anthropic.Messages.ImageBlockParam
+
+export type UserContent = string | (TextBlockParam | ImageBlockParam)[]
 
 export type ApiUsage = {
   inputTokens: number

@@ -1,4 +1,4 @@
-import type { AiServiceBase, MessageParam } from '../AiService'
+import type { AiServiceBase, MessageParam, UserContent } from '../AiService'
 import {
   type FullToolInfo,
   type ToolResponse,
@@ -55,7 +55,7 @@ export interface TaskEventStartTask extends TaskEventBase {
  */
 export interface TaskEventStartRequest extends TaskEventBase {
   kind: TaskEventKind.StartRequest
-  userMessage: string
+  userMessage: UserContent
 }
 
 /**
@@ -260,13 +260,13 @@ export abstract class AgentBase {
     await this.config.callback?.(event)
   }
 
-  async start(prompt: string): Promise<ExitReason> {
+  async start(prompt: UserContent): Promise<ExitReason> {
     this.#callback({ kind: TaskEventKind.StartTask, agent: this, systemPrompt: this.config.systemPrompt })
 
     return await this.#processLoop(prompt)
   }
 
-  async step(prompt: string) {
+  async step(prompt: UserContent) {
     if (this.#messages.length === 0) {
       this.#callback({ kind: TaskEventKind.StartTask, agent: this, systemPrompt: this.config.systemPrompt })
     }
@@ -278,8 +278,8 @@ export abstract class AgentBase {
     return this.#handleResponse(response)
   }
 
-  async #processLoop(userMessage: string): Promise<ExitReason> {
-    let nextRequest = userMessage
+  async #processLoop(userMessage: UserContent): Promise<ExitReason> {
+    let nextRequest: UserContent | string = userMessage
     while (true) {
       if (this.ai.usageMeter.isLimitExceeded().result) {
         this.#callback({ kind: TaskEventKind.UsageExceeded, agent: this })
@@ -295,11 +295,11 @@ export abstract class AgentBase {
     }
   }
 
-  async continueTask(userMessage: string): Promise<ExitReason> {
+  async continueTask(userMessage: UserContent): Promise<ExitReason> {
     return await this.#processLoop(userMessage)
   }
 
-  async #request(userMessage: string) {
+  async #request(userMessage: UserContent | string) {
     if (!userMessage) {
       throw new Error('userMessage is missing')
     }
