@@ -129,6 +129,18 @@ export const getProvider = (agentName: AgentNameType, config: Config, options: P
 
       return undefined
     },
+    fetchUrl: async (url: string): Promise<string> => {
+      try {
+        const response = await fetch(`https://r.jina.ai/${url}`)
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        return await response.text()
+      } catch (error) {
+        console.error('Error fetching URL:', error)
+        throw error
+      }
+    },
   }
 
   if (checkRipgrep()) {
