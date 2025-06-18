@@ -130,8 +130,12 @@ export const getProvider = (agentName: AgentNameType, config: Config, options: P
       return undefined
     },
     fetchUrl: async (url: string): Promise<string> => {
+      const isRaw = url.startsWith('https://raw.githubusercontent.com/')
+
+      const urlToFetch = isRaw ? url : `https://r.jina.ai/${url}`
+
       try {
-        const response = await fetch(`https://r.jina.ai/${url}`)
+        const response = await fetch(urlToFetch)
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`)
         }

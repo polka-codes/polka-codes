@@ -5,18 +5,18 @@ import { getStringArray } from './utils'
 
 export const toolInfo = {
   name: 'fetch_url',
-  description: 'Fetches content from one or more URLs.',
+  description:
+    'Fetch the content located at one or more HTTP(S) URLs and return it in Markdown format. This works for standard web pages as well as raw files (e.g. README.md, source code) hosted on platforms like GitHub.',
   parameters: [
     {
       name: 'url',
-      description:
-        'The URL(s) to fetch content from. Can be a single URL or a comma-separated list of URLs. Note: The content will be converted to Markdown format',
+      description: 'One or more URLs to fetch, separated by commas if multiple.',
       required: true,
     },
   ],
   examples: [
     {
-      description: 'Fetch content from a single URL',
+      description: 'Fetch a single webpage',
       parameters: [
         {
           name: 'url',
@@ -25,11 +25,20 @@ export const toolInfo = {
       ],
     },
     {
-      description: 'Fetch content from multiple URLs',
+      description: 'Fetch multiple webpages',
       parameters: [
         {
           name: 'url',
-          value: 'https://example.com,https://another-example.com',
+          value: 'https://example.com,https://developer.mozilla.org/en-US/docs/Web/HTTP',
+        },
+      ],
+    },
+    {
+      description: 'Fetch a raw file from GitHub',
+      parameters: [
+        {
+          name: 'url',
+          value: 'https://raw.githubusercontent.com/user/repo/main/README.md',
         },
       ],
     },
