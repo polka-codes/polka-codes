@@ -1,40 +1,65 @@
 description: Tool implementations for agent operations
 files:
   provider.ts:
-    description: "Defines provider interfaces for tool capabilities like filesystem, command execution, and interaction."
+    description: Defines provider interfaces for tool capabilities like filesystem,
+      command execution, and interaction.
     api:
       types:
         "1":
-          name: "FilesystemProvider"
-          description: "Interface for filesystem operations."
+          name: FilesystemProvider
+          description: Interface for filesystem operations.
           properties:
-            "1": { name: "readFile", type: "(path: string) => Promise<string | undefined>" }
-            "2": { name: "writeFile", type: "(path: string, content: string) => Promise<void>" }
-            "3": { name: "removeFile", type: "(path: string) => Promise<void>" }
-            "4": { name: "renameFile", type: "(sourcePath: string, targetPath: string) => Promise<void>" }
-            "5": { name: "listFiles", type: "(path: string, recursive: boolean, maxCount: number) => Promise<[string[], boolean]>" }
-            "6": { name: "searchFiles", type: "(path: string, regex: string, filePattern: string) => Promise<string[]>" }
+            "1":
+              name: readFile
+              type: "(path: string) => Promise<string | undefined>"
+            "2":
+              name: writeFile
+              type: "(path: string, content: string) => Promise<void>"
+            "3":
+              name: removeFile
+              type: "(path: string) => Promise<void>"
+            "4":
+              name: renameFile
+              type: "(sourcePath: string, targetPath: string) => Promise<void>"
+            "5":
+              name: listFiles
+              type: "(path: string, recursive: boolean, maxCount: number) =>
+                Promise<[string[], boolean]>"
+            "6":
+              name: searchFiles
+              type: "(path: string, regex: string, filePattern: string) => Promise<string[]>"
         "2":
-          name: "CommandProvider"
-          description: "Interface for executing shell commands."
+          name: CommandProvider
+          description: Interface for executing shell commands.
           properties:
-            "1": { name: "executeCommand", type: "(command: string, needApprove: boolean) => Promise<{ stdout: string; stderr: string; exitCode: number }>" }
+            "1":
+              name: executeCommand
+              type: "(command: string, needApprove: boolean) => Promise<{ stdout: string;
+                stderr: string; exitCode: number }>"
         "3":
-          name: "InteractionProvider"
-          description: "Interface for user interactions."
+          name: InteractionProvider
+          description: Interface for user interactions.
           properties:
-            "1": { name: "askFollowupQuestion", type: "(question: string, options: string[]) => Promise<string>" }
-            "2": { name: "attemptCompletion", type: "(result: string) => Promise<string | undefined>" }
+            "1":
+              name: askFollowupQuestion
+              type: "(question: string, options: string[]) => Promise<string>"
+            "2":
+              name: attemptCompletion
+              type: "(result: string) => Promise<string | undefined>"
         "4":
-          name: "WebProvider"
-          description: "Interface for web-related operations."
+          name: WebProvider
+          description: Interface for web-related operations.
           properties:
-            "1": { name: "fetchUrl", type: "(url: string) => Promise<string>" }
+            "1":
+              name: fetchUrl
+              type: "(url: string) => Promise<string>"
         "5":
-          name: "ToolProvider"
-          description: "Combined provider interface for all tool capabilities."
+          name: ToolProvider
+          description: Combined provider interface for all tool capabilities.
           properties:
-            "1": { name: "extends", type: "FilesystemProvider & CommandProvider & InteractionProvider & WebProvider" }
+            "1":
+              name: extends
+              type: FilesystemProvider & CommandProvider & InteractionProvider & WebProvider
   askFollowupQuestion.ts:
     description: Tool for asking user follow-up questions
     api:
@@ -111,6 +136,37 @@ files:
           name: target_path
           description: The new path for the file
           required: true
+  fetchUrl.ts:
+    description: Tool for fetching content from URLs
+    api:
+      functions:
+        "1":
+          name: handler
+          description: Handles the fetchUrl tool execution
+          params:
+            "1":
+              name: provider
+              type: WebProvider
+            "2":
+              name: args
+              type: object
+              description: Object containing the url parameter
+          returns: Promise<ToolResponse>
+        "2":
+          name: isAvailable
+          description: Checks if the fetchUrl tool is available
+          params:
+            "1":
+              name: provider
+              type: WebProvider
+          returns: boolean
+      parameters:
+        "1":
+          name: url
+          description: The URL(s) to fetch content from. Can be a single URL or a
+            comma-separated list of URLs.
+          required: true
+          allowMultiple: true
 rules:
   "1": Each tool should have clear input/output types
   "2": Tools should be atomic and focused
