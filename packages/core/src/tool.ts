@@ -1,3 +1,5 @@
+import type { UserContent } from './AiService'
+
 export type ToolParameter = {
   name: string
   description: string
@@ -52,7 +54,7 @@ export enum ToolResponseType {
 // Reply to the tool use
 export type ToolResponseReply = {
   type: ToolResponseType.Reply
-  message: string
+  message: UserContent
 }
 
 // Should end the message thread

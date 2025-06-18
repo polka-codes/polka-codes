@@ -185,7 +185,9 @@ export type AgentPolicyInstance = {
 
 export type AgentPolicy = (tools: Record<string, FullToolInfo>) => AgentPolicyInstance | undefined
 
-export type ToolResponseOrToolPause = { type: 'response'; tool: string; response: string } | { type: 'pause'; tool: string; object: any }
+export type ToolResponseOrToolPause =
+  | { type: 'response'; tool: string; response: UserContent }
+  | { type: 'pause'; tool: string; object: any }
 
 export type ExitReason =
   | { type: 'UsageExceeded' }
@@ -373,7 +375,7 @@ export abstract class AgentBase {
 
   async #handleResponse(
     response: AssistantMessageContent[],
-  ): Promise<{ type: 'reply'; message: string } | { type: 'exit'; reason: ExitReason }> {
+  ): Promise<{ type: 'reply'; message: UserContent } | { type: 'exit'; reason: ExitReason }> {
     const toolResponses: ToolResponseOrToolPause[] = []
     let hasPause = false
 
@@ -393,11 +395,12 @@ export abstract class AgentBase {
           await this.#callback({ kind: TaskEventKind.ToolUse, agent: this, tool: content.name })
           const toolResp = await this.#invokeTool(content.name, content.params)
           switch (toolResp.type) {
-            case ToolResponseType.Reply:
+            case ToolResponseType.Reply: {
               // reply to the tool use
               await this.#callback({ kind: TaskEventKind.ToolReply, agent: this, tool: content.name })
               toolResponses.push({ type: 'response', tool: content.name, response: toolResp.message })
               break
+            }
             case ToolResponseType.Exit:
               if (toolResponses.length > 0) {
                 // agent is trying run too many tools in a single request
@@ -406,16 +409,18 @@ export abstract class AgentBase {
               }
               // task completed
               return { type: 'exit', reason: toolResp }
-            case ToolResponseType.Invalid:
+            case ToolResponseType.Invalid: {
               // tell AI about the invalid arguments
               await this.#callback({ kind: TaskEventKind.ToolInvalid, agent: this, tool: content.name })
               toolResponses.push({ type: 'response', tool: content.name, response: toolResp.message })
               break outer
-            case ToolResponseType.Error:
+            }
+            case ToolResponseType.Error: {
               // tell AI about the error
               await this.#callback({ kind: TaskEventKind.ToolError, agent: this, tool: content.name })
               toolResponses.push({ type: 'response', tool: content.name, response: toolResp.message })
               break outer
+            }
             case ToolResponseType.Interrupted:
               // the execution is killed
               await this.#callback({ kind: TaskEventKind.ToolInterrupted, agent: this, tool: content.name })
@@ -478,9 +483,9 @@ export abstract class AgentBase {
     }
 
     const finalResp = toolResponses
-      .filter((resp) => resp.type === 'response')
-      .map(({ tool, response }) => responsePrompts.toolResults(tool, response))
-      .join('\n\n')
+      .filter((resp): resp is { type: 'response'; tool: string; response: UserContent } => resp.type === 'response')
+      .flatMap(({ tool, response }) => responsePrompts.toolResults(tool, response))
+
     return { type: 'reply', message: finalResp }
   }
 

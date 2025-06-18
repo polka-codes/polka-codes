@@ -20,7 +20,7 @@ import {
 } from '@polka-codes/core'
 
 import { WebSocketManager } from './WebSocketManager'
-import type { WsIncomingMessage } from './types'
+import type { UserContent, WsIncomingMessage } from './types'
 
 export interface RunnerOptions {
   taskId: string
@@ -121,7 +121,7 @@ export class Runner {
       message.requests.map((r) => r.tool),
     )
 
-    const responses: { index: number; tool: string; response: string }[] = []
+    const responses: { index: number; tool: string; response: UserContent }[] = []
 
     for (const request of message.requests) {
       const fn = async () => {
@@ -190,7 +190,7 @@ export class Runner {
 
       const respMsg = await fn()
 
-      if (typeof respMsg === 'string') {
+      if (typeof respMsg === 'string' || Array.isArray(respMsg)) {
         responses.push({
           index: request.index,
           tool: request.tool,

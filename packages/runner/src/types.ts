@@ -21,6 +21,30 @@ export const wsIncomingMessageSchema = z.discriminatedUnion('type', [
 
 export type WsIncomingMessage = z.infer<typeof wsIncomingMessageSchema>
 
+export const textBlockParamSchema = z.object({
+  type: z.literal('text'),
+  text: z.string(),
+})
+
+export const imageBlockParamSchema = z.object({
+  type: z.literal('image'),
+  source: z.union([
+    z.object({
+      data: z.string(),
+      media_type: z.string(),
+      type: z.literal('base64'),
+    }),
+    z.object({
+      type: z.literal('url'),
+      url: z.string(),
+    }),
+  ]),
+})
+
+export const userContentSchema = z.union([z.string(), z.array(z.union([textBlockParamSchema, imageBlockParamSchema]))])
+
+export type UserContent = z.infer<typeof userContentSchema>
+
 export const wsOutgoingMessageSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('pending_tools_response'),
@@ -29,7 +53,7 @@ export const wsOutgoingMessageSchema = z.discriminatedUnion('type', [
       z.object({
         index: z.number(),
         tool: z.string(),
-        response: z.string(),
+        response: userContentSchema,
       }),
     ),
   }),

@@ -1,3 +1,5 @@
+import type { UserContent } from '../AiService'
+import type { ImageBlockParam, TextBlockParam } from '../AiService/AiServiceBase'
 import type { ToolExample, ToolInfo, ToolParameterValue } from '../tool'
 import type { AgentInfo } from './AgentBase'
 
@@ -219,12 +221,27 @@ Ensure the opening and closing tags are correctly nested and closed, and that yo
 Avoid unnecessary text or symbols before or after the tool use.
 Avoid unnecessary escape characters or special characters.
 `,
-  toolResults: (tool: string, result: string) => `<tool_response>
-<tool_name>${tool}</tool_name>
-<tool_result>
-${result}
-</tool_result>
-</tool_response>`,
+  toolResults: (tool: string, result: UserContent): (TextBlockParam | ImageBlockParam)[] => {
+    if (typeof result === 'string') {
+      return [
+        {
+          type: 'text',
+          text: `<tool_response name=${tool}>${result}</tool_response>`,
+        },
+      ]
+    }
+    return [
+      {
+        type: 'text',
+        text: `<tool_response name=${tool}>`,
+      },
+      ...result,
+      {
+        type: 'text',
+        text: '</tool_response>',
+      },
+    ]
+  },
   commandResult: (command: string, exitCode: number, stdout: string, stderr: string) => `<command>${command}</command>
 <command_exit_code>${exitCode}</command_exit_code>
 <command_stdout>
