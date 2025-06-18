@@ -136,7 +136,15 @@ The following agents are available for task handover/delegate:
 
 exports[`Agent prompts responsePrompts errorInvokeTool should format error message 1`] = `"An error occurred while invoking the tool "test_tool": Test error"`;
 
-exports[`Agent prompts responsePrompts requireUseTool should return error message 1`] = `"Error: You MUST use a tool before proceeding using XCM tags. e.g. <tool_tool_name>tool_name</tool_tool_name>"`;
+exports[`Agent prompts responsePrompts requireUseTool should return error message 1`] = `
+"Error: No tool use detected. You MUST use a tool before proceeding.
+e.g. <tool_tool_name>tool_name</tool_tool_name>
+
+Ensure the opening and closing tags are correctly nested and closed, and that you are using the correct tool name.
+Avoid unnecessary text or symbols before or after the tool use.
+Avoid unnecessary escape characters or special characters.
+"
+`;
 
 exports[`Agent prompts responsePrompts toolResults should format tool results 1`] = `
 "<tool_response>

@@ -212,7 +212,13 @@ ${joined}`
 
 export const responsePrompts = {
   errorInvokeTool: (tool: string, error: unknown) => `An error occurred while invoking the tool "${tool}": ${error}`,
-  requireUseTool: 'Error: You MUST use a tool before proceeding using XCM tags. e.g. <tool_tool_name>tool_name</tool_tool_name>',
+  requireUseTool: `Error: No tool use detected. You MUST use a tool before proceeding.
+e.g. <tool_tool_name>tool_name</tool_tool_name>
+
+Ensure the opening and closing tags are correctly nested and closed, and that you are using the correct tool name.
+Avoid unnecessary text or symbols before or after the tool use.
+Avoid unnecessary escape characters or special characters.
+`,
   toolResults: (tool: string, result: string) => `<tool_response>
 <tool_name>${tool}</tool_name>
 <tool_result>
