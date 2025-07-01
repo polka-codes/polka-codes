@@ -1,12 +1,49 @@
 description: "Utility functions for CLI shared functionality"
 files:
-  - path: "eventHandler.ts"
-    description: "Event handling utilities"
-  - path: "listFiles.ts"
+  "checkRipgrep.ts":
+    description: "Checks if ripgrep is installed and executable."
+    api:
+      functions:
+        "1":
+          name: "checkRipgrep"
+          returns: "Promise<void>"
+  "eventHandler.ts":
+    description: "Handles and prints task events from the core library. It can display tool call statistics if verbosity is greater than 1."
+    api:
+      functions:
+        "1":
+          name: "printEvent"
+          params:
+            "1":
+              name: "verbose"
+              type: "number"
+            "2":
+              name: "usageMeter"
+              type: "UsageMeter"
+          returns: "(event: TaskEvent) => void"
+  "listFiles.ts":
     description: "File system operations for listing files"
-  - path: "searchFiles.ts"
+    api:
+      functions:
+        "1":
+          name: "listFiles"
+          params:
+            "1":
+              name: "options"
+              type: "{ cwd?: string, patterns: string[], ignorePatterns?: string[], gitignore: boolean, maxResults?: number, silent?: boolean, following: boolean, directories: boolean }"
+          returns: "Promise<string[]>"
+  "searchFiles.ts":
     description: "File content searching utilities"
+    api:
+      functions:
+        "1":
+          name: "searchFiles"
+          params:
+            "1":
+              name: "options"
+              type: "{ cwd?: string, patterns: string[] }"
+          returns: "Promise<string[]>"
 rules:
-  - "Utilities should be pure functions where possible"
-  - "Follow consistent error handling patterns"
-  - "Document public APIs with JSDoc"
+  "1": "Utilities should be pure functions where possible"
+  "2": "Follow consistent error handling patterns"
+  "3": "Document public APIs with JSDoc"

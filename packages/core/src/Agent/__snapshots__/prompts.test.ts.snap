@@ -147,10 +147,10 @@ Avoid unnecessary escape characters or special characters.
 `;
 
 exports[`Agent prompts responsePrompts toolResults should format tool results 1`] = `
-"<tool_response>
-<tool_name>test_tool</tool_name>
-<tool_result>
-Test result
-</tool_result>
-</tool_response>"
+[
+  {
+    "text": "<tool_response name=test_tool>Test result</tool_response>",
+    "type": "text",
+  },
+]
 `;

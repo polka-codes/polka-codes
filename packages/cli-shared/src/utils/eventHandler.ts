@@ -2,6 +2,7 @@ import { type TaskEvent, TaskEventKind, ToolResponseType, type UsageMeter } from
 import chalk from 'chalk'
 
 export const printEvent = (verbose: number, usageMeter: UsageMeter) => {
+  const toolCallStats = new Map<string, number>()
   let hadReasoning = false
   return (event: TaskEvent) => {
     switch (event.kind) {
@@ -41,6 +42,10 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter) => {
         hadReasoning = true
         break
       case TaskEventKind.ToolUse:
+        if (verbose > 1) {
+          const count = toolCallStats.get(event.tool) ?? 0
+          toolCallStats.set(event.tool, count + 1)
+        }
         break
       case TaskEventKind.ToolReply:
         break
@@ -70,6 +75,16 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter) => {
         console.log('\n\n======= Usage Exceeded ========\n')
         break
       case TaskEventKind.EndTask:
+        if (verbose > 1) {
+          console.log('\n\n======== Tool Call Stats ========')
+          if (toolCallStats.size === 0) {
+            console.log('No tools were called.')
+          } else {
+            for (const [toolName, count] of toolCallStats.entries()) {
+              console.log(`${toolName}: ${count}`)
+            }
+          }
+        }
         console.log('\n\n======== Task Ended ========\n')
         console.log('Reason:', event.exitReason.type)
         switch (event.exitReason.type) {
