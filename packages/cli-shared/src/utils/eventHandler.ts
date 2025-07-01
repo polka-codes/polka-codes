@@ -1,11 +1,15 @@
 import { type TaskEvent, TaskEventKind, ToolResponseType, type UsageMeter } from '@polka-codes/core'
 import chalk from 'chalk'
 
+type ToolStat = { calls: number; success: number; errors: number }
+const toolCallStats = new Map<string, ToolStat>()
+
 export const printEvent = (verbose: number, usageMeter: UsageMeter) => {
   let hadReasoning = false
   return (event: TaskEvent) => {
     switch (event.kind) {
       case TaskEventKind.StartTask:
+        toolCallStats.clear()
         if (verbose > 1) {
           console.log(`\n====== System Prompt ======\n${event.systemPrompt}`)
           console.log('\n\n================\n')
@@ -41,12 +45,27 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter) => {
         hadReasoning = true
         break
       case TaskEventKind.ToolUse:
+        if (verbose > 1) {
+          const stats = toolCallStats.get(event.tool) ?? { calls: 0, success: 0, errors: 0 }
+          stats.calls++
+          toolCallStats.set(event.tool, stats)
+        }
         break
       case TaskEventKind.ToolReply:
+        if (verbose > 1) {
+          const stats = toolCallStats.get(event.tool) ?? { calls: 0, success: 0, errors: 0 }
+          stats.success++
+          toolCallStats.set(event.tool, stats)
+        }
         break
       case TaskEventKind.ToolInvalid:
         break
       case TaskEventKind.ToolError:
+        if (verbose > 1) {
+          const stats = toolCallStats.get(event.tool) ?? { calls: 0, success: 0, errors: 0 }
+          stats.errors++
+          toolCallStats.set(event.tool, stats)
+        }
         break
       case TaskEventKind.ToolInterrupted:
         break
@@ -70,6 +89,24 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter) => {
         console.log('\n\n======= Usage Exceeded ========\n')
         break
       case TaskEventKind.EndTask:
+        if (verbose > 1) {
+          console.log('\n\n======== Tool Call Stats ========')
+          if (toolCallStats.size > 0) {
+            const tableData = [...toolCallStats.entries()].map(([tool, stats]) => {
+              const successRate = stats.calls > 0 ? (stats.success / stats.calls) * 100 : 0
+              return {
+                'Tool Name': tool,
+                Calls: stats.calls,
+                Success: stats.success,
+                Errors: stats.errors,
+                'Success Rate': `${successRate.toFixed(2)}%`,
+              }
+            })
+            console.table(tableData)
+          } else {
+            console.log('No tools were called.')
+          }
+        }
         console.log('\n\n======== Task Ended ========\n')
         console.log('Reason:', event.exitReason.type)
         switch (event.exitReason.type) {
