@@ -356,7 +356,7 @@ export class Runner {
           path,
           content,
         })
-        console.log(`Sent content for file: ${path}`)
+        console.log(`Sent content for file: ${path}, size: ${content.length}`)
       } else {
         // Not a file or directory
         console.error(`Path is not a file or directory: ${path}`)
