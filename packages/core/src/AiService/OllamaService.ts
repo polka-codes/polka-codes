@@ -26,18 +26,21 @@ export class OllamaService extends AiServiceBase {
     }
   }
 
-  override async *sendImpl(systemPrompt: string, messages: MessageParam[]): ApiStream {
+  override async *sendImpl(systemPrompt: string, messages: MessageParam[], signal: AbortSignal): ApiStream {
     const openAiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
       { role: 'system', content: systemPrompt },
       ...convertToOpenAiMessages(messages),
     ]
 
-    const stream = await this.#client.chat.completions.create({
-      model: this.model.id,
-      messages: openAiMessages,
-      temperature: 0,
-      stream: true,
-    })
+    const stream = await this.#client.chat.completions.create(
+      {
+        model: this.model.id,
+        messages: openAiMessages,
+        temperature: 0,
+        stream: true,
+      },
+      { signal },
+    )
     for await (const chunk of stream) {
       const delta = chunk.choices[0]?.delta
       if (delta?.content) {

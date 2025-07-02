@@ -29,7 +29,7 @@ export class AnthropicService extends AiServiceBase {
     }
   }
 
-  override async *sendImpl(systemPrompt: string, messages: MessageParam[]): ApiStream {
+  override async *sendImpl(systemPrompt: string, messages: MessageParam[], signal: AbortSignal): ApiStream {
     let stream: AnthropicStream<Anthropic.Messages.RawMessageStreamEvent>
     const modelId = this.model.id
 
@@ -62,56 +62,62 @@ export class AnthropicService extends AiServiceBase {
         }, [] as number[])
         const lastUserMsgIndex = userMsgIndices[userMsgIndices.length - 1] ?? -1
         const secondLastMsgUserIndex = userMsgIndices[userMsgIndices.length - 2] ?? -1
-        stream = await this.#client.messages.create({
-          model: modelId,
-          max_tokens: this.model.info.maxTokens || 8192,
-          thinking: thinkingBudgetTokens ? { type: 'enabled', budget_tokens: thinkingBudgetTokens } : undefined,
-          temperature,
-          system: [
-            {
-              text: systemPrompt,
-              type: 'text',
-              cache_control: cacheControl,
-            },
-          ], // setting cache breakpoint for system prompt so new tasks can reuse it
-          messages: messages.map((message, index) => {
-            if (index === lastUserMsgIndex || index === secondLastMsgUserIndex) {
-              return {
-                ...message,
-                content:
-                  typeof message.content === 'string'
-                    ? [
-                        {
-                          type: 'text',
-                          text: message.content,
-                          cache_control: cacheControl,
-                        },
-                      ]
-                    : message.content.map((content, contentIndex) =>
-                        contentIndex === message.content.length - 1
-                          ? {
-                              ...content,
-                              cache_control: cacheControl,
-                            }
-                          : content,
-                      ),
+        stream = await this.#client.messages.create(
+          {
+            model: modelId,
+            max_tokens: this.model.info.maxTokens || 8192,
+            thinking: thinkingBudgetTokens ? { type: 'enabled', budget_tokens: thinkingBudgetTokens } : undefined,
+            temperature,
+            system: [
+              {
+                text: systemPrompt,
+                type: 'text',
+                cache_control: cacheControl,
+              },
+            ], // setting cache breakpoint for system prompt so new tasks can reuse it
+            messages: messages.map((message, index) => {
+              if (index === lastUserMsgIndex || index === secondLastMsgUserIndex) {
+                return {
+                  ...message,
+                  content:
+                    typeof message.content === 'string'
+                      ? [
+                          {
+                            type: 'text',
+                            text: message.content,
+                            cache_control: cacheControl,
+                          },
+                        ]
+                      : message.content.map((content, contentIndex) =>
+                          contentIndex === message.content.length - 1
+                            ? {
+                                ...content,
+                                cache_control: cacheControl,
+                              }
+                            : content,
+                        ),
+                }
               }
-            }
-            return message
-          }),
-          stream: true,
-        })
+              return message
+            }),
+            stream: true,
+          },
+          { signal },
+        )
         break
       }
       default: {
-        stream = await this.#client.messages.create({
-          model: modelId,
-          max_tokens: this.model.info.maxTokens || 8192,
-          temperature: 0,
-          system: [{ text: systemPrompt, type: 'text' }],
-          messages,
-          stream: true,
-        })
+        stream = await this.#client.messages.create(
+          {
+            model: modelId,
+            max_tokens: this.model.info.maxTokens || 8192,
+            temperature: 0,
+            system: [{ text: systemPrompt, type: 'text' }],
+            messages,
+            stream: true,
+          },
+          { signal },
+        )
         break
       }
     }

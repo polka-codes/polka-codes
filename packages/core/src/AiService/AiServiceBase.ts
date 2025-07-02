@@ -46,6 +46,7 @@ export type ApiUsage = {
 export abstract class AiServiceBase {
   readonly usageMeter: UsageMeter
   readonly options: AiServiceOptions
+  #abortController: AbortController | undefined
 
   constructor(options: AiServiceOptions) {
     this.options = options
@@ -54,14 +55,19 @@ export abstract class AiServiceBase {
 
   abstract get model(): { provider: string; id: string; info: ModelInfo }
 
-  abstract sendImpl(systemPrompt: string, messages: MessageParam[]): ApiStream
+  abstract sendImpl(systemPrompt: string, messages: MessageParam[], signal: AbortSignal): ApiStream
+
+  abort() {
+    this.#abortController?.abort()
+  }
 
   async *send(systemPrompt: string, messages: MessageParam[]): ApiStream {
     this.usageMeter.checkLimit()
 
     this.usageMeter.incrementMessageCount()
 
-    const stream = this.sendImpl(systemPrompt, messages)
+    this.#abortController = new AbortController()
+    const stream = this.sendImpl(systemPrompt, messages, this.#abortController.signal)
 
     for await (const chunk of stream) {
       switch (chunk.type) {
@@ -78,7 +84,8 @@ export abstract class AiServiceBase {
 
     this.usageMeter.incrementMessageCount()
 
-    const stream = this.sendImpl(systemPrompt, messages)
+    this.#abortController = new AbortController()
+    const stream = this.sendImpl(systemPrompt, messages, this.#abortController.signal)
     const usage: ApiUsage = {
       inputTokens: 0,
       outputTokens: 0,

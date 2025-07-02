@@ -53,6 +53,7 @@ export class MultiAgent {
           case ToolResponseType.Delegate:
             console.warn('Unexpected exit reason', delegateResult)
             break
+          case 'Aborted':
           case ToolResponseType.Interrupted:
             return delegateResult
           case ToolResponseType.Exit:
@@ -60,6 +61,7 @@ export class MultiAgent {
         }
         return delegateResult
       }
+      case 'Aborted':
       case ToolResponseType.Interrupted:
       case ToolResponseType.Exit:
         // execution is finished
@@ -102,5 +104,11 @@ export class MultiAgent {
 
   get hasActiveAgent(): boolean {
     return this.#agents.length > 0
+  }
+
+  abort() {
+    if (this.hasActiveAgent) {
+      this.#agents[this.#agents.length - 1].abort()
+    }
   }
 }

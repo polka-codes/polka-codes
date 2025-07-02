@@ -64,7 +64,7 @@ export class OpenRouterService extends AiServiceBase {
       })
   }
 
-  override async *sendImpl(systemPrompt: string, messages: MessageParam[]): ApiStream {
+  override async *sendImpl(systemPrompt: string, messages: MessageParam[], signal: AbortSignal): ApiStream {
     const openAiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
       { role: 'system', content: systemPrompt },
       ...convertToOpenAiMessages(messages),
@@ -131,15 +131,18 @@ export class OpenRouterService extends AiServiceBase {
     }
 
     // @ts-ignore-next-line
-    const stream = await this.#client.chat.completions.create({
-      model: this.model.id,
-      messages: openAiMessages,
-      temperature: 0,
-      stream: true,
-      transforms: shouldApplyMiddleOutTransform ? ['middle-out'] : undefined,
-      include_reasoning: true,
-      ...reasoning,
-    })
+    const stream = await this.#client.chat.completions.create(
+      {
+        model: this.model.id,
+        messages: openAiMessages,
+        temperature: 0,
+        stream: true,
+        transforms: shouldApplyMiddleOutTransform ? ['middle-out'] : undefined,
+        include_reasoning: true,
+        ...reasoning,
+      },
+      { signal },
+    )
 
     let genId: string | undefined
 

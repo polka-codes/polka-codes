@@ -27,20 +27,23 @@ export class DeepSeekService extends AiServiceBase {
     }
   }
 
-  override async *sendImpl(systemPrompt: string, messages: MessageParam[]): ApiStream {
+  override async *sendImpl(systemPrompt: string, messages: MessageParam[], signal: AbortSignal): ApiStream {
     const openAiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
       { role: 'system', content: systemPrompt },
       ...convertToOpenAiMessages(messages),
     ]
 
-    const stream = await this.#client.chat.completions.create({
-      model: this.model.id,
-      max_completion_tokens: this.model.info.maxTokens,
-      messages: openAiMessages,
-      temperature: 0,
-      stream: true,
-      stream_options: { include_usage: true },
-    })
+    const stream = await this.#client.chat.completions.create(
+      {
+        model: this.model.id,
+        max_completion_tokens: this.model.info.maxTokens,
+        messages: openAiMessages,
+        temperature: 0,
+        stream: true,
+        stream_options: { include_usage: true },
+      },
+      { signal },
+    )
     for await (const chunk of stream) {
       const delta = chunk.choices[0]?.delta
       if ((delta as any)?.reasoning_content) {

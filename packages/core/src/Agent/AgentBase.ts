@@ -192,6 +192,7 @@ export type ToolResponseOrToolPause =
 export type ExitReason =
   | { type: 'UsageExceeded' }
   | { type: 'WaitForUserInput' }
+  | { type: 'Aborted' }
   | ToolResponseExit
   | ToolResponseInterrupted
   | ToolResponseHandOver
@@ -207,6 +208,7 @@ export abstract class AgentBase {
   protected readonly handlers: Record<string, FullToolInfo>
   #messages: MessageParam[] = []
   readonly #policies: Readonly<AgentPolicyInstance[]>
+  #aborted = false
 
   constructor(name: string, ai: AiServiceBase, config: AgentBaseConfig) {
     this.ai = ai
@@ -246,6 +248,11 @@ export abstract class AgentBase {
     this.#policies = policies
   }
 
+  abort() {
+    this.#aborted = true
+    this.ai.abort()
+  }
+
   get parameters(): Readonly<any> {
     return this.ai.options.parameters
   }
@@ -283,11 +290,17 @@ export abstract class AgentBase {
   async #processLoop(userMessage: UserContent): Promise<ExitReason> {
     let nextRequest: UserContent | string = userMessage
     while (true) {
+      if (this.#aborted) {
+        return { type: 'Aborted' }
+      }
       if (this.ai.usageMeter.isLimitExceeded().result) {
         this.#callback({ kind: TaskEventKind.UsageExceeded, agent: this })
         return { type: 'UsageExceeded' }
       }
       const response = await this.#request(nextRequest)
+      if (this.#aborted) {
+        return { type: 'Aborted' }
+      }
       const resp = await this.#handleResponse(response)
       if (resp.type === 'exit') {
         this.#callback({ kind: TaskEventKind.EndTask, agent: this, exitReason: resp.reason })
@@ -346,6 +359,9 @@ export abstract class AgentBase {
           }
         }
       } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          break
+        }
         console.error('Error in stream:', error)
       }
 
@@ -353,10 +369,17 @@ export abstract class AgentBase {
         break
       }
 
+      if (this.#aborted) {
+        break
+      }
+
       console.debug(`Retrying request ${i + 1} of ${retryCount}`)
     }
 
     if (!currentAssistantMessage) {
+      if (this.#aborted) {
+        return []
+      }
       // something went wrong
       throw new Error('No assistant message received')
     }

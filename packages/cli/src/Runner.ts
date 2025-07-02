@@ -255,6 +255,10 @@ export class Runner {
     return await this.multiAgent.continueTask(message)
   }
 
+  abort() {
+    this.multiAgent.abort()
+  }
+
   get hasActiveAgent() {
     return this.multiAgent.hasActiveAgent
   }
