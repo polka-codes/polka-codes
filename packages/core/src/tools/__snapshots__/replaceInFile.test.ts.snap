@@ -4,11 +4,19 @@ exports[`replaceInFile tool handler should return file not found error 1`] = `"<
 
 exports[`replaceInFile tool handler should return no_diff_applied message 1`] = `
 {
-  "message": "<replace_in_file_result path="test.txt" status="failed" message="Unable to apply changes" />",
+  "message": 
+"<replace_in_file_result path="test.txt" status="failed" message="Unable to apply changes">
+  <file_content path="test.txt">file content</file_content>
+</replace_in_file_result>"
+,
   "type": "Error",
 }
 `;
 
-exports[`replaceInFile tool handler should return some_diff_applied message 1`] = `"<replace_in_file_result path="test.txt" status="some_diff_applied" applied_count="1" total_count="2" />"`;
+exports[`replaceInFile tool handler should return some_diff_applied message 1`] = `
+"<replace_in_file_result path="test.txt" status="some_diff_applied" applied_count="1" total_count="2">
+  <file_content path="test.txt">new content</file_content>
+</replace_in_file_result>"
+`;
 
 exports[`replaceInFile tool handler should return all_diff_applied message 1`] = `"<replace_in_file_result path="test.txt" status="all_diff_applied" />"`;

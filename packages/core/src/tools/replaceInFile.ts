@@ -181,7 +181,9 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
   if (result.status === 'no_diff_applied') {
     return {
       type: ToolResponseType.Error,
-      message: `<replace_in_file_result path="${path}" status="failed" message="Unable to apply changes" />`,
+      message: `<replace_in_file_result path="${path}" status="failed" message="Unable to apply changes">
+  <file_content path="${path}">${fileContent}</file_content>
+</replace_in_file_result>`,
     }
   }
 
@@ -190,7 +192,9 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
   if (result.status === 'some_diff_applied') {
     return {
       type: ToolResponseType.Reply,
-      message: `<replace_in_file_result path="${path}" status="some_diff_applied" applied_count="${result.appliedCount}" total_count="${result.totalCount}" />`,
+      message: `<replace_in_file_result path="${path}" status="some_diff_applied" applied_count="${result.appliedCount}" total_count="${result.totalCount}">
+  <file_content path="${path}">${result.content}</file_content>
+</replace_in_file_result>`,
     }
   }
 
