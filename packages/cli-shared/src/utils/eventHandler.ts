@@ -19,7 +19,28 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter) => {
         console.log('\n\n======== New Request ========\n')
 
         if (verbose) {
-          console.log(event.userMessage)
+          const { userMessage } = event
+          if (typeof userMessage === 'string') {
+            console.log(userMessage)
+          } else {
+            for (const content of userMessage) {
+              if (content.type === 'text') {
+                console.log(content.text)
+              } else if (content.type === 'image') {
+                if (content.source.type === 'base64') {
+                  console.log(chalk.yellow(`[Image content: ${content.source.media_type}]`))
+                } else if (content.source.type === 'url') {
+                  console.log(chalk.yellow(`[Image content from URL: ${content.source.url}]`))
+                } else {
+                  console.log(chalk.red('[Unknown image source type]'))
+                  console.log(content.source)
+                }
+              } else {
+                console.log(chalk.red('[Unknown content type]'))
+                console.log(content)
+              }
+            }
+          }
           console.log('\n\n======== Request Message Ended ========\n')
         }
         break
@@ -45,14 +66,14 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter) => {
         hadReasoning = true
         break
       case TaskEventKind.ToolUse:
-        if (verbose > 1) {
+        {
           const stats = toolCallStats.get(event.tool) ?? { calls: 0, success: 0, errors: 0 }
           stats.calls++
           toolCallStats.set(event.tool, stats)
         }
         break
       case TaskEventKind.ToolReply:
-        if (verbose > 1) {
+        {
           const stats = toolCallStats.get(event.tool) ?? { calls: 0, success: 0, errors: 0 }
           stats.success++
           toolCallStats.set(event.tool, stats)
@@ -61,7 +82,7 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter) => {
       case TaskEventKind.ToolInvalid:
         break
       case TaskEventKind.ToolError:
-        if (verbose > 1) {
+        {
           const stats = toolCallStats.get(event.tool) ?? { calls: 0, success: 0, errors: 0 }
           stats.errors++
           toolCallStats.set(event.tool, stats)
@@ -89,24 +110,6 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter) => {
         console.log('\n\n======= Usage Exceeded ========\n')
         break
       case TaskEventKind.EndTask:
-        if (verbose > 1) {
-          console.log('\n\n======== Tool Call Stats ========')
-          if (toolCallStats.size > 0) {
-            const tableData = [...toolCallStats.entries()].map(([tool, stats]) => {
-              const successRate = stats.calls > 0 ? (stats.success / stats.calls) * 100 : 0
-              return {
-                'Tool Name': tool,
-                Calls: stats.calls,
-                Success: stats.success,
-                Errors: stats.errors,
-                'Success Rate': `${successRate.toFixed(2)}%`,
-              }
-            })
-            console.table(tableData)
-          } else {
-            console.log('No tools were called.')
-          }
-        }
         console.log('\n\n======== Task Ended ========\n')
         console.log('Reason:', event.exitReason.type)
         switch (event.exitReason.type) {
@@ -116,6 +119,22 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter) => {
           case ToolResponseType.Interrupted:
             console.log('Interrupted Message:', event.exitReason.message)
             break
+        }
+        console.log('\n\n======== Tool Call Stats ========')
+        if (toolCallStats.size > 0) {
+          const tableData = [...toolCallStats.entries()].map(([tool, stats]) => {
+            const successRate = stats.calls > 0 ? (stats.success / stats.calls) * 100 : 0
+            return {
+              'Tool Name': tool,
+              Calls: stats.calls,
+              Success: stats.success,
+              Errors: stats.errors,
+              'Success Rate': `${successRate.toFixed(2)}%`,
+            }
+          })
+          console.table(tableData)
+        } else {
+          console.log('No tools were called.')
         }
         break
     }
