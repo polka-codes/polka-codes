@@ -3,6 +3,7 @@ import readline from 'node:readline'
 export type ChatOptions = {
   onMessage: (message: string) => Promise<string | undefined>
   onExit: () => Promise<void>
+  onInterrupt?: () => void
 }
 
 export class Chat {
@@ -109,6 +110,12 @@ Available commands:
     })
 
     this.#rl.on('SIGINT', () => {
+      if (this.#busy) {
+        console.log('\nAborting request...')
+        this.#options.onInterrupt?.()
+        return
+      }
+
       if (this.#isMultilineMode) {
         this.#isMultilineMode = false
         this.#multilineBuffer = []

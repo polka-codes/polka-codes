@@ -1,117 +1,83 @@
+description: "This package contains the command-line interface for interacting with the AI."
 files:
-  "1":
-    path: src/index.ts
-    description: Main CLI entry point
-    api:
-      functions:
-        - name: main
-          params:
-            - name: argv
-              type: string[]
-          returns: Promise<void>
-  "2":
-    path: src/commands/chat.ts
-    description: Chat command implementation
-    api:
-      functions:
-        - name: chatCommand
-          params:
-            - name: options
-              type: ChatCommandOptions
-          returns: Promise<void>
-  "3":
-    path: src/commands/commit.ts
-    description: Commit command implementation
-    api:
-      functions:
-        - name: commitCommand
-          params:
-            - name: options
-              type: CommitCommandOptions
-          returns: Promise<void>
-  "4":
-    path: src/Runner.ts
-    description: Core runner for executing tasks
-    api:
-      classes:
-        - name: Runner
-          methods:
-            - name: run
-              params:
-                - name: task
-                  type: string
-              returns: Promise<void>
-  src/ApiProviderConfig.ts:
-    description: Manages API provider configurations, resolving appropriate settings
-      for commands and agents by merging global, provider-specific, and
-      command/agent-specific parameters.
+  "src/Chat.ts":
+    description: "Provides an interactive chat interface in the terminal."
     api:
       classes:
         "1":
-          name: ApiProviderConfig
+          name: "Chat"
           constructor:
             params:
               "1":
-                name: config
-                type: Config
-            description: Initializes with a Config object, setting up default provider,
-              provider-specific settings, command/agent configurations, and
-              global default parameters.
-          properties:
-            "1":
-              name: defaultProvider
-              type: AiServiceProvider | undefined
-              access: readonly
-            "2":
-              name: providers
-              type: "Readonly<Partial<Record<AiServiceProvider, { apiKey: string;
-                defaultModel?: string; defaultParameters: any }>>>"
-              access: readonly
-            "3":
-              name: commands
-              type: "Partial<Record<string, { provider?: AiServiceProvider; model?: string;
-                parameters: any }>> | undefined"
-              access: readonly
-            "4":
-              name: agents
-              type: "Partial<Record<string, { provider?: AiServiceProvider; model?: string;
-                parameters: any }>> | undefined"
-              access: readonly
-            "5":
-              name: defaultParameters
-              type: any
-              access: readonly
-              description: Global default parameters, used if not overridden at provider or
-                command/agent level.
+                name: "options"
+                type: "ChatOptions"
           methods:
             "1":
-              name: getConfigForCommand
-              params:
-                "1":
-                  name: command
-                  type: string
-              returns: "{ provider: AiServiceProvider; model: string; apiKey: string |
-                undefined; parameters: any } | undefined"
-              description: Resolves the configuration for a given command, merging global
-                defaults, provider defaults, and command-specific settings.
-                Returns undefined if no provider can be determined.
+              name: "close"
+              returns: "void"
+              description: "Closes the readline interface."
+      types:
+        "1":
+          name: "ChatOptions"
+          properties:
+            "1":
+              name: "onMessage"
+              type: "(message: string) => Promise<string | undefined>"
+              description: "Callback for when the user sends a message."
             "2":
-              name: getConfigForAgent
+              name: "onExit"
+              type: "() => Promise<void>"
+              description: "Callback for when the chat is exited."
+            "3":
+              name: "onInterrupt"
+              type: "() => void"
+              optional: true
+              description: "Callback for when the user presses Ctrl+C during a busy state."
+  "src/commands/chat.ts":
+    description: "Implements the chat command, setting up a Runner and a Chat interface to handle interactive sessions with the AI."
+    api:
+      functions:
+        "1":
+          name: "runChat"
+          params:
+            "1":
+              name: "opts"
+              type: "any"
+            "2":
+              name: "command"
+              type: "Command"
+              optional: true
+          returns: "Promise<void>"
+          description: "Initializes and runs the chat session. It configures the provider, creates a Runner, and sets up the Chat interface with handlers for messages, exit, and interruptions."
+  "src/ApiProviderConfig.ts":
+    description: "Manages API provider configurations, resolving appropriate settings for commands and agents by merging global, provider-specific, and command/agent-specific parameters."
+    api:
+      classes:
+        "1":
+          name: "ApiProviderConfig"
+          constructor:
+            params:
+              "1":
+                name: "config"
+                type: "Config"
+            description: "Initializes with a Config object, setting up default provider, provider-specific settings, command/agent configurations, and global default parameters."
+          methods:
+            "1":
+              name: "getConfigForCommand"
               params:
                 "1":
-                  name: agent
-                  type: string
-              returns: "{ provider: AiServiceProvider; model: string; apiKey: string |
-                undefined; parameters: any } | undefined"
-              description: Resolves the configuration for a given agent, merging global
-                defaults, provider defaults, and agent-specific settings.
-                Returns undefined if no provider can be determined.
-invariants:
-  - All commands must be async and return Promises
-  - Command options are validated before execution
-patterns:
-  - Commands follow a consistent structure with options handling
-  - Error handling is centralized in the Runner class
+                  name: "command"
+                  type: "string"
+              returns: "{ provider: AiServiceProvider; model: string; apiKey: string | undefined; parameters: any } | undefined"
+              description: "Resolves the configuration for a given command, merging global defaults, provider defaults, and command-specific settings. Returns undefined if no provider can be determined."
+            "2":
+              name: "getConfigForAgent"
+              params:
+                "1":
+                  name: "agent"
+                  type: "string"
+              returns: "{ provider: AiServiceProvider; model: string; apiKey: string | undefined; parameters: any } | undefined"
+              description: "Resolves the configuration for a given agent, merging global defaults, provider defaults, and agent-specific settings. Returns undefined if no provider can be determined."
 rules:
-  - Each command must have a corresponding test file
-  - All user-facing output must go through the logger
+  "1": "Each command should have its own file in the `src/commands` directory."
+  "2": "Use the `Runner` class to execute tasks."

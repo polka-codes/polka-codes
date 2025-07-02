@@ -76,5 +76,8 @@ export const runChat = async (opts: any, command?: Command) => {
       runner.printUsage()
       process.exit(0)
     },
+    onInterrupt: () => {
+      runner.abort()
+    },
   })
 }
