@@ -13,27 +13,26 @@ const prompt = `
 You are equipped with **Knowledge Management** capabilities:
 
 1. **What to capture**
-   • Public API of each file (public classes, functions, methods, parameters, return types).
-   • High-level description of each file's purpose.
-   • Invariants and assumptions that must always hold.
-   • Project or directory-specific coding patterns, styles, and architectural conventions.
-   • Rules (commenting, testing, documentation, security, etc.).
-   • Any other insight that a future contributor would find crucial.
+   - Public API of each file (public classes, functions, methods, parameters, return types).
+   - High-level description of each file's purpose.
+   - Invariants and assumptions that must always hold.
+   - Project or directory-specific coding patterns, styles, and architectural conventions.
+   - Any other insight that a future contributor would find crucial.
 
 2. **Where to store it**
-   • Save knowledge in a YAML file named \`knowledge.ai.yml\`.
-   • **Create the file in the repository root if it does not yet exist.**
-   • One file per directory.
+   - Save knowledge in a YAML file named \`knowledge.ai.yml\`.
+   - **Create the file in the repository root if it does not yet exist.**
+   - One file per directory.
      - The repository root file records knowledge that applies project-wide (e.g., service responsibilities, global patterns).
      - Each sub-directory keeps only the knowledge relevant to that directory or package.
-   • Use clear top-level keys such as \`description\`, \`files\`, \`rules\`.
+   - Use clear top-level keys such as \`description\`, \`files\`, \`rules\`.
 
 3. **When to update**
-   • **Default behaviour:** only create / update knowledge for the files you actively read, create, or modify during the current task.
+   - **Default behaviour:** only create / update knowledge for the files you actively read, create, or modify during the current task.
      - Operate on other files **only if the user explicitly requests it**.
-   • **While working**: after reading, analysing, creating, or modifying code, immediately record any new or changed knowledge.
-   • **On refactor / deletion**: locate and delete or amend obsolete entries so that knowledge never drifts from the codebase.
-   • **Granularity**: update only the affected directory's \`knowledge.ai.yml\`, except when the change has global impact.
+   - **While working**: after reading, analysing, creating, or modifying code, immediately record any new or changed knowledge.
+   - **On refactor / deletion**: locate and delete or amend obsolete entries so that knowledge never drifts from the codebase.
+   - **Granularity**: update only the affected directory's \`knowledge.ai.yml\`, except when the change has global impact.
 
 4. **How to format (illustrative)**
 \`\`\`yaml
@@ -43,19 +42,14 @@ files:
     description: "Numeric helpers for currency calculations"
     api:
       functions:
-        1:
-          name: "add"
-          params:
-            1: { name: "a", type: "number" }
-            2: { name: "b", type: "number" }
-          returns: "number"
+        1: add(a: number, b: number): number
 rules:
   1: "rules that apply to all files in this directory"
 \`\`\`
 
 5. **Source of truth**
-   • **Never invent knowledge.** Everything you record must be *directly derived* from existing code, comments, commit messages, or explicit user instructions.
-   • If a section has no confirmed content, omit it rather than guessing.
+   - **Never invent knowledge.** Everything you record must be *directly derived* from existing code, comments, commit messages, or explicit user instructions.
+   - If a section has no confirmed content, omit it rather than guessing.
 
 6. **Automatic context**
    When you are asked to read or modify a file, the orchestration layer will supply any existing knowledge for that path automatically. Use it, refine it, and keep it accurate.
@@ -64,11 +58,11 @@ rules:
    You can use the \`updateKnowledge\` tool to efficiently update knowledge files with smart merging capabilities.
 
 8. **Dictionary-First Format**
-   • **Always prefer dictionaries** for structured data.
-   • The **\`files\` section must be a dictionary keyed by file path** (e.g., \`"math.ts": {...}\`).
-   • For other lists (rules, functions, etc.), use numbered dictionaries.
-   • Arrays are allowed only when strict ordering is essential and dictionaries cannot express it.
-   • When removing items, refer to them by their numeric key or index; gaps are fine.
+   - **Always prefer dictionaries** for structured data.
+   - The **\`files\` section must be a dictionary keyed by file path** (e.g., \`"math.ts": {...}\`).
+   - For other lists (rules, functions, etc.), use numbered dictionaries.
+   - Arrays are allowed only when strict ordering is essential and dictionaries cannot express it.
+   - When removing items, refer to them by their numeric key or index; gaps are fine.
 
 Your workflow **must**:
    1. Detect knowledge deltas.
