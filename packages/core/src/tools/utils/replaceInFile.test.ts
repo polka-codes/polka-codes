@@ -13,10 +13,15 @@ line2
 new line2
 >>>>>>> REPLACE`
 
-    const result = await replaceInFile(content, diff)
-    expect(result).toBe(`line1
+    const result = replaceInFile(content, diff)
+    expect(result).toEqual({
+      content: `line1
 new line2
-line3`)
+line3`,
+      status: 'all_diff_applied',
+      appliedCount: 1,
+      totalCount: 1,
+    })
   })
 
   it('should handle multiple replacements', async () => {
@@ -35,11 +40,16 @@ line3
 new line3
 >>>>>>> REPLACE`
 
-    const result = await replaceInFile(content, diff)
-    expect(result).toBe(`line1
+    const result = replaceInFile(content, diff)
+    expect(result).toEqual({
+      content: `line1
 new line2
 new line3
-line2`)
+line2`,
+      status: 'all_diff_applied',
+      appliedCount: 2,
+      totalCount: 2,
+    })
   })
 
   it('should handle whitespace variations', async () => {
@@ -52,10 +62,15 @@ line2
 new line2
 >>>>>>> REPLACE`
 
-    const result = await replaceInFile(content, diff)
-    expect(result).toBe(`line1
+    const result = replaceInFile(content, diff)
+    expect(result).toEqual({
+      content: `line1
   new line2
-line3`)
+line3`,
+      status: 'all_diff_applied',
+      appliedCount: 1,
+      totalCount: 1,
+    })
   })
 
   it('should throw error when no blocks found', async () => {
@@ -63,10 +78,10 @@ line3`)
 line2`
     const diff = 'invalid format'
 
-    expect(replaceInFile(content, diff)).rejects.toThrow('No valid diff blocks found')
+    expect(() => replaceInFile(content, diff)).toThrow('No valid diff blocks found')
   })
 
-  it('should throw error when search text not found', async () => {
+  it('should return no_diff_applied when search text not found', async () => {
     const content = `line1
 line2`
     const diff = `<<<<<<< SEARCH
@@ -75,7 +90,13 @@ line3
 new line3
 >>>>>>> REPLACE`
 
-    expect(replaceInFile(content, diff)).rejects.toThrow('Could not find the following text in file')
+    const result = replaceInFile(content, diff)
+    expect(result).toEqual({
+      content,
+      status: 'no_diff_applied',
+      appliedCount: 0,
+      totalCount: 1,
+    })
   })
 
   it('should handle empty file', async () => {
@@ -86,7 +107,13 @@ line1
 new line1
 >>>>>>> REPLACE`
 
-    expect(replaceInFile(content, diff)).rejects.toThrow('Could not find the following text in file')
+    const result = replaceInFile(content, diff)
+    expect(result).toEqual({
+      content,
+      status: 'no_diff_applied',
+      appliedCount: 0,
+      totalCount: 1,
+    })
   })
 
   it('should handle empty replacement', async () => {
@@ -97,8 +124,34 @@ line2
 =======
 >>>>>>> REPLACE`
 
-    const result = await replaceInFile(content, diff)
-    expect(result).toBe(`line1
-`)
+    const result = replaceInFile(content, diff)
+    expect(result).toEqual({
+      content: `line1
+`,
+      status: 'all_diff_applied',
+      appliedCount: 1,
+      totalCount: 1,
+    })
+  })
+
+  it('should return some_diff_applied when some search text not found', () => {
+    const content = 'line1\nline2'
+    const diff = `<<<<<<< SEARCH
+line1
+=======
+new line1
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+line3
+=======
+new line3
+>>>>>>> REPLACE`
+    const result = replaceInFile(content, diff)
+    expect(result).toEqual({
+      content: 'new line1\nline2',
+      status: 'some_diff_applied',
+      appliedCount: 1,
+      totalCount: 2,
+    })
   })
 })

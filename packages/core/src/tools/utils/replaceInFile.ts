@@ -6,7 +6,14 @@
   >>>>>>> REPLACE
 */
 
-export const replaceInFile = async (fileContent: string, diff: string): Promise<string> => {
+export type ReplaceResult = {
+  content: string
+  status: 'no_diff_applied' | 'some_diff_applied' | 'all_diff_applied'
+  appliedCount: number
+  totalCount: number
+}
+
+export const replaceInFile = (fileContent: string, diff: string): ReplaceResult => {
   // Regex to match blocks of the form:
   // <<<<<<< SEARCH
   // (some lines)
@@ -25,7 +32,7 @@ export const replaceInFile = async (fileContent: string, diff: string): Promise<
   }
 
   // Helper: try to find the search text in fileContent with progressive relaxation
-  const findAndReplace = (content: string, search: string, replace: string): string => {
+  const findAndReplace = (content: string, search: string, replace: string): string | null => {
     // 1) Direct exact match
     let index = content.indexOf(search)
     if (index !== -1) {
@@ -81,13 +88,34 @@ export const replaceInFile = async (fileContent: string, diff: string): Promise<
       return content.slice(0, startPos) + replace + content.slice(endPos)
     }
 
-    throw new Error(`Could not find the following text in file:\n${search}`)
+    return null
   }
 
   let updatedFile = fileContent
+  let appliedCount = 0
+  const totalCount = blocks.length
+
   for (const { search, replace } of blocks) {
-    updatedFile = findAndReplace(updatedFile, search, replace)
+    const result = findAndReplace(updatedFile, search, replace)
+    if (result !== null) {
+      updatedFile = result
+      appliedCount++
+    }
   }
 
-  return updatedFile
+  let status: ReplaceResult['status']
+  if (appliedCount === 0) {
+    status = 'no_diff_applied'
+  } else if (appliedCount < totalCount) {
+    status = 'some_diff_applied'
+  } else {
+    status = 'all_diff_applied'
+  }
+
+  return {
+    content: updatedFile,
+    status,
+    appliedCount,
+    totalCount,
+  }
 }

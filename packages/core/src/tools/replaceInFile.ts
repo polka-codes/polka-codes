@@ -172,17 +172,31 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
   if (fileContent == null) {
     return {
       type: ToolResponseType.Error,
-      message: `<error><replace_in_file_path>${path}</replace_in_file_path><error_message>File not found</error_message></error>`,
+      message: `<replace_in_file_result path="${path}" status="failed" message="File not found" />`,
     }
   }
 
-  const result = await replaceInFile(fileContent, diff)
+  const result = replaceInFile(fileContent, diff)
 
-  await provider.writeFile(path, result)
+  if (result.status === 'no_diff_applied') {
+    return {
+      type: ToolResponseType.Error,
+      message: `<replace_in_file_result path="${path}" status="failed" message="Unable to apply changes" />`,
+    }
+  }
+
+  await provider.writeFile(path, result.content)
+
+  if (result.status === 'some_diff_applied') {
+    return {
+      type: ToolResponseType.Reply,
+      message: `<replace_in_file_result path="${path}" status="some_diff_applied" applied_count="${result.appliedCount}" total_count="${result.totalCount}" />`,
+    }
+  }
 
   return {
     type: ToolResponseType.Reply,
-    message: `<replace_in_file_path>${path}</replace_in_file_path>`,
+    message: `<replace_in_file_result path="${path}" status="all_diff_applied" />`,
   }
 }
 

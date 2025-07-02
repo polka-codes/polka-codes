@@ -1,0 +1,14 @@
+// Bun Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`replaceInFile tool handler should return file not found error 1`] = `"<replace_in_file_result path="nonexistent.txt" status="failed" message="File not found" />"`;
+
+exports[`replaceInFile tool handler should return no_diff_applied message 1`] = `
+{
+  "message": "<replace_in_file_result path="test.txt" status="failed" message="Unable to apply changes" />",
+  "type": "Error",
+}
+`;
+
+exports[`replaceInFile tool handler should return some_diff_applied message 1`] = `"<replace_in_file_result path="test.txt" status="some_diff_applied" applied_count="1" total_count="2" />"`;
+
+exports[`replaceInFile tool handler should return all_diff_applied message 1`] = `"<replace_in_file_result path="test.txt" status="all_diff_applied" />"`;
