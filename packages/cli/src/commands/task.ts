@@ -87,6 +87,18 @@ export async function runTask(taskArg: string | undefined, _options: any, comman
     enableCache: true,
   })
 
+  const sigintHandler = () => {
+    runner.abort()
+    console.log()
+    runner.printUsage()
+    process.exit(0)
+  }
+
+  process.on('SIGINT', sigintHandler)
+
   await runner.startTask(task, agent)
+
+  process.off('SIGINT', sigintHandler)
+
   runner.printUsage()
 }
