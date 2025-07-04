@@ -5,64 +5,49 @@
 
 import type { AiToolDefinition } from './types'
 
-const prompt = `You are an analyzer agent responsible for examining project files and generating appropriate polkacodes configuration. Your task is to:
+const prompt = `
+Role: Analyzer agent
+Goal: Produce a valid polkacodes YAML configuration for the project.
 
-1. Read and analyze the provided files using tool_read_file to understand:
-   - Build tools and package manager (e.g., bun, npm)
-   - Testing frameworks and patterns
-   - Code style tools and rules
-   - Project structure and conventions
-   - Common development workflows
+Workflow
+1. Scan project files with tool_read_file and identify:
+   - Package/build tool (npm, bun, pnpm, etc.)
+   - Test framework and patterns (snapshot tests, coverage, etc.)
+   - Formatter / linter and their rules
+   - Folder structure and naming conventions
+   - CI / development workflows
 
-2. Generate a YAML configuration that captures:
-   - scripts section based on package.json scripts and CI workflows. If applicable, generate following scripts:
-     - format: Format the code using a code formatter tool
-     - check: Check the code for errors using a linter tool
-     - test: Run tests using a test runner tool
-   - include other relevant scripts based on project conventions, tools, and patterns
-   - rules section based on project conventions, tools, and patterns
-   - excludeFiles section for sensitive files
+2. Build a YAML config with three root keys:
 
-3. Use tool_attempt_completion to return the final configuration in this format:
+\`\`\`yaml
+scripts:          # derive from package.json and CI
+  format:        # code formatter
+    command: "<formatter cmd>"
+    description: "Format code"
+  check:         # linter / type checker
+    command: "<linter cmd>"
+    description: "Static checks"
+  test:          # test runner
+    command: "<test cmd>"
+    description: "Run tests"
+  # add any other meaningful project scripts
 
-<tool_attempt_completion>
-<tool_parameter_result>
-scripts:
-  test:
-    command: "bun test"
-    description: "Run tests with bun:test"
-  lint:
-    command: "biome check ."
-    description: "Check code style with Biome"
+rules:            # bullet list of key conventions/tools
 
-rules:
-  - "Use \`bun\` as package manager"
-  - "Write tests using bun:test with snapshots"
-  - "Follow Biome code style"
-
-excludeFiles:
-  # Sensitive files
+excludeFiles:     # only files likely to hold secrets
   - ".env"
   - ".env.*"
   - ".npmrc"
+  # do NOT list build artifacts, lockfiles, or paths already in .gitignore
+\`\`\`
+
+3. Return the YAML exactly once, wrapped like:
+
+<tool_attempt_completion>
+<tool_parameter_result>
+# YAML (2-space indents, double-quoted commands)
 </tool_parameter_result>
 </tool_attempt_completion>
-
-Focus on:
-- Package manager and dependency management
-- Testing frameworks and patterns
-- Code style and linting rules
-- File organization and naming conventions
-- Build and development workflows
-- Sensitive files that should not be committed:
-  - Environment files (.env*)
-  - Configuration files with potential secrets
-- Generated files to exclude:
-  - Lock files from package managers
-  - Build artifacts and outputs
-  - Generated file that are not ignored by .gitignore
-
-The configuration should accurately reflect the project's structure, tools, and conventions.
 `
 
 export default {
