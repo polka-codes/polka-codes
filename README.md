@@ -7,12 +7,7 @@
 > **Warning**
 > This project is still in very early stages of development. Please use with caution as APIs and features may change frequently.
 
-Polka Codes is a powerful TypeScript-based AI coding assistant framework that helps developers write, improve, and maintain code through natural language interactions. It provides:
-
-- 🚀 Core AI services with multiple provider support
-- 💻 Command-line interface for local development
-- 🤖 GitHub Action integration for CI/CD pipelines
-- 🧩 Extensible architecture for custom integrations
+Polka Codes is a powerful TypeScript-based AI coding assistant framework that helps developers write, improve, and maintain code through natural language interactions. It features a multi-agent system, a command-line interface, and seamless GitHub integration to streamline your development workflow.
 
 ## Quick Start
 
@@ -30,38 +25,39 @@ npx @polka-codes/cli "your task description"
 
 ```bash
 # Create a new project
-pokla create my-project
+polka create my-project
 
 # Initialize configuration
-pokla init
+polka init
 
-# Run some task
-pokla "improve README.md"
+# Run a task
+polka "improve README.md"
 
-# Start interactive chat session
-polka-codes
+# Start an interactive chat session
+polka
 
 # Get help
-pokla --help
+polka --help
 ```
 
-For more information, see [cli README](packages/cli/README.md)
+For more information, see the [CLI README](packages/cli/README.md).
 
 ## Features
 
-- 🎯 **Project Creation**: Easy project scaffolding with `create` command
-- 🔧 **Simple Setup**: Quick configuration with `init` command
-- 🤖 **Multiple AI Providers**: Supports DeepSeek (recommended), Anthropic Claude, Ollama, and OpenRouter
-- 🔧 **CLI Interface**: Interactive command-line tool with chat and task execution
-- 🔄 **GitHub Action**: Seamless integration with CI/CD pipelines
-- 📦 **Extensible Architecture**: Modular design for adding new AI providers and tools
-- ⚡ **Type Safety**: Fully typed with TypeScript for better developer experience
-- 🧪 **Testing**: Comprehensive testing with bun:test and snapshot testing
-- 🔍 **Code Analysis**: Built-in tools for code understanding and improvement
-- 🤝 **MultiAgent System**: Specialized AI agents working together seamlessly
-  - Architect Agent for system design and high-level planning
-  - Coder Agent for implementation and code maintenance
-  - Intelligent task handover for complex development workflows
+- 🎯 **Project Scaffolding**: Easily create new projects with the `create` command.
+- 🔧 **Simple Setup**: Quickly initialize your project configuration with `init`.
+- 🤖 **Multiple AI Providers**: Supports DeepSeek (recommended), Anthropic Claude, Ollama, and OpenRouter.
+- 🤝 **Multi-Agent System**: Specialized AI agents collaborate on complex tasks:
+  - **Architect Agent**: Handles system design and high-level planning.
+  - **Coder Agent**: Focuses on implementation, coding, and maintenance.
+  - **Analyzer Agent**: Analyzes code and project structure.
+  - **Code Fixer Agent**: Fixes bugs and addresses issues.
+- 🧠 **Knowledge Management**: Automatically captures and maintains knowledge about your codebase in `knowledge.ai.yml` files, ensuring agents have context.
+- 💻 **Interactive CLI**: A powerful command-line interface for task execution and interactive chat.
+- 🔄 **GitHub Integration**: A GitHub Action that allows you to run Polka Codes by mentioning it in pull requests and issues.
+- 📦 **Extensible Architecture**: A modular design that allows for adding new AI providers, tools, and agents.
+- ⚡ **Type Safety**: Fully typed with TypeScript for a better developer experience.
+- 🧪 **Thoroughly Tested**: Comprehensive test suite using `bun:test` with snapshot testing.
 
 ## Project Structure
 
@@ -69,35 +65,41 @@ The project is organized as a monorepo with the following packages:
 
 | Package | Description |
 |---------|-------------|
-| [core](/packages/core) | Core AI services, agent implementations, and tooling |
-| [cli](/packages/cli) | Command-line interface for interacting with AI services |
+| [`core`](/packages/core) | Core AI services, agent implementations, and tooling. |
+| [`cli`](/packages/cli) | Command-line interface for interacting with AI services. |
+| [`cli-shared`](/packages/cli-shared) | Shared utilities and types for CLI packages. |
+| [`github`](/packages/github) | GitHub integration, including the GitHub Action. |
+| [`runner`](/packages/runner) | Service for running agents and managing tasks. |
 
 ## Getting Started
 
 ### Prerequisites
 
 - [Bun](https://bun.sh/) (v1.0.0 or higher)
-- [ripgrep](https://github.com/BurntSushi/ripgrep#installation) (required for the search tool to work)
+- [ripgrep](https://github.com/BurntSushi/ripgrep#installation) (required for the file search tool)
 
 ### Development Setup
 
 ```bash
-# Clone and setup
+# Clone the repository
 git clone https://github.com/polka-codes/polka-codes.git
 cd polka-codes
-bun install
 
-# Available scripts
-bun run test      # Run tests across all packages
-bun run check     # Run type checking and linting
-bun run fix       # Fix linting issues
+# Install dependencies
+bun install
 ```
 
-### Configuration
+### Available Scripts
+
+- `bun test`: Run tests across all packages and update snapshots.
+- `bun typecheck`: Run type checking.
+- `bun fix --unsafe`: Fix linting and formatting issues.
+
+## Configuration
 
 A [`.polkacodes.yml`](.polkacodes.yml) configuration file can be used to customize the behavior of polka-codes. An example configuration file is provided in the repository as [`example.polkacodes.yml`](example.polkacodes.yml).
 
-For detailed configuration options, refer to the example file which includes comprehensive comments for each setting.
+For detailed configuration options, refer to the example file, which includes comprehensive comments for each setting.
 
 ## Environment Variables
 
@@ -105,13 +107,13 @@ The following environment variables can be used to configure Polka Codes. Note t
 
 | Variable | Description |
 |----------|-------------|
-| `POLKA_API_PROVIDER` | Specify the default AI service provider |
-| `POLKA_MODEL` | Specify the default AI model to use |
-| `POLKA_API_KEY` | Default API key for the selected provider |
-| `POLKA_BUDGET` | Set the budget limit for AI service usage (defaults to 1000) |
-| `ANTHROPIC_API_KEY` | API key for Anthropic Claude service |
-| `OPENROUTER_API_KEY` | API key for OpenRouter service |
-| `DEEPSEEK_API_KEY` | API key for DeepSeek service |
+| `POLKA_API_PROVIDER` | Specify the default AI service provider. |
+| `POLKA_MODEL` | Specify the default AI model to use. |
+| `POLKA_API_KEY` | Default API key for the selected provider. |
+| `POLKA_BUDGET` | Set the budget limit for AI service usage (defaults to 1000). |
+| `ANTHROPIC_API_KEY` | API key for Anthropic Claude service. |
+| `OPENROUTER_API_KEY` | API key for OpenRouter service. |
+| `DEEPSEEK_API_KEY` | API key for DeepSeek service. |
 
 ## License
 
