@@ -46,6 +46,8 @@ exports[`parseOptions handles multiple config files 1`] = `
       "defaultModel": "claude-3-sonnet",
     },
   },
+  "requestTimeoutSeconds": 10,
+  "retryCount": 5,
   "rules": [
     "rule1",
     "rule2",
