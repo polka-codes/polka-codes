@@ -27,6 +27,14 @@ jobs:
       - name: Install dependencies
         run: bun install
 
+      - name: Cache Bun global cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-cache-${{ hashFiles('**/bun.lockb') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-cache-
+
       - name: Run
         uses: polka-codes/action@master
         with:
