@@ -29,6 +29,12 @@ defaultProvider: "deepseek"
 # Default model to use when not specified for a provider
 defaultModel: "deepseek-chat"
 
+# Number of retries for failed AI requests
+retryCount: 3
+
+# Timeout in seconds for AI requests
+requestTimeoutSeconds: 10
+
 defaultParameters: # Default parameters for the default model
   thinkingBudgetTokens: 8192 # unrecognized parameters will be ignored
 
@@ -65,6 +71,8 @@ agents:
   default: # Default agent configuration
     provider: "deepseek"
     model: "deepseek-chat"
+    retryCount: 5
+    requestTimeoutSeconds: 15
     initialContext: # Parameters for the initial context
       maxFileCount: 200 # Maximum number of files to include in the context
       excludes:

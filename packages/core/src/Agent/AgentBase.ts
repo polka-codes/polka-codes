@@ -155,6 +155,8 @@ export type SharedAgentOptions = {
   agents?: Readonly<AgentInfo[]>
   callback?: TaskEventCallback
   policies: AgentPolicy[]
+  retryCount?: number
+  requestTimeoutSeconds?: number
 }
 
 export type AgentBaseConfig = {
@@ -167,6 +169,8 @@ export type AgentBaseConfig = {
   scripts?: Record<string, string | { command: string; description: string }>
   callback?: TaskEventCallback
   policies: AgentPolicy[]
+  retryCount?: number
+  requestTimeoutSeconds?: number
 }
 
 export type AgentInfo = {
@@ -335,16 +339,31 @@ export abstract class AgentBase {
 
     let currentAssistantMessage = ''
 
-    const retryCount = 5 // TODO: make this configurable
+    const retryCount = this.config.retryCount ?? 5
+    const requestTimeoutSeconds = this.config.requestTimeoutSeconds ?? 10
 
     for (let i = 0; i < retryCount; i++) {
       currentAssistantMessage = ''
+      let timeout: ReturnType<typeof setTimeout> | undefined
 
-      // TODO: use a truncated messages if needed to avoid exceeding the token limit
+      const resetTimeout = () => {
+        if (timeout) {
+          clearTimeout(timeout)
+        }
+        if (requestTimeoutSeconds > 0) {
+          timeout = setTimeout(() => {
+            console.debug(`No data received for ${requestTimeoutSeconds} seconds. Aborting request.`)
+            this.ai.abort()
+          }, requestTimeoutSeconds * 1000)
+        }
+      }
+
       const stream = this.ai.send(this.config.systemPrompt, this.#messages)
 
       try {
+        resetTimeout()
         for await (const chunk of stream) {
+          resetTimeout()
           switch (chunk.type) {
             case 'usage':
               await this.#callback({ kind: TaskEventKind.Usage, agent: this })
@@ -363,6 +382,10 @@ export abstract class AgentBase {
           break
         }
         console.error('Error in stream:', error)
+      } finally {
+        if (timeout) {
+          clearTimeout(timeout)
+        }
       }
 
       if (currentAssistantMessage) {

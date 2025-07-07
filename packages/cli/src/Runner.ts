@@ -139,6 +139,10 @@ export class Runner {
     this.multiAgent = new MultiAgent({
       createAgent: async (name: string): Promise<AgentBase> => {
         const agentName = name.trim().toLowerCase()
+        const agentConfig = this.#options.config.agents?.[name as AgentNameType] ?? this.#options.config.agents?.default ?? {}
+        const retryCount = agentConfig.retryCount ?? this.#options.config.retryCount
+        const requestTimeoutSeconds = agentConfig.requestTimeoutSeconds ?? this.#options.config.requestTimeoutSeconds
+
         const args = {
           ai: getOrCreateService(agentName),
           os: platform,
@@ -148,6 +152,8 @@ export class Runner {
           agents: this.#options.availableAgents ?? allAgents,
           callback,
           policies,
+          retryCount,
+          requestTimeoutSeconds,
         }
         switch (agentName) {
           case coderAgentInfo.name:

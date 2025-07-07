@@ -13,6 +13,8 @@ const agentSchema = providerModelSchema.extend({
       excludes: z.array(z.string()).optional(),
     })
     .optional(),
+  retryCount: z.number().int().min(0).optional(),
+  requestTimeoutSeconds: z.number().int().positive().optional(),
 })
 
 export const configSchema = z
@@ -47,6 +49,8 @@ export const configSchema = z
     defaultParameters: z.record(z.string(), z.any()).optional(),
     maxMessageCount: z.number().int().positive().optional(),
     budget: z.number().positive().optional(),
+    retryCount: z.number().int().min(0).optional(),
+    requestTimeoutSeconds: z.number().int().positive().optional(),
     scripts: z
       .record(
         z.string(),
