@@ -33,5 +33,4 @@ rules: |
   NEVER mock modules
   Prefer ASCII over Unicode
 policies:
-  - KnowledgeManagement
   - TruncateContext
