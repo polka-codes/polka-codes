@@ -6,6 +6,7 @@ exports[`ApiProviderConfig getConfigForCommand with command-specific config 1`] 
   "model": "deepseek-chat",
   "parameters": {},
   "provider": "deepseek",
+  "toolFormat": "polka-codes",
 }
 `;
 
@@ -15,6 +16,7 @@ exports[`ApiProviderConfig getConfigForCommand falls back to default provider 1`
   "model": "claude-3-opus",
   "parameters": {},
   "provider": "anthropic",
+  "toolFormat": "polka-codes",
 }
 `;
 
@@ -24,6 +26,7 @@ exports[`ApiProviderConfig getConfigForAgent with agent-specific config 1`] = `
   "model": "claude-3-sonnet",
   "parameters": {},
   "provider": "anthropic",
+  "toolFormat": "polka-codes",
 }
 `;
 
@@ -33,6 +36,7 @@ exports[`parseOptions prioritizes CLI flags over env vars and config 1`] = `
   "model": "deepseek-chat-32k",
   "parameters": {},
   "provider": "deepseek",
+  "toolFormat": "polka-codes",
 }
 `;
 
@@ -61,5 +65,6 @@ exports[`parseOptions merges environment variables with config 1`] = `
   "model": "deepseek-chat",
   "parameters": {},
   "provider": "deepseek",
+  "toolFormat": "polka-codes",
 }
 `;

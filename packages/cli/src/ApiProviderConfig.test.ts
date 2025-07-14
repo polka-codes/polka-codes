@@ -298,4 +298,74 @@ describe('ApiProviderConfig', () => {
     const agentOnlyGlobalConfig = apiConfigOnlyGlobal.getConfigForAgent('default')
     expect(agentOnlyGlobalConfig?.parameters).toMatchSnapshot('agent default - only global params')
   })
+
+  test('resolves toolFormat correctly for agents and commands', () => {
+    const config: Config = {
+      defaultProvider: AiServiceProvider.Anthropic,
+      providers: {
+        anthropic: {
+          apiKey: 'anthropic-key',
+          defaultModel: 'claude-sonnet-4-20250514',
+        },
+        openrouter: {
+          apiKey: 'openrouter-key',
+          defaultModel: 'anthropic/claude-sonnet-4',
+        },
+      },
+      agents: {
+        // Sonnet model should default to native
+        default: {
+          provider: AiServiceProvider.Anthropic,
+        },
+        // Sonnet model on OpenRouter should default to native
+        coder: {
+          provider: AiServiceProvider.OpenRouter,
+        },
+        // Explicitly set to polka-codes
+        analyzer: {
+          provider: AiServiceProvider.Anthropic,
+          toolFormat: 'polka-codes',
+        },
+        // Non-sonnet model should default to polka-codes
+        architect: {
+          provider: AiServiceProvider.Anthropic,
+          model: 'claude-3-opus-20240229',
+        },
+      },
+      commands: {
+        // Sonnet model should default to native
+        default: {
+          provider: AiServiceProvider.Anthropic,
+        },
+        // Sonnet model on OpenRouter should default to native
+        task: {
+          provider: AiServiceProvider.OpenRouter,
+        },
+        // Explicitly set to polka-codes
+        commit: {
+          provider: AiServiceProvider.Anthropic,
+          toolFormat: 'polka-codes',
+        },
+        // Non-sonnet model should default to polka-codes
+        pr: {
+          provider: AiServiceProvider.OpenRouter,
+          model: 'google/gemini-flash-1.5',
+        },
+      },
+    }
+
+    const apiConfig = new ApiProviderConfig(config)
+
+    // Agent tests
+    expect(apiConfig.getConfigForAgent('default')?.toolFormat).toBe('native')
+    expect(apiConfig.getConfigForAgent('coder')?.toolFormat).toBe('native')
+    expect(apiConfig.getConfigForAgent('analyzer')?.toolFormat).toBe('polka-codes')
+    expect(apiConfig.getConfigForAgent('architect')?.toolFormat).toBe('polka-codes')
+
+    // Command tests
+    expect(apiConfig.getConfigForCommand('default')?.toolFormat).toBe('native')
+    expect(apiConfig.getConfigForCommand('task')?.toolFormat).toBe('native')
+    expect(apiConfig.getConfigForCommand('commit')?.toolFormat).toBe('polka-codes')
+    expect(apiConfig.getConfigForCommand('pr')?.toolFormat).toBe('polka-codes')
+  })
 })

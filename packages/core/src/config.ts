@@ -85,3 +85,5 @@ export enum Policies {
   KnowledgeManagement = 'knowledgemanagement',
   TruncateContext = 'truncatecontext',
 }
+
+export type ToolFormat = 'native' | 'polka-codes'
