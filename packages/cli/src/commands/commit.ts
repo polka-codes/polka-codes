@@ -16,7 +16,7 @@ export const commitCommand = new Command('commit')
     const options = command.parent?.opts() ?? {}
     const { providerConfig, config } = parseOptions(options)
 
-    const { provider, model, apiKey, parameters } = providerConfig.getConfigForCommand('commit') ?? {}
+    const { provider, model, apiKey, parameters, toolFormat } = providerConfig.getConfigForCommand('commit') ?? {}
 
     console.log('Provider:', provider)
     console.log('Model:', model)
@@ -35,6 +35,7 @@ export const commitCommand = new Command('commit')
       model,
       usageMeter: usage,
       parameters,
+      toolFormat: toolFormat ?? 'polka-codes',
     })
 
     try {

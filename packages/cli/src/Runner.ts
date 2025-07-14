@@ -99,7 +99,7 @@ export class Runner {
         }
         throw new Error(`No provider configured for agent: ${agentName}`)
       }
-      const { provider, model, apiKey, parameters } = config
+      const { provider, model, apiKey, parameters, toolFormat } = config
       let service = services[provider]?.[model]
       if (!service) {
         service = createService(provider, {
@@ -108,6 +108,7 @@ export class Runner {
           parameters,
           usageMeter: this.#usageMeter,
           enableCache: options.enableCache,
+          toolFormat,
         })
         services[provider] = { [model]: service }
       }
@@ -143,8 +144,10 @@ export class Runner {
         const retryCount = agentConfig.retryCount ?? this.#options.config.retryCount
         const requestTimeoutSeconds = agentConfig.requestTimeoutSeconds ?? this.#options.config.requestTimeoutSeconds
 
+        const ai = getOrCreateService(agentName)
+
         const args = {
-          ai: getOrCreateService(agentName),
+          ai,
           os: platform,
           customInstructions: rules,
           scripts: options.config.scripts,
@@ -154,6 +157,7 @@ export class Runner {
           policies,
           retryCount,
           requestTimeoutSeconds,
+          toolFormat: ai.options.toolFormat,
         }
         switch (agentName) {
           case coderAgentInfo.name:

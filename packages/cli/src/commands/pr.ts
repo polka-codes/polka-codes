@@ -12,7 +12,7 @@ export const prCommand = new Command('pr')
     const options = command.parent?.opts() ?? {}
     const { providerConfig, config } = parseOptions(options)
 
-    const { provider, model, apiKey, parameters } = providerConfig.getConfigForCommand('pr') ?? {}
+    const { provider, model, apiKey, parameters, toolFormat } = providerConfig.getConfigForCommand('pr') ?? {}
 
     console.log('Provider:', provider)
     console.log('Model:', model)
@@ -73,6 +73,7 @@ export const prCommand = new Command('pr')
         model,
         parameters,
         usageMeter: usage,
+        toolFormat: toolFormat ?? 'polka-codes',
       })
 
       spinner.text = 'Generating pull request details...'

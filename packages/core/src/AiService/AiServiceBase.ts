@@ -1,4 +1,5 @@
 import type { Anthropic } from '@anthropic-ai/sdk'
+import type { ToolFormat } from '../config'
 import type { ModelInfo } from './ModelInfo'
 import type { UsageMeter } from './UsageMeter'
 
@@ -27,6 +28,7 @@ export interface AiServiceOptions {
   usageMeter: UsageMeter
   enableCache?: boolean
   parameters: Record<string, any>
+  toolFormat: ToolFormat
 }
 
 export type MessageParam = Anthropic.Messages.MessageParam

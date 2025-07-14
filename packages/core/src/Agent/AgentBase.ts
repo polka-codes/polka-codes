@@ -1,4 +1,5 @@
 import type { AiServiceBase, MessageParam, UserContent } from '../AiService'
+import type { ToolFormat } from '../config'
 import {
   type FullToolInfo,
   type ToolResponse,
@@ -157,6 +158,7 @@ export type SharedAgentOptions = {
   policies: AgentPolicy[]
   retryCount?: number
   requestTimeoutSeconds?: number
+  toolFormat: ToolFormat
 }
 
 export type AgentBaseConfig = {
