@@ -14,6 +14,7 @@ providers:
     defaultModel: "claude-3-7-sonnet-20250219" # Default model for this provider
     defaultParameters:
       thinkingBudgetTokens: 8192 # enable extended thinking mode, with a budget of 8192 tokens
+    toolFormat: "native" # Sonnet 4 tend to overshooting tool call with polka-codes format
 
   # Local Ollama configuration
   ollama:
@@ -37,6 +38,15 @@ requestTimeoutSeconds: 10
 
 defaultParameters: # Default parameters for the default model
   thinkingBudgetTokens: 8192 # unrecognized parameters will be ignored
+
+# Tool format configuration
+# Determines how tool use is integrated with the AI model.
+# Can be 'native' or 'polka-codes'.
+# - 'native': Uses the model's native tool use format. This may not be supported by all models,
+# but can be more efficient.
+# - 'polka-codes': Uses a custom XML-based format that is compatible with most models,
+# but may consume more tokens.
+toolFormat: "polka-codes"
 
 # Maximum number of messages for AI operations
 # Helps prevent infinite loops and excessive API calls

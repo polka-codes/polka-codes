@@ -101,6 +101,22 @@ A [`.polkacodes.yml`](.polkacodes.yml) configuration file can be used to customi
 
 For detailed configuration options, refer to the example file, which includes comprehensive comments for each setting.
 
+### Tool Format
+
+You can specify the format for tool integration using the `toolFormat` option in your `.polkacodes.yml` file. This setting determines how the AI model interacts with the available tools.
+
+-   **`native`**: This option uses the model's native tool-use capabilities. It can be more efficient and lead to better results, but it is not supported by all models. Check your model provider's documentation for compatibility.
+
+-   **`polka-codes`** (default): This option uses a custom XML-based format for tool calls. It is designed to be compatible with a wide range of models but may consume more tokens and be less performant compared to the `native` format.
+
+You can set the `toolFormat` globally or for specific agents or commands.
+
+Example:
+```yaml
+# .polkacodes.yml
+toolFormat: "native"
+```
+
 ## Environment Variables
 
 The following environment variables can be used to configure Polka Codes. Note that command line options take precedence over environment variables, which in turn take precedence over the configuration file.

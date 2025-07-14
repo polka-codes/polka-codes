@@ -1,9 +1,12 @@
 import { z } from 'zod'
 
+const toolFormatSchema = z.enum(['native', 'polka-codes']).optional()
+
 const providerModelSchema = z.object({
   provider: z.string().optional(),
   model: z.string().optional(),
   parameters: z.record(z.string(), z.any()).optional(),
+  toolFormat: toolFormatSchema,
 })
 
 const agentSchema = providerModelSchema.extend({
@@ -47,6 +50,7 @@ export const configSchema = z
     defaultProvider: z.string().optional(),
     defaultModel: z.string().optional(),
     defaultParameters: z.record(z.string(), z.any()).optional(),
+    toolFormat: toolFormatSchema,
     maxMessageCount: z.number().int().positive().optional(),
     budget: z.number().positive().optional(),
     retryCount: z.number().int().min(0).optional(),
