@@ -42,6 +42,7 @@ export class CodeFixerAgent extends AgentBase {
       options.customInstructions ?? [],
       options.scripts ?? {},
       options.interactive,
+      options.toolFormat === 'native',
     )
 
     super(codeFixerAgentInfo.name, options.ai, {

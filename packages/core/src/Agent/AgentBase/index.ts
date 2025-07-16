@@ -1,5 +1,5 @@
-import type { AiServiceBase, MessageParam, UserContent } from '../AiService'
-import type { ToolFormat } from '../config'
+import type { AiServiceBase, MessageParam, UserContent } from '../../AiService'
+import type { ToolFormat } from '../../config'
 import {
   type FullToolInfo,
   type ToolResponse,
@@ -8,10 +8,10 @@ import {
   type ToolResponseHandOver,
   type ToolResponseInterrupted,
   ToolResponseType,
-} from '../tool'
-import type { ToolProvider } from './../tools'
-import { type AssistantMessageContent, parseAssistantMessage } from './parseAssistantMessage'
-import { agentsPrompt, responsePrompts } from './prompts'
+} from '../../tool'
+import { type AssistantMessageContent, parseAssistantMessage } from '../parseAssistantMessage'
+import { agentsPrompt, responsePrompts } from '../prompts'
+import type { ToolProvider } from './../../tools'
 
 /**
  * Enum representing different kinds of task events
