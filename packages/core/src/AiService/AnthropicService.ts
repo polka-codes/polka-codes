@@ -3,7 +3,8 @@
 import { Anthropic } from '@anthropic-ai/sdk'
 import type { Stream as AnthropicStream } from '@anthropic-ai/sdk/streaming'
 
-import type { FullToolInfo as Tool, ToolParameter } from '../tool'
+import { toolToAnthropicTool } from '../Agent/toolUtils'
+import type { FullToolInfo as Tool } from '../tool'
 import {
   AiServiceBase,
   type AiServiceOptions,
@@ -14,68 +15,6 @@ import {
   type MessageParam,
 } from './AiServiceBase'
 import { type AnthropicModelId, type ModelInfo, anthropicDefaultModelId, anthropicModels } from './ModelInfo'
-
-function paramToJsonSchema(param: ToolParameter): any {
-  let schema: any
-
-  if (param.children?.length) {
-    const properties = param.children.reduce(
-      (acc, child) => {
-        acc[child.name] = paramToJsonSchema(child)
-        return acc
-      },
-      {} as Record<string, any>,
-    )
-
-    const required = param.children.filter((p) => p.required).map((p) => p.name)
-
-    schema = {
-      type: 'object',
-      properties,
-    }
-    if (required.length > 0) {
-      schema.required = required
-    }
-  } else {
-    schema = {
-      type: 'string', // Assuming string for primitive types
-      description: param.description,
-    }
-  }
-
-  if (param.allowMultiple) {
-    return {
-      type: 'array',
-      items: schema,
-      description: param.description,
-    }
-  }
-
-  schema.description = param.description
-  return schema
-}
-
-function toolToAnthropicTool(tool: Tool): Anthropic.Tool {
-  const properties = tool.parameters.reduce(
-    (acc, p) => {
-      acc[p.name] = paramToJsonSchema(p)
-      return acc
-    },
-    {} as Record<string, any>,
-  )
-
-  const required = tool.parameters.filter((p) => p.required).map((p) => p.name)
-
-  return {
-    name: tool.name,
-    description: tool.description,
-    input_schema: {
-      type: 'object',
-      properties,
-      ...(required.length > 0 && { required }),
-    },
-  }
-}
 
 export class AnthropicService extends AiServiceBase {
   #options: AiServiceOptions
