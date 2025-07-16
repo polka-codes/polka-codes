@@ -1,5 +1,6 @@
 import type { Anthropic } from '@anthropic-ai/sdk'
 import type { ToolFormat } from '../config'
+import type { FullToolInfo as Tool } from '../tool'
 import type { ModelInfo } from './ModelInfo'
 import type { UsageMeter } from './UsageMeter'
 
@@ -20,6 +21,17 @@ export interface ApiStreamUsageChunk extends Partial<ApiUsage> {
 }
 
 export type ApiStream = AsyncGenerator<ApiStreamChunk>
+
+export interface ApiStreamToolCallChunk {
+  type: 'tool_call'
+  id: string
+  name: string
+  input: any
+}
+
+export type ApiStreamWithToolChunk = ApiStreamChunk | ApiStreamToolCallChunk
+
+export type ApiStreamWithTool = AsyncGenerator<ApiStreamWithToolChunk>
 
 export interface AiServiceOptions {
   model?: string
@@ -59,6 +71,8 @@ export abstract class AiServiceBase {
 
   abstract sendImpl(systemPrompt: string, messages: MessageParam[], signal: AbortSignal): ApiStream
 
+  sendImplWithTool?(systemPrompt: string, messages: MessageParam[], tools: Tool[], signal: AbortSignal): ApiStreamWithTool
+
   abort() {
     this.#abortController?.abort()
   }
@@ -70,6 +84,29 @@ export abstract class AiServiceBase {
 
     this.#abortController = new AbortController()
     const stream = this.sendImpl(systemPrompt, messages, this.#abortController.signal)
+
+    for await (const chunk of stream) {
+      switch (chunk.type) {
+        case 'usage':
+          this.usageMeter.addUsage(chunk, this.model)
+          break
+      }
+      yield chunk
+    }
+  }
+
+  async *sendWithTool(systemPrompt: string, messages: MessageParam[], tools: Tool[]): ApiStreamWithTool {
+    this.usageMeter.checkLimit()
+
+    this.usageMeter.incrementMessageCount()
+
+    this.#abortController = new AbortController()
+
+    if (!this.sendImplWithTool) {
+      throw new Error('This service does not support native tool use.')
+    }
+
+    const stream = this.sendImplWithTool(systemPrompt, messages, tools, this.#abortController.signal)
 
     for await (const chunk of stream) {
       switch (chunk.type) {

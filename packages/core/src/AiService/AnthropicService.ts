@@ -3,8 +3,79 @@
 import { Anthropic } from '@anthropic-ai/sdk'
 import type { Stream as AnthropicStream } from '@anthropic-ai/sdk/streaming'
 
-import { AiServiceBase, type AiServiceOptions, type ApiStream, type MessageParam } from './AiServiceBase'
+import type { FullToolInfo as Tool, ToolParameter } from '../tool'
+import {
+  AiServiceBase,
+  type AiServiceOptions,
+  type ApiStream,
+  type ApiStreamChunk,
+  type ApiStreamWithTool,
+  type ApiStreamWithToolChunk,
+  type MessageParam,
+} from './AiServiceBase'
 import { type AnthropicModelId, type ModelInfo, anthropicDefaultModelId, anthropicModels } from './ModelInfo'
+
+function paramToJsonSchema(param: ToolParameter): any {
+  let schema: any
+
+  if (param.children?.length) {
+    const properties = param.children.reduce(
+      (acc, child) => {
+        acc[child.name] = paramToJsonSchema(child)
+        return acc
+      },
+      {} as Record<string, any>,
+    )
+
+    const required = param.children.filter((p) => p.required).map((p) => p.name)
+
+    schema = {
+      type: 'object',
+      properties,
+    }
+    if (required.length > 0) {
+      schema.required = required
+    }
+  } else {
+    schema = {
+      type: 'string', // Assuming string for primitive types
+      description: param.description,
+    }
+  }
+
+  if (param.allowMultiple) {
+    return {
+      type: 'array',
+      items: schema,
+      description: param.description,
+    }
+  }
+
+  schema.description = param.description
+  return schema
+}
+
+function toolToAnthropicTool(tool: Tool): Anthropic.Tool {
+  const properties = tool.parameters.reduce(
+    (acc, p) => {
+      acc[p.name] = paramToJsonSchema(p)
+      return acc
+    },
+    {} as Record<string, any>,
+  )
+
+  const required = tool.parameters.filter((p) => p.required).map((p) => p.name)
+
+  return {
+    name: tool.name,
+    description: tool.description,
+    input_schema: {
+      type: 'object',
+      properties,
+      ...(required.length > 0 && { required }),
+    },
+  }
+}
 
 export class AnthropicService extends AiServiceBase {
   #options: AiServiceOptions
@@ -30,10 +101,35 @@ export class AnthropicService extends AiServiceBase {
   }
 
   override async *sendImpl(systemPrompt: string, messages: MessageParam[], signal: AbortSignal): ApiStream {
-    let stream: AnthropicStream<Anthropic.Messages.RawMessageStreamEvent>
-    const modelId = this.model.id
+    yield* this._streamImpl(systemPrompt, messages, undefined, signal)
+  }
 
-    const cacheControl = this.#options.enableCache ? { type: 'ephemeral' as const } : undefined
+  override async *sendImplWithTool(systemPrompt: string, messages: MessageParam[], tools: Tool[], signal: AbortSignal): ApiStreamWithTool {
+    yield* this._streamImpl(systemPrompt, messages, tools, signal)
+  }
+
+  private _streamImpl(
+    systemPrompt: string,
+    messages: MessageParam[],
+    tools: undefined,
+    signal: AbortSignal,
+  ): AsyncGenerator<ApiStreamChunk, void, unknown>
+  private _streamImpl(
+    systemPrompt: string,
+    messages: MessageParam[],
+    tools: Tool[],
+    signal: AbortSignal,
+  ): AsyncGenerator<ApiStreamWithToolChunk, void, unknown>
+  private async *_streamImpl(
+    systemPrompt: string,
+    messages: MessageParam[],
+    tools: Tool[] | undefined,
+    signal: AbortSignal,
+  ): AsyncGenerator<ApiStreamWithToolChunk, void, unknown> {
+    const modelId = this.model.id
+    const anthropicTools = tools?.map(toolToAnthropicTool)
+
+    const cacheControl = this.#options.enableCache ? ({ type: 'ephemeral' as const } as const) : undefined
     let temperature: number | undefined = 0
     let thinkingBudgetTokens = 0
     if (this.model.info.reasoning) {
@@ -41,6 +137,22 @@ export class AnthropicService extends AiServiceBase {
     }
     if (thinkingBudgetTokens > 0) {
       temperature = undefined
+    }
+
+    const body: Anthropic.Messages.MessageCreateParams = {
+      model: modelId,
+      max_tokens: this.model.info.maxTokens || 8192,
+      temperature,
+      system: [{ type: 'text', text: systemPrompt }],
+      messages,
+      stream: true,
+      ...(tools && {
+        tools: anthropicTools,
+        tool_choice: { type: 'auto' },
+      }),
+      ...(thinkingBudgetTokens > 0 && {
+        thinking: { type: 'enabled', budget_tokens: thinkingBudgetTokens },
+      }),
     }
 
     switch (modelId) {
@@ -51,9 +163,6 @@ export class AnthropicService extends AiServiceBase {
       case 'claude-3-5-haiku-20241022':
       case 'claude-3-opus-20240229':
       case 'claude-3-haiku-20240307': {
-        /*
-				The latest message will be the new user message, one before will be the assistant message from a previous request, and the user message before that will be a previously cached user message. So we need to mark the latest user message as ephemeral to cache it for the next request, and mark the second to last user message as ephemeral to let the server know the last message to retrieve from the cache for the current request..
-				*/
         const userMsgIndices = messages.reduce((acc, msg, index) => {
           if (msg.role === 'user') {
             acc.push(index)
@@ -62,70 +171,56 @@ export class AnthropicService extends AiServiceBase {
         }, [] as number[])
         const lastUserMsgIndex = userMsgIndices[userMsgIndices.length - 1] ?? -1
         const secondLastMsgUserIndex = userMsgIndices[userMsgIndices.length - 2] ?? -1
-        stream = await this.#client.messages.create(
+
+        body.system = [
           {
-            model: modelId,
-            max_tokens: this.model.info.maxTokens || 8192,
-            thinking: thinkingBudgetTokens ? { type: 'enabled', budget_tokens: thinkingBudgetTokens } : undefined,
-            temperature,
-            system: [
-              {
-                text: systemPrompt,
-                type: 'text',
-                cache_control: cacheControl,
-              },
-            ], // setting cache breakpoint for system prompt so new tasks can reuse it
-            messages: messages.map((message, index) => {
-              if (index === lastUserMsgIndex || index === secondLastMsgUserIndex) {
-                return {
-                  ...message,
-                  content:
-                    typeof message.content === 'string'
-                      ? [
-                          {
-                            type: 'text',
-                            text: message.content,
-                            cache_control: cacheControl,
-                          },
-                        ]
-                      : message.content.map((content, contentIndex) =>
-                          contentIndex === message.content.length - 1
-                            ? {
-                                ...content,
-                                cache_control: cacheControl,
-                              }
-                            : content,
-                        ),
-                }
-              }
-              return message
-            }),
-            stream: true,
+            text: systemPrompt,
+            type: 'text',
+            cache_control: cacheControl,
           },
-          { signal },
-        )
+        ]
+        body.messages = messages.map((message, index) => {
+          if (index === lastUserMsgIndex || index === secondLastMsgUserIndex) {
+            return {
+              ...message,
+              content:
+                typeof message.content === 'string'
+                  ? [
+                      {
+                        type: 'text',
+                        text: message.content,
+                        cache_control: cacheControl,
+                      },
+                    ]
+                  : message.content.map((content, contentIndex) =>
+                      contentIndex === message.content.length - 1
+                        ? {
+                            ...content,
+                            cache_control: cacheControl,
+                          }
+                        : content,
+                    ),
+            }
+          }
+          return message
+        })
         break
       }
       default: {
-        stream = await this.#client.messages.create(
-          {
-            model: modelId,
-            max_tokens: this.model.info.maxTokens || 8192,
-            temperature: 0,
-            system: [{ text: systemPrompt, type: 'text' }],
-            messages,
-            stream: true,
-          },
-          { signal },
-        )
         break
       }
     }
 
+    const stream: AnthropicStream<Anthropic.Messages.RawMessageStreamEvent> = await this.#client.messages.create(
+      body as Anthropic.Messages.MessageCreateParamsStreaming,
+      { signal },
+    )
+
+    const toolCallsByIndex: Record<number, { id: string; name: string; input: string }> = {}
+
     for await (const chunk of stream) {
       switch (chunk.type) {
         case 'message_start': {
-          // tells us cache reads/writes/input/output
           const usage = chunk.message.usage
           yield {
             type: 'usage',
@@ -137,8 +232,6 @@ export class AnthropicService extends AiServiceBase {
           break
         }
         case 'message_delta': {
-          // tells us stop_reason, stop_sequence, and output tokens along the way and at the end of the message
-
           yield {
             type: 'usage',
             inputTokens: 0,
@@ -151,7 +244,6 @@ export class AnthropicService extends AiServiceBase {
         case 'content_block_start':
           switch (chunk.content_block.type) {
             case 'text':
-              // we may receive multiple text blocks, in which case just insert a line break between them
               if (chunk.index > 0) {
                 yield {
                   type: 'text',
@@ -163,6 +255,15 @@ export class AnthropicService extends AiServiceBase {
                 text: chunk.content_block.text,
               }
               break
+            case 'tool_use':
+              if (tools) {
+                toolCallsByIndex[chunk.index] = {
+                  id: chunk.content_block.id,
+                  name: chunk.content_block.name,
+                  input: '',
+                }
+              }
+              break
             case 'thinking':
               yield {
                 type: 'reasoning',
@@ -172,7 +273,7 @@ export class AnthropicService extends AiServiceBase {
             case 'redacted_thinking':
               yield {
                 type: 'reasoning',
-                text: '[Redacted by providered]',
+                text: '[Redacted by provider]',
               }
               break
           }
@@ -185,6 +286,15 @@ export class AnthropicService extends AiServiceBase {
                 text: chunk.delta.text,
               }
               break
+            case 'input_json_delta': {
+              if (tools) {
+                const toolCall = toolCallsByIndex[chunk.index]
+                if (toolCall) {
+                  toolCall.input += chunk.delta.partial_json
+                }
+              }
+              break
+            }
             case 'thinking_delta':
               yield {
                 type: 'reasoning',
@@ -193,8 +303,25 @@ export class AnthropicService extends AiServiceBase {
               break
           }
           break
-        case 'content_block_stop':
+        case 'content_block_stop': {
+          if (tools) {
+            const toolCall = toolCallsByIndex[chunk.index]
+            if (toolCall) {
+              try {
+                yield {
+                  type: 'tool_call',
+                  id: toolCall.id,
+                  name: toolCall.name,
+                  input: JSON.parse(toolCall.input),
+                }
+              } catch (error) {
+                console.error(`[AnthropicService] Error parsing tool call input: ${toolCall.input}`, error)
+              }
+              delete toolCallsByIndex[chunk.index]
+            }
+          }
           break
+        }
       }
     }
   }
