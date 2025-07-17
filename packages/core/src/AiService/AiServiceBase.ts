@@ -22,7 +22,7 @@ export interface ApiStreamUsageChunk extends Partial<ApiUsage> {
 
 export type ApiStream = AsyncGenerator<ApiStreamChunk>
 
-export interface ApiStreamToolCallChunk {
+export type ApiStreamToolCallChunk = {
   type: 'tool_call'
   id: string
   name: string
