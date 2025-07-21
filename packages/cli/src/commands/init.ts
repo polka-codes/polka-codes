@@ -16,6 +16,7 @@ import { ZodError } from 'zod'
 import { ApiProviderConfig } from '../ApiProviderConfig'
 import { Runner } from '../Runner'
 import { type ProviderConfig, configPrompt } from '../configPrompt'
+import type { AiProvider } from '../getModel'
 import { parseOptions } from '../options'
 
 export const initCommand = new Command('init')
@@ -81,16 +82,17 @@ initCommand.action(async (options, command: Command) => {
     }
 
     const { providerConfig, verbose, maxMessageCount, budget } = parseOptions(cmdOptions)
-    let { provider, model, apiKey, parameters } = providerConfig.getConfigForCommand('init') ?? {}
+    let { provider: maybeProvider, model, apiKey, parameters } = providerConfig.getConfigForCommand('init') ?? {}
 
     // Get provider configuration
     let newConfig: ProviderConfig | undefined
-    if (!provider) {
-      newConfig = await configPrompt({ provider, model, apiKey })
-      provider = newConfig.provider
+    if (!maybeProvider) {
+      newConfig = await configPrompt({})
+      maybeProvider = newConfig.provider
       model = newConfig.model
       apiKey = newConfig.apiKey
     }
+    const provider = maybeProvider as AiProvider
 
     // Handle API key storage if provided
     if (newConfig?.apiKey && !gloabl) {

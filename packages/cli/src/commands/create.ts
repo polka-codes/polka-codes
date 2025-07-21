@@ -13,6 +13,7 @@ import { architectAgentInfo, coderAgentInfo, createNewProject } from '@polka-cod
 import { ApiProviderConfig } from '../ApiProviderConfig'
 import { Runner } from '../Runner'
 import { configPrompt } from '../configPrompt'
+import type { AiProvider } from '../getModel'
 import { parseOptions } from '../options'
 
 const askForPath = async (projectName: string) => {
@@ -54,17 +55,18 @@ export const createCommand = new Command('create')
   .argument('[name]', 'Project name')
   .action(async (name: string | undefined, options: any, command: Command) => {
     const cmdOptions = command.parent?.opts() ?? {}
-    const { config, providerConfig, maxMessageCount, verbose, budget } = parseOptions(cmdOptions)
+    const { providerConfig, maxMessageCount, verbose, budget } = parseOptions(cmdOptions)
 
-    let { provider, model, apiKey } = providerConfig.getConfigForAgent('architect') ?? {}
+    let { provider: maybeProvider, model, apiKey } = providerConfig.getConfigForAgent('architect') ?? {}
 
-    if (!provider) {
+    if (!maybeProvider) {
       // new user? ask for config
-      const newConfig = await configPrompt({ provider, model, apiKey })
-      provider = newConfig.provider
+      const newConfig = await configPrompt({})
+      maybeProvider = newConfig.provider
       model = newConfig.model
       apiKey = newConfig.apiKey
     }
+    const provider = maybeProvider as AiProvider
 
     let projectName = name
 

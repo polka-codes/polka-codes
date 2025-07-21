@@ -28,10 +28,10 @@ export const textBlockParamSchema = z.object({
 
 export const imageBlockParamSchema = z.object({
   type: z.literal('image'),
+  mediaType: z.string().optional(),
   source: z.union([
     z.object({
       data: z.string(),
-      media_type: z.string(),
       type: z.literal('base64'),
     }),
     z.object({
@@ -41,7 +41,26 @@ export const imageBlockParamSchema = z.object({
   ]),
 })
 
-export const userContentSchema = z.union([z.string(), z.array(z.union([textBlockParamSchema, imageBlockParamSchema]))])
+export const fileBlockParamSchema = z.object({
+  type: z.literal('file'),
+  filename: z.string().optional(),
+  mediaType: z.string().optional(),
+  source: z.union([
+    z.object({
+      data: z.string(),
+      type: z.literal('base64'),
+    }),
+    z.object({
+      type: z.literal('url'),
+      url: z.string(),
+    }),
+  ]),
+})
+
+export const userContentSchema = z.union([
+  z.string(),
+  z.array(z.union([textBlockParamSchema, imageBlockParamSchema, fileBlockParamSchema])),
+])
 
 export type UserContent = z.infer<typeof userContentSchema>
 

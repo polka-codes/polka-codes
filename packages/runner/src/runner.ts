@@ -190,11 +190,55 @@ export class Runner {
 
       const respMsg = await fn()
 
-      if (typeof respMsg === 'string' || Array.isArray(respMsg)) {
+      if (typeof respMsg === 'string') {
         responses.push({
           index: request.index,
           tool: request.tool,
           response: respMsg,
+        })
+      } else if (Array.isArray(respMsg)) {
+        responses.push({
+          index: request.index,
+          tool: request.tool,
+          response: respMsg.map((part) => {
+            const toSource = (data: string | Uint8Array | ArrayBuffer | Buffer | URL) => {
+              if (typeof data === 'string') {
+                return { type: 'base64', data } as const
+              }
+              if (data instanceof URL) {
+                return { type: 'url', url: data.toString() } as const
+              }
+              if (data instanceof Buffer) {
+                return { type: 'base64', data: data.toString('base64') } as const
+              }
+              if (data instanceof Uint8Array) {
+                return { type: 'base64', data: Buffer.from(data).toString('base64') } as const
+              }
+              return { type: 'base64', data: Buffer.from(data).toString('base64') } as const
+            }
+
+            switch (part.type) {
+              case 'text':
+                return {
+                  type: 'text',
+                  text: part.text,
+                }
+              case 'image':
+                part.image
+                return {
+                  type: 'image',
+                  mediaType: part.mediaType,
+                  source: toSource(part.image),
+                }
+              case 'file':
+                return {
+                  type: 'file',
+                  mediaType: part.mediaType,
+                  filename: part.filename,
+                  source: toSource(part.data),
+                }
+            }
+          }),
         })
       } else if (respMsg.type === 'exit') {
         this.wsManager.sendMessage({

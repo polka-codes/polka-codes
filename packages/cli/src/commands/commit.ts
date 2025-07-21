@@ -1,10 +1,20 @@
-import { execSync, spawnSync } from 'node:child_process'
+import { execSync } from 'node:child_process'
 import { confirm } from '@inquirer/prompts'
 import { Command } from 'commander'
 import ora from 'ora'
+import { z } from 'zod/v3'
 
-import { UsageMeter, createService, generateGitCommitMessage } from '@polka-codes/core'
+import { UsageMeter, generateGitCommitMessage } from '@polka-codes/core'
+import { getModel } from '../getModel'
 import { parseOptions } from '../options'
+
+const prompt = `
+You are an advanced assistant specialized in creating concise and accurate Git commit messages. When you receive:
+- A Git diff inside the <tool_diff> tag.
+- Additional user-supplied context inside the <tool_context> tag (if any).
+
+You will produce a single commit message. The commit message must accurately reflect the changes shown in the diff and should be clear, descriptive, and devoid of unnecessary or repeated information. If a context is provided, it MUST be incorporated into the commit message.
+`
 
 export const commitCommand = new Command('commit')
   .description('Create a commit with AI-generated message')
@@ -14,29 +24,19 @@ export const commitCommand = new Command('commit')
     const spinner = ora('Gathering information...').start()
 
     const options = command.parent?.opts() ?? {}
-    const { providerConfig, config } = parseOptions(options)
+    const { providerConfig } = parseOptions(options)
 
-    const { provider, model, apiKey, parameters, toolFormat } = providerConfig.getConfigForCommand('commit') ?? {}
+    const { provider, model, apiKey } = providerConfig.getConfigForCommand('commit') ?? {}
 
     console.log('Provider:', provider)
     console.log('Model:', model)
 
-    if (!provider) {
+    if (!provider || !model) {
       console.error('Error: No provider specified. Please run "pokla config" to configure your AI provider.')
       process.exit(1)
     }
 
-    const usage = new UsageMeter({
-      prices: config.prices,
-    })
-
-    const ai = createService(provider, {
-      apiKey,
-      model,
-      usageMeter: usage,
-      parameters,
-      toolFormat: toolFormat ?? 'polka-codes',
-    })
+    const usage = new UsageMeter()
 
     try {
       // Check if there are any staged files
@@ -70,22 +70,32 @@ export const commitCommand = new Command('commit')
 
       spinner.text = 'Generating commit message...'
 
-      // Generate commit message
-      const result = await generateGitCommitMessage(ai, { diff, context: message })
+      const llm = getModel({
+        provider,
+        model,
+        apiKey,
+      })
+
+      const schema = z.object({
+        reasoning: z.string().describe('Reasoning if any'),
+        message: z.string().describe('The generated commit message'),
+      })
+
+      const commitMessage = await generateGitCommitMessage(llm, { diff, context: message }, usage)
 
       usage.printUsage()
 
       spinner.succeed('Commit message generated')
 
-      console.log(`\nCommit message:\n${result.response}`)
+      console.log(`\nCommit message:\n${commitMessage}`)
 
       // Make the commit
-      try {
-        spawnSync('git', ['commit', '-m', result.response], { stdio: 'inherit' })
-      } catch {
-        console.error('Error: Commit failed')
-        process.exit(1)
-      }
+      // try {
+      //   spawnSync('git', ['commit', '-m', commitMessage], { stdio: 'inherit' })
+      // } catch {
+      //   console.error('Error: Commit failed')
+      //   process.exit(1)
+      // }
     } catch (error) {
       console.error('Error:', error)
       process.exit(1)

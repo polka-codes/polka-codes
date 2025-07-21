@@ -7,12 +7,10 @@ import {
   type AgentInfo,
   type AgentNameType,
   type AgentPolicy,
-  type AiServiceBase,
   AnalyzerAgent,
   ArchitectAgent,
   CodeFixerAgent,
   CoderAgent,
-  KnowledgeManagementPolicy,
   MultiAgent,
   Policies,
   TruncateContextPolicy,
@@ -22,11 +20,14 @@ import {
   architectAgentInfo,
   codeFixerAgentInfo,
   coderAgentInfo,
-  createService,
 } from '@polka-codes/core'
 
+import type { LanguageModelV2 } from '@ai-sdk/provider'
 import { type Config, type ProviderOptions, getProvider, listFiles, printEvent } from '@polka-codes/cli-shared'
+import { merge } from 'lodash'
 import type { ApiProviderConfig } from './ApiProviderConfig'
+import { getModel } from './getModel'
+import prices from './prices'
 
 export type RunnerOptions = {
   providerConfig: ApiProviderConfig
@@ -51,10 +52,10 @@ export class Runner {
   /** Initialize core components including usage tracking and agent service provisioning */
   constructor(options: RunnerOptions) {
     this.#options = options
-    this.#usageMeter = new UsageMeter({
-      prices: options.config.prices,
-      maxCost: options.budget,
-      maxMessageCount: options.maxMessageCount,
+
+    this.#usageMeter = new UsageMeter(merge(prices, options.config.prices ?? {}), {
+      maxMessages: options.config.maxMessageCount ?? 0,
+      maxCost: options.config.budget ?? 0,
     })
 
     let rules = options.config.rules
@@ -86,31 +87,28 @@ export class Runner {
 
     const platform = os.platform()
 
-    const services: Record<string, Record<string, AiServiceBase>> = {}
+    const llms: Record<string, Record<string, LanguageModelV2>> = {}
 
     // Cache AI services by provider+model to reuse connections and track costs
-    const getOrCreateService = (agentName: string) => {
+    const getOrCreateLlm = (agentName: string) => {
       const config = this.#options.providerConfig.getConfigForAgent(agentName)
       if (!config) {
         // return any existing service if found
-        const service = Object.values(Object.values(services)[0] ?? {})[0]
+        const service = Object.values(Object.values(llms)[0] ?? {})[0]
         if (service) {
           return service
         }
         throw new Error(`No provider configured for agent: ${agentName}`)
       }
       const { provider, model, apiKey, parameters, toolFormat } = config
-      let service = services[provider]?.[model]
+      let service = llms[provider]?.[model]
       if (!service) {
-        service = createService(provider, {
+        service = getModel({
+          provider,
           apiKey,
           model,
-          parameters,
-          usageMeter: this.#usageMeter,
-          enableCache: options.enableCache,
-          toolFormat,
         })
-        services[provider] = { [model]: service }
+        llms[provider] = { [model]: service }
       }
       return service
     }
@@ -122,11 +120,6 @@ export class Runner {
     const policies: AgentPolicy[] = []
     for (const policy of options.config.policies ?? []) {
       switch (policy.trim().toLowerCase()) {
-        case Policies.KnowledgeManagement:
-          policies.push(KnowledgeManagementPolicy)
-          this.#hasKnowledgeManagementPolicy = true
-          console.log('KnowledgeManagementPolicy enabled')
-          break
         case Policies.TruncateContext:
           policies.push(TruncateContextPolicy)
           console.log('TruncateContextPolicy enabled')
@@ -144,7 +137,8 @@ export class Runner {
         const retryCount = agentConfig.retryCount ?? this.#options.config.retryCount
         const requestTimeoutSeconds = agentConfig.requestTimeoutSeconds ?? this.#options.config.requestTimeoutSeconds
 
-        const ai = getOrCreateService(agentName)
+        const ai = getOrCreateLlm(agentName)
+        const config = this.#options.providerConfig.getConfigForAgent(agentName)
 
         const args = {
           ai,
@@ -157,7 +151,9 @@ export class Runner {
           policies,
           retryCount,
           requestTimeoutSeconds,
-          toolFormat: ai.options.toolFormat,
+          toolFormat: this.#options.config.toolFormat ?? 'polka-codes',
+          parameters: config?.parameters,
+          usageMeter: this.#usageMeter,
         }
         switch (agentName) {
           case coderAgentInfo.name:

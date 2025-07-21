@@ -4,10 +4,10 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { AiServiceProvider } from '@polka-codes/core'
 import { Command } from 'commander'
 
 import { ApiProviderConfig } from './ApiProviderConfig'
+import { AiProvider } from './getModel'
 import { addSharedOptions, parseOptions } from './options'
 
 describe('ApiProviderConfig', () => {
@@ -23,16 +23,16 @@ describe('ApiProviderConfig', () => {
 
   test('getConfigForCommand with command-specific config', () => {
     const config = new ApiProviderConfig({
-      defaultProvider: AiServiceProvider.Anthropic,
+      defaultProvider: AiProvider.Anthropic,
       providers: {
-        [AiServiceProvider.Anthropic]: {
+        [AiProvider.Anthropic]: {
           apiKey: 'test-key',
           defaultModel: 'claude-3-opus',
         },
       },
       commands: {
         chat: {
-          provider: AiServiceProvider.DeepSeek,
+          provider: AiProvider.DeepSeek,
           model: 'deepseek-chat',
         },
       },
@@ -43,9 +43,9 @@ describe('ApiProviderConfig', () => {
 
   test('getConfigForCommand falls back to default provider', () => {
     const config = new ApiProviderConfig({
-      defaultProvider: AiServiceProvider.Anthropic,
+      defaultProvider: AiProvider.Anthropic,
       providers: {
-        [AiServiceProvider.Anthropic]: {
+        [AiProvider.Anthropic]: {
           apiKey: 'test-key',
           defaultModel: 'claude-3-opus',
         },
@@ -57,9 +57,9 @@ describe('ApiProviderConfig', () => {
 
   test('getConfigForAgent with agent-specific config', () => {
     const config = new ApiProviderConfig({
-      defaultProvider: AiServiceProvider.Anthropic,
+      defaultProvider: AiProvider.Anthropic,
       providers: {
-        [AiServiceProvider.Anthropic]: {
+        [AiProvider.Anthropic]: {
           apiKey: 'test-key',
           defaultModel: 'claude-3-opus',
         },
@@ -155,7 +155,7 @@ rules:
 
   test('merges environment variables with config', () => {
     const env = {
-      POLKA_API_PROVIDER: AiServiceProvider.DeepSeek,
+      POLKA_API_PROVIDER: AiProvider.DeepSeek,
       POLKA_MODEL: 'deepseek-chat',
       POLKA_API_KEY: 'cli-key',
     }

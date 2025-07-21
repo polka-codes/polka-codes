@@ -52,8 +52,8 @@ export class UsageMeter {
 
     this.#modelInfos = infos
     this.#cacheOn = opts.cacheEnabledDefault ?? false
-    this.#maxMessages = opts.maxMessages ?? 0
-    this.#maxCost = opts.maxCost ?? 0
+    this.#maxMessages = opts.maxMessages ?? 1000
+    this.#maxCost = opts.maxCost ?? 100
   }
 
   addUsage(

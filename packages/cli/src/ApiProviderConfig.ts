@@ -1,5 +1,6 @@
 import type { Config } from '@polka-codes/cli-shared'
-import { type AiServiceProvider, type ToolFormat, defaultModels } from '@polka-codes/core'
+import type { ToolFormat } from '@polka-codes/core'
+import { AiProvider } from './getModel'
 
 const isSonnet4 = (model: string) => model.includes('claude-sonnet-4')
 
@@ -13,23 +14,31 @@ const getToolFormat = (model: string, toolFormat?: ToolFormat) => {
   return 'polka-codes'
 }
 
+const defaultModels = {
+  [AiProvider.Anthropic]: 'claude-sonnet-4-20250514',
+  [AiProvider.Ollama]: 'deepseek-r1:32b',
+  [AiProvider.DeepSeek]: 'deepseek-chat',
+  [AiProvider.OpenRouter]: 'google/gemini-2.5-pro',
+  [AiProvider.OpenAI]: 'gpt-4.1',
+}
+
 export class ApiProviderConfig {
-  readonly defaultProvider?: AiServiceProvider
-  readonly providers: Readonly<Partial<Record<AiServiceProvider, { apiKey: string; defaultModel?: string; defaultParameters: any }>>>
-  readonly commands?: Partial<Record<string, { provider?: AiServiceProvider; model?: string; parameters: any; toolFormat?: ToolFormat }>>
-  readonly agents?: Partial<Record<string, { provider?: AiServiceProvider; model?: string; parameters: any; toolFormat?: ToolFormat }>>
+  readonly defaultProvider?: AiProvider
+  readonly providers: Readonly<Partial<Record<AiProvider, { apiKey: string; defaultModel?: string; defaultParameters: any }>>>
+  readonly commands?: Partial<Record<string, { provider?: AiProvider; model?: string; parameters: any; toolFormat?: ToolFormat }>>
+  readonly agents?: Partial<Record<string, { provider?: AiProvider; model?: string; parameters: any; toolFormat?: ToolFormat }>>
   readonly defaultParameters: any
   readonly toolFormat?: ToolFormat
 
   constructor(config: Config) {
-    this.defaultProvider = config.defaultProvider as AiServiceProvider | undefined
+    this.defaultProvider = config.defaultProvider as AiProvider | undefined
     this.defaultParameters = config.defaultParameters ?? {}
     this.providers = config.providers ?? {}
     this.commands = config.commands as Partial<
-      Record<string, { provider?: AiServiceProvider; model?: string; parameters: any; toolFormat?: ToolFormat }>
+      Record<string, { provider?: AiProvider; model?: string; parameters: any; toolFormat?: ToolFormat }>
     >
     this.agents = config.agents as Partial<
-      Record<string, { provider?: AiServiceProvider; model?: string; parameters: any; toolFormat?: ToolFormat }>
+      Record<string, { provider?: AiProvider; model?: string; parameters: any; toolFormat?: ToolFormat }>
     >
     this.toolFormat = config.toolFormat
   }

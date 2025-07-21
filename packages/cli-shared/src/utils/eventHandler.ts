@@ -24,20 +24,23 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter) => {
             console.log(userMessage)
           } else {
             for (const content of userMessage) {
-              if (content.type === 'text') {
-                console.log(content.text)
-              } else if (content.type === 'image') {
-                if (content.source.type === 'base64') {
-                  console.log(chalk.yellow(`[Image content: ${content.source.media_type}]`))
-                } else if (content.source.type === 'url') {
-                  console.log(chalk.yellow(`[Image content from URL: ${content.source.url}]`))
-                } else {
-                  console.log(chalk.red('[Unknown image source type]'))
-                  console.log(content.source)
-                }
-              } else {
-                console.log(chalk.red('[Unknown content type]'))
-                console.log(content)
+              switch (content.type) {
+                case 'text':
+                  console.log(content.text)
+                  break
+                case 'image':
+                  if (content.image instanceof URL) {
+                    console.log(chalk.yellow(`[Image content from URL: ${content.image}]`))
+                  } else {
+                    console.log(chalk.yellow(`[Image content: ${content.mediaType}]`))
+                  }
+                  break
+                case 'file':
+                  console.log(chalk.yellow(`[File name: ${content.filename}, type: ${content.mediaType}]`))
+                  break
+                default:
+                  console.log(chalk.red('[Unknown content type]'))
+                  console.log(content)
               }
             }
           }

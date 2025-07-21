@@ -374,12 +374,16 @@ export abstract class AgentBase {
       // TODO: this is racy. we should block concurrent requests
       this.#abortController = new AbortController()
 
+      console.log('Messages:', this.#messages)
+      console.log('llm:', this.ai)
+
       try {
         const stream = streamText({
           model: this.ai,
           messages: this.#messages,
           system: this.config.systemPrompt,
           onChunk: async ({ chunk }) => {
+            console.log('Chunk:', chunk)
             resetTimeout()
             switch (chunk.type) {
               case 'text':
@@ -391,10 +395,7 @@ export abstract class AgentBase {
                 break
             }
           },
-          onFinish: async (evt) => {
-            evt.totalUsage
-            evt.providerMetadata
-          },
+          onFinish: this.config.usageMeter.onFinishHandler(this.ai),
           onAbort: async () => {
             console.log('aborted')
           },
@@ -405,6 +406,8 @@ export abstract class AgentBase {
         })
 
         const resp = await stream.response
+        console.log('Response:', resp)
+        console.log('text:', await stream.text)
       } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') {
           break
@@ -434,6 +437,8 @@ export abstract class AgentBase {
       // something went wrong
       throw new Error('No assistant message received')
     }
+
+    console.log('Assistant message:', currentAssistantMessage)
 
     this.#messages.push({
       role: 'assistant',
