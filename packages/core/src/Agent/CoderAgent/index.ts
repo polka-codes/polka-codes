@@ -1,3 +1,4 @@
+import { UsageMeter } from '../../UsageMeter'
 import { getAvailableTools } from '../../getAvailableTools'
 import { PermissionLevel, type ToolResponse, ToolResponseType } from '../../tool'
 import { allTools, attemptCompletion } from '../../tools'
@@ -45,6 +46,8 @@ export class CoderAgent extends AgentBase {
       callback: options.callback,
       policies: options.policies,
       toolFormat: options.toolFormat,
+      parameters: options.parameters ?? {},
+      usageMeter: options.usageMeter ?? new UsageMeter(),
     })
   }
 

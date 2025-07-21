@@ -1,3 +1,4 @@
+import { UsageMeter } from '../../UsageMeter'
 import { getAvailableTools } from '../../getAvailableTools'
 import { PermissionLevel } from '../../tool'
 import { allTools } from '../../tools'
@@ -39,6 +40,8 @@ export class ArchitectAgent extends AgentBase {
       callback: options.callback,
       policies: options.policies,
       toolFormat: options.toolFormat,
+      parameters: options.parameters ?? {},
+      usageMeter: options.usageMeter ?? new UsageMeter(),
     })
   }
 

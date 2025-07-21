@@ -1,4 +1,4 @@
-import type { UserContent } from './AiService'
+import type { UserContent } from '@ai-sdk/provider-utils'
 
 export type ToolParameter = {
   name: string

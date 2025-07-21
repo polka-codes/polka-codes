@@ -1,5 +1,4 @@
-import type { UserContent } from '../AiService'
-import type { ImageBlockParam, TextBlockParam } from '../AiService/AiServiceBase'
+import type { FilePart, ImagePart, TextPart, UserContent } from 'ai'
 import type { ToolExample, ToolInfo, ToolParameterValue } from '../tool'
 import type { AgentInfo } from './AgentBase'
 
@@ -221,7 +220,7 @@ Ensure the opening and closing tags are correctly nested and closed, and that yo
 Avoid unnecessary text or symbols before or after the tool use.
 Avoid unnecessary escape characters or special characters.
 `,
-  toolResults: (tool: string, result: UserContent): (TextBlockParam | ImageBlockParam)[] => {
+  toolResults: (tool: string, result: UserContent): Array<TextPart | ImagePart | FilePart> => {
     if (typeof result === 'string') {
       return [
         {

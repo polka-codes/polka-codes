@@ -1,4 +1,8 @@
-import type { AiServiceBase, MessageParam, UserContent } from '../../AiService'
+import type { LanguageModelV2 } from '@ai-sdk/provider'
+import type { ModelMessage, UserContent } from '@ai-sdk/provider-utils'
+
+import { streamText } from 'ai'
+import type { UsageMeter } from '../../UsageMeter'
 import type { ToolFormat } from '../../config'
 import {
   type FullToolInfo,
@@ -146,7 +150,7 @@ export type TaskEvent =
 export type TaskEventCallback = (event: TaskEvent) => void | Promise<void>
 
 export type SharedAgentOptions = {
-  ai: AiServiceBase
+  ai: LanguageModelV2
   os: string
   provider: ToolProvider
   interactive: boolean
@@ -159,6 +163,8 @@ export type SharedAgentOptions = {
   retryCount?: number
   requestTimeoutSeconds?: number
   toolFormat: ToolFormat
+  parameters?: Record<string, any>
+  usageMeter?: UsageMeter
 }
 
 export type AgentBaseConfig = {
@@ -173,6 +179,9 @@ export type AgentBaseConfig = {
   policies: AgentPolicy[]
   retryCount?: number
   requestTimeoutSeconds?: number
+  toolFormat: ToolFormat
+  parameters: Record<string, any>
+  usageMeter: UsageMeter
 }
 
 export type AgentInfo = {
@@ -184,7 +193,6 @@ export type AgentPolicyInstance = {
   name: string
   tools?: FullToolInfo[]
   prompt?: string
-  updateResponse?: (response: AssistantMessageContent[]) => Promise<AssistantMessageContent[]>
   onBeforeInvokeTool?: (name: string, args: Record<string, string>) => Promise<ToolResponse | undefined>
   onBeforeRequest?: (agent: AgentBase) => Promise<void>
 }
@@ -209,14 +217,15 @@ export type ExitReason =
     }
 
 export abstract class AgentBase {
-  protected readonly ai: AiServiceBase
+  protected readonly ai: LanguageModelV2
   protected readonly config: Readonly<AgentBaseConfig>
   protected readonly handlers: Record<string, FullToolInfo>
-  #messages: MessageParam[] = []
+  #messages: ModelMessage[] = []
   readonly #policies: Readonly<AgentPolicyInstance[]>
   #aborted = false
+  #abortController: AbortController | undefined
 
-  constructor(name: string, ai: AiServiceBase, config: AgentBaseConfig) {
+  constructor(name: string, ai: LanguageModelV2, config: AgentBaseConfig) {
     this.ai = ai
 
     // If agents are provided, add them to the system prompt
@@ -256,18 +265,20 @@ export abstract class AgentBase {
 
   abort() {
     this.#aborted = true
-    this.ai.abort()
+    if (this.#abortController) {
+      this.#abortController.abort()
+    }
   }
 
-  get parameters(): Readonly<any> {
-    return this.ai.options.parameters
+  get parameters(): Readonly<Record<string, any>> {
+    return this.config.parameters
   }
 
-  get messages(): Readonly<MessageParam[]> {
+  get messages(): Readonly<ModelMessage[]> {
     return this.#messages
   }
 
-  setMessages(messages: Readonly<MessageParam[]>) {
+  setMessages(messages: Readonly<ModelMessage[]>) {
     this.#messages = [...messages]
   }
 
@@ -299,7 +310,7 @@ export abstract class AgentBase {
       if (this.#aborted) {
         return { type: 'Aborted' }
       }
-      if (this.ai.usageMeter.isLimitExceeded().result) {
+      if (this.config.usageMeter.isLimitExceeded().result) {
         this.#callback({ kind: TaskEventKind.UsageExceeded, agent: this })
         return { type: 'UsageExceeded' }
       }
@@ -355,30 +366,45 @@ export abstract class AgentBase {
         if (requestTimeoutSeconds > 0) {
           timeout = setTimeout(() => {
             console.debug(`No data received for ${requestTimeoutSeconds} seconds. Aborting request.`)
-            this.ai.abort()
+            this.abort()
           }, requestTimeoutSeconds * 1000)
         }
       }
 
-      const stream = this.ai.send(this.config.systemPrompt, this.#messages)
+      // TODO: this is racy. we should block concurrent requests
+      this.#abortController = new AbortController()
 
       try {
-        resetTimeout()
-        for await (const chunk of stream) {
-          resetTimeout()
-          switch (chunk.type) {
-            case 'usage':
-              await this.#callback({ kind: TaskEventKind.Usage, agent: this })
-              break
-            case 'text':
-              currentAssistantMessage += chunk.text
-              await this.#callback({ kind: TaskEventKind.Text, agent: this, newText: chunk.text })
-              break
-            case 'reasoning':
-              await this.#callback({ kind: TaskEventKind.Reasoning, agent: this, newText: chunk.text })
-              break
-          }
-        }
+        const stream = streamText({
+          model: this.ai,
+          messages: this.#messages,
+          system: this.config.systemPrompt,
+          onChunk: async ({ chunk }) => {
+            resetTimeout()
+            switch (chunk.type) {
+              case 'text':
+                currentAssistantMessage += chunk.text
+                await this.#callback({ kind: TaskEventKind.Text, agent: this, newText: chunk.text })
+                break
+              case 'reasoning':
+                await this.#callback({ kind: TaskEventKind.Reasoning, agent: this, newText: chunk.text })
+                break
+            }
+          },
+          onFinish: async (evt) => {
+            evt.totalUsage
+            evt.providerMetadata
+          },
+          onAbort: async () => {
+            console.log('aborted')
+          },
+          onError: async () => {
+            console.log('error')
+          },
+          abortSignal: this.#abortController.signal,
+        })
+
+        const resp = await stream.response
       } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') {
           break
@@ -427,14 +453,7 @@ export abstract class AgentBase {
     const toolResponses: ToolResponseOrToolPause[] = []
     let hasPause = false
 
-    let updatedResponse = response
-    for (const hook of this.#policies) {
-      if (hook.updateResponse) {
-        updatedResponse = await hook.updateResponse(updatedResponse)
-      }
-    }
-
-    outer: for (const content of updatedResponse) {
+    outer: for (const content of response) {
       switch (content.type) {
         case 'text':
           // no need to handle text content
@@ -572,10 +591,10 @@ export abstract class AgentBase {
   protected abstract onBeforeInvokeTool(name: string, args: Record<string, string>): Promise<ToolResponse | undefined>
 
   get model() {
-    return this.ai.model
+    return `${this.ai.provider}:${this.ai.modelId}`
   }
 
   get usage() {
-    return this.ai.usageMeter.usage
+    return this.config.usageMeter.usage
   }
 }
