@@ -1,9 +1,9 @@
 import type { LanguageModelV2 } from '@ai-sdk/provider'
 import type { ModelMessage, UserContent } from '@ai-sdk/provider-utils'
-
 import { streamText } from 'ai'
-import type { UsageMeter } from '../../UsageMeter'
-import type { ToolFormat } from '../../config'
+
+import type { UsageMeter } from '../UsageMeter'
+import type { ToolFormat } from '../config'
 import {
   type FullToolInfo,
   type ToolResponse,
@@ -12,10 +12,10 @@ import {
   type ToolResponseHandOver,
   type ToolResponseInterrupted,
   ToolResponseType,
-} from '../../tool'
-import { type AssistantMessageContent, parseAssistantMessage } from '../parseAssistantMessage'
-import { agentsPrompt, responsePrompts } from '../prompts'
-import type { ToolProvider } from './../../tools'
+} from '../tool'
+import type { ToolProvider } from '../tools'
+import { type AssistantMessageContent, parseAssistantMessage } from './parseAssistantMessage'
+import { agentsPrompt, responsePrompts } from './prompts'
 
 /**
  * Enum representing different kinds of task events
@@ -195,9 +195,10 @@ export type AgentPolicyInstance = {
   prompt?: string
   onBeforeInvokeTool?: (name: string, args: Record<string, string>) => Promise<ToolResponse | undefined>
   onBeforeRequest?: (agent: AgentBase) => Promise<void>
+  prepareMessages?: (agent: AgentBase, messages: ModelMessage[]) => Promise<ModelMessage[]>
 }
 
-export type AgentPolicy = (tools: Record<string, FullToolInfo>) => AgentPolicyInstance | undefined
+export type AgentPolicy = (tools: Record<string, FullToolInfo>, parameters: Record<string, any>) => AgentPolicyInstance | undefined
 
 export type ToolResponseOrToolPause =
   | { type: 'response'; tool: string; response: UserContent }
@@ -220,8 +221,9 @@ export abstract class AgentBase {
   protected readonly ai: LanguageModelV2
   protected readonly config: Readonly<AgentBaseConfig>
   protected readonly handlers: Record<string, FullToolInfo>
-  #messages: ModelMessage[] = []
   readonly #policies: Readonly<AgentPolicyInstance[]>
+
+  #messages: ModelMessage[] = []
   #aborted = false
   #abortController: AbortController | undefined
 
@@ -242,7 +244,7 @@ export abstract class AgentBase {
     const policies: AgentPolicyInstance[] = []
 
     for (const policy of config.policies) {
-      const instance = policy(handlers)
+      const instance = policy(handlers, config.parameters)
       if (instance) {
         policies.push(instance)
 
@@ -261,6 +263,11 @@ export abstract class AgentBase {
 
     this.config = config
     this.#policies = policies
+
+    this.#messages.push({
+      role: 'system',
+      content: this.config.systemPrompt,
+    })
   }
 
   abort() {
@@ -350,6 +357,13 @@ export abstract class AgentBase {
       }
     }
 
+    let messages = this.#messages
+    for (const instance of this.#policies) {
+      if (instance.prepareMessages) {
+        messages = await instance.prepareMessages(this, messages)
+      }
+    }
+
     let currentAssistantMessage = ''
 
     const retryCount = this.config.retryCount ?? 5
@@ -377,8 +391,7 @@ export abstract class AgentBase {
       try {
         const stream = streamText({
           model: this.ai,
-          messages: this.#messages,
-          system: this.config.systemPrompt,
+          messages,
           onChunk: async ({ chunk }) => {
             resetTimeout()
             switch (chunk.type) {

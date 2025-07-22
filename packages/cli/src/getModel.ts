@@ -21,7 +21,7 @@ export type ModelConfig = {
 }
 
 export const getModel = (config: ModelConfig, debugLogging = false): LanguageModelV2 => {
-  const fetchOverride: typeof fetch = debugLogging
+  const fetchOverride: typeof fetch | undefined = debugLogging
     ? ((async (url, options) => {
         // log outgoing request
         console.log('-> Request URL:', url)
@@ -65,7 +65,7 @@ export const getModel = (config: ModelConfig, debugLogging = false): LanguageMod
           status: res.status,
         })
       }) as typeof fetch)
-    : fetch
+    : undefined
 
   switch (config.provider) {
     case AiProvider.Anthropic: {
