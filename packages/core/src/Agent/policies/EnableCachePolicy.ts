@@ -21,7 +21,7 @@ export const EnableCachePolicy: AgentPolicy = () => {
         return messages
       }
 
-      const providerOptions = { [agent.ai.provider]: { cache_control: { type: 'ephemeral' } } }
+      const providerOptions = { [agent.ai.provider]: { cacheControl: { type: 'ephemeral' } } }
 
       const newMessages = messages.slice()
       let userMessagesToUpdate = 2

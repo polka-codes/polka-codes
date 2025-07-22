@@ -97,7 +97,6 @@ export const createCommand = new Command('create')
       budget,
       interactive: true,
       verbose,
-      enableCache: true,
       availableAgents: [architectAgentInfo, coderAgentInfo],
     })
 

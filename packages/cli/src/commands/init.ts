@@ -165,7 +165,6 @@ initCommand.action(async (options, command: Command) => {
         budget,
         interactive: true,
         verbose,
-        enableCache: true,
         availableAgents: [analyzerAgentInfo],
       })
 

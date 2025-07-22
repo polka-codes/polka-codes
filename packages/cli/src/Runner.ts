@@ -1,7 +1,5 @@
-import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import os from 'node:os'
-import { join } from 'node:path'
 import {
   type AgentBase,
   type AgentInfo,
@@ -11,6 +9,7 @@ import {
   ArchitectAgent,
   CodeFixerAgent,
   CoderAgent,
+  EnableCachePolicy,
   MultiAgent,
   Policies,
   TruncateContextPolicy,
@@ -36,7 +35,6 @@ export type RunnerOptions = {
   budget: number
   interactive: boolean
   verbose: number
-  enableCache: boolean
   availableAgents?: AgentInfo[] // empty to enable all agents
 }
 
@@ -46,8 +44,6 @@ export class Runner {
   readonly #usageMeter: UsageMeter
 
   readonly multiAgent: MultiAgent
-
-  readonly #hasKnowledgeManagementPolicy: boolean
 
   /** Initialize core components including usage tracking and agent service provisioning */
   constructor(options: RunnerOptions) {
@@ -115,14 +111,15 @@ export class Runner {
 
     const callback = printEvent(options.verbose, this.#usageMeter)
 
-    this.#hasKnowledgeManagementPolicy = false
-
-    const policies: AgentPolicy[] = []
+    const policies: AgentPolicy[] = [EnableCachePolicy]
     for (const policy of options.config.policies ?? []) {
       switch (policy.trim().toLowerCase()) {
         case Policies.TruncateContext:
           policies.push(TruncateContextPolicy)
           console.log('TruncateContextPolicy enabled')
+          break
+        case Policies.EnableCache:
+          // Already added by default
           break
         default:
           console.log('Unknown policy:', policy)
@@ -227,22 +224,7 @@ export class Runner {
     const [fileList] = await listFiles(cwd, true, maxFileCount, cwd, finalExcludes)
     const fileContext = `<files>\n${fileList.join('\n')}\n</files>`
 
-    let knowledgeContent = ''
-
-    // If KnowledgeManagement policy is enabled, try to read knowledge.ai.yml at root
-    if (this.#hasKnowledgeManagementPolicy) {
-      const knowledgeFilePath = join(cwd, 'knowledge.ai.yml')
-      if (existsSync(knowledgeFilePath)) {
-        try {
-          const content = await readFile(knowledgeFilePath, 'utf8')
-          knowledgeContent = `\n<knowledge_file path="knowledge.ai.yml">${content}</knowledge_file>`
-        } catch (error) {
-          console.warn(`Failed to read knowledge file at root: ${error}`)
-        }
-      }
-    }
-
-    return `<now_date>${new Date().toISOString()}</now_date>${fileContext}${knowledgeContent}`
+    return `<now_date>${new Date().toISOString()}</now_date>${fileContext}`
   }
 
   /** Execute a task through the agent system, initializing context if not provided */

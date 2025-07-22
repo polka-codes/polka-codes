@@ -41,7 +41,6 @@ export const runChat = async (opts: any, command?: Command) => {
     budget,
     interactive: true,
     verbose,
-    enableCache: true,
   })
 
   const chat = new Chat({
