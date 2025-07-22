@@ -374,16 +374,12 @@ export abstract class AgentBase {
       // TODO: this is racy. we should block concurrent requests
       this.#abortController = new AbortController()
 
-      console.log('Messages:', this.#messages)
-      console.log('llm:', this.ai)
-
       try {
         const stream = streamText({
           model: this.ai,
           messages: this.#messages,
           system: this.config.systemPrompt,
           onChunk: async ({ chunk }) => {
-            console.log('Chunk:', chunk)
             resetTimeout()
             switch (chunk.type) {
               case 'text':
@@ -405,9 +401,7 @@ export abstract class AgentBase {
           abortSignal: this.#abortController.signal,
         })
 
-        const resp = await stream.response
-        console.log('Response:', resp)
-        console.log('text:', await stream.text)
+        await stream.consumeStream()
       } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') {
           break

@@ -45,7 +45,7 @@ export const getModel = (config: ModelConfig, debugLogging = false): LanguageMod
               done = d
               if (value) {
                 const text = decoder.decode(value)
-                console.log('<- Stream chunk:', JSON.parse(text.replace(/\n/g, '\\n')))
+                console.log('<- Stream chunk:', text.replace(/\n/g, '\\n'))
               }
             }
           })()

@@ -1,4 +1,4 @@
-// Bun Snapshot v1, https://goo.gl/fbAQLP
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
 
 exports[`ApiProviderConfig getConfigForCommand resolves parameters correctly 1`] = `
 {
@@ -73,7 +73,7 @@ exports[`ApiProviderConfig getConfigForAgent resolves parameters correctly 2`] =
 exports[`ApiProviderConfig getConfigForAgent resolves parameters correctly 3`] = `
 {
   "apiKey": undefined,
-  "model": "anthropic/claude-3.7-sonnet",
+  "model": "google/gemini-2.5-pro",
   "parameters": {
     "frequency_penalty": 0.3,
     "temperature": 0.7,
