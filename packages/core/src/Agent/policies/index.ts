@@ -1,2 +1,2 @@
-export { TruncateContextPolicy } from './TruncateContext'
-export { EnableCachePolicy } from './EnableCache'
+export { TruncateContextPolicy } from './TruncateContextPolicy'
+export { EnableCachePolicy } from './EnableCachePolicy'

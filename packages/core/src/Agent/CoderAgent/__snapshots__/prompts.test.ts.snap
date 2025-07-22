@@ -256,20 +256,6 @@ Usage:
 <tool_parameter_file_pattern>file pattern here (optional)</tool_parameter_file_pattern>
 </tool_search_files>
 
-## tool_update_knowledge
-
-Description: Update knowledge in a knowledge.ai.yml file with smart merging capabilities. This tool lets you add, update, or remove information using path-based updates and special directives.
-
-Parameters:
-- tool_parameter_path: (required) Directory containing (or where to create) the knowledge.ai.yml file
-- tool_parameter_knowledge: (required) YAML content to merge into the knowledge file
-
-Usage:
-<tool_update_knowledge>
-<tool_parameter_path>Directory path here</tool_parameter_path>
-<tool_parameter_knowledge>YAML content with knowledge to update</tool_parameter_knowledge>
-</tool_update_knowledge>
-
 ## tool_write_to_file
 
 Description: Request to write content to a file at the specified path. If the file exists, it will be overwritten with the provided content. If the file doesn't exist, it will be created. This tool will automatically create any directories needed to write the file. Ensure that the output content does not include incorrect escaped character patterns such as \`&lt;\`, \`&gt;\`, or \`&amp;\`. Also ensure there is no unwanted CDATA tags in the content.
@@ -503,54 +489,6 @@ function oldFeature() {
 <tool_parameter_regex>^components/</tool_parameter_regex>
 <tool_parameter_file_pattern>*.ts,*.tsx</tool_parameter_file_pattern>
 </tool_search_files>
-
-## Example: Add a new file entry
-
-<tool_update_knowledge>
-<tool_parameter_path>src/utils</tool_parameter_path>
-<tool_parameter_knowledge>files:
-  "newFile.ts":
-    description: "A new utility file"
-    api:
-      functions:
-        1:
-          name: "processData"
-          params:
-            1: { name: "data", type: "object" }
-          returns: "object"</tool_parameter_knowledge>
-</tool_update_knowledge>
-
-## Example: Update an existing file description
-
-<tool_update_knowledge>
-<tool_parameter_path>src/utils</tool_parameter_path>
-<tool_parameter_knowledge>files:
-  "existingFile.ts":
-    description: "Updated description for the file"</tool_parameter_knowledge>
-</tool_update_knowledge>
-
-## Example: Add a new rule
-
-<tool_update_knowledge>
-<tool_parameter_path>src</tool_parameter_path>
-<tool_parameter_knowledge>rules:
-    10: "New rule to follow"</tool_parameter_knowledge>
-</tool_update_knowledge>
-
-## Example: Remove a rule
-
-<tool_update_knowledge>
-<tool_parameter_path>src</tool_parameter_path>
-<tool_parameter_knowledge>rules:
-    5: null</tool_parameter_knowledge>
-</tool_update_knowledge>
-
-## Example: Update nested properties using dot notation
-
-<tool_update_knowledge>
-<tool_parameter_path>src/components</tool_parameter_path>
-<tool_parameter_knowledge>files.Button.tsx.api.functions.1.description: "Updated function description"</tool_parameter_knowledge>
-</tool_update_knowledge>
 
 ## Example: Request to write content to a file
 
