@@ -22,7 +22,7 @@ test('TruncateContextPolicy should truncate messages when over threshold', async
     parameters: {},
   }
 
-  const policy = TruncateContextPolicy({})
+  const policy = TruncateContextPolicy()
   await policy.onBeforeRequest(mockAgent as any)
 
   expect(mockAgent.messages).toMatchSnapshot()
@@ -41,7 +41,7 @@ test('TruncateContextPolicy should not truncate small message lists', async () =
   }
 
   const setMessagesSpy = spyOn(mockAgent, 'setMessages')
-  const policy = TruncateContextPolicy({})
+  const policy = TruncateContextPolicy()
   await policy.onBeforeRequest(mockAgent as any)
 
   expect(setMessagesSpy).not.toHaveBeenCalled()
@@ -68,7 +68,7 @@ test('TruncateContextPolicy should preserve messages from start and end', async 
     parameters: {},
   }
 
-  const policy = TruncateContextPolicy({})
+  const policy = TruncateContextPolicy()
   await policy.onBeforeRequest(mockAgent as any)
 
   expect(mockAgent.messages).toMatchSnapshot()
@@ -88,7 +88,7 @@ test('TruncateContextPolicy should use maxTokens parameter when provided', async
     parameters: { maxTokens: 500 }, // Low threshold to trigger truncation
   }
 
-  const policy = TruncateContextPolicy({})
+  const policy = TruncateContextPolicy()
   await policy.onBeforeRequest(mockAgent as any)
 
   expect(mockAgent.messages).toMatchSnapshot()
@@ -108,7 +108,7 @@ test('TruncateContextPolicy should use thinkingBudgetTokens as fallback', async 
     parameters: { thinkingBudgetTokens: 600 }, // Low threshold to trigger truncation
   }
 
-  const policy = TruncateContextPolicy({})
+  const policy = TruncateContextPolicy()
   await policy.onBeforeRequest(mockAgent as any)
 
   expect(mockAgent.messages).toMatchSnapshot()
@@ -131,7 +131,7 @@ test('TruncateContextPolicy should prefer maxTokens over thinkingBudgetTokens', 
     },
   }
 
-  const policy = TruncateContextPolicy({})
+  const policy = TruncateContextPolicy()
   await policy.onBeforeRequest(mockAgent as any)
 
   expect(mockAgent.messages).toMatchSnapshot()
@@ -155,7 +155,7 @@ test('TruncateContextPolicy should truncate exactly half of messages', async () 
     parameters: { maxTokens: 1000 },
   }
 
-  const policy = TruncateContextPolicy({})
+  const policy = TruncateContextPolicy()
   await policy.onBeforeRequest(mockAgent as any)
 
   // Should keep 4 messages (half of 8) plus 1 truncation notice = 5 total

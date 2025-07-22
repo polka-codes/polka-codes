@@ -15,7 +15,6 @@ import {
   replaceInFile,
   responsePrompts,
   searchFiles,
-  updateKnowledge,
   writeToFile,
 } from '@polka-codes/core'
 
@@ -70,7 +69,6 @@ export class Runner {
       [replaceInFile.name]: replaceInFile,
       [searchFiles.name]: searchFiles,
       [writeToFile.name]: writeToFile,
-      [updateKnowledge.name]: updateKnowledge,
     }
 
     // Initialize WebSocket manager

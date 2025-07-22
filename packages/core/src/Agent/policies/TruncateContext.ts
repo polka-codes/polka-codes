@@ -3,7 +3,8 @@
 
 import type { ModelMessage } from 'ai'
 import { Policies } from '../../config'
-import type { AgentBase, AgentPolicy } from '../AgentBase'
+import type { AgentBase } from '../AgentBase'
+import type { AgentPolicy } from '../AgentPolicy'
 
 // Default max token threshold
 const DEFAULT_MAX_TOKENS_ESTIMATE = 8000
@@ -26,7 +27,7 @@ function estimateTokens(text: string): number {
   return Math.ceil(text.length / 4)
 }
 
-export const TruncateContextPolicy = (tools: Parameters<AgentPolicy>[0]) => {
+export const TruncateContextPolicy = (() => {
   return {
     name: Policies.TruncateContext,
     async onBeforeRequest(agent: AgentBase): Promise<void> {
@@ -99,4 +100,4 @@ export const TruncateContextPolicy = (tools: Parameters<AgentPolicy>[0]) => {
       agent.setMessages(truncatedMessages)
     },
   }
-}
+}) satisfies AgentPolicy

@@ -4,6 +4,7 @@ import { codeFixerAgentInfo } from './CodeFixerAgent'
 import { coderAgentInfo } from './CoderAgent'
 
 export * from './AgentBase'
+export * from './AgentPolicy'
 export * from './CoderAgent'
 export * from './ArchitectAgent'
 export * from './AnalyzerAgent'

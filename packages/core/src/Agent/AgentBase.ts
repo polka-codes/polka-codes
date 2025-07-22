@@ -14,6 +14,7 @@ import {
   ToolResponseType,
 } from '../tool'
 import type { ToolProvider } from '../tools'
+import type { AgentPolicy, AgentPolicyInstance } from './AgentPolicy'
 import { type AssistantMessageContent, parseAssistantMessage } from './parseAssistantMessage'
 import { agentsPrompt, responsePrompts } from './prompts'
 
@@ -189,17 +190,6 @@ export type AgentInfo = {
   responsibilities: string[]
 }
 
-export type AgentPolicyInstance = {
-  name: string
-  tools?: FullToolInfo[]
-  prompt?: string
-  onBeforeInvokeTool?: (name: string, args: Record<string, string>) => Promise<ToolResponse | undefined>
-  onBeforeRequest?: (agent: AgentBase) => Promise<void>
-  prepareMessages?: (agent: AgentBase, messages: ModelMessage[]) => Promise<ModelMessage[]>
-}
-
-export type AgentPolicy = (tools: Record<string, FullToolInfo>, parameters: Record<string, any>) => AgentPolicyInstance | undefined
-
 export type ToolResponseOrToolPause =
   | { type: 'response'; tool: string; response: UserContent }
   | { type: 'pause'; tool: string; object: any }
@@ -218,7 +208,7 @@ export type ExitReason =
     }
 
 export abstract class AgentBase {
-  protected readonly ai: LanguageModelV2
+  readonly ai: LanguageModelV2
   protected readonly config: Readonly<AgentBaseConfig>
   protected readonly handlers: Record<string, FullToolInfo>
   readonly #policies: Readonly<AgentPolicyInstance[]>
