@@ -67,10 +67,11 @@ export class UsageMeter {
           output,
           cachedRead,
           cost:
-            input * modelInfo.inputPrice +
-            output * modelInfo.outputPrice +
-            cacheWrite * modelInfo.cacheWritesPrice +
-            cachedRead * modelInfo.cacheReadsPrice,
+            (input * modelInfo.inputPrice +
+              output * modelInfo.outputPrice +
+              cacheWrite * modelInfo.cacheWritesPrice +
+              cachedRead * modelInfo.cacheReadsPrice) /
+            1_000_000,
         }
       }
       case 'deepseek': {
@@ -83,7 +84,7 @@ export class UsageMeter {
           input,
           output,
           cachedRead,
-          cost: output * modelInfo.outputPrice + cacheWrite * modelInfo.inputPrice + cachedRead * modelInfo.cacheReadsPrice,
+          cost: (output * modelInfo.outputPrice + cacheWrite * modelInfo.inputPrice + cachedRead * modelInfo.cacheReadsPrice) / 1_000_000,
         }
       }
       default: {
@@ -95,7 +96,7 @@ export class UsageMeter {
           input,
           output,
           cachedRead,
-          cost: input * modelInfo.inputPrice + output * modelInfo.outputPrice,
+          cost: (input * modelInfo.inputPrice + output * modelInfo.outputPrice) / 1_000_000,
         }
       }
     }
@@ -106,16 +107,8 @@ export class UsageMeter {
     resp: { usage: LanguageModelV2Usage; providerMetadata?: any } | { totalUsage: LanguageModelV2Usage; providerMetadata?: any },
     options: { modelInfo?: ModelInfo } = {},
   ) {
-    console.dir(
-      {
-        providerMetadata: resp.providerMetadata,
-        usage: 'totalUsage' in resp ? resp.totalUsage : resp.usage,
-      },
-      { depth: null },
-    )
-
     const modelInfo = options.modelInfo ??
-      this.#modelInfos[`${llm.provider}-${llm.modelId}`] ?? {
+      this.#modelInfos[`${llm.provider.split('.')[0]}:${llm.modelId}`] ?? {
         inputPrice: 0,
         outputPrice: 0,
         cacheWritesPrice: 0,
