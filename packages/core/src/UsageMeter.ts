@@ -108,11 +108,6 @@ export class UsageMeter {
     resp: { usage: LanguageModelV2Usage; providerMetadata?: any } | { totalUsage: LanguageModelV2Usage; providerMetadata?: any },
     options: { modelInfo?: ModelInfo } = {},
   ) {
-    console.log({
-      provider: llm.provider,
-      modelId: llm.modelId,
-    })
-
     const modelInfo = options.modelInfo ??
       // make google.vertex.chat to google
       // and anthropic.messages to anthropic
