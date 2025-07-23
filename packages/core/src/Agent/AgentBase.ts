@@ -378,10 +378,27 @@ export abstract class AgentBase {
       // TODO: this is racy. we should block concurrent requests
       this.#abortController = new AbortController()
 
+      const providerOptions: any = {}
+
+      const thinkingBudgetTokens = this.config.parameters?.thinkingBudgetTokens
+      const enableThinking = thinkingBudgetTokens > 0
+
+      if (enableThinking) {
+        providerOptions.anthropic = {
+          thinking: { type: 'enabled', budgetTokens: thinkingBudgetTokens },
+        }
+        providerOptions.openrouter = {
+          reasoning: {
+            max_tokens: thinkingBudgetTokens,
+          },
+        }
+      }
+
       try {
         const stream = streamText({
           model: this.ai,
           messages,
+          providerOptions,
           onChunk: async ({ chunk }) => {
             resetTimeout()
             switch (chunk.type) {
