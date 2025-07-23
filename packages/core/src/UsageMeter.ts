@@ -12,32 +12,21 @@ export type ModelInfo = {
   cacheReadsPrice: number
 }
 
-type Totals = { input: number; output: number; reasoning: number; cached: number; cost: number }
-const PER_M = 1_000_000
-
-function costFor(m: ModelInfo, uncached: number, cached: number, outs: number, cache: boolean): number {
-  const promptCost = cache ? uncached * m.cacheWritesPrice + cached * m.cacheReadsPrice : uncached * m.inputPrice // cached === 0 when cache disabled
-  const completionCost = outs * m.outputPrice
-  return (promptCost + completionCost) / PER_M
-}
+type Totals = { input: number; output: number; cachedRead: number; cost: number }
 
 /**
  * Tracks token / cost usage across any mix of LLM models.
  * Supports optional caps on total messages and total cost.
  */
 export class UsageMeter {
-  #totals: Totals = { input: 0, output: 0, reasoning: 0, cached: 0, cost: 0 }
+  #totals: Totals = { input: 0, output: 0, cachedRead: 0, cost: 0 }
   #calls = 0
 
   readonly #modelInfos: Record<string, ModelInfo>
-  readonly #cacheOn: boolean
   readonly #maxMessages: number
   readonly #maxCost: number
 
-  constructor(
-    modelInfos: Record<string, Record<string, Partial<ModelInfo>>> = {},
-    opts: { cacheEnabledDefault?: boolean; maxMessages?: number; maxCost?: number } = {},
-  ) {
+  constructor(modelInfos: Record<string, Record<string, Partial<ModelInfo>>> = {}, opts: { maxMessages?: number; maxCost?: number } = {}) {
     const infos: Record<string, ModelInfo> = {}
     for (const [provider, providerInfo] of Object.entries(modelInfos)) {
       for (const [model, modelInfo] of Object.entries(providerInfo)) {
@@ -51,17 +40,81 @@ export class UsageMeter {
     }
 
     this.#modelInfos = infos
-    this.#cacheOn = opts.cacheEnabledDefault ?? false
     this.#maxMessages = opts.maxMessages ?? 1000
     this.#maxCost = opts.maxCost ?? 100
+  }
+
+  #calculageUsage(usage: LanguageModelV2Usage, providerMetadata: any, modelInfo: ModelInfo) {
+    const providerMetadataKey = Object.keys(providerMetadata ?? {})[0]
+    const metadata = providerMetadata?.[providerMetadataKey] ?? {}
+
+    switch (providerMetadataKey) {
+      case 'openrouter':
+        return {
+          input: usage.inputTokens ?? 0,
+          output: usage.outputTokens ?? 0,
+          cachedRead: usage.cachedInputTokens ?? 0,
+          cost: metadata.usage?.cost ?? 0,
+        }
+      case 'anthropic': {
+        const cachedRead = usage.cachedInputTokens ?? 0
+        const cacheWrite = metadata?.promptCacheMissTokens ?? 0
+        const input = usage.inputTokens ?? 0
+        const output = usage.outputTokens ?? 0
+
+        return {
+          input: input + cacheWrite + cachedRead,
+          output,
+          cachedRead,
+          cost:
+            input * modelInfo.inputPrice +
+            output * modelInfo.outputPrice +
+            cacheWrite * modelInfo.cacheWritesPrice +
+            cachedRead * modelInfo.cacheReadsPrice,
+        }
+      }
+      case 'deepseek': {
+        const cachedRead = usage.cachedInputTokens ?? 0
+        const cacheWrite = metadata.promptCacheMissTokens ?? 0
+        const input = usage.inputTokens ?? 0
+        const output = usage.outputTokens ?? 0
+
+        return {
+          input,
+          output,
+          cachedRead,
+          cost: output * modelInfo.outputPrice + cacheWrite * modelInfo.inputPrice + cachedRead * modelInfo.cacheReadsPrice,
+        }
+      }
+      default: {
+        const cachedRead = usage.cachedInputTokens ?? 0
+        const input = usage.inputTokens ?? 0
+        const output = usage.outputTokens ?? 0
+
+        return {
+          input,
+          output,
+          cachedRead,
+          cost: input * modelInfo.inputPrice + output * modelInfo.outputPrice,
+        }
+      }
+    }
   }
 
   addUsage(
     llm: LanguageModelV2,
     resp: { usage: LanguageModelV2Usage; providerMetadata?: any } | { totalUsage: LanguageModelV2Usage; providerMetadata?: any },
-    callOpts: { modelInfo?: ModelInfo; cacheEnabled?: boolean } = {},
+    options: { modelInfo?: ModelInfo } = {},
   ) {
-    const m = callOpts.modelInfo ??
+    console.dir(
+      {
+        providerMetadata: resp.providerMetadata,
+        usage: 'totalUsage' in resp ? resp.totalUsage : resp.usage,
+      },
+      { depth: null },
+    )
+
+    const modelInfo = options.modelInfo ??
       this.#modelInfos[`${llm.provider}-${llm.modelId}`] ?? {
         inputPrice: 0,
         outputPrice: 0,
@@ -69,23 +122,13 @@ export class UsageMeter {
         cacheReadsPrice: 0,
       }
 
-    const usage = 'usage' in resp ? resp.usage : resp.totalUsage
-    const openrouterCost = resp.providerMetadata?.openrouter?.usage?.cost ?? 0
+    const usage = 'totalUsage' in resp ? resp.totalUsage : resp.usage
+    const result = this.#calculageUsage(usage, resp.providerMetadata, modelInfo)
 
-    const cache = callOpts.cacheEnabled ?? this.#cacheOn
-    const input = usage.inputTokens ?? 0
-    const cached = cache ? (usage.cachedInputTokens ?? 0) : 0
-    const uncached = Math.max(0, input - cached)
-    const outs = (usage.outputTokens ?? 0) + (usage.reasoningTokens ?? 0)
-
-    const cost = openrouterCost ?? costFor(m, uncached, cached, outs, cache)
-
-    // accumulate
-    this.#totals.input += input
-    this.#totals.cached += cached
-    this.#totals.output += usage.outputTokens ?? 0
-    this.#totals.reasoning += usage.reasoningTokens ?? 0
-    this.#totals.cost += cost
+    this.#totals.input += result.input
+    this.#totals.output += result.output
+    this.#totals.cachedRead += result.cachedRead
+    this.#totals.cost += result.cost
     this.#calls++
   }
 
@@ -93,8 +136,7 @@ export class UsageMeter {
   setUsage(newUsage: Partial<Totals & { calls: number }>) {
     if (newUsage.input != null) this.#totals.input = newUsage.input
     if (newUsage.output != null) this.#totals.output = newUsage.output
-    if (newUsage.reasoning != null) this.#totals.reasoning = newUsage.reasoning
-    if (newUsage.cached != null) this.#totals.cached = newUsage.cached
+    if (newUsage.cachedRead != null) this.#totals.cachedRead = newUsage.cachedRead
     if (newUsage.cost != null) this.#totals.cost = newUsage.cost
     if (newUsage.calls != null) this.#calls = newUsage.calls
   }
@@ -137,8 +179,8 @@ export class UsageMeter {
   printUsage() {
     const u = this.usage
     console.log(
-      `Usage — messages: ${u.messageCount}, input: ${u.input}, cached: ${u.cached}, ` +
-        `output: ${u.output}, reasoning: ${u.reasoning}, cost: $${u.cost.toFixed(4)}`,
+      `Usage - messages: ${u.messageCount}, input: ${u.input}, cached: ${u.cachedRead}, ` +
+        `output: ${u.output}, cost: $${u.cost.toFixed(4)}`,
     )
   }
 

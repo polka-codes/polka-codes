@@ -9,19 +9,27 @@ function isCacheableModel(modelId: string): boolean {
   return CACHEABLE_MODELS.some((model) => modelId.includes(model))
 }
 
-function isCacheableProvider(provider: string): boolean {
-  return ['google', 'anthropic', 'openrouter'].includes(provider)
+function getProviderKey(provider: string) {
+  if (provider === 'openrouter') {
+    return 'openrouter'
+  }
+  if (provider.includes('anthropic')) {
+    return 'anthropic'
+  }
+  return undefined
 }
 
 export const EnableCachePolicy: AgentPolicy = () => {
   return {
     name: Policies.EnableCache,
     async prepareMessages(agent: AgentBase, messages: ModelMessage[]): Promise<ModelMessage[]> {
-      if (!isCacheableProvider(agent.ai.provider) || !isCacheableModel(agent.ai.modelId)) {
+      const providerKey = getProviderKey(agent.ai.provider)
+
+      if (!providerKey || !isCacheableModel(agent.ai.modelId)) {
         return messages
       }
 
-      const providerOptions = { [agent.ai.provider]: { cacheControl: { type: 'ephemeral' } } }
+      const providerOptions = { [providerKey]: { cacheControl: { type: 'ephemeral' } } }
 
       const newMessages = messages.slice()
       let userMessagesToUpdate = 2
@@ -46,6 +54,7 @@ export const EnableCachePolicy: AgentPolicy = () => {
               ...(message.providerOptions ?? {}),
             },
           }
+
           break // Stop after updating the last system message
         }
       }

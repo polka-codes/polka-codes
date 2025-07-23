@@ -395,11 +395,8 @@ export abstract class AgentBase {
             }
           },
           onFinish: this.config.usageMeter.onFinishHandler(this.ai),
-          onAbort: async () => {
-            console.log('aborted')
-          },
-          onError: async () => {
-            console.log('error')
+          onError: async (error) => {
+            console.error('Error in stream:', error)
           },
           abortSignal: this.#abortController.signal,
         })
