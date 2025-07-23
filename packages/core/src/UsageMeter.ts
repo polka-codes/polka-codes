@@ -30,7 +30,8 @@ export class UsageMeter {
     const infos: Record<string, ModelInfo> = {}
     for (const [provider, providerInfo] of Object.entries(modelInfos)) {
       for (const [model, modelInfo] of Object.entries(providerInfo)) {
-        infos[`${provider}:${model}`] = {
+        // make google-vertex to google
+        infos[`${provider.split('-')[0]}:${model}`] = {
           inputPrice: modelInfo.inputPrice ?? 0,
           outputPrice: modelInfo.outputPrice ?? 0,
           cacheWritesPrice: modelInfo.cacheWritesPrice ?? 0,
@@ -107,7 +108,14 @@ export class UsageMeter {
     resp: { usage: LanguageModelV2Usage; providerMetadata?: any } | { totalUsage: LanguageModelV2Usage; providerMetadata?: any },
     options: { modelInfo?: ModelInfo } = {},
   ) {
+    console.log({
+      provider: llm.provider,
+      modelId: llm.modelId,
+    })
+
     const modelInfo = options.modelInfo ??
+      // make google.vertex.chat to google
+      // and anthropic.messages to anthropic
       this.#modelInfos[`${llm.provider.split('.')[0]}:${llm.modelId}`] ?? {
         inputPrice: 0,
         outputPrice: 0,

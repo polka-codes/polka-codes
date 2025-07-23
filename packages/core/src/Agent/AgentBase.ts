@@ -392,6 +392,12 @@ export abstract class AgentBase {
             max_tokens: thinkingBudgetTokens,
           },
         }
+        providerOptions.google = {
+          thinkingConfig: {
+            includeThoughts: true,
+            thinkingBudget: thinkingBudgetTokens,
+          },
+        }
       }
 
       try {

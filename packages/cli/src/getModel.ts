@@ -1,5 +1,6 @@
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { createDeepSeek } from '@ai-sdk/deepseek'
+import { createVertex } from '@ai-sdk/google-vertex'
 import { createOpenAI } from '@ai-sdk/openai'
 import type { LanguageModelV2 } from '@ai-sdk/provider'
 import { createOpenRouter } from '@openrouter/ai-sdk-provider'
@@ -11,6 +12,7 @@ export enum AiProvider {
   DeepSeek = 'deepseek',
   OpenRouter = 'openrouter',
   OpenAI = 'openai',
+  GoogleVertex = 'google-vertex',
 }
 
 export type ModelConfig = {
@@ -111,8 +113,14 @@ export const getModel = (config: ModelConfig, debugLogging = false): LanguageMod
         baseURL: config.baseUrl,
         fetch: fetchOverride,
       })
-
       return openai(config.model)
+    }
+
+    case AiProvider.GoogleVertex: {
+      const vertex = createVertex({
+        fetch: fetchOverride,
+      })
+      return vertex(config.model)
     }
   }
 }
