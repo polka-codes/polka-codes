@@ -20,6 +20,7 @@ const defaultModels = {
   [AiProvider.DeepSeek]: 'deepseek-chat',
   [AiProvider.OpenRouter]: 'google/gemini-2.5-pro',
   [AiProvider.OpenAI]: 'gpt-4.1',
+  [AiProvider.GoogleVertex]: 'gemini-2.5-pro',
 }
 
 export class ApiProviderConfig {

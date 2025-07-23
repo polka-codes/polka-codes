@@ -52,7 +52,6 @@ For more information, see the [CLI README](packages/cli/README.md).
   - **Coder Agent**: Focuses on implementation, coding, and maintenance.
   - **Analyzer Agent**: Analyzes code and project structure.
   - **Code Fixer Agent**: Fixes bugs and addresses issues.
-- 🧠 **Knowledge Management**: Automatically captures and maintains knowledge about your codebase in `knowledge.ai.yml` files, ensuring agents have context.
 - 💻 **Interactive CLI**: A powerful command-line interface for task execution and interactive chat.
 - 🔄 **GitHub Integration**: A GitHub Action that allows you to run Polka Codes by mentioning it in pull requests and issues.
 - 📦 **Extensible Architecture**: A modular design that allows for adding new AI providers, tools, and agents.
