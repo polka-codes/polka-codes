@@ -1,5 +1,5 @@
 import { execSync, spawnSync } from 'node:child_process'
-import { UsageMeter, generateGithubPullRequestDetails } from '@polka-codes/core'
+import { generateGithubPullRequestDetails, UsageMeter } from '@polka-codes/core'
 import { Command } from 'commander'
 import ora from 'ora'
 

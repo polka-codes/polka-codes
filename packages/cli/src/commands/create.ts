@@ -6,15 +6,14 @@
 import { existsSync } from 'node:fs'
 import { mkdir, stat } from 'node:fs/promises'
 import { join } from 'node:path'
-import { Command } from 'commander'
-
 import { confirm, input } from '@inquirer/prompts'
 import { architectAgentInfo, coderAgentInfo, createNewProject } from '@polka-codes/core'
+import { Command } from 'commander'
 import { ApiProviderConfig } from '../ApiProviderConfig'
-import { Runner } from '../Runner'
 import { configPrompt } from '../configPrompt'
 import type { AiProvider } from '../getModel'
 import { parseOptions } from '../options'
+import { Runner } from '../Runner'
 
 const askForPath = async (projectName: string) => {
   let targetPath = join(process.cwd(), projectName)
@@ -53,7 +52,7 @@ const askForPath = async (projectName: string) => {
 export const createCommand = new Command('create')
   .description('Create a new project')
   .argument('[name]', 'Project name')
-  .action(async (name: string | undefined, options: any, command: Command) => {
+  .action(async (name: string | undefined, _options: any, command: Command) => {
     const cmdOptions = command.parent?.opts() ?? {}
     const { providerConfig, maxMessageCount, verbose, budget } = parseOptions(cmdOptions)
 

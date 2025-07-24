@@ -1,6 +1,6 @@
 import type { Command } from 'commander'
-import { Runner } from '../Runner'
 import { parseOptions } from '../options'
+import { Runner } from '../Runner'
 import { runChat } from './chat'
 
 const readStdin = async (timeoutMs = 30000): Promise<string> => {
@@ -10,7 +10,7 @@ const readStdin = async (timeoutMs = 30000): Promise<string> => {
 
   return new Promise((resolve, reject) => {
     let input = ''
-    let timeoutId: NodeJS.Timer | undefined = undefined
+    let timeoutId: NodeJS.Timer | undefined
 
     const cleanup = () => {
       if (timeoutId) clearTimeout(timeoutId)

@@ -1,10 +1,9 @@
 import { execSync, spawnSync } from 'node:child_process'
 import { confirm } from '@inquirer/prompts'
+import { generateGitCommitMessage, UsageMeter } from '@polka-codes/core'
 import { Command } from 'commander'
 import ora from 'ora'
 import { z } from 'zod'
-
-import { UsageMeter, generateGitCommitMessage } from '@polka-codes/core'
 import { getModel } from '../getModel'
 import { parseOptions } from '../options'
 
@@ -68,7 +67,7 @@ export const commitCommand = new Command('commit')
         apiKey,
       })
 
-      const schema = z.object({
+      const _schema = z.object({
         reasoning: z.string().describe('Reasoning if any'),
         message: z.string().describe('The generated commit message'),
       })

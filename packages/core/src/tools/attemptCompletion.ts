@@ -52,7 +52,7 @@ export const handler: ToolHandler<typeof toolInfo, InteractionProvider> = async 
   }
 }
 
-export const isAvailable = (provider: InteractionProvider): boolean => {
+export const isAvailable = (_provider: InteractionProvider): boolean => {
   return true
 }
 

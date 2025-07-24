@@ -32,7 +32,7 @@ export class UsageMeter {
       for (const [model, modelInfo] of Object.entries(providerInfo)) {
         // make google-vertex to google
         // and unify modelId
-        infos[`${provider.split('-')[0]}:${model.replace(/[\.-]/g, '')}`] = {
+        infos[`${provider.split('-')[0]}:${model.replace(/[.-]/g, '')}`] = {
           inputPrice: modelInfo.inputPrice ?? 0,
           outputPrice: modelInfo.outputPrice ?? 0,
           cacheWritesPrice: modelInfo.cacheWritesPrice ?? 0,
@@ -112,7 +112,7 @@ export class UsageMeter {
     const modelInfo = options.modelInfo ??
       // make google.vertex.chat to google
       // and anthropic.messages to anthropic
-      this.#modelInfos[`${llm.provider.split('.')[0]}:${llm.modelId.replace(/[\.-]/g, '')}`] ?? {
+      this.#modelInfos[`${llm.provider.split('.')[0]}:${llm.modelId.replace(/[.-]/g, '')}`] ?? {
         inputPrice: 0,
         outputPrice: 0,
         cacheWritesPrice: 0,

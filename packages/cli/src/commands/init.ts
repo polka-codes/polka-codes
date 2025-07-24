@@ -14,10 +14,10 @@ import { parse, stringify } from 'yaml'
 
 import { ZodError } from 'zod'
 import { ApiProviderConfig } from '../ApiProviderConfig'
-import { Runner } from '../Runner'
-import { type ProviderConfig, configPrompt } from '../configPrompt'
+import { configPrompt, type ProviderConfig } from '../configPrompt'
 import type { AiProvider } from '../getModel'
 import { parseOptions } from '../options'
+import { Runner } from '../Runner'
 
 export const initCommand = new Command('init')
   .description('Initialize polkacodes configuration')

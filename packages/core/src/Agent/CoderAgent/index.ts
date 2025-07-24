@@ -1,11 +1,11 @@
-import { UsageMeter } from '../../UsageMeter'
 import { getAvailableTools } from '../../getAvailableTools'
 import { PermissionLevel, type ToolResponse, ToolResponseType } from '../../tool'
 import { toToolInfoV1 } from '../../tool-v1-compat'
 import { allTools, attemptCompletion } from '../../tools'
+import { UsageMeter } from '../../UsageMeter'
+import type { AgentInfo, SharedAgentOptions } from './../AgentBase'
 import { AgentBase } from '../AgentBase'
 import { responsePrompts } from '../prompts'
-import type { AgentInfo, SharedAgentOptions } from './../AgentBase'
 import { fullSystemPrompt } from './prompts'
 
 export type CoderAgentOptions = SharedAgentOptions
@@ -52,7 +52,7 @@ export class CoderAgent extends AgentBase {
     })
   }
 
-  protected async onBeforeInvokeTool(name: string, args: Record<string, string>): Promise<ToolResponse | undefined> {
+  protected async onBeforeInvokeTool(name: string, _args: Record<string, string>): Promise<ToolResponse | undefined> {
     // if agent is about to attemptCompletion, do format and check
     if (name !== attemptCompletion.name) {
       return

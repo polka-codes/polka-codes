@@ -17,7 +17,7 @@ export function getGlobalConfigPath(home = homedir()): string {
 export function loadConfigAtPath(path: string): Config | undefined {
   try {
     return readConfig(path)
-  } catch (error) {
+  } catch (_error) {
     return undefined
   }
 }
@@ -116,7 +116,7 @@ export const readConfig = (path: string): Config => {
 export const readLocalConfig = (path?: string): Config | undefined => {
   try {
     return readConfig(path ?? localConfigFileName)
-  } catch (error) {
+  } catch (_error) {
     return undefined
   }
 }

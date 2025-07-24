@@ -82,11 +82,7 @@ export class MultiAgent {
     return await this.#handleTaskResult(exitReason)
   }
 
-  async startTask(options: {
-    agentName: string
-    task: string
-    context: string
-  }): Promise<ExitReason> {
+  async startTask(options: { agentName: string; task: string; context: string }): Promise<ExitReason> {
     if (this.#agents.length > 0) {
       throw new Error('An active agent already exists')
     }

@@ -23,39 +23,39 @@ export type WebProvider = {
 export type ToolProvider = FilesystemProvider & CommandProvider & InteractionProvider & WebProvider
 
 export class MockProvider implements ToolProvider {
-  async readFile(path: string): Promise<string> {
+  async readFile(_path: string): Promise<string> {
     return 'mock content'
   }
 
-  async writeFile(path: string, content: string): Promise<void> {
+  async writeFile(_path: string, _content: string): Promise<void> {
     return
   }
 
-  async removeFile(path: string): Promise<void> {
+  async removeFile(_path: string): Promise<void> {
     return
   }
 
-  async renameFile(sourcePath: string, targetPath: string): Promise<void> {
+  async renameFile(_sourcePath: string, _targetPath: string): Promise<void> {
     return
   }
 
-  async listFiles(path: string, recursive: boolean, maxCount: number): Promise<[string[], boolean]> {
+  async listFiles(_path: string, _recursive: boolean, _maxCount: number): Promise<[string[], boolean]> {
     return [['mock-file.txt'], false]
   }
 
-  async searchFiles(path: string, regex: string, filePattern: string): Promise<string[]> {
+  async searchFiles(_path: string, _regex: string, _filePattern: string): Promise<string[]> {
     return ['mock-file.txt']
   }
 
-  async executeCommand(command: string, needApprove: boolean): Promise<{ stdout: string; stderr: string; exitCode: number }> {
+  async executeCommand(_command: string, _needApprove: boolean): Promise<{ stdout: string; stderr: string; exitCode: number }> {
     return { stdout: 'mock output', stderr: '', exitCode: 0 }
   }
 
-  async askFollowupQuestion(question: string, options?: string[]): Promise<string> {
+  async askFollowupQuestion(_question: string, _options?: string[]): Promise<string> {
     return 'mock answer'
   }
 
-  async attemptCompletion(result: string): Promise<string | undefined> {
+  async attemptCompletion(_result: string): Promise<string | undefined> {
     return 'mock completion'
   }
 }

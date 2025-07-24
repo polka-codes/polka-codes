@@ -36,7 +36,10 @@
     "yaml": "^2.7.0",
     "zod": "^4.0.8"
   },
-  "files": ["dist", "cli.mjs"],
+  "files": [
+    "dist",
+    "cli.mjs"
+  ],
   "devDependencies": {
     "@types/lodash": "^4.17.14"
   }

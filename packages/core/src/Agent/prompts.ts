@@ -157,7 +157,7 @@ ${agent.responsibilities.map((resp) => `    - ${resp}`).join('\n')}`,
   You are currently acting as **${name}**. If you identify the task is beyond your current scope, use the handover or delegate tool to transition to the other agent. Include sufficient context so the new agent can seamlessly continue the work.
 `
 
-export const capabilities = (toolNamePrefix: string) => `
+export const capabilities = (_toolNamePrefix: string) => `
 ====
 
 CAPABILITIES

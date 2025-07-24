@@ -1,10 +1,9 @@
 import { spawn } from 'node:child_process'
 import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
+import { input, select } from '@inquirer/prompts'
 import type { AgentNameType, ToolProvider } from '@polka-codes/core'
 import ignore from 'ignore'
-
-import { input, select } from '@inquirer/prompts'
 import type { Config } from './config'
 import { checkRipgrep } from './utils/checkRipgrep'
 import { listFiles } from './utils/listFiles'
@@ -22,7 +21,7 @@ export type ProviderOptions = {
   interactive?: boolean
 }
 
-export const getProvider = (agentName: AgentNameType, config: Config, options: ProviderOptions = {}): ToolProvider => {
+export const getProvider = (_agentName: AgentNameType, _config: Config, options: ProviderOptions = {}): ToolProvider => {
   const ig = ignore().add(options.excludeFiles ?? [])
   const provider: ToolProvider = {
     readFile: async (path: string): Promise<string | undefined> => {
@@ -60,7 +59,7 @@ export const getProvider = (agentName: AgentNameType, config: Config, options: P
       return await listFiles(path, recursive, maxCount, process.cwd(), options.excludeFiles)
     },
 
-    executeCommand: (command: string, needApprove: boolean): Promise<{ stdout: string; stderr: string; exitCode: number }> => {
+    executeCommand: (command: string, _needApprove: boolean): Promise<{ stdout: string; stderr: string; exitCode: number }> => {
       // TODO: add timeout
 
       return new Promise((resolve, reject) => {
@@ -124,7 +123,7 @@ export const getProvider = (agentName: AgentNameType, config: Config, options: P
 
       return answerOptions[0] ?? '<warning>This is non-interactive mode, no answer can be provided.</warning>'
     },
-    attemptCompletion: async (result: string): Promise<string | undefined> => {
+    attemptCompletion: async (_result: string): Promise<string | undefined> => {
       // TODO: if interactive, ask user to confirm completion
 
       return undefined

@@ -138,4 +138,4 @@ export type ToolResponse =
   | ToolResponseDelegate
   | ToolResponsePause
 
-export type ToolHandler<T, P> = (provider: P, args: Partial<Record<string, ToolParameterValue>>) => Promise<ToolResponse>
+export type ToolHandler<_T, P> = (provider: P, args: Partial<Record<string, ToolParameterValue>>) => Promise<ToolResponse>

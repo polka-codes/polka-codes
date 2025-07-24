@@ -16,7 +16,13 @@ export const getAvailableTools = <T extends FullToolInfoV2 | FullToolInfo>({
   hasAgent,
   permissionLevel,
   interactive,
-}: { provider: any; allTools: T[]; hasAgent: boolean; permissionLevel: PermissionLevel; interactive: boolean }) => {
+}: {
+  provider: any
+  allTools: T[]
+  hasAgent: boolean
+  permissionLevel: PermissionLevel
+  interactive: boolean
+}) => {
   const filteredTools = interactive ? allTools : allTools.filter((tool) => tool.name !== askFollowupQuestion.name)
   const tools: T[] = []
   for (const tool of filteredTools) {

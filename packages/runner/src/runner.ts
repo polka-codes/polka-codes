@@ -2,12 +2,10 @@
 
 import { execSync } from 'node:child_process'
 import { promises as fs } from 'node:fs'
-import { listFiles as listFilesHelper } from '@polka-codes/cli-shared'
-import { getProvider, loadConfig } from '@polka-codes/cli-shared'
+import { getProvider, listFiles as listFilesHelper, loadConfig } from '@polka-codes/cli-shared'
 import {
-  type FullToolInfoV2,
-  ToolResponseType,
   executeCommand,
+  type FullToolInfoV2,
   listFiles,
   readFile,
   removeFile,
@@ -15,11 +13,11 @@ import {
   replaceInFile,
   responsePrompts,
   searchFiles,
+  ToolResponseType,
   writeToFile,
 } from '@polka-codes/core'
-
-import { WebSocketManager } from './WebSocketManager'
 import type { UserContent, WsIncomingMessage } from './types'
+import { WebSocketManager } from './WebSocketManager'
 
 export interface RunnerOptions {
   taskId: string

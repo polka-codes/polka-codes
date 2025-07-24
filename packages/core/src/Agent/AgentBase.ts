@@ -1,8 +1,6 @@
 import type { LanguageModelV2 } from '@ai-sdk/provider'
 import type { ModelMessage, UserContent } from '@ai-sdk/provider-utils'
 import { streamText } from 'ai'
-
-import type { UsageMeter } from '../UsageMeter'
 import type { ToolFormat } from '../config'
 import {
   type FullToolInfoV2,
@@ -15,6 +13,7 @@ import {
 } from '../tool'
 import { toToolInfoV1 } from '../tool-v1-compat'
 import type { ToolProvider } from '../tools'
+import type { UsageMeter } from '../UsageMeter'
 import type { AgentPolicy, AgentPolicyInstance } from './AgentPolicy'
 import { type AssistantMessageContent, parseAssistantMessage } from './parseAssistantMessage'
 import { agentsPrompt, responsePrompts } from './prompts'

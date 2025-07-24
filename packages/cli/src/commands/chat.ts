@@ -2,9 +2,9 @@ import { type ExitReason, ToolResponseType } from '@polka-codes/core'
 import type { Command } from 'commander'
 
 import { Chat } from '../Chat'
-import { Runner } from '../Runner'
 import { configPrompt } from '../configPrompt'
 import { parseOptions } from '../options'
+import { Runner } from '../Runner'
 
 export const runChat = async (opts: any, command?: Command) => {
   const options = command?.parent?.opts() ?? opts ?? {}

@@ -1,8 +1,8 @@
-import { UsageMeter } from '../../UsageMeter'
 import { getAvailableTools } from '../../getAvailableTools'
 import { PermissionLevel } from '../../tool'
 import { toToolInfoV1 } from '../../tool-v1-compat'
 import { allTools } from '../../tools'
+import { UsageMeter } from '../../UsageMeter'
 import { AgentBase, type AgentInfo, type SharedAgentOptions } from '../AgentBase'
 import { fullSystemPrompt } from './prompts'
 
