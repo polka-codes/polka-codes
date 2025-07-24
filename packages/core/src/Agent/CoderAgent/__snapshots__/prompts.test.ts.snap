@@ -1,4 +1,4 @@
-// Bun Snapshot v1, https://goo.gl/fbAQLP
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
 
 exports[`fullSystemPrompt 1`] = `
 "
@@ -92,14 +92,14 @@ Usage:
 Description: Temporarily delegate a task to another agent and receive the result back. This tool MUST NOT to be used with any other tool.
 
 Parameters:
-- tool_parameter_agent_name: (required) The name of the agent to delegate the task to
+- tool_parameter_agentName: (required) The name of the agent to delegate the task to
 - tool_parameter_task: (required) The task to be completed by the target agent
 - tool_parameter_context: (required) The context information for the task
 - tool_parameter_files: (optional) The files relevant to the task. Comma separated paths
 
 Usage:
 <tool_delegate>
-<tool_parameter_agent_name>Name of the target agent</tool_parameter_agent_name>
+<tool_parameter_agentName>Name of the target agent</tool_parameter_agentName>
 <tool_parameter_task>Task description</tool_parameter_task>
 <tool_parameter_context>Context information</tool_parameter_context>
 <tool_parameter_files>Relevant files</tool_parameter_files>
@@ -111,12 +111,12 @@ Description: Run a single CLI command. The command is always executed in the pro
 
 Parameters:
 - tool_parameter_command: (required) The exact command to run  (valid for the current OS). It must be correctly formatted and free of harmful instructions.
-- tool_parameter_requires_approval: (optional) Set to \`true\` for commands that install/uninstall software, modify or delete files, change system settings, perform network operations, or have other side effects. Use \`false\` for safe, read-only, or purely local development actions (e.g., listing files, make a build, running tests).
+- tool_parameter_requiresApproval: (optional) Set to \`true\` for commands that install/uninstall software, modify or delete files, change system settings, perform network operations, or have other side effects. Use \`false\` for safe, read-only, or purely local development actions (e.g., listing files, make a build, running tests).
 
 Usage:
 <tool_execute_command>
 <tool_parameter_command>your-command-here</tool_parameter_command>
-<tool_parameter_requires_approval>true | false</tool_parameter_requires_approval>
+<tool_parameter_requiresApproval>true | false</tool_parameter_requiresApproval>
 </tool_execute_command>
 
 ## tool_fetch_url
@@ -124,11 +124,11 @@ Usage:
 Description: Fetch the content located at one or more HTTP(S) URLs and return it in Markdown format. This works for standard web pages as well as raw files (e.g. README.md, source code) hosted on platforms like GitHub.
 
 Parameters:
-- tool_parameter_url: (required) One or more URLs to fetch, separated by commas if multiple.
+- tool_parameter_url: (optional) One or more URLs to fetch, separated by commas if multiple.
 
 Usage:
 <tool_fetch_url>
-<tool_parameter_url>undefined</tool_parameter_url>
+<tool_parameter_url>url</tool_parameter_url>
 </tool_fetch_url>
 
 ## tool_hand_over
@@ -136,14 +136,14 @@ Usage:
 Description: Hand over the current task to another agent to complete. This tool MUST NOT to be used with any other tool.
 
 Parameters:
-- tool_parameter_agent_name: (required) The name of the agent to hand over the task to
+- tool_parameter_agentName: (required) The name of the agent to hand over the task to
 - tool_parameter_task: (required) The task to be completed by the target agent
 - tool_parameter_context: (required) The context information for the task
 - tool_parameter_files: (optional) The files relevant to the task. Comma separated paths
 
 Usage:
 <tool_hand_over>
-<tool_parameter_agent_name>Name of the target agent</tool_parameter_agent_name>
+<tool_parameter_agentName>Name of the target agent</tool_parameter_agentName>
 <tool_parameter_task>Task description</tool_parameter_task>
 <tool_parameter_context>Context information</tool_parameter_context>
 <tool_parameter_files>Relevant files</tool_parameter_files>
@@ -155,13 +155,13 @@ Description: Request to list files and directories within the specified director
 
 Parameters:
 - tool_parameter_path: (required) The path of the directory to list contents for (relative to the current working directory)
-- tool_parameter_max_count: (optional) The maximum number of files to list. Default to 2000
+- tool_parameter_maxCount: (optional) The maximum number of files to list. Default to 2000
 - tool_parameter_recursive: (optional) Whether to list files recursively. Use true for recursive listing, false or omit for top-level only.
 
 Usage:
 <tool_list_files>
 <tool_parameter_path>Directory path here</tool_parameter_path>
-<tool_parameter_max_count>Maximum number of files to list (optional)</tool_parameter_max_count>
+<tool_parameter_maxCount>Maximum number of files to list (optional)</tool_parameter_maxCount>
 <tool_parameter_recursive>true or false (optional)</tool_parameter_recursive>
 </tool_list_files>
 
@@ -170,7 +170,7 @@ Usage:
 Description: Request to read the contents of one or multiple files at the specified paths. Use comma separated paths to read multiple files. Use this when you need to examine the contents of an existing file you do not know the contents of, for example to analyze code, review text files, or extract information from configuration files. May not be suitable for other types of binary files, as it returns the raw content as a string. Try to list all the potential files are relevent to the task, and then use this tool to read all the relevant files.
 
 Parameters:
-- tool_parameter_path: (required) The path of the file to read
+- tool_parameter_path: (optional) The path of the file to read
 
 Usage:
 <tool_read_file>
@@ -247,28 +247,14 @@ Description: Request to perform a regex search across files in a specified direc
 Parameters:
 - tool_parameter_path: (required) The path of the directory to search in (relative to the current working directory). This directory will be recursively searched.
 - tool_parameter_regex: (required) The regular expression pattern to search for. Uses Rust regex syntax.
-- tool_parameter_file_pattern: (optional) Comma-separated glob pattern to filter files (e.g., "*.ts" for TypeScript files or "*.ts,*.js" for both TypeScript and JavaScript files). If not provided, it will search all files (*).
+- tool_parameter_filePattern: (optional) Comma-separated glob pattern to filter files (e.g., "*.ts" for TypeScript files or "*.ts,*.js" for both TypeScript and JavaScript files). If not provided, it will search all files (*).
 
 Usage:
 <tool_search_files>
 <tool_parameter_path>Directory path here</tool_parameter_path>
 <tool_parameter_regex>Your regex pattern here</tool_parameter_regex>
-<tool_parameter_file_pattern>file pattern here (optional)</tool_parameter_file_pattern>
+<tool_parameter_filePattern>file pattern here (optional)</tool_parameter_filePattern>
 </tool_search_files>
-
-## tool_update_knowledge
-
-Description: Update knowledge in a knowledge.ai.yml file with smart merging capabilities. This tool lets you add, update, or remove information using path-based updates and special directives.
-
-Parameters:
-- tool_parameter_path: (required) Directory containing (or where to create) the knowledge.ai.yml file
-- tool_parameter_knowledge: (required) YAML content to merge into the knowledge file
-
-Usage:
-<tool_update_knowledge>
-<tool_parameter_path>Directory path here</tool_parameter_path>
-<tool_parameter_knowledge>YAML content with knowledge to update</tool_parameter_knowledge>
-</tool_update_knowledge>
 
 ## tool_write_to_file
 
@@ -340,7 +326,7 @@ Usage:
 ## Example: Delegate a code analysis task to the analyzer agent
 
 <tool_delegate>
-<tool_parameter_agent_name>analyzer</tool_parameter_agent_name>
+<tool_parameter_agentName>analyzer</tool_parameter_agentName>
 <tool_parameter_task>Analyze the authentication implementation</tool_parameter_task>
 <tool_parameter_context>Need to understand the security implications of the current auth system</tool_parameter_context>
 <tool_parameter_files>src/auth/login.ts,src/auth/types.ts</tool_parameter_files>
@@ -350,7 +336,7 @@ Usage:
 
 <tool_execute_command>
 <tool_parameter_command>npm run build</tool_parameter_command>
-<tool_parameter_requires_approval>false</tool_parameter_requires_approval>
+<tool_parameter_requiresApproval>false</tool_parameter_requiresApproval>
 </tool_execute_command>
 
 ## Example: Fetch a single webpage
@@ -374,7 +360,7 @@ Usage:
 ## Example: Hand over a coding task to the coder agent
 
 <tool_hand_over>
-<tool_parameter_agent_name>coder</tool_parameter_agent_name>
+<tool_parameter_agentName>coder</tool_parameter_agentName>
 <tool_parameter_task>Implement the login feature</tool_parameter_task>
 <tool_parameter_context>We need a secure login system with email and password</tool_parameter_context>
 <tool_parameter_files>src/auth/login.ts,src/auth/types.ts</tool_parameter_files>
@@ -384,7 +370,7 @@ Usage:
 
 <tool_list_files>
 <tool_parameter_path>src</tool_parameter_path>
-<tool_parameter_max_count>100</tool_parameter_max_count>
+<tool_parameter_maxCount>100</tool_parameter_maxCount>
 </tool_list_files>
 
 ## Example: Request to read the contents of a file
@@ -416,8 +402,7 @@ Usage:
 
 <tool_replace_in_file>
 <tool_parameter_path>src/main.js</tool_parameter_path>
-<tool_parameter_diff>
-<<<<<<< SEARCH
+<tool_parameter_diff><<<<<<< SEARCH
 import React from 'react';
 =======
 import React, { useState } from 'react';
@@ -443,29 +428,25 @@ function handleSubmit() {
 
 return (
   <div>
->>>>>>> REPLACE
-</tool_parameter_diff>
+>>>>>>> REPLACE</tool_parameter_diff>
 </tool_replace_in_file>
 
 ## Example: Request to perform a simple, single-line replacement
 
 <tool_replace_in_file>
 <tool_parameter_path>src/config.js</tool_parameter_path>
-<tool_parameter_diff>
-<<<<<<< SEARCH
+<tool_parameter_diff><<<<<<< SEARCH
 const API_URL = 'https://api.example.com';
 =======
 const API_URL = 'https://api.staging.example.com';
->>>>>>> REPLACE
-</tool_parameter_diff>
+>>>>>>> REPLACE</tool_parameter_diff>
 </tool_replace_in_file>
 
 ## Example: Request to add a new function to a file
 
 <tool_replace_in_file>
 <tool_parameter_path>src/utils.js</tool_parameter_path>
-<tool_parameter_diff>
-<<<<<<< SEARCH
+<tool_parameter_diff><<<<<<< SEARCH
 function helperA() {
   // ...
 }
@@ -477,23 +458,20 @@ function helperA() {
 function newHelper() {
   // implementation
 }
->>>>>>> REPLACE
-</tool_parameter_diff>
+>>>>>>> REPLACE</tool_parameter_diff>
 </tool_replace_in_file>
 
 ## Example: Request to delete a block of code from a file
 
 <tool_replace_in_file>
 <tool_parameter_path>src/app.js</tool_parameter_path>
-<tool_parameter_diff>
-<<<<<<< SEARCH
+<tool_parameter_diff><<<<<<< SEARCH
 function oldFeature() {
   // This is no longer needed
 }
 
 =======
->>>>>>> REPLACE
-</tool_parameter_diff>
+>>>>>>> REPLACE</tool_parameter_diff>
 </tool_replace_in_file>
 
 ## Example: Request to perform a regex search across files
@@ -501,56 +479,8 @@ function oldFeature() {
 <tool_search_files>
 <tool_parameter_path>src</tool_parameter_path>
 <tool_parameter_regex>^components/</tool_parameter_regex>
-<tool_parameter_file_pattern>*.ts,*.tsx</tool_parameter_file_pattern>
+<tool_parameter_filePattern>*.ts,*.tsx</tool_parameter_filePattern>
 </tool_search_files>
-
-## Example: Add a new file entry
-
-<tool_update_knowledge>
-<tool_parameter_path>src/utils</tool_parameter_path>
-<tool_parameter_knowledge>files:
-  "newFile.ts":
-    description: "A new utility file"
-    api:
-      functions:
-        1:
-          name: "processData"
-          params:
-            1: { name: "data", type: "object" }
-          returns: "object"</tool_parameter_knowledge>
-</tool_update_knowledge>
-
-## Example: Update an existing file description
-
-<tool_update_knowledge>
-<tool_parameter_path>src/utils</tool_parameter_path>
-<tool_parameter_knowledge>files:
-  "existingFile.ts":
-    description: "Updated description for the file"</tool_parameter_knowledge>
-</tool_update_knowledge>
-
-## Example: Add a new rule
-
-<tool_update_knowledge>
-<tool_parameter_path>src</tool_parameter_path>
-<tool_parameter_knowledge>rules:
-    10: "New rule to follow"</tool_parameter_knowledge>
-</tool_update_knowledge>
-
-## Example: Remove a rule
-
-<tool_update_knowledge>
-<tool_parameter_path>src</tool_parameter_path>
-<tool_parameter_knowledge>rules:
-    5: null</tool_parameter_knowledge>
-</tool_update_knowledge>
-
-## Example: Update nested properties using dot notation
-
-<tool_update_knowledge>
-<tool_parameter_path>src/components</tool_parameter_path>
-<tool_parameter_knowledge>files.Button.tsx.api.functions.1.description: "Updated function description"</tool_parameter_knowledge>
-</tool_update_knowledge>
 
 ## Example: Request to write content to a file
 

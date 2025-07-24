@@ -7,6 +7,7 @@ export const fullSystemPrompt = (
   toolNamePrefix: string,
   instructions: string[],
   scripts: Record<string, string | { command: string; description: string }>,
+  useNativeTool: boolean,
 ) => `
 # Architect Agent
 
@@ -43,7 +44,7 @@ You are the **Architect** agent, responsible for:
    - If multiple steps are required, break them into numbered tasks to delegate to the **Coder** agent.
    - Provide all necessary context, implementation plan, file references, and clarifications for successful execution.
 
-${toolUsePrompt(tools, toolNamePrefix)}
+${useNativeTool ? '' : toolUsePrompt(tools, toolNamePrefix)}
 ${capabilities(toolNamePrefix)}
 ${systemInformation(info)}
 ${customInstructions(instructions)}

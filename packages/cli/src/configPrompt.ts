@@ -1,5 +1,6 @@
 import { input, password, select } from '@inquirer/prompts'
-import { AiServiceProvider, anthropicDefaultModelId, anthropicModels, deepSeekDefaultModelId } from '@polka-codes/core'
+import { AiProvider } from './getModel'
+import prices from './prices'
 
 const fetchOllamaModels = async () => {
   try {
@@ -13,7 +14,7 @@ const fetchOllamaModels = async () => {
 }
 
 export type ProviderConfig = {
-  provider: AiServiceProvider
+  provider: AiProvider
   model: string
   apiKey?: string
 }
@@ -22,21 +23,21 @@ export async function configPrompt(existingConfig?: Partial<ProviderConfig>): Pr
   // select AI provider
   const provider = await select({
     message: 'Choose AI Provider:',
-    choices: Object.entries(AiServiceProvider).map(([key, value]) => ({ name: key, value })),
+    choices: Object.entries(AiProvider).map(([key, value]) => ({ name: key, value })),
     default: existingConfig?.provider,
   })
 
   let model = existingConfig?.model
 
   switch (provider) {
-    case AiServiceProvider.Anthropic:
+    case AiProvider.Anthropic:
       model = await select({
         message: 'Choose Model ID:',
-        choices: Object.keys(anthropicModels).map((key) => ({ name: key, value: key })),
-        default: existingConfig?.model ?? anthropicDefaultModelId,
+        choices: Object.keys(prices[AiProvider.Anthropic]).map((key) => ({ name: key, value: key })),
+        default: existingConfig?.model ?? 'claude-opus-4-20250514',
       })
       break
-    case AiServiceProvider.Ollama:
+    case AiProvider.Ollama:
       {
         // fetch model list from Ollama API
         const models = await fetchOllamaModels()
@@ -51,19 +52,26 @@ export async function configPrompt(existingConfig?: Partial<ProviderConfig>): Pr
         }
       }
       break
-    case AiServiceProvider.DeepSeek:
-      model = deepSeekDefaultModelId
+    case AiProvider.DeepSeek:
+      model = await select({
+        message: 'Choose Model ID:',
+        choices: [
+          { name: 'deepseek-chat', value: 'deepseek-chat' },
+          { name: 'deepseek-reasoner', value: 'deepseek-reasoner' },
+        ],
+        default: existingConfig?.model ?? 'deepseek-chat',
+      })
       break
-    case AiServiceProvider.OpenRouter:
+    case AiProvider.OpenRouter:
       // TODO: search for models
       model = await input({ message: 'Enter Model ID (Visit https://openrouter.ai/models for available models):' })
       break
   }
 
   let apiKey: string | undefined
-  if (provider !== AiServiceProvider.Ollama) {
+  if (provider !== AiProvider.Ollama) {
     apiKey = await password({ message: 'Enter API Key:', mask: '*' })
   }
 
-  return { provider, model, apiKey }
+  return { provider, model: model as string, apiKey }
 }

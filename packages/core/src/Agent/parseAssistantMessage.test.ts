@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { PermissionLevel, type ToolInfo } from '../tool'
-import { askFollowupQuestion } from '../tools'
-import { type ToolUse, parseAssistantMessage } from './parseAssistantMessage'
+import { parseAssistantMessage } from './parseAssistantMessage'
 
 describe('parseAssistantMessage', () => {
   const mockTools: ToolInfo[] = [
@@ -442,17 +441,40 @@ describe('parseAssistantMessage', () => {
 </test_parameter_questions>
 </test_ask_followup_question>`
 
-    // Get the actual result
-    const result = parseAssistantMessage(message, [askFollowupQuestion], toolPrefix)
+    const askFollowupQuestionV1: ToolInfo = {
+      name: 'ask_followup_question',
+      description: 'ask a question',
+      permissionLevel: PermissionLevel.None,
+      parameters: [
+        {
+          name: 'questions',
+          description: 'questions',
+          required: true,
+          allowMultiple: true,
+          children: [
+            { name: 'prompt', description: 'prompt', required: true },
+            { name: 'options', description: 'options', required: false, allowMultiple: true },
+          ],
+        },
+      ],
+    }
 
-    // For debugging purposes, let's see what we're actually getting
-    const toolUseResult = result[0] as ToolUse
-    const actualQuestions = toolUseResult.params.questions
+    const result = parseAssistantMessage(message, [askFollowupQuestionV1], toolPrefix)
 
-    // Adjust the expectation to match the actual implementation
-    expect(toolUseResult.type).toBe('tool_use')
-    expect(toolUseResult.name).toBe('ask_followup_question')
-    expect(actualQuestions).toBeDefined()
+    expect(result).toEqual([
+      {
+        type: 'tool_use',
+        name: 'ask_followup_question',
+        params: {
+          questions: [
+            {
+              prompt: 'What type of task does this issue represent?',
+              options: ['Feature request', 'Bug fix', 'Test setup', 'Other (please specify)'],
+            },
+          ],
+        },
+      },
+    ])
   })
 
   test('should handle multiple questions in askFollowupQuestion', () => {
@@ -467,7 +489,24 @@ describe('parseAssistantMessage', () => {
 </test_parameter_questions>
 </test_ask_followup_question>`
 
-    const result = parseAssistantMessage(message, [askFollowupQuestion], toolPrefix)
+    const askFollowupQuestionV1: ToolInfo = {
+      name: 'ask_followup_question',
+      description: 'ask a question',
+      permissionLevel: PermissionLevel.None,
+      parameters: [
+        {
+          name: 'questions',
+          description: 'questions',
+          required: true,
+          allowMultiple: true,
+          children: [
+            { name: 'prompt', description: 'prompt', required: true },
+            { name: 'options', description: 'options', required: false, allowMultiple: true },
+          ],
+        },
+      ],
+    }
+    const result = parseAssistantMessage(message, [askFollowupQuestionV1], toolPrefix)
 
     expect(result).toEqual([
       {

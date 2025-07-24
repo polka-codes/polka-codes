@@ -17,6 +17,10 @@
     "commit": "bun cli commit",
     "codegen": "cd packages/github; graphql-codegen"
   },
+  "resolutions": {
+    "@ai-sdk/google-vertex": "3.0.0-beta.15",
+    "@ai-sdk/provider-utils": "3.0.0-beta.5"
+  },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "@microsoft/api-extractor": "^7.51.1",

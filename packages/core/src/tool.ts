@@ -1,13 +1,5 @@
-import type { UserContent } from './AiService'
-
-export type ToolParameter = {
-  name: string
-  description: string
-  required: boolean
-  usageValue?: string
-  allowMultiple?: boolean
-  children?: ToolParameter[]
-}
+import type { UserContent } from '@ai-sdk/provider-utils'
+import type { z } from 'zod'
 
 export type ToolParameterValue = string | { [key: string]: ToolParameterValue } | ToolParameterValue[]
 
@@ -27,6 +19,15 @@ export enum PermissionLevel {
   Arbitrary = 3,
 }
 
+export type ToolParameter = {
+  name: string
+  description: string
+  required: boolean
+  usageValue?: string
+  allowMultiple?: boolean
+  children?: ToolParameter[]
+}
+
 export type ToolInfo = {
   name: string
   description: string
@@ -35,8 +36,21 @@ export type ToolInfo = {
   permissionLevel: PermissionLevel
 }
 
+export type ToolInfoV2 = {
+  name: string
+  description: string
+  parameters: z.ZodObject<any>
+  examples?: ToolExample[]
+  permissionLevel: PermissionLevel
+}
+
 export type FullToolInfo = ToolInfo & {
   handler: ToolHandler<ToolInfo, any>
+  isAvailable: (provider: any) => boolean
+}
+
+export type FullToolInfoV2 = ToolInfoV2 & {
+  handler: ToolHandler<ToolInfoV2, any>
   isAvailable: (provider: any) => boolean
 }
 
@@ -124,7 +138,4 @@ export type ToolResponse =
   | ToolResponseDelegate
   | ToolResponsePause
 
-export type ToolHandler<T extends ToolInfo, P> = (
-  provider: P,
-  args: Partial<Record<T['parameters'][number]['name'], ToolParameterValue>>,
-) => Promise<ToolResponse>
+export type ToolHandler<T, P> = (provider: P, args: Partial<Record<string, ToolParameterValue>>) => Promise<ToolResponse>

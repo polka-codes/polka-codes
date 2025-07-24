@@ -2,13 +2,13 @@
 
 import { describe, expect, test } from 'bun:test'
 import type { Config } from '@polka-codes/cli-shared'
-import { AiServiceProvider } from '@polka-codes/core'
 import { ApiProviderConfig } from './ApiProviderConfig'
+import { AiProvider } from './getModel'
 
 describe('ApiProviderConfig', () => {
   // Define test configurations
   const basicConfig: Config = {
-    defaultProvider: AiServiceProvider.Anthropic,
+    defaultProvider: 'anthropic',
     defaultModel: 'claude-3-opus',
     defaultParameters: {
       temperature: 0.7,
@@ -36,7 +36,7 @@ describe('ApiProviderConfig', () => {
   test('constructor initializes providers and parameters', () => {
     const apiConfig = new ApiProviderConfig(basicConfig)
 
-    expect(apiConfig.defaultProvider).toBe(AiServiceProvider.Anthropic)
+    expect(apiConfig.defaultProvider).toBe(AiProvider.Anthropic)
     expect(apiConfig.providers.anthropic?.apiKey).toBe('test-api-key')
     expect(apiConfig.providers.anthropic?.defaultModel).toBe('claude-3-haiku')
     expect(apiConfig.providers.anthropic?.defaultParameters).toEqual({
@@ -50,7 +50,7 @@ describe('ApiProviderConfig', () => {
       ...basicConfig,
       commands: {
         default: {
-          provider: AiServiceProvider.Anthropic,
+          provider: AiProvider.Anthropic,
           model: 'claude-3-opus',
           parameters: {
             temperature: 0.6,
@@ -86,7 +86,7 @@ describe('ApiProviderConfig', () => {
       ...basicConfig,
       agents: {
         default: {
-          provider: AiServiceProvider.Anthropic,
+          provider: AiProvider.Anthropic,
           model: 'claude-3-opus',
           parameters: {
             temperature: 0.6,
@@ -100,7 +100,7 @@ describe('ApiProviderConfig', () => {
           },
         },
         analyzer: {
-          provider: AiServiceProvider.OpenRouter,
+          provider: AiProvider.OpenRouter,
           parameters: {
             frequency_penalty: 0.3,
           },
@@ -129,7 +129,7 @@ describe('ApiProviderConfig', () => {
 
   test('parameters inherit correctly from different levels', () => {
     const complexConfig: Config = {
-      defaultProvider: AiServiceProvider.Anthropic,
+      defaultProvider: AiProvider.Anthropic,
       defaultModel: 'claude-3-opus',
       defaultParameters: {
         temperature: 0.7,
@@ -178,7 +178,7 @@ describe('ApiProviderConfig', () => {
 
   test('handles missing providers gracefully', () => {
     const minimalConfig: Config = {
-      defaultProvider: AiServiceProvider.Anthropic,
+      defaultProvider: AiProvider.Anthropic,
     }
 
     const apiConfig = new ApiProviderConfig(minimalConfig)
@@ -201,7 +201,7 @@ describe('ApiProviderConfig', () => {
 
   test('handles global default parameters correctly', () => {
     const configWithGlobalDefaults: Config = {
-      defaultProvider: AiServiceProvider.OpenRouter,
+      defaultProvider: AiProvider.OpenRouter,
       defaultModel: 'gpt-4', // Assuming OpenRouter can use gpt-4
       defaultParameters: {
         temperature: 0.2,
@@ -228,11 +228,11 @@ describe('ApiProviderConfig', () => {
           // Uses OpenRouter by default, should inherit global params
         },
         coder: {
-          provider: AiServiceProvider.Anthropic,
+          provider: AiProvider.Anthropic,
           // Uses Anthropic, should use Anthropic's params, overriding global temp
         },
         analyzer: {
-          provider: AiServiceProvider.OpenRouter, // Changed from OpenAI
+          provider: AiProvider.OpenRouter, // Changed from OpenAI
           parameters: {
             temperature: 0.3, // This should override global and provider temperature for this agent
             top_p: 0.3, // This should override global and provider top_p for this agent
@@ -244,7 +244,7 @@ describe('ApiProviderConfig', () => {
           // Uses OpenRouter by default, should inherit global params
         },
         task: {
-          provider: AiServiceProvider.Anthropic,
+          provider: AiProvider.Anthropic,
           parameters: {
             temperature: 0.6, // This should override global and Anthropic's temperature
             max_tokens: 1500, // This should override Anthropic's max_tokens
@@ -277,7 +277,7 @@ describe('ApiProviderConfig', () => {
 
     // Test with only global defaults and no provider specific params
     const configOnlyGlobal: Config = {
-      defaultProvider: AiServiceProvider.OpenRouter, // Changed from OpenAI
+      defaultProvider: AiProvider.OpenRouter, // Changed from OpenAI
       defaultModel: 'gpt-3.5-turbo', // Assuming OpenRouter can use this
       defaultParameters: {
         temperature: 0.1,
@@ -297,5 +297,75 @@ describe('ApiProviderConfig', () => {
     const apiConfigOnlyGlobal = new ApiProviderConfig(configOnlyGlobal)
     const agentOnlyGlobalConfig = apiConfigOnlyGlobal.getConfigForAgent('default')
     expect(agentOnlyGlobalConfig?.parameters).toMatchSnapshot('agent default - only global params')
+  })
+
+  test('resolves toolFormat correctly for agents and commands', () => {
+    const config: Config = {
+      defaultProvider: AiProvider.Anthropic,
+      providers: {
+        anthropic: {
+          apiKey: 'anthropic-key',
+          defaultModel: 'claude-sonnet-4-20250514',
+        },
+        openrouter: {
+          apiKey: 'openrouter-key',
+          defaultModel: 'anthropic/claude-sonnet-4',
+        },
+      },
+      agents: {
+        // Sonnet model should default to native
+        default: {
+          provider: AiProvider.Anthropic,
+        },
+        // Sonnet model on OpenRouter should default to native
+        coder: {
+          provider: AiProvider.OpenRouter,
+        },
+        // Explicitly set to polka-codes
+        analyzer: {
+          provider: AiProvider.Anthropic,
+          toolFormat: 'polka-codes',
+        },
+        // Non-sonnet model should default to polka-codes
+        architect: {
+          provider: AiProvider.Anthropic,
+          model: 'claude-3-opus-20240229',
+        },
+      },
+      commands: {
+        // Sonnet model should default to native
+        default: {
+          provider: AiProvider.Anthropic,
+        },
+        // Sonnet model on OpenRouter should default to native
+        task: {
+          provider: AiProvider.OpenRouter,
+        },
+        // Explicitly set to polka-codes
+        commit: {
+          provider: AiProvider.Anthropic,
+          toolFormat: 'polka-codes',
+        },
+        // Non-sonnet model should default to polka-codes
+        pr: {
+          provider: AiProvider.OpenRouter,
+          model: 'google/gemini-flash-1.5',
+        },
+      },
+    }
+
+    const apiConfig = new ApiProviderConfig(config)
+
+    // Agent tests
+    expect(apiConfig.getConfigForAgent('default')?.toolFormat).toBe('native')
+    expect(apiConfig.getConfigForAgent('coder')?.toolFormat).toBe('native')
+    expect(apiConfig.getConfigForAgent('analyzer')?.toolFormat).toBe('polka-codes')
+    expect(apiConfig.getConfigForAgent('architect')?.toolFormat).toBe('polka-codes')
+
+    // Command tests
+    expect(apiConfig.getConfigForCommand('default')?.toolFormat).toBe('native')
+    expect(apiConfig.getConfigForCommand('task')?.toolFormat).toBe('native')
+    expect(apiConfig.getConfigForCommand('commit')?.toolFormat).toBe('polka-codes')
+    expect(apiConfig.getConfigForCommand('pr')?.toolFormat).toBe('polka-codes')
   })
 })

@@ -1,2 +1,2 @@
-export { KnowledgeManagementPolicy } from './KnowledgeManagement'
-export { TruncateContextPolicy } from './TruncateContext'
+export { TruncateContextPolicy } from './TruncateContextPolicy'
+export { EnableCachePolicy } from './EnableCachePolicy'

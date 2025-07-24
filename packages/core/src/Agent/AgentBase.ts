@@ -1,6 +1,11 @@
-import type { AiServiceBase, MessageParam, UserContent } from '../AiService'
+import type { LanguageModelV2 } from '@ai-sdk/provider'
+import type { ModelMessage, UserContent } from '@ai-sdk/provider-utils'
+import { streamText } from 'ai'
+
+import type { UsageMeter } from '../UsageMeter'
+import type { ToolFormat } from '../config'
 import {
-  type FullToolInfo,
+  type FullToolInfoV2,
   type ToolResponse,
   type ToolResponseDelegate,
   type ToolResponseExit,
@@ -8,7 +13,9 @@ import {
   type ToolResponseInterrupted,
   ToolResponseType,
 } from '../tool'
-import type { ToolProvider } from './../tools'
+import { toToolInfoV1 } from '../tool-v1-compat'
+import type { ToolProvider } from '../tools'
+import type { AgentPolicy, AgentPolicyInstance } from './AgentPolicy'
 import { type AssistantMessageContent, parseAssistantMessage } from './parseAssistantMessage'
 import { agentsPrompt, responsePrompts } from './prompts'
 
@@ -145,11 +152,11 @@ export type TaskEvent =
 export type TaskEventCallback = (event: TaskEvent) => void | Promise<void>
 
 export type SharedAgentOptions = {
-  ai: AiServiceBase
+  ai: LanguageModelV2
   os: string
   provider: ToolProvider
   interactive: boolean
-  additionalTools?: FullToolInfo[]
+  additionalTools?: FullToolInfoV2[]
   customInstructions?: string[]
   scripts?: Record<string, string | { command: string; description: string }>
   agents?: Readonly<AgentInfo[]>
@@ -157,11 +164,14 @@ export type SharedAgentOptions = {
   policies: AgentPolicy[]
   retryCount?: number
   requestTimeoutSeconds?: number
+  toolFormat: ToolFormat
+  parameters?: Record<string, any>
+  usageMeter?: UsageMeter
 }
 
 export type AgentBaseConfig = {
   systemPrompt: string
-  tools: FullToolInfo[]
+  tools: FullToolInfoV2[]
   toolNamePrefix: string
   provider: ToolProvider
   interactive: boolean
@@ -171,23 +181,15 @@ export type AgentBaseConfig = {
   policies: AgentPolicy[]
   retryCount?: number
   requestTimeoutSeconds?: number
+  toolFormat: ToolFormat
+  parameters: Record<string, any>
+  usageMeter: UsageMeter
 }
 
 export type AgentInfo = {
   name: string
   responsibilities: string[]
 }
-
-export type AgentPolicyInstance = {
-  name: string
-  tools?: FullToolInfo[]
-  prompt?: string
-  updateResponse?: (response: AssistantMessageContent[]) => Promise<AssistantMessageContent[]>
-  onBeforeInvokeTool?: (name: string, args: Record<string, string>) => Promise<ToolResponse | undefined>
-  onBeforeRequest?: (agent: AgentBase) => Promise<void>
-}
-
-export type AgentPolicy = (tools: Record<string, FullToolInfo>) => AgentPolicyInstance | undefined
 
 export type ToolResponseOrToolPause =
   | { type: 'response'; tool: string; response: UserContent }
@@ -207,14 +209,16 @@ export type ExitReason =
     }
 
 export abstract class AgentBase {
-  protected readonly ai: AiServiceBase
+  readonly ai: LanguageModelV2
   protected readonly config: Readonly<AgentBaseConfig>
-  protected readonly handlers: Record<string, FullToolInfo>
-  #messages: MessageParam[] = []
+  protected readonly handlers: Record<string, FullToolInfoV2>
   readonly #policies: Readonly<AgentPolicyInstance[]>
-  #aborted = false
 
-  constructor(name: string, ai: AiServiceBase, config: AgentBaseConfig) {
+  #messages: ModelMessage[] = []
+  #aborted = false
+  #abortController: AbortController | undefined
+
+  constructor(name: string, ai: LanguageModelV2, config: AgentBaseConfig) {
     this.ai = ai
 
     // If agents are provided, add them to the system prompt
@@ -223,7 +227,7 @@ export abstract class AgentBase {
       config.systemPrompt += `\n${agents}`
     }
 
-    const handlers: Record<string, FullToolInfo> = {}
+    const handlers: Record<string, FullToolInfoV2> = {}
     for (const tool of config.tools) {
       handlers[tool.name] = tool
     }
@@ -231,7 +235,7 @@ export abstract class AgentBase {
     const policies: AgentPolicyInstance[] = []
 
     for (const policy of config.policies) {
-      const instance = policy(handlers)
+      const instance = policy(handlers, config.parameters)
       if (instance) {
         policies.push(instance)
 
@@ -250,22 +254,29 @@ export abstract class AgentBase {
 
     this.config = config
     this.#policies = policies
+
+    this.#messages.push({
+      role: 'system',
+      content: this.config.systemPrompt,
+    })
   }
 
   abort() {
     this.#aborted = true
-    this.ai.abort()
+    if (this.#abortController) {
+      this.#abortController.abort()
+    }
   }
 
-  get parameters(): Readonly<any> {
-    return this.ai.options.parameters
+  get parameters(): Readonly<Record<string, any>> {
+    return this.config.parameters
   }
 
-  get messages(): Readonly<MessageParam[]> {
+  get messages(): Readonly<ModelMessage[]> {
     return this.#messages
   }
 
-  setMessages(messages: Readonly<MessageParam[]>) {
+  setMessages(messages: Readonly<ModelMessage[]>) {
     this.#messages = [...messages]
   }
 
@@ -297,7 +308,7 @@ export abstract class AgentBase {
       if (this.#aborted) {
         return { type: 'Aborted' }
       }
-      if (this.ai.usageMeter.isLimitExceeded().result) {
+      if (this.config.usageMeter.isLimitExceeded().result) {
         this.#callback({ kind: TaskEventKind.UsageExceeded, agent: this })
         return { type: 'UsageExceeded' }
       }
@@ -337,6 +348,13 @@ export abstract class AgentBase {
       }
     }
 
+    let messages = this.#messages
+    for (const instance of this.#policies) {
+      if (instance.prepareMessages) {
+        messages = await instance.prepareMessages(this, messages)
+      }
+    }
+
     let currentAssistantMessage = ''
 
     const retryCount = this.config.retryCount ?? 5
@@ -353,30 +371,61 @@ export abstract class AgentBase {
         if (requestTimeoutSeconds > 0) {
           timeout = setTimeout(() => {
             console.debug(`No data received for ${requestTimeoutSeconds} seconds. Aborting request.`)
-            this.ai.abort()
+            this.abort()
           }, requestTimeoutSeconds * 1000)
         }
       }
 
-      const stream = this.ai.send(this.config.systemPrompt, this.#messages)
+      // TODO: this is racy. we should block concurrent requests
+      this.#abortController = new AbortController()
+
+      const providerOptions: any = {}
+
+      const thinkingBudgetTokens = this.config.parameters?.thinkingBudgetTokens
+      const enableThinking = thinkingBudgetTokens > 0
+
+      if (enableThinking) {
+        providerOptions.anthropic = {
+          thinking: { type: 'enabled', budgetTokens: thinkingBudgetTokens },
+        }
+        providerOptions.openrouter = {
+          reasoning: {
+            max_tokens: thinkingBudgetTokens,
+          },
+        }
+        providerOptions.google = {
+          thinkingConfig: {
+            includeThoughts: true,
+            thinkingBudget: thinkingBudgetTokens,
+          },
+        }
+      }
 
       try {
-        resetTimeout()
-        for await (const chunk of stream) {
-          resetTimeout()
-          switch (chunk.type) {
-            case 'usage':
-              await this.#callback({ kind: TaskEventKind.Usage, agent: this })
-              break
-            case 'text':
-              currentAssistantMessage += chunk.text
-              await this.#callback({ kind: TaskEventKind.Text, agent: this, newText: chunk.text })
-              break
-            case 'reasoning':
-              await this.#callback({ kind: TaskEventKind.Reasoning, agent: this, newText: chunk.text })
-              break
-          }
-        }
+        const stream = streamText({
+          model: this.ai,
+          messages,
+          providerOptions,
+          onChunk: async ({ chunk }) => {
+            resetTimeout()
+            switch (chunk.type) {
+              case 'text':
+                currentAssistantMessage += chunk.text
+                await this.#callback({ kind: TaskEventKind.Text, agent: this, newText: chunk.text })
+                break
+              case 'reasoning':
+                await this.#callback({ kind: TaskEventKind.Reasoning, agent: this, newText: chunk.text })
+                break
+            }
+          },
+          onFinish: this.config.usageMeter.onFinishHandler(this.ai),
+          onError: async (error) => {
+            console.error('Error in stream:', error)
+          },
+          abortSignal: this.#abortController.signal,
+        })
+
+        await stream.consumeStream()
       } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') {
           break
@@ -407,12 +456,14 @@ export abstract class AgentBase {
       throw new Error('No assistant message received')
     }
 
+    console.log('Assistant message:', currentAssistantMessage)
+
     this.#messages.push({
       role: 'assistant',
       content: currentAssistantMessage,
     })
 
-    const ret = parseAssistantMessage(currentAssistantMessage, this.config.tools, this.config.toolNamePrefix)
+    const ret = parseAssistantMessage(currentAssistantMessage, this.config.tools.map(toToolInfoV1), this.config.toolNamePrefix)
 
     await this.#callback({ kind: TaskEventKind.EndRequest, agent: this, message: currentAssistantMessage })
 
@@ -425,14 +476,7 @@ export abstract class AgentBase {
     const toolResponses: ToolResponseOrToolPause[] = []
     let hasPause = false
 
-    let updatedResponse = response
-    for (const hook of this.#policies) {
-      if (hook.updateResponse) {
-        updatedResponse = await hook.updateResponse(updatedResponse)
-      }
-    }
-
-    outer: for (const content of updatedResponse) {
+    outer: for (const content of response) {
       switch (content.type) {
         case 'text':
           // no need to handle text content
@@ -570,10 +614,10 @@ export abstract class AgentBase {
   protected abstract onBeforeInvokeTool(name: string, args: Record<string, string>): Promise<ToolResponse | undefined>
 
   get model() {
-    return this.ai.model
+    return `${this.ai.provider}:${this.ai.modelId}`
   }
 
   get usage() {
-    return this.ai.usageMeter.usage
+    return this.config.usageMeter.usage
   }
 }

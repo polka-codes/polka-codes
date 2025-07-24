@@ -5,7 +5,7 @@ import { promises as fs } from 'node:fs'
 import { listFiles as listFilesHelper } from '@polka-codes/cli-shared'
 import { getProvider, loadConfig } from '@polka-codes/cli-shared'
 import {
-  type FullToolInfo,
+  type FullToolInfoV2,
   ToolResponseType,
   executeCommand,
   listFiles,
@@ -15,7 +15,6 @@ import {
   replaceInFile,
   responsePrompts,
   searchFiles,
-  updateKnowledge,
   writeToFile,
 } from '@polka-codes/core'
 
@@ -32,7 +31,7 @@ export interface RunnerOptions {
 export class Runner {
   private wsManager: WebSocketManager
   private provider: ReturnType<typeof getProvider>
-  private availableTools: Record<string, FullToolInfo>
+  private availableTools: Record<string, FullToolInfoV2>
 
   constructor(private options: RunnerOptions) {
     const config = loadConfig() ?? {}
@@ -70,7 +69,6 @@ export class Runner {
       [replaceInFile.name]: replaceInFile,
       [searchFiles.name]: searchFiles,
       [writeToFile.name]: writeToFile,
-      [updateKnowledge.name]: updateKnowledge,
     }
 
     // Initialize WebSocket manager
@@ -190,11 +188,55 @@ export class Runner {
 
       const respMsg = await fn()
 
-      if (typeof respMsg === 'string' || Array.isArray(respMsg)) {
+      if (typeof respMsg === 'string') {
         responses.push({
           index: request.index,
           tool: request.tool,
           response: respMsg,
+        })
+      } else if (Array.isArray(respMsg)) {
+        responses.push({
+          index: request.index,
+          tool: request.tool,
+          response: respMsg.map((part) => {
+            const toSource = (data: string | Uint8Array | ArrayBuffer | Buffer | URL) => {
+              if (typeof data === 'string') {
+                return { type: 'base64', data } as const
+              }
+              if (data instanceof URL) {
+                return { type: 'url', url: data.toString() } as const
+              }
+              if (data instanceof Buffer) {
+                return { type: 'base64', data: data.toString('base64') } as const
+              }
+              if (data instanceof Uint8Array) {
+                return { type: 'base64', data: Buffer.from(data).toString('base64') } as const
+              }
+              return { type: 'base64', data: Buffer.from(data).toString('base64') } as const
+            }
+
+            switch (part.type) {
+              case 'text':
+                return {
+                  type: 'text',
+                  text: part.text,
+                }
+              case 'image':
+                part.image
+                return {
+                  type: 'image',
+                  mediaType: part.mediaType,
+                  source: toSource(part.image),
+                }
+              case 'file':
+                return {
+                  type: 'file',
+                  mediaType: part.mediaType,
+                  filename: part.filename,
+                  source: toSource(part.data),
+                }
+            }
+          }),
         })
       } else if (respMsg.type === 'exit') {
         this.wsManager.sendMessage({

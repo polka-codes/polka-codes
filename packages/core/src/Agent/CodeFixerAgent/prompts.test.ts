@@ -8,7 +8,7 @@ import { fullSystemPrompt } from './prompts'
 
 describe('CodeFixerAgent prompts', () => {
   test('fullSystemPrompt should include all required sections', () => {
-    const prompt = fullSystemPrompt({ os: 'test-os' }, [], 'tool_', [], {}, false)
+    const prompt = fullSystemPrompt({ os: 'test-os' }, [], 'tool_', [], {}, false, false)
 
     // Check for key sections
     expect(prompt).toContain('CODE FIXING STRATEGIES')
@@ -29,7 +29,7 @@ describe('CodeFixerAgent prompts', () => {
 
   test('should include custom instructions when provided', () => {
     const customInstructions = ['Custom instruction 1', 'Custom instruction 2']
-    const prompt = fullSystemPrompt({ os: 'test-os' }, [], 'tool_', customInstructions, {}, false)
+    const prompt = fullSystemPrompt({ os: 'test-os' }, [], 'tool_', customInstructions, {}, false, false)
 
     expect(prompt).toContain('Custom instruction 1')
     expect(prompt).toContain('Custom instruction 2')
@@ -40,7 +40,7 @@ describe('CodeFixerAgent prompts', () => {
       test: 'bun test',
       check: { command: 'bun typecheck', description: 'Check types' },
     }
-    const prompt = fullSystemPrompt({ os: 'test-os' }, [], 'tool_', [], scripts, false)
+    const prompt = fullSystemPrompt({ os: 'test-os' }, [], 'tool_', [], scripts, false, false)
 
     expect(prompt).toContain('bun test')
     expect(prompt).toContain('bun typecheck')

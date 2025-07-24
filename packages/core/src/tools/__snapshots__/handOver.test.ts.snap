@@ -1,0 +1,14 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`handOver tool handler should return proper handover response 1`] = `
+{
+  "agentName": "coder",
+  "context": "test context",
+  "files": [
+    "file1.ts",
+    "file2.ts",
+  ],
+  "task": "implement feature",
+  "type": "HandOver",
+}
+`;

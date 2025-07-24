@@ -84,7 +84,6 @@ export async function runTask(taskArg: string | undefined, _options: any, comman
     budget,
     interactive: process.stdin.isTTY,
     verbose,
-    enableCache: true,
   })
 
   const sigintHandler = () => {

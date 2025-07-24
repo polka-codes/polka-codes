@@ -1,18 +1,13 @@
-import { type FullToolInfo, PermissionLevel, type ToolHandler, type ToolInfo, ToolResponseType } from '../tool'
+import { z } from 'zod'
+import { type FullToolInfoV2, PermissionLevel, type ToolHandler, type ToolInfoV2, ToolResponseType } from '../tool'
 import type { FilesystemProvider } from './provider'
-import { getString } from './utils'
 
 export const toolInfo = {
   name: 'remove_file',
   description: 'Request to remove a file at the specified path.',
-  parameters: [
-    {
-      name: 'path',
-      description: 'The path of the file to remove',
-      required: true,
-      usageValue: 'File path here',
-    },
-  ],
+  parameters: z.object({
+    path: z.string().describe('The path of the file to remove').meta({ usageValue: 'File path here' }),
+  }),
   examples: [
     {
       description: 'Request to remove a file',
@@ -25,7 +20,7 @@ export const toolInfo = {
     },
   ],
   permissionLevel: PermissionLevel.Write,
-} as const satisfies ToolInfo
+} as const satisfies ToolInfoV2
 
 export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (provider, args) => {
   if (!provider.removeFile) {
@@ -35,7 +30,14 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
     }
   }
 
-  const path = getString(args, 'path')
+  const parsed = toolInfo.parameters.safeParse(args)
+  if (!parsed.success) {
+    return {
+      type: ToolResponseType.Invalid,
+      message: `Invalid arguments for remove_file: ${parsed.error.message}`,
+    }
+  }
+  const { path } = parsed.data
 
   await provider.removeFile(path)
 
@@ -53,4 +55,4 @@ export default {
   ...toolInfo,
   handler,
   isAvailable,
-} satisfies FullToolInfo
+} satisfies FullToolInfoV2

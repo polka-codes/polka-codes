@@ -115,9 +115,10 @@ export const fullSystemPrompt = (
   toolNamePrefix: string,
   instructions: string[],
   scripts: Record<string, string | { command: string; description: string }>,
+  useNativeTool: boolean,
 ) => `
 ${basePrompt}
-${toolUsePrompt(tools, toolNamePrefix)}
+${useNativeTool ? '' : toolUsePrompt(tools, toolNamePrefix)}
 ${editingFilesPrompt(toolNamePrefix)}
 ${capabilities(toolNamePrefix)}
 ${rules(toolNamePrefix)}

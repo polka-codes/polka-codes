@@ -19,7 +19,7 @@ export const runChat = async (opts: any, command?: Command) => {
 
   if (!provider) {
     // new user? ask for config
-    const newConfig = await configPrompt({ provider, model, apiKey })
+    const newConfig = await configPrompt({})
     provider = newConfig.provider
     model = newConfig.model
     apiKey = newConfig.apiKey
@@ -41,7 +41,6 @@ export const runChat = async (opts: any, command?: Command) => {
     budget,
     interactive: true,
     verbose,
-    enableCache: true,
   })
 
   const chat = new Chat({

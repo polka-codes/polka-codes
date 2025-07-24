@@ -1,5 +1,7 @@
+import type { LanguageModelV2 } from '@ai-sdk/provider'
+import { generateText } from 'ai'
 import type { MultiAgent } from '../Agent'
-import type { AiServiceBase, ApiUsage } from '../AiService'
+import type { UsageMeter } from '../UsageMeter'
 import { ToolResponseType } from '../tool'
 import createNewProjectDef from './createNewProject'
 import generateGitCommitMessageDef from './generateGitCommitMessage'
@@ -9,16 +11,24 @@ import type { AiToolDefinition, GetInput, GetOutput } from './types'
 
 export const executeTool = async <T extends AiToolDefinition<any, any>>(
   definition: T,
-  ai: AiServiceBase,
+  ai: LanguageModelV2,
   params: GetInput<T>,
-): Promise<{ response: GetOutput<T>; usage: ApiUsage }> => {
-  const { response, usage } = await (ai as AiServiceBase).request(definition.prompt, [
-    { role: 'user', content: definition.formatInput(params) },
-  ])
-  return {
-    response: definition.parseOutput(response),
-    usage,
-  }
+  usageMeter: UsageMeter,
+): Promise<GetOutput<T>> => {
+  const resp = await generateText({
+    model: ai,
+    system: definition.prompt,
+    messages: [
+      {
+        role: 'user',
+        content: definition.formatInput(params),
+      },
+    ],
+  })
+
+  usageMeter.addUsage(ai, resp)
+
+  return definition.parseOutput(resp.text)
 }
 
 export const executeAgentTool = async <T extends AiToolDefinition<any, any>>(
@@ -45,8 +55,8 @@ export const executeAgentTool = async <T extends AiToolDefinition<any, any>>(
 }
 
 export const makeTool = <T extends AiToolDefinition<any, any>>(definition: T) => {
-  return async (ai: AiServiceBase, params: GetInput<T>): Promise<{ response: GetOutput<T>; usage: ApiUsage }> => {
-    return executeTool(definition, ai, params)
+  return async (ai: LanguageModelV2, params: GetInput<T>, usageMeter: UsageMeter): Promise<GetOutput<T>> => {
+    return executeTool(definition, ai, params, usageMeter)
   }
 }
 

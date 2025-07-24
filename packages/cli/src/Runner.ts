@@ -1,18 +1,15 @@
-import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import os from 'node:os'
-import { join } from 'node:path'
 import {
   type AgentBase,
   type AgentInfo,
   type AgentNameType,
   type AgentPolicy,
-  type AiServiceBase,
   AnalyzerAgent,
   ArchitectAgent,
   CodeFixerAgent,
   CoderAgent,
-  KnowledgeManagementPolicy,
+  EnableCachePolicy,
   MultiAgent,
   Policies,
   TruncateContextPolicy,
@@ -22,11 +19,14 @@ import {
   architectAgentInfo,
   codeFixerAgentInfo,
   coderAgentInfo,
-  createService,
 } from '@polka-codes/core'
 
+import type { LanguageModelV2 } from '@ai-sdk/provider'
 import { type Config, type ProviderOptions, getProvider, listFiles, printEvent } from '@polka-codes/cli-shared'
+import { merge } from 'lodash'
 import type { ApiProviderConfig } from './ApiProviderConfig'
+import { getModel } from './getModel'
+import prices from './prices'
 
 export type RunnerOptions = {
   providerConfig: ApiProviderConfig
@@ -35,7 +35,6 @@ export type RunnerOptions = {
   budget: number
   interactive: boolean
   verbose: number
-  enableCache: boolean
   availableAgents?: AgentInfo[] // empty to enable all agents
 }
 
@@ -46,15 +45,13 @@ export class Runner {
 
   readonly multiAgent: MultiAgent
 
-  readonly #hasKnowledgeManagementPolicy: boolean
-
   /** Initialize core components including usage tracking and agent service provisioning */
   constructor(options: RunnerOptions) {
     this.#options = options
-    this.#usageMeter = new UsageMeter({
-      prices: options.config.prices,
-      maxCost: options.budget,
-      maxMessageCount: options.maxMessageCount,
+
+    this.#usageMeter = new UsageMeter(merge(prices, options.config.prices ?? {}), {
+      maxMessages: options.config.maxMessageCount ?? 0,
+      maxCost: options.config.budget ?? 0,
     })
 
     let rules = options.config.rules
@@ -86,49 +83,43 @@ export class Runner {
 
     const platform = os.platform()
 
-    const services: Record<string, Record<string, AiServiceBase>> = {}
+    const llms: Record<string, Record<string, LanguageModelV2>> = {}
 
     // Cache AI services by provider+model to reuse connections and track costs
-    const getOrCreateService = (agentName: string) => {
+    const getOrCreateLlm = (agentName: string) => {
       const config = this.#options.providerConfig.getConfigForAgent(agentName)
       if (!config) {
         // return any existing service if found
-        const service = Object.values(Object.values(services)[0] ?? {})[0]
+        const service = Object.values(Object.values(llms)[0] ?? {})[0]
         if (service) {
           return service
         }
         throw new Error(`No provider configured for agent: ${agentName}`)
       }
-      const { provider, model, apiKey, parameters } = config
-      let service = services[provider]?.[model]
+      const { provider, model, apiKey, parameters, toolFormat } = config
+      let service = llms[provider]?.[model]
       if (!service) {
-        service = createService(provider, {
+        service = getModel({
+          provider,
           apiKey,
           model,
-          parameters,
-          usageMeter: this.#usageMeter,
-          enableCache: options.enableCache,
         })
-        services[provider] = { [model]: service }
+        llms[provider] = { [model]: service }
       }
       return service
     }
 
     const callback = printEvent(options.verbose, this.#usageMeter)
 
-    this.#hasKnowledgeManagementPolicy = false
-
-    const policies: AgentPolicy[] = []
+    const policies: AgentPolicy[] = [EnableCachePolicy]
     for (const policy of options.config.policies ?? []) {
       switch (policy.trim().toLowerCase()) {
-        case Policies.KnowledgeManagement:
-          policies.push(KnowledgeManagementPolicy)
-          this.#hasKnowledgeManagementPolicy = true
-          console.log('KnowledgeManagementPolicy enabled')
-          break
         case Policies.TruncateContext:
           policies.push(TruncateContextPolicy)
           console.log('TruncateContextPolicy enabled')
+          break
+        case Policies.EnableCache:
+          // Already added by default
           break
         default:
           console.log('Unknown policy:', policy)
@@ -143,8 +134,11 @@ export class Runner {
         const retryCount = agentConfig.retryCount ?? this.#options.config.retryCount
         const requestTimeoutSeconds = agentConfig.requestTimeoutSeconds ?? this.#options.config.requestTimeoutSeconds
 
+        const ai = getOrCreateLlm(agentName)
+        const config = this.#options.providerConfig.getConfigForAgent(agentName)
+
         const args = {
-          ai: getOrCreateService(agentName),
+          ai,
           os: platform,
           customInstructions: rules,
           scripts: options.config.scripts,
@@ -154,6 +148,9 @@ export class Runner {
           policies,
           retryCount,
           requestTimeoutSeconds,
+          toolFormat: this.#options.config.toolFormat ?? 'polka-codes',
+          parameters: config?.parameters,
+          usageMeter: this.#usageMeter,
         }
         switch (agentName) {
           case coderAgentInfo.name:
@@ -227,22 +224,7 @@ export class Runner {
     const [fileList] = await listFiles(cwd, true, maxFileCount, cwd, finalExcludes)
     const fileContext = `<files>\n${fileList.join('\n')}\n</files>`
 
-    let knowledgeContent = ''
-
-    // If KnowledgeManagement policy is enabled, try to read knowledge.ai.yml at root
-    if (this.#hasKnowledgeManagementPolicy) {
-      const knowledgeFilePath = join(cwd, 'knowledge.ai.yml')
-      if (existsSync(knowledgeFilePath)) {
-        try {
-          const content = await readFile(knowledgeFilePath, 'utf8')
-          knowledgeContent = `\n<knowledge_file path="knowledge.ai.yml">${content}</knowledge_file>`
-        } catch (error) {
-          console.warn(`Failed to read knowledge file at root: ${error}`)
-        }
-      }
-    }
-
-    return `<now_date>${new Date().toISOString()}</now_date>${fileContext}${knowledgeContent}`
+    return `<now_date>${new Date().toISOString()}</now_date>${fileContext}`
   }
 
   /** Execute a task through the agent system, initializing context if not provided */

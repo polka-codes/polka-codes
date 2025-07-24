@@ -2,8 +2,10 @@ import { execSync, spawnSync } from 'node:child_process'
 import { confirm } from '@inquirer/prompts'
 import { Command } from 'commander'
 import ora from 'ora'
+import { z } from 'zod'
 
-import { UsageMeter, createService, generateGitCommitMessage } from '@polka-codes/core'
+import { UsageMeter, generateGitCommitMessage } from '@polka-codes/core'
+import { getModel } from '../getModel'
 import { parseOptions } from '../options'
 
 export const commitCommand = new Command('commit')
@@ -14,28 +16,19 @@ export const commitCommand = new Command('commit')
     const spinner = ora('Gathering information...').start()
 
     const options = command.parent?.opts() ?? {}
-    const { providerConfig, config } = parseOptions(options)
+    const { providerConfig } = parseOptions(options)
 
-    const { provider, model, apiKey, parameters } = providerConfig.getConfigForCommand('commit') ?? {}
+    const { provider, model, apiKey } = providerConfig.getConfigForCommand('commit') ?? {}
 
     console.log('Provider:', provider)
     console.log('Model:', model)
 
-    if (!provider) {
+    if (!provider || !model) {
       console.error('Error: No provider specified. Please run "pokla config" to configure your AI provider.')
       process.exit(1)
     }
 
-    const usage = new UsageMeter({
-      prices: config.prices,
-    })
-
-    const ai = createService(provider, {
-      apiKey,
-      model,
-      usageMeter: usage,
-      parameters,
-    })
+    const usage = new UsageMeter()
 
     try {
       // Check if there are any staged files
@@ -69,18 +62,28 @@ export const commitCommand = new Command('commit')
 
       spinner.text = 'Generating commit message...'
 
-      // Generate commit message
-      const result = await generateGitCommitMessage(ai, { diff, context: message })
+      const llm = getModel({
+        provider,
+        model,
+        apiKey,
+      })
+
+      const schema = z.object({
+        reasoning: z.string().describe('Reasoning if any'),
+        message: z.string().describe('The generated commit message'),
+      })
+
+      const commitMessage = await generateGitCommitMessage(llm, { diff, context: message }, usage)
 
       usage.printUsage()
 
       spinner.succeed('Commit message generated')
 
-      console.log(`\nCommit message:\n${result.response}`)
+      console.log(`\nCommit message:\n${commitMessage}`)
 
       // Make the commit
       try {
-        spawnSync('git', ['commit', '-m', result.response], { stdio: 'inherit' })
+        spawnSync('git', ['commit', '-m', commitMessage], { stdio: 'inherit' })
       } catch {
         console.error('Error: Commit failed')
         process.exit(1)

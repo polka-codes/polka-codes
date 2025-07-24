@@ -1,5 +1,7 @@
+import { UsageMeter } from '../../UsageMeter'
 import { getAvailableTools } from '../../getAvailableTools'
 import { PermissionLevel } from '../../tool'
+import { toToolInfoV1 } from '../../tool-v1-compat'
 import { allTools } from '../../tools'
 import { AgentBase, type AgentInfo, type SharedAgentOptions } from '../AgentBase'
 import { fullSystemPrompt } from './prompts'
@@ -21,10 +23,11 @@ export class ArchitectAgent extends AgentBase {
       {
         os: options.os,
       },
-      tools,
+      tools.map(toToolInfoV1),
       toolNamePrefix,
       options.customInstructions ?? [],
       options.scripts ?? {},
+      options.toolFormat === 'native',
     )
 
     super(architectAgentInfo.name, options.ai, {
@@ -37,6 +40,9 @@ export class ArchitectAgent extends AgentBase {
       scripts: options.scripts,
       callback: options.callback,
       policies: options.policies,
+      toolFormat: options.toolFormat,
+      parameters: options.parameters ?? {},
+      usageMeter: options.usageMeter ?? new UsageMeter(),
     })
   }
 

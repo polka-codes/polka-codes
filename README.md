@@ -52,7 +52,6 @@ For more information, see the [CLI README](packages/cli/README.md).
   - **Coder Agent**: Focuses on implementation, coding, and maintenance.
   - **Analyzer Agent**: Analyzes code and project structure.
   - **Code Fixer Agent**: Fixes bugs and addresses issues.
-- 🧠 **Knowledge Management**: Automatically captures and maintains knowledge about your codebase in `knowledge.ai.yml` files, ensuring agents have context.
 - 💻 **Interactive CLI**: A powerful command-line interface for task execution and interactive chat.
 - 🔄 **GitHub Integration**: A GitHub Action that allows you to run Polka Codes by mentioning it in pull requests and issues.
 - 📦 **Extensible Architecture**: A modular design that allows for adding new AI providers, tools, and agents.
@@ -100,6 +99,22 @@ bun install
 A [`.polkacodes.yml`](.polkacodes.yml) configuration file can be used to customize the behavior of polka-codes. An example configuration file is provided in the repository as [`example.polkacodes.yml`](example.polkacodes.yml).
 
 For detailed configuration options, refer to the example file, which includes comprehensive comments for each setting.
+
+### Tool Format
+
+You can specify the format for tool integration using the `toolFormat` option in your `.polkacodes.yml` file. This setting determines how the AI model interacts with the available tools.
+
+-   **`native`**: This option uses the model's native tool-use capabilities. It can be more efficient and lead to better results, but it is not supported by all models. Check your model provider's documentation for compatibility.
+
+-   **`polka-codes`** (default): This option uses a custom XML-based format for tool calls. It is designed to be compatible with a wide range of models but may consume more tokens and be less performant compared to the `native` format.
+
+You can set the `toolFormat` globally or for specific agents or commands.
+
+Example:
+```yaml
+# .polkacodes.yml
+toolFormat: "native"
+```
 
 ## Environment Variables
 
