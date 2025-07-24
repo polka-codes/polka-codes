@@ -1,6 +1,9 @@
+import { confirm } from '@inquirer/prompts'
 import { type ExitReason, ToolResponseType } from '@polka-codes/core'
 import type { Command } from 'commander'
+import { set } from 'lodash'
 
+import { ApiProviderConfig } from '../ApiProviderConfig'
 import { Chat } from '../Chat'
 import { configPrompt } from '../configPrompt'
 import { parseOptions } from '../options'
@@ -8,23 +11,31 @@ import { Runner } from '../Runner'
 
 export const runChat = async (opts: any, command?: Command) => {
   const options = command?.parent?.opts() ?? opts ?? {}
-  const { config, providerConfig, maxMessageCount, verbose, budget, agent } = parseOptions(options)
+  let { config, providerConfig, maxMessageCount, verbose, budget, agent } = parseOptions(options)
 
   if (!process.stdin.isTTY) {
     console.error('Error: Terminal is not interactive. Please run this command in an interactive terminal.')
     process.exit(1)
   }
 
-  let { provider, model, apiKey, parameters } = providerConfig.getConfigForAgent(agent) ?? {}
+  let providerDetails = providerConfig.getConfigForAgent(agent)
 
-  if (!provider) {
+  if (!providerDetails?.provider) {
     // new user? ask for config
-    // TODO: this isn't working as provider, model, and apiKey isn't passed
     const newConfig = await configPrompt({})
-    provider = newConfig.provider
-    model = newConfig.model
-    apiKey = newConfig.apiKey
+    const updatedConfig = JSON.parse(JSON.stringify(config ?? {}))
+    set(updatedConfig, `providers.${newConfig.provider}.model`, newConfig.model)
+    set(updatedConfig, `providers.${newConfig.provider}.apiKey`, newConfig.apiKey)
+    if (newConfig.baseURL) {
+      set(updatedConfig, `providers.${newConfig.provider}.baseURL`, newConfig.baseURL)
+    }
+
+    providerConfig = new ApiProviderConfig(updatedConfig)
+    providerDetails = providerConfig.getConfigForAgent(agent)
+    config = updatedConfig
   }
+
+  const { provider, model, parameters } = providerDetails ?? {}
 
   console.log('Starting chat session...')
   console.log('Provider:', provider)
@@ -37,7 +48,7 @@ export const runChat = async (opts: any, command?: Command) => {
 
   const runner = new Runner({
     providerConfig,
-    config: config ?? {},
+    config: config,
     maxMessageCount,
     budget,
     interactive: true,
@@ -55,11 +66,18 @@ export const runChat = async (opts: any, command?: Command) => {
         exitReason = reason
       }
       switch (exitReason.type) {
-        case 'UsageExceeded':
-          console.log('Usage exceeded.')
-          chat.close()
-          // TODO: ask user if they want to continue
+        case 'UsageExceeded': {
+          const continueChat = await confirm({
+            message: 'Usage limit exceeded. Do you want to continue?',
+            default: true,
+          })
+          if (continueChat) {
+            runner.usageMeter.resetUsage()
+          } else {
+            chat.close()
+          }
           break
+        }
         case 'WaitForUserInput':
           break
         case ToolResponseType.Interrupted:

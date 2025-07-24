@@ -143,6 +143,12 @@ export class UsageMeter {
     this.#calls += n
   }
 
+  /** Reset the running totals. */
+  resetUsage() {
+    this.#totals = { input: 0, output: 0, cachedRead: 0, cost: 0 }
+    this.#calls = 0
+  }
+
   /** Return true once either messages or cost exceed the configured caps. */
   isLimitExceeded() {
     const messageCount = this.#maxMessages !== undefined && this.#calls >= this.#maxMessages

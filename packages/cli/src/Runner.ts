@@ -40,7 +40,7 @@ export type RunnerOptions = {
 /** Core orchestrator managing AI agents, service provisioning, and task execution lifecycle */
 export class Runner {
   readonly #options: RunnerOptions
-  readonly #usageMeter: UsageMeter
+  readonly usageMeter: UsageMeter
 
   readonly multiAgent: MultiAgent
 
@@ -48,7 +48,7 @@ export class Runner {
   constructor(options: RunnerOptions) {
     this.#options = options
 
-    this.#usageMeter = new UsageMeter(merge(prices, options.config.prices ?? {}), {
+    this.usageMeter = new UsageMeter(merge(prices, options.config.prices ?? {}), {
       maxMessages: options.config.maxMessageCount ?? 0,
       maxCost: options.config.budget ?? 0,
     })
@@ -104,7 +104,7 @@ export class Runner {
       return service
     }
 
-    const callback = printEvent(options.verbose, this.#usageMeter)
+    const callback = printEvent(options.verbose, this.usageMeter)
 
     const policies: AgentPolicy[] = [EnableCachePolicy]
     for (const policy of options.config.policies ?? []) {
@@ -145,7 +145,7 @@ export class Runner {
           requestTimeoutSeconds,
           toolFormat: this.#options.config.toolFormat ?? 'polka-codes',
           parameters: config?.parameters,
-          usageMeter: this.#usageMeter,
+          usageMeter: this.usageMeter,
         }
         switch (agentName) {
           case coderAgentInfo.name:
@@ -247,10 +247,10 @@ export class Runner {
   }
 
   get usage() {
-    return this.#usageMeter.usage
+    return this.usageMeter.usage
   }
 
   printUsage() {
-    this.#usageMeter.printUsage()
+    this.usageMeter.printUsage()
   }
 }

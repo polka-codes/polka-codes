@@ -17,6 +17,7 @@ export type ProviderConfig = {
   provider: AiProvider
   model: string
   apiKey?: string
+  baseURL?: string
 }
 
 export async function configPrompt(existingConfig?: Partial<ProviderConfig>): Promise<ProviderConfig> {
@@ -73,5 +74,10 @@ export async function configPrompt(existingConfig?: Partial<ProviderConfig>): Pr
     apiKey = await password({ message: 'Enter API Key:', mask: '*' })
   }
 
-  return { provider, model: model as string, apiKey }
+  let baseURL: string | undefined
+  if (provider === AiProvider.Ollama) {
+    baseURL = await input({ message: 'Enter Ollama Base URL:', default: 'http://localhost:11434' })
+  }
+
+  return { provider, model: model as string, apiKey, baseURL }
 }
