@@ -3,6 +3,7 @@
 exports[`ApiProviderConfig getConfigForCommand with command-specific config 1`] = `
 {
   "apiKey": undefined,
+  "baseUrl": undefined,
   "keyFile": undefined,
   "location": undefined,
   "model": "deepseek-chat",
@@ -16,6 +17,7 @@ exports[`ApiProviderConfig getConfigForCommand with command-specific config 1`] 
 exports[`ApiProviderConfig getConfigForCommand falls back to default provider 1`] = `
 {
   "apiKey": "test-key",
+  "baseUrl": undefined,
   "keyFile": undefined,
   "location": undefined,
   "model": "claude-3-opus",
@@ -29,6 +31,7 @@ exports[`ApiProviderConfig getConfigForCommand falls back to default provider 1`
 exports[`ApiProviderConfig getConfigForAgent with agent-specific config 1`] = `
 {
   "apiKey": "test-key",
+  "baseUrl": undefined,
   "keyFile": undefined,
   "location": undefined,
   "model": "claude-3-sonnet",
@@ -42,6 +45,7 @@ exports[`ApiProviderConfig getConfigForAgent with agent-specific config 1`] = `
 exports[`parseOptions prioritizes CLI flags over env vars and config 1`] = `
 {
   "apiKey": "cli-key",
+  "baseUrl": undefined,
   "keyFile": undefined,
   "location": undefined,
   "model": "deepseek-chat-32k",
@@ -74,6 +78,7 @@ exports[`parseOptions handles multiple config files 1`] = `
 exports[`parseOptions merges environment variables with config 1`] = `
 {
   "apiKey": "cli-key",
+  "baseUrl": undefined,
   "keyFile": undefined,
   "location": undefined,
   "model": "deepseek-chat",

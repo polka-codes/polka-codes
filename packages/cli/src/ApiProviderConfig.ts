@@ -51,7 +51,7 @@ export class ApiProviderConfig {
     if (!finalProvider) {
       return undefined
     }
-    const { apiKey, defaultModel, defaultParameters, location, project, keyFile } = (this.providers[finalProvider] as any) ?? {}
+    const { apiKey, defaultModel, defaultParameters, location, project, keyFile, baseUrl } = (this.providers[finalProvider] as any) ?? {}
     const finalModel = model ?? defaultModel ?? defaultModels[finalProvider]
     const finalParameters = {
       ...this.defaultParameters,
@@ -66,6 +66,7 @@ export class ApiProviderConfig {
       location,
       project,
       keyFile,
+      baseUrl,
       parameters: finalParameters,
       toolFormat: finalToolFormat,
     }
@@ -78,7 +79,7 @@ export class ApiProviderConfig {
     if (!finalProvider) {
       return undefined
     }
-    const { apiKey, defaultModel, defaultParameters, location, project, keyFile } = (this.providers[finalProvider] as any) ?? {}
+    const { apiKey, defaultModel, defaultParameters, location, project, keyFile, baseUrl } = (this.providers[finalProvider] as any) ?? {}
     const finalModel = model ?? defaultModel ?? defaultModels[finalProvider]
     const finalParameters = {
       ...this.defaultParameters,
@@ -93,6 +94,7 @@ export class ApiProviderConfig {
       location,
       project,
       keyFile,
+      baseUrl,
       parameters: finalParameters,
       toolFormat: finalToolFormat,
     }

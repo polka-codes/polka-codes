@@ -33,6 +33,7 @@ ApiProviderConfig {
 exports[`ApiProviderConfig getConfigForCommand resolves parameters correctly 1`] = `
 {
   "apiKey": "test-api-key",
+  "baseUrl": undefined,
   "keyFile": undefined,
   "location": undefined,
   "model": "claude-3-opus",
@@ -50,6 +51,7 @@ exports[`ApiProviderConfig getConfigForCommand resolves parameters correctly 1`]
 exports[`ApiProviderConfig getConfigForCommand resolves parameters correctly 2`] = `
 {
   "apiKey": "test-api-key",
+  "baseUrl": undefined,
   "keyFile": undefined,
   "location": undefined,
   "model": "claude-3-sonnet",
@@ -67,6 +69,7 @@ exports[`ApiProviderConfig getConfigForCommand resolves parameters correctly 2`]
 exports[`ApiProviderConfig getConfigForCommand resolves parameters correctly 3`] = `
 {
   "apiKey": "test-api-key",
+  "baseUrl": undefined,
   "keyFile": undefined,
   "location": undefined,
   "model": "claude-3-opus",
@@ -84,6 +87,7 @@ exports[`ApiProviderConfig getConfigForCommand resolves parameters correctly 3`]
 exports[`ApiProviderConfig getConfigForAgent resolves parameters correctly 1`] = `
 {
   "apiKey": "test-api-key",
+  "baseUrl": undefined,
   "keyFile": undefined,
   "location": undefined,
   "model": "claude-3-opus",
@@ -101,6 +105,7 @@ exports[`ApiProviderConfig getConfigForAgent resolves parameters correctly 1`] =
 exports[`ApiProviderConfig getConfigForAgent resolves parameters correctly 2`] = `
 {
   "apiKey": "test-api-key",
+  "baseUrl": undefined,
   "keyFile": undefined,
   "location": undefined,
   "model": "claude-3-sonnet",
@@ -118,6 +123,7 @@ exports[`ApiProviderConfig getConfigForAgent resolves parameters correctly 2`] =
 exports[`ApiProviderConfig getConfigForAgent resolves parameters correctly 3`] = `
 {
   "apiKey": undefined,
+  "baseUrl": undefined,
   "keyFile": undefined,
   "location": undefined,
   "model": "google/gemini-2.5-pro",
@@ -135,6 +141,7 @@ exports[`ApiProviderConfig getConfigForAgent resolves parameters correctly 3`] =
 exports[`ApiProviderConfig getConfigForAgent resolves parameters correctly 4`] = `
 {
   "apiKey": "test-api-key",
+  "baseUrl": undefined,
   "keyFile": undefined,
   "location": undefined,
   "model": "claude-3-opus",
@@ -170,6 +177,7 @@ exports[`ApiProviderConfig parameters inherit correctly from different levels 2`
 exports[`ApiProviderConfig handles missing providers gracefully 1`] = `
 {
   "apiKey": undefined,
+  "baseUrl": undefined,
   "keyFile": undefined,
   "location": undefined,
   "model": "claude-sonnet-4-20250514",
@@ -183,6 +191,7 @@ exports[`ApiProviderConfig handles missing providers gracefully 1`] = `
 exports[`ApiProviderConfig handles missing providers gracefully 2`] = `
 {
   "apiKey": undefined,
+  "baseUrl": undefined,
   "keyFile": undefined,
   "location": undefined,
   "model": "claude-sonnet-4-20250514",
@@ -249,6 +258,7 @@ exports[`ApiProviderConfig handles global default parameters correctly: agent de
 exports[`ApiProviderConfig resolves toolFormat correctly for agents and commands 1`] = `
 {
   "apiKey": "anthropic-key",
+  "baseUrl": undefined,
   "keyFile": undefined,
   "location": undefined,
   "model": "claude-sonnet-4-20250514",
@@ -262,6 +272,7 @@ exports[`ApiProviderConfig resolves toolFormat correctly for agents and commands
 exports[`ApiProviderConfig resolves toolFormat correctly for agents and commands 2`] = `
 {
   "apiKey": "openrouter-key",
+  "baseUrl": undefined,
   "keyFile": undefined,
   "location": undefined,
   "model": "anthropic/claude-sonnet-4",
@@ -275,6 +286,7 @@ exports[`ApiProviderConfig resolves toolFormat correctly for agents and commands
 exports[`ApiProviderConfig resolves toolFormat correctly for agents and commands 3`] = `
 {
   "apiKey": "anthropic-key",
+  "baseUrl": undefined,
   "keyFile": undefined,
   "location": undefined,
   "model": "claude-sonnet-4-20250514",
@@ -288,6 +300,7 @@ exports[`ApiProviderConfig resolves toolFormat correctly for agents and commands
 exports[`ApiProviderConfig resolves toolFormat correctly for agents and commands 4`] = `
 {
   "apiKey": "anthropic-key",
+  "baseUrl": undefined,
   "keyFile": undefined,
   "location": undefined,
   "model": "claude-3-opus-20240229",
@@ -301,6 +314,7 @@ exports[`ApiProviderConfig resolves toolFormat correctly for agents and commands
 exports[`ApiProviderConfig resolves toolFormat correctly for agents and commands 5`] = `
 {
   "apiKey": "anthropic-key",
+  "baseUrl": undefined,
   "keyFile": undefined,
   "location": undefined,
   "model": "claude-sonnet-4-20250514",
@@ -314,6 +328,7 @@ exports[`ApiProviderConfig resolves toolFormat correctly for agents and commands
 exports[`ApiProviderConfig resolves toolFormat correctly for agents and commands 6`] = `
 {
   "apiKey": "openrouter-key",
+  "baseUrl": undefined,
   "keyFile": undefined,
   "location": undefined,
   "model": "anthropic/claude-sonnet-4",
@@ -327,6 +342,7 @@ exports[`ApiProviderConfig resolves toolFormat correctly for agents and commands
 exports[`ApiProviderConfig resolves toolFormat correctly for agents and commands 7`] = `
 {
   "apiKey": "anthropic-key",
+  "baseUrl": undefined,
   "keyFile": undefined,
   "location": undefined,
   "model": "claude-sonnet-4-20250514",
@@ -340,6 +356,7 @@ exports[`ApiProviderConfig resolves toolFormat correctly for agents and commands
 exports[`ApiProviderConfig resolves toolFormat correctly for agents and commands 8`] = `
 {
   "apiKey": "openrouter-key",
+  "baseUrl": undefined,
   "keyFile": undefined,
   "location": undefined,
   "model": "google/gemini-flash-1.5",
@@ -353,6 +370,7 @@ exports[`ApiProviderConfig resolves toolFormat correctly for agents and commands
 exports[`ApiProviderConfig should correctly read Google Vertex provider config 1`] = `
 {
   "apiKey": "test-vertex-key",
+  "baseUrl": undefined,
   "keyFile": "/path/to/keyfile.json",
   "location": "us-central1",
   "model": "gemini-1.5-pro",
@@ -366,6 +384,7 @@ exports[`ApiProviderConfig should correctly read Google Vertex provider config 1
 exports[`ApiProviderConfig should correctly read Google Vertex provider config 2`] = `
 {
   "apiKey": "test-vertex-key",
+  "baseUrl": undefined,
   "keyFile": "/path/to/keyfile.json",
   "location": "us-central1",
   "model": "gemini-1.5-flash",

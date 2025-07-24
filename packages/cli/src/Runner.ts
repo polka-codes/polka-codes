@@ -95,14 +95,10 @@ export class Runner {
         }
         throw new Error(`No provider configured for agent: ${agentName}`)
       }
-      const { provider, model, apiKey, parameters, toolFormat } = config
+      const { provider, model } = config
       let service = llms[provider]?.[model]
       if (!service) {
-        service = getModel({
-          provider,
-          apiKey,
-          model,
-        })
+        service = getModel(config, this.#options.verbose > 2)
         llms[provider] = { [model]: service }
       }
       return service

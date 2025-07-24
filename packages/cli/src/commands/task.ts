@@ -10,15 +10,13 @@ const readStdin = async (timeoutMs = 30000): Promise<string> => {
 
   return new Promise((resolve, reject) => {
     let input = ''
-    let timeoutId: NodeJS.Timer | undefined
-
     const cleanup = () => {
       if (timeoutId) clearTimeout(timeoutId)
       process.stdin.removeAllListeners()
       process.stdin.resume()
     }
 
-    timeoutId = setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       cleanup()
       reject(new Error('Stdin read timeout'))
     }, timeoutMs)
