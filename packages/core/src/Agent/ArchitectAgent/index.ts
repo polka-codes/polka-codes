@@ -1,6 +1,5 @@
 import { getAvailableTools } from '../../getAvailableTools'
 import { PermissionLevel } from '../../tool'
-import { toToolInfoV1 } from '../../tool-v1-compat'
 import { allTools } from '../../tools'
 import { UsageMeter } from '../../UsageMeter'
 import { AgentBase, type AgentInfo, type SharedAgentOptions } from '../AgentBase'
@@ -23,7 +22,7 @@ export class ArchitectAgent extends AgentBase {
       {
         os: options.os,
       },
-      tools.map(toToolInfoV1),
+      tools,
       toolNamePrefix,
       options.customInstructions ?? [],
       options.scripts ?? {},

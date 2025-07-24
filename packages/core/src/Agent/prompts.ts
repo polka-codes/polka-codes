@@ -1,5 +1,6 @@
 import type { FilePart, ImagePart, TextPart, UserContent } from 'ai'
-import type { ToolExample, ToolInfo, ToolParameterValue } from '../tool'
+import type { FullToolInfoV2, ToolExample, ToolInfo, ToolParameterValue } from '../tool'
+import { toToolInfoV1 } from '../tool-v1-compat'
 import type { AgentInfo } from './AgentBase'
 
 const renderParameterValue = (key: string, value: ToolParameterValue, parameterPrefix: string): string => {
@@ -49,12 +50,13 @@ ${example.parameters.map((param) => `${renderParameterValue(param.name, param.va
 </${toolNamePrefix}${tool.name}>
 `
 
-export const toolUsePrompt = (tools: ToolInfo[], toolNamePrefix: string) => {
+export const toolUsePrompt = (tools: FullToolInfoV2[], toolNamePrefix: string) => {
   if (tools.length === 0) {
     return ''
   }
 
   const parameterPrefix = `${toolNamePrefix}parameter_`
+  const v1Tools = tools.map(toToolInfoV1)
 
   return `
 ====
@@ -114,10 +116,10 @@ Always adhere to this format, ensuring every opening tag has a matching closing 
 NEVER surround tool use with triple backticks (\`\`\`).
 
 # Tools
-${tools.map((tool) => toolInfoPrompt(tool, toolNamePrefix, parameterPrefix)).join('\n')}
+${v1Tools.map((tool) => toolInfoPrompt(tool, toolNamePrefix, parameterPrefix)).join('\n')}
 
 # Tool Use Examples
-${tools
+${v1Tools
   .map((tool) => {
     let promp = ''
     for (const example of tool.examples ?? []) {

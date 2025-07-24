@@ -1,6 +1,5 @@
 import { getAvailableTools } from '../../getAvailableTools'
 import { PermissionLevel, type ToolResponse, ToolResponseType } from '../../tool'
-import { toToolInfoV1 } from '../../tool-v1-compat'
 import { allTools, attemptCompletion } from '../../tools'
 import { UsageMeter } from '../../UsageMeter'
 import type { AgentInfo, SharedAgentOptions } from './../AgentBase'
@@ -29,7 +28,7 @@ export class CoderAgent extends AgentBase {
       {
         os: options.os,
       },
-      tools.map(toToolInfoV1),
+      tools,
       toolNamePrefix,
       options.customInstructions ?? [],
       options.scripts ?? {},
