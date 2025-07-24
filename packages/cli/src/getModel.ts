@@ -20,6 +20,9 @@ export type ModelConfig = {
   model: string
   apiKey?: string
   baseUrl?: string
+  location?: string
+  project?: string
+  keyFile?: string
 }
 
 export const getModel = (config: ModelConfig, debugLogging = false): LanguageModelV2 => {
@@ -119,6 +122,11 @@ export const getModel = (config: ModelConfig, debugLogging = false): LanguageMod
     case AiProvider.GoogleVertex: {
       const vertex = createVertex({
         fetch: fetchOverride,
+        location: config.location,
+        project: config.project,
+        googleAuthOptions: {
+          keyFile: config.keyFile,
+        },
       })
       return vertex(config.model)
     }

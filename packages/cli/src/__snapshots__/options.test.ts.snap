@@ -3,8 +3,11 @@
 exports[`ApiProviderConfig getConfigForCommand with command-specific config 1`] = `
 {
   "apiKey": undefined,
+  "keyFile": undefined,
+  "location": undefined,
   "model": "deepseek-chat",
   "parameters": {},
+  "project": undefined,
   "provider": "deepseek",
   "toolFormat": "polka-codes",
 }
@@ -13,8 +16,11 @@ exports[`ApiProviderConfig getConfigForCommand with command-specific config 1`] 
 exports[`ApiProviderConfig getConfigForCommand falls back to default provider 1`] = `
 {
   "apiKey": "test-key",
+  "keyFile": undefined,
+  "location": undefined,
   "model": "claude-3-opus",
   "parameters": {},
+  "project": undefined,
   "provider": "anthropic",
   "toolFormat": "polka-codes",
 }
@@ -23,8 +29,11 @@ exports[`ApiProviderConfig getConfigForCommand falls back to default provider 1`
 exports[`ApiProviderConfig getConfigForAgent with agent-specific config 1`] = `
 {
   "apiKey": "test-key",
+  "keyFile": undefined,
+  "location": undefined,
   "model": "claude-3-sonnet",
   "parameters": {},
+  "project": undefined,
   "provider": "anthropic",
   "toolFormat": "polka-codes",
 }
@@ -33,8 +42,11 @@ exports[`ApiProviderConfig getConfigForAgent with agent-specific config 1`] = `
 exports[`parseOptions prioritizes CLI flags over env vars and config 1`] = `
 {
   "apiKey": "cli-key",
+  "keyFile": undefined,
+  "location": undefined,
   "model": "deepseek-chat-32k",
   "parameters": {},
+  "project": undefined,
   "provider": "deepseek",
   "toolFormat": "polka-codes",
 }
@@ -62,8 +74,11 @@ exports[`parseOptions handles multiple config files 1`] = `
 exports[`parseOptions merges environment variables with config 1`] = `
 {
   "apiKey": "cli-key",
+  "keyFile": undefined,
+  "location": undefined,
   "model": "deepseek-chat",
   "parameters": {},
+  "project": undefined,
   "provider": "deepseek",
   "toolFormat": "polka-codes",
 }

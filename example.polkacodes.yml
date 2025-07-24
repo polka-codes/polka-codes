@@ -24,6 +24,13 @@ providers:
     apiKey: "sk-..." # Your OpenRouter API key
     defaultModel: "openai/gpt-4o" # Default model for this provider
 
+  # Google Vertex AI configuration
+  google-vertex:
+    project: "your-gcp-project-id" # Your Google Cloud project ID
+    location: "us-central1" # The GCP region for your Vertex AI resources
+    keyFile: "/path/to/your/service-account-key.json" # Optional: path to your service account key file for authentication
+    defaultModel: "gemini-2.5-pro"
+
 # Default provider to use when not specified elsewhere
 defaultProvider: "deepseek"
 
@@ -156,6 +163,14 @@ prices:
       cacheWritesPrice: 5.0  # Estimated cost for cache writes
       cacheReadsPrice: 1.0   # Estimated cost for cache reads
 
+  # Google Vertex AI models pricing (estimated values)
+  google-vertex:
+    "gemini-2.5-pro":
+      inputPrice: 3.0      # Estimated cost per million input tokens
+      outputPrice: 9.0     # Estimated cost per million output tokens
+      cacheWritesPrice: 2.25 # Estimated cost for cache writes
+      cacheReadsPrice: 0.3   # Estimated cost for cache reads
+
 # Files to exclude from AI operations
 # Supports glob patterns
 excludeFiles:
@@ -167,5 +182,4 @@ excludeFiles:
 
 # Additional policies to enforce specific behaviors
 policies:
-  - KnowledgeManagement # create and mataintain knowledge.ai.yml file
   - TruncateContext # truncate context to fit within the model's token limit

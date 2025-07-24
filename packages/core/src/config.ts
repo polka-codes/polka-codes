@@ -44,6 +44,9 @@ export const configSchema = z
           apiKey: z.string().optional(),
           defaultModel: z.string().optional(),
           defaultParameters: z.record(z.string(), z.any()).optional(),
+          location: z.string().optional(),
+          project: z.string().optional(),
+          keyFile: z.string().optional(),
         }),
       )
       .optional(),

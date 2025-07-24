@@ -1,14 +1,47 @@
 // Bun Snapshot v1, https://bun.sh/docs/test/snapshots
 
+exports[`ApiProviderConfig constructor initializes providers and parameters 1`] = `
+ApiProviderConfig {
+  "agents": undefined,
+  "commands": undefined,
+  "defaultParameters": {
+    "temperature": 0.7,
+    "top_p": 0.9,
+  },
+  "defaultProvider": "anthropic",
+  "providers": {
+    "anthropic": {
+      "apiKey": "test-api-key",
+      "defaultModel": "claude-3-haiku",
+      "defaultParameters": {
+        "max_tokens": 2000,
+        "temperature": 0.5,
+      },
+    },
+    "openai": {
+      "apiKey": "test-openai-key",
+      "defaultParameters": {
+        "presence_penalty": 0.2,
+        "temperature": 0.8,
+      },
+    },
+  },
+  "toolFormat": undefined,
+}
+`;
+
 exports[`ApiProviderConfig getConfigForCommand resolves parameters correctly 1`] = `
 {
   "apiKey": "test-api-key",
+  "keyFile": undefined,
+  "location": undefined,
   "model": "claude-3-opus",
   "parameters": {
     "max_tokens": 3000,
     "temperature": 0.6,
     "top_p": 0.9,
   },
+  "project": undefined,
   "provider": "anthropic",
   "toolFormat": "polka-codes",
 }
@@ -17,12 +50,15 @@ exports[`ApiProviderConfig getConfigForCommand resolves parameters correctly 1`]
 exports[`ApiProviderConfig getConfigForCommand resolves parameters correctly 2`] = `
 {
   "apiKey": "test-api-key",
+  "keyFile": undefined,
+  "location": undefined,
   "model": "claude-3-sonnet",
   "parameters": {
     "max_tokens": 2000,
     "temperature": 0.8,
     "top_p": 0.9,
   },
+  "project": undefined,
   "provider": "anthropic",
   "toolFormat": "polka-codes",
 }
@@ -31,12 +67,15 @@ exports[`ApiProviderConfig getConfigForCommand resolves parameters correctly 2`]
 exports[`ApiProviderConfig getConfigForCommand resolves parameters correctly 3`] = `
 {
   "apiKey": "test-api-key",
+  "keyFile": undefined,
+  "location": undefined,
   "model": "claude-3-opus",
   "parameters": {
     "max_tokens": 3000,
     "temperature": 0.6,
     "top_p": 0.9,
   },
+  "project": undefined,
   "provider": "anthropic",
   "toolFormat": "polka-codes",
 }
@@ -45,12 +84,15 @@ exports[`ApiProviderConfig getConfigForCommand resolves parameters correctly 3`]
 exports[`ApiProviderConfig getConfigForAgent resolves parameters correctly 1`] = `
 {
   "apiKey": "test-api-key",
+  "keyFile": undefined,
+  "location": undefined,
   "model": "claude-3-opus",
   "parameters": {
     "max_tokens": 3000,
     "temperature": 0.6,
     "top_p": 0.9,
   },
+  "project": undefined,
   "provider": "anthropic",
   "toolFormat": "polka-codes",
 }
@@ -59,12 +101,15 @@ exports[`ApiProviderConfig getConfigForAgent resolves parameters correctly 1`] =
 exports[`ApiProviderConfig getConfigForAgent resolves parameters correctly 2`] = `
 {
   "apiKey": "test-api-key",
+  "keyFile": undefined,
+  "location": undefined,
   "model": "claude-3-sonnet",
   "parameters": {
     "max_tokens": 2000,
     "temperature": 0.8,
     "top_p": 0.9,
   },
+  "project": undefined,
   "provider": "anthropic",
   "toolFormat": "polka-codes",
 }
@@ -73,12 +118,15 @@ exports[`ApiProviderConfig getConfigForAgent resolves parameters correctly 2`] =
 exports[`ApiProviderConfig getConfigForAgent resolves parameters correctly 3`] = `
 {
   "apiKey": undefined,
+  "keyFile": undefined,
+  "location": undefined,
   "model": "google/gemini-2.5-pro",
   "parameters": {
     "frequency_penalty": 0.3,
     "temperature": 0.7,
     "top_p": 0.9,
   },
+  "project": undefined,
   "provider": "openrouter",
   "toolFormat": "polka-codes",
 }
@@ -87,12 +135,15 @@ exports[`ApiProviderConfig getConfigForAgent resolves parameters correctly 3`] =
 exports[`ApiProviderConfig getConfigForAgent resolves parameters correctly 4`] = `
 {
   "apiKey": "test-api-key",
+  "keyFile": undefined,
+  "location": undefined,
   "model": "claude-3-opus",
   "parameters": {
     "max_tokens": 3000,
     "temperature": 0.6,
     "top_p": 0.9,
   },
+  "project": undefined,
   "provider": "anthropic",
   "toolFormat": "polka-codes",
 }
@@ -115,6 +166,36 @@ exports[`ApiProviderConfig parameters inherit correctly from different levels 2`
   "top_p": 0.9,
 }
 `;
+
+exports[`ApiProviderConfig handles missing providers gracefully 1`] = `
+{
+  "apiKey": undefined,
+  "keyFile": undefined,
+  "location": undefined,
+  "model": "claude-sonnet-4-20250514",
+  "parameters": {},
+  "project": undefined,
+  "provider": "anthropic",
+  "toolFormat": "native",
+}
+`;
+
+exports[`ApiProviderConfig handles missing providers gracefully 2`] = `
+{
+  "apiKey": undefined,
+  "keyFile": undefined,
+  "location": undefined,
+  "model": "claude-sonnet-4-20250514",
+  "parameters": {},
+  "project": undefined,
+  "provider": "anthropic",
+  "toolFormat": "native",
+}
+`;
+
+exports[`ApiProviderConfig returns undefined when no provider is configured 1`] = `undefined`;
+
+exports[`ApiProviderConfig returns undefined when no provider is configured 2`] = `undefined`;
 
 exports[`ApiProviderConfig handles global default parameters correctly: agent default - global params 1`] = `
 {
@@ -162,5 +243,135 @@ exports[`ApiProviderConfig handles global default parameters correctly: agent de
 {
   "max_tokens": 500,
   "temperature": 0.1,
+}
+`;
+
+exports[`ApiProviderConfig resolves toolFormat correctly for agents and commands 1`] = `
+{
+  "apiKey": "anthropic-key",
+  "keyFile": undefined,
+  "location": undefined,
+  "model": "claude-sonnet-4-20250514",
+  "parameters": {},
+  "project": undefined,
+  "provider": "anthropic",
+  "toolFormat": "native",
+}
+`;
+
+exports[`ApiProviderConfig resolves toolFormat correctly for agents and commands 2`] = `
+{
+  "apiKey": "openrouter-key",
+  "keyFile": undefined,
+  "location": undefined,
+  "model": "anthropic/claude-sonnet-4",
+  "parameters": {},
+  "project": undefined,
+  "provider": "openrouter",
+  "toolFormat": "native",
+}
+`;
+
+exports[`ApiProviderConfig resolves toolFormat correctly for agents and commands 3`] = `
+{
+  "apiKey": "anthropic-key",
+  "keyFile": undefined,
+  "location": undefined,
+  "model": "claude-sonnet-4-20250514",
+  "parameters": {},
+  "project": undefined,
+  "provider": "anthropic",
+  "toolFormat": "polka-codes",
+}
+`;
+
+exports[`ApiProviderConfig resolves toolFormat correctly for agents and commands 4`] = `
+{
+  "apiKey": "anthropic-key",
+  "keyFile": undefined,
+  "location": undefined,
+  "model": "claude-3-opus-20240229",
+  "parameters": {},
+  "project": undefined,
+  "provider": "anthropic",
+  "toolFormat": "polka-codes",
+}
+`;
+
+exports[`ApiProviderConfig resolves toolFormat correctly for agents and commands 5`] = `
+{
+  "apiKey": "anthropic-key",
+  "keyFile": undefined,
+  "location": undefined,
+  "model": "claude-sonnet-4-20250514",
+  "parameters": {},
+  "project": undefined,
+  "provider": "anthropic",
+  "toolFormat": "native",
+}
+`;
+
+exports[`ApiProviderConfig resolves toolFormat correctly for agents and commands 6`] = `
+{
+  "apiKey": "openrouter-key",
+  "keyFile": undefined,
+  "location": undefined,
+  "model": "anthropic/claude-sonnet-4",
+  "parameters": {},
+  "project": undefined,
+  "provider": "openrouter",
+  "toolFormat": "native",
+}
+`;
+
+exports[`ApiProviderConfig resolves toolFormat correctly for agents and commands 7`] = `
+{
+  "apiKey": "anthropic-key",
+  "keyFile": undefined,
+  "location": undefined,
+  "model": "claude-sonnet-4-20250514",
+  "parameters": {},
+  "project": undefined,
+  "provider": "anthropic",
+  "toolFormat": "polka-codes",
+}
+`;
+
+exports[`ApiProviderConfig resolves toolFormat correctly for agents and commands 8`] = `
+{
+  "apiKey": "openrouter-key",
+  "keyFile": undefined,
+  "location": undefined,
+  "model": "google/gemini-flash-1.5",
+  "parameters": {},
+  "project": undefined,
+  "provider": "openrouter",
+  "toolFormat": "polka-codes",
+}
+`;
+
+exports[`ApiProviderConfig should correctly read Google Vertex provider config 1`] = `
+{
+  "apiKey": "test-vertex-key",
+  "keyFile": "/path/to/keyfile.json",
+  "location": "us-central1",
+  "model": "gemini-1.5-pro",
+  "parameters": {},
+  "project": "my-gcp-project",
+  "provider": "google-vertex",
+  "toolFormat": "polka-codes",
+}
+`;
+
+exports[`ApiProviderConfig should correctly read Google Vertex provider config 2`] = `
+{
+  "apiKey": "test-vertex-key",
+  "keyFile": "/path/to/keyfile.json",
+  "location": "us-central1",
+  "model": "gemini-1.5-flash",
+  "parameters": {},
+  "project": "my-gcp-project",
+  "provider": "google-vertex",
+  "toolFormat": "polka-codes",
 }
 `;

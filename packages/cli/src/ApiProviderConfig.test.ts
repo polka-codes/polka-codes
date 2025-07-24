@@ -35,14 +35,7 @@ describe('ApiProviderConfig', () => {
 
   test('constructor initializes providers and parameters', () => {
     const apiConfig = new ApiProviderConfig(basicConfig)
-
-    expect(apiConfig.defaultProvider).toBe(AiProvider.Anthropic)
-    expect(apiConfig.providers.anthropic?.apiKey).toBe('test-api-key')
-    expect(apiConfig.providers.anthropic?.defaultModel).toBe('claude-3-haiku')
-    expect(apiConfig.providers.anthropic?.defaultParameters).toEqual({
-      temperature: 0.5,
-      max_tokens: 2000,
-    })
+    expect(apiConfig).toMatchSnapshot()
   })
 
   test('getConfigForCommand resolves parameters correctly', () => {
@@ -184,10 +177,10 @@ describe('ApiProviderConfig', () => {
     const apiConfig = new ApiProviderConfig(minimalConfig)
 
     const agentConfig = apiConfig.getConfigForAgent('coder')
-    expect(agentConfig?.parameters).toEqual({})
+    expect(agentConfig).toMatchSnapshot()
 
     const commandConfig = apiConfig.getConfigForCommand('task')
-    expect(commandConfig?.parameters).toEqual({})
+    expect(commandConfig).toMatchSnapshot()
   })
 
   test('returns undefined when no provider is configured', () => {
@@ -195,8 +188,8 @@ describe('ApiProviderConfig', () => {
 
     const apiConfig = new ApiProviderConfig(emptyConfig)
 
-    expect(apiConfig.getConfigForAgent('coder')).toBeUndefined()
-    expect(apiConfig.getConfigForCommand('task')).toBeUndefined()
+    expect(apiConfig.getConfigForAgent('coder')).toMatchSnapshot()
+    expect(apiConfig.getConfigForCommand('task')).toMatchSnapshot()
   })
 
   test('handles global default parameters correctly', () => {
@@ -357,15 +350,47 @@ describe('ApiProviderConfig', () => {
     const apiConfig = new ApiProviderConfig(config)
 
     // Agent tests
-    expect(apiConfig.getConfigForAgent('default')?.toolFormat).toBe('native')
-    expect(apiConfig.getConfigForAgent('coder')?.toolFormat).toBe('native')
-    expect(apiConfig.getConfigForAgent('analyzer')?.toolFormat).toBe('polka-codes')
-    expect(apiConfig.getConfigForAgent('architect')?.toolFormat).toBe('polka-codes')
+    expect(apiConfig.getConfigForAgent('default')).toMatchSnapshot()
+    expect(apiConfig.getConfigForAgent('coder')).toMatchSnapshot()
+    expect(apiConfig.getConfigForAgent('analyzer')).toMatchSnapshot()
+    expect(apiConfig.getConfigForAgent('architect')).toMatchSnapshot()
 
     // Command tests
-    expect(apiConfig.getConfigForCommand('default')?.toolFormat).toBe('native')
-    expect(apiConfig.getConfigForCommand('task')?.toolFormat).toBe('native')
-    expect(apiConfig.getConfigForCommand('commit')?.toolFormat).toBe('polka-codes')
-    expect(apiConfig.getConfigForCommand('pr')?.toolFormat).toBe('polka-codes')
+    expect(apiConfig.getConfigForCommand('default')).toMatchSnapshot()
+    expect(apiConfig.getConfigForCommand('task')).toMatchSnapshot()
+    expect(apiConfig.getConfigForCommand('commit')).toMatchSnapshot()
+    expect(apiConfig.getConfigForCommand('pr')).toMatchSnapshot()
+  })
+
+  test('should correctly read Google Vertex provider config', () => {
+    const vertexConfig: Config = {
+      defaultProvider: 'google-vertex',
+      providers: {
+        'google-vertex': {
+          apiKey: 'test-vertex-key',
+          location: 'us-central1',
+          project: 'my-gcp-project',
+          keyFile: '/path/to/keyfile.json',
+        },
+      },
+      agents: {
+        default: {
+          model: 'gemini-1.5-pro',
+        },
+      },
+      commands: {
+        default: {
+          model: 'gemini-1.5-flash',
+        },
+      },
+    }
+
+    const apiConfig = new ApiProviderConfig(vertexConfig)
+
+    const agentConfig = apiConfig.getConfigForAgent('default')
+    expect(agentConfig).toMatchSnapshot()
+
+    const commandConfig = apiConfig.getConfigForCommand('default')
+    expect(commandConfig).toMatchSnapshot()
   })
 })

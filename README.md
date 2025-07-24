@@ -46,7 +46,7 @@ For more information, see the [CLI README](packages/cli/README.md).
 
 - 🎯 **Project Scaffolding**: Easily create new projects with the `create` command.
 - 🔧 **Simple Setup**: Quickly initialize your project configuration with `init`.
-- 🤖 **Multiple AI Providers**: Supports DeepSeek (recommended), Anthropic Claude, Ollama, and OpenRouter.
+- 🤖 **Multiple AI Providers**: Supports Google Vertex, DeepSeek (recommended), Anthropic Claude, Ollama, and OpenRouter.
 - 🤝 **Multi-Agent System**: Specialized AI agents collaborate on complex tasks:
   - **Architect Agent**: Handles system design and high-level planning.
   - **Coder Agent**: Focuses on implementation, coding, and maintenance.

@@ -51,11 +51,11 @@ export class ApiProviderConfig {
     if (!finalProvider) {
       return undefined
     }
-    const finalModel = model ?? this.providers[finalProvider]?.defaultModel ?? defaultModels[finalProvider]
-    const apiKey = this.providers[finalProvider]?.apiKey
+    const { apiKey, defaultModel, defaultParameters, location, project, keyFile } = (this.providers[finalProvider] as any) ?? {}
+    const finalModel = model ?? defaultModel ?? defaultModels[finalProvider]
     const finalParameters = {
       ...this.defaultParameters,
-      ...(this.providers[finalProvider]?.defaultParameters ?? {}),
+      ...(defaultParameters ?? {}),
       ...(parameters ?? {}),
     }
     const finalToolFormat = getToolFormat(finalModel, toolFormat ?? this.toolFormat)
@@ -63,6 +63,9 @@ export class ApiProviderConfig {
       provider: finalProvider,
       model: finalModel,
       apiKey,
+      location,
+      project,
+      keyFile,
       parameters: finalParameters,
       toolFormat: finalToolFormat,
     }
@@ -75,11 +78,11 @@ export class ApiProviderConfig {
     if (!finalProvider) {
       return undefined
     }
-    const finalModel = model ?? this.providers[finalProvider]?.defaultModel ?? defaultModels[finalProvider]
-    const apiKey = this.providers[finalProvider]?.apiKey
+    const { apiKey, defaultModel, defaultParameters, location, project, keyFile } = (this.providers[finalProvider] as any) ?? {}
+    const finalModel = model ?? defaultModel ?? defaultModels[finalProvider]
     const finalParameters = {
       ...this.defaultParameters,
-      ...(this.providers[finalProvider]?.defaultParameters ?? {}),
+      ...(defaultParameters ?? {}),
       ...(parameters ?? {}),
     }
     const finalToolFormat = getToolFormat(finalModel, toolFormat ?? this.toolFormat)
@@ -87,6 +90,9 @@ export class ApiProviderConfig {
       provider: finalProvider,
       model: finalModel,
       apiKey,
+      location,
+      project,
+      keyFile,
       parameters: finalParameters,
       toolFormat: finalToolFormat,
     }
