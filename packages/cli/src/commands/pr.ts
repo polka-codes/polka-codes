@@ -6,26 +6,6 @@ import ora from 'ora'
 import { getModel } from '../getModel'
 import { parseOptions } from '../options'
 
-const prompt = `
-# Generate GitHub Pull Request Details
-
-**Inputs**
-- \`<tool_input_branch_name>\`
-- \`<tool_input_commit_messages>\` = all commit messages combined
-- \`<tool_input_commit_diff>\` - all diffs combined
-- \`<tool_input_context>\` (optional)
-
-**Steps**
-1. If \`<tool_input_context>\` contains an issue number, prepend
-   \`Closes #<number>\` **exactly in this format** to the PR description.
-   - Do **not** use variations like “Closes issue #xxx”.
-2. Analyze the combined commit messages and diffs.
-
-**Output**
-- **Title:** A single concise GitHub Pull Request title.
-- **Description:** A clear explanation of the changes. If step 1 applies, start with the required \`Closes #<number>\` line.
-`
-
 export const prCommand = new Command('pr')
   .description('Create a GitHub pull request')
   .argument('[message]', 'Optional context for the commit message generation')

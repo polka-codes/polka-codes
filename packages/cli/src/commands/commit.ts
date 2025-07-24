@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process'
+import { execSync, spawnSync } from 'node:child_process'
 import { confirm } from '@inquirer/prompts'
 import { Command } from 'commander'
 import ora from 'ora'
@@ -7,14 +7,6 @@ import { z } from 'zod/v3'
 import { UsageMeter, generateGitCommitMessage } from '@polka-codes/core'
 import { getModel } from '../getModel'
 import { parseOptions } from '../options'
-
-const prompt = `
-You are an advanced assistant specialized in creating concise and accurate Git commit messages. When you receive:
-- A Git diff inside the <tool_diff> tag.
-- Additional user-supplied context inside the <tool_context> tag (if any).
-
-You will produce a single commit message. The commit message must accurately reflect the changes shown in the diff and should be clear, descriptive, and devoid of unnecessary or repeated information. If a context is provided, it MUST be incorporated into the commit message.
-`
 
 export const commitCommand = new Command('commit')
   .description('Create a commit with AI-generated message')
@@ -90,12 +82,12 @@ export const commitCommand = new Command('commit')
       console.log(`\nCommit message:\n${commitMessage}`)
 
       // Make the commit
-      // try {
-      //   spawnSync('git', ['commit', '-m', commitMessage], { stdio: 'inherit' })
-      // } catch {
-      //   console.error('Error: Commit failed')
-      //   process.exit(1)
-      // }
+      try {
+        spawnSync('git', ['commit', '-m', commitMessage], { stdio: 'inherit' })
+      } catch {
+        console.error('Error: Commit failed')
+        process.exit(1)
+      }
     } catch (error) {
       console.error('Error:', error)
       process.exit(1)
