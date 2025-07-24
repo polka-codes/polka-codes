@@ -7,45 +7,48 @@ export const toolInfo = {
   name: 'fetch_url',
   description:
     'Fetch the content located at one or more HTTP(S) URLs and return it in Markdown format. This works for standard web pages as well as raw files (e.g. README.md, source code) hosted on platforms like GitHub.',
-  parameters: z.object({
-    url: z
-      .preprocess((val) => {
-        if (!val) return []
-        const values = Array.isArray(val) ? val : [val]
-        return values.flatMap((i) => (typeof i === 'string' ? i.split(',') : [])).filter((s) => s.length > 0)
-      }, z.array(z.string()))
-      .describe('One or more URLs to fetch, separated by commas if multiple.')
-      .meta({ usageValue: 'url' }),
-  }),
-  examples: [
-    {
-      description: 'Fetch a single webpage',
-      parameters: [
+  parameters: z
+    .object({
+      url: z
+        .preprocess((val) => {
+          if (!val) return []
+          const values = Array.isArray(val) ? val : [val]
+          return values.flatMap((i) => (typeof i === 'string' ? i.split(',') : [])).filter((s) => s.length > 0)
+        }, z.array(z.string()))
+        .describe('One or more URLs to fetch, separated by commas if multiple.')
+        .meta({ usageValue: 'url' }),
+    })
+    .meta({
+      examples: [
         {
-          name: 'url',
-          value: 'https://example.com',
+          description: 'Fetch a single webpage',
+          parameters: [
+            {
+              name: 'url',
+              value: 'https://example.com',
+            },
+          ],
+        },
+        {
+          description: 'Fetch multiple webpages',
+          parameters: [
+            {
+              name: 'url',
+              value: 'https://example.com,https://developer.mozilla.org/en-US/docs/Web/HTTP',
+            },
+          ],
+        },
+        {
+          description: 'Fetch a raw file from GitHub',
+          parameters: [
+            {
+              name: 'url',
+              value: 'https://raw.githubusercontent.com/user/repo/main/README.md',
+            },
+          ],
         },
       ],
-    },
-    {
-      description: 'Fetch multiple webpages',
-      parameters: [
-        {
-          name: 'url',
-          value: 'https://example.com,https://developer.mozilla.org/en-US/docs/Web/HTTP',
-        },
-      ],
-    },
-    {
-      description: 'Fetch a raw file from GitHub',
-      parameters: [
-        {
-          name: 'url',
-          value: 'https://raw.githubusercontent.com/user/repo/main/README.md',
-        },
-      ],
-    },
-  ],
+    }),
   permissionLevel: PermissionLevel.Read,
 } as const satisfies ToolInfoV2
 

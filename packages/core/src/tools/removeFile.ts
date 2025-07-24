@@ -5,20 +5,23 @@ import type { FilesystemProvider } from './provider'
 export const toolInfo = {
   name: 'remove_file',
   description: 'Request to remove a file at the specified path.',
-  parameters: z.object({
-    path: z.string().describe('The path of the file to remove').meta({ usageValue: 'File path here' }),
-  }),
-  examples: [
-    {
-      description: 'Request to remove a file',
-      parameters: [
+  parameters: z
+    .object({
+      path: z.string().describe('The path of the file to remove').meta({ usageValue: 'File path here' }),
+    })
+    .meta({
+      examples: [
         {
-          name: 'path',
-          value: 'src/main.js',
+          description: 'Request to remove a file',
+          parameters: [
+            {
+              name: 'path',
+              value: 'src/main.js',
+            },
+          ],
         },
       ],
-    },
-  ],
+    }),
   permissionLevel: PermissionLevel.Write,
 } as const satisfies ToolInfoV2
 

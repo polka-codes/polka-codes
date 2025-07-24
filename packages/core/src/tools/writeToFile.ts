@@ -6,26 +6,28 @@ export const toolInfo = {
   name: 'write_to_file',
   description:
     "Request to write content to a file at the specified path. If the file exists, it will be overwritten with the provided content. If the file doesn't exist, it will be created. This tool will automatically create any directories needed to write the file. Ensure that the output content does not include incorrect escaped character patterns such as `&lt;`, `&gt;`, or `&amp;`. Also ensure there is no unwanted CDATA tags in the content.",
-  parameters: z.object({
-    path: z.string().describe('The path of the file to write to').meta({ usageValue: 'File path here' }),
-    content: z
-      .string()
-      .describe(
-        "The content to write to the file. ALWAYS provide the COMPLETE intended content of the file, without any truncation or omissions. You MUST include ALL parts of the file, even if they haven't been modified.",
-      )
-      .meta({ usageValue: 'Your file content here' }),
-  }),
-  examples: [
-    {
-      description: 'Request to write content to a file',
-      parameters: [
+  parameters: z
+    .object({
+      path: z.string().describe('The path of the file to write to').meta({ usageValue: 'File path here' }),
+      content: z
+        .string()
+        .describe(
+          "The content to write to the file. ALWAYS provide the COMPLETE intended content of the file, without any truncation or omissions. You MUST include ALL parts of the file, even if they haven't been modified.",
+        )
+        .meta({ usageValue: 'Your file content here' }),
+    })
+    .meta({
+      examples: [
         {
-          name: 'path',
-          value: 'src/main.js',
-        },
-        {
-          name: 'content',
-          value: `import React from 'react';
+          description: 'Request to write content to a file',
+          parameters: [
+            {
+              name: 'path',
+              value: 'src/main.js',
+            },
+            {
+              name: 'content',
+              value: `import React from 'react';
 
 function App() {
   return (
@@ -37,10 +39,11 @@ function App() {
 
 export default App;
 `,
+            },
+          ],
         },
       ],
-    },
-  ],
+    }),
   permissionLevel: PermissionLevel.Write,
 } as const satisfies ToolInfoV2
 

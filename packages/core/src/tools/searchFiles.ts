@@ -6,45 +6,48 @@ export const toolInfo = {
   name: 'search_files',
   description:
     'Request to perform a regex search across files in a specified directory, outputting context-rich results that include surrounding lines. This tool searches for patterns or specific content across multiple files, displaying each match with encapsulating context.',
-  parameters: z.object({
-    path: z
-      .string()
-      .describe(
-        'The path of the directory to search in (relative to the current working directory). This directory will be recursively searched.',
-      )
-      .meta({ usageValue: 'Directory path here' }),
-    regex: z.string().describe('The regular expression pattern to search for. Uses Rust regex syntax.').meta({
-      usageValue: 'Your regex pattern here',
-    }),
-    filePattern: z
-      .string()
-      .optional()
-      .describe(
-        'Comma-separated glob pattern to filter files (e.g., "*.ts" for TypeScript files or "*.ts,*.js" for both TypeScript and JavaScript files). If not provided, it will search all files (*).',
-      )
-      .meta({
-        usageValue: 'file pattern here (optional)',
+  parameters: z
+    .object({
+      path: z
+        .string()
+        .describe(
+          'The path of the directory to search in (relative to the current working directory). This directory will be recursively searched.',
+        )
+        .meta({ usageValue: 'Directory path here' }),
+      regex: z.string().describe('The regular expression pattern to search for. Uses Rust regex syntax.').meta({
+        usageValue: 'Your regex pattern here',
       }),
-  }),
-  examples: [
-    {
-      description: 'Request to perform a regex search across files',
-      parameters: [
+      filePattern: z
+        .string()
+        .optional()
+        .describe(
+          'Comma-separated glob pattern to filter files (e.g., "*.ts" for TypeScript files or "*.ts,*.js" for both TypeScript and JavaScript files). If not provided, it will search all files (*).',
+        )
+        .meta({
+          usageValue: 'file pattern here (optional)',
+        }),
+    })
+    .meta({
+      examples: [
         {
-          name: 'path',
-          value: 'src',
-        },
-        {
-          name: 'regex',
-          value: '^components/',
-        },
-        {
-          name: 'filePattern',
-          value: '*.ts,*.tsx',
+          description: 'Request to perform a regex search across files',
+          parameters: [
+            {
+              name: 'path',
+              value: 'src',
+            },
+            {
+              name: 'regex',
+              value: '^components/',
+            },
+            {
+              name: 'filePattern',
+              value: '*.ts,*.tsx',
+            },
+          ],
         },
       ],
-    },
-  ],
+    }),
   permissionLevel: PermissionLevel.Read,
 } as const satisfies ToolInfoV2
 

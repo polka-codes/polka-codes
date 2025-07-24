@@ -40,7 +40,6 @@ export type ToolInfoV2 = {
   name: string
   description: string
   parameters: z.ZodObject<any>
-  examples?: ToolExample[]
   permissionLevel: PermissionLevel
 }
 

@@ -6,25 +6,28 @@ export const toolInfo = {
   name: 'attempt_completion',
   description:
     'Use this tool when you believe the user’s requested task is complete. Indicate that your work is finished, but acknowledge the user may still provide additional instructions or questions if they want to continue. This tool MUST NOT to be used with any other tool.',
-  parameters: z.object({
-    result: z
-      .string()
-      .describe(
-        "The result of the task. Formulate this result in a way that is final and does not require further input from the user. Don't end your result with questions or offers for further assistance.",
-      )
-      .meta({ usageValue: 'Your final result description here' }),
-  }),
-  examples: [
-    {
-      description: 'Request to present the result of the task',
-      parameters: [
+  parameters: z
+    .object({
+      result: z
+        .string()
+        .describe(
+          "The result of the task. Formulate this result in a way that is final and does not require further input from the user. Don't end your result with questions or offers for further assistance.",
+        )
+        .meta({ usageValue: 'Your final result description here' }),
+    })
+    .meta({
+      examples: [
         {
-          name: 'result',
-          value: 'Your final result description here',
+          description: 'Request to present the result of the task',
+          parameters: [
+            {
+              name: 'result',
+              value: 'Your final result description here',
+            },
+          ],
         },
       ],
-    },
-  ],
+    }),
   permissionLevel: PermissionLevel.None,
 } as const satisfies ToolInfoV2
 

@@ -10,43 +10,46 @@ export const toolInfo = {
   name: 'delegate',
   description:
     'Temporarily delegate a task to another agent and receive the result back. This tool MUST NOT to be used with any other tool.',
-  parameters: z.object({
-    agentName: z.string().describe('The name of the agent to delegate the task to').meta({ usageValue: 'Name of the target agent' }),
-    task: z.string().describe('The task to be completed by the target agent').meta({ usageValue: 'Task description' }),
-    context: z.string().describe('The context information for the task').meta({ usageValue: 'Context information' }),
-    files: z
-      .preprocess((val) => {
-        if (!val) return []
-        const values = Array.isArray(val) ? val : [val]
-        return values.flatMap((i) => (typeof i === 'string' ? i.split(',') : [])).filter((s) => s.length > 0)
-      }, z.array(z.string()))
-      .optional()
-      .describe('The files relevant to the task. Comma separated paths')
-      .meta({ usageValue: 'Relevant files' }),
-  }),
-  examples: [
-    {
-      description: 'Delegate a code analysis task to the analyzer agent',
-      parameters: [
+  parameters: z
+    .object({
+      agentName: z.string().describe('The name of the agent to delegate the task to').meta({ usageValue: 'Name of the target agent' }),
+      task: z.string().describe('The task to be completed by the target agent').meta({ usageValue: 'Task description' }),
+      context: z.string().describe('The context information for the task').meta({ usageValue: 'Context information' }),
+      files: z
+        .preprocess((val) => {
+          if (!val) return []
+          const values = Array.isArray(val) ? val : [val]
+          return values.flatMap((i) => (typeof i === 'string' ? i.split(',') : [])).filter((s) => s.length > 0)
+        }, z.array(z.string()))
+        .optional()
+        .describe('The files relevant to the task. Comma separated paths')
+        .meta({ usageValue: 'Relevant files' }),
+    })
+    .meta({
+      examples: [
         {
-          name: 'agentName',
-          value: 'analyzer',
-        },
-        {
-          name: 'task',
-          value: 'Analyze the authentication implementation',
-        },
-        {
-          name: 'context',
-          value: 'Need to understand the security implications of the current auth system',
-        },
-        {
-          name: 'files',
-          value: 'src/auth/login.ts,src/auth/types.ts',
+          description: 'Delegate a code analysis task to the analyzer agent',
+          parameters: [
+            {
+              name: 'agentName',
+              value: 'analyzer',
+            },
+            {
+              name: 'task',
+              value: 'Analyze the authentication implementation',
+            },
+            {
+              name: 'context',
+              value: 'Need to understand the security implications of the current auth system',
+            },
+            {
+              name: 'files',
+              value: 'src/auth/login.ts,src/auth/types.ts',
+            },
+          ],
         },
       ],
-    },
-  ],
+    }),
   permissionLevel: PermissionLevel.None,
 } as const satisfies ToolInfoV2
 

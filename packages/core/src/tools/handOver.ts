@@ -9,43 +9,46 @@ import { type FullToolInfoV2, PermissionLevel, type ToolHandler, type ToolInfoV2
 export const toolInfo = {
   name: 'hand_over',
   description: 'Hand over the current task to another agent to complete. This tool MUST NOT to be used with any other tool.',
-  parameters: z.object({
-    agentName: z.string().describe('The name of the agent to hand over the task to').meta({ usageValue: 'Name of the target agent' }),
-    task: z.string().describe('The task to be completed by the target agent').meta({ usageValue: 'Task description' }),
-    context: z.string().describe('The context information for the task').meta({ usageValue: 'Context information' }),
-    files: z
-      .preprocess((val) => {
-        if (!val) return []
-        const values = Array.isArray(val) ? val : [val]
-        return values.flatMap((i) => (typeof i === 'string' ? i.split(',') : [])).filter((s) => s.length > 0)
-      }, z.array(z.string()))
-      .optional()
-      .describe('The files relevant to the task. Comma separated paths')
-      .meta({ usageValue: 'Relevant files' }),
-  }),
-  examples: [
-    {
-      description: 'Hand over a coding task to the coder agent',
-      parameters: [
+  parameters: z
+    .object({
+      agentName: z.string().describe('The name of the agent to hand over the task to').meta({ usageValue: 'Name of the target agent' }),
+      task: z.string().describe('The task to be completed by the target agent').meta({ usageValue: 'Task description' }),
+      context: z.string().describe('The context information for the task').meta({ usageValue: 'Context information' }),
+      files: z
+        .preprocess((val) => {
+          if (!val) return []
+          const values = Array.isArray(val) ? val : [val]
+          return values.flatMap((i) => (typeof i === 'string' ? i.split(',') : [])).filter((s) => s.length > 0)
+        }, z.array(z.string()))
+        .optional()
+        .describe('The files relevant to the task. Comma separated paths')
+        .meta({ usageValue: 'Relevant files' }),
+    })
+    .meta({
+      examples: [
         {
-          name: 'agentName',
-          value: 'coder',
-        },
-        {
-          name: 'task',
-          value: 'Implement the login feature',
-        },
-        {
-          name: 'context',
-          value: 'We need a secure login system with email and password',
-        },
-        {
-          name: 'files',
-          value: 'src/auth/login.ts,src/auth/types.ts',
+          description: 'Hand over a coding task to the coder agent',
+          parameters: [
+            {
+              name: 'agentName',
+              value: 'coder',
+            },
+            {
+              name: 'task',
+              value: 'Implement the login feature',
+            },
+            {
+              name: 'context',
+              value: 'We need a secure login system with email and password',
+            },
+            {
+              name: 'files',
+              value: 'src/auth/login.ts,src/auth/types.ts',
+            },
+          ],
         },
       ],
-    },
-  ],
+    }),
   permissionLevel: PermissionLevel.None,
 } as const satisfies ToolInfoV2
 
