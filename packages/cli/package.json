@@ -34,7 +34,7 @@
     "ollama-ai-provider-v2": "1.0.0-alpha.3",
     "ora": "^8.1.1",
     "yaml": "^2.7.0",
-    "zod": "^3.25.76"
+    "zod": "^4.0.8"
   },
   "files": ["dist", "cli.mjs"],
   "devDependencies": {

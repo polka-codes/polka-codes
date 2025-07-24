@@ -2,7 +2,7 @@ import { execSync, spawnSync } from 'node:child_process'
 import { confirm } from '@inquirer/prompts'
 import { Command } from 'commander'
 import ora from 'ora'
-import { z } from 'zod/v3'
+import { z } from 'zod'
 
 import { UsageMeter, generateGitCommitMessage } from '@polka-codes/core'
 import { getModel } from '../getModel'
