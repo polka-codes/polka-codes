@@ -1,7 +1,9 @@
 {
   "name": "polka-codes",
   "private": true,
-  "workspaces": ["packages/*"],
+  "workspaces": [
+    "packages/*"
+  ],
   "type": "module",
   "license": "AGPL-3.0",
   "scripts": {
@@ -22,7 +24,7 @@
     "@ai-sdk/provider-utils": "3.0.0-beta.5"
   },
   "devDependencies": {
-    "@biomejs/biome": "^1.9.4",
+    "@biomejs/biome": "^2.1.2",
     "@microsoft/api-extractor": "^7.51.1",
     "bun-types": "^1.2.0",
     "husky": "^9.1.7",
@@ -32,7 +34,9 @@
     "typescript": "^5.7.3"
   },
   "lint-staged": {
-    "*.{js,ts,cjs,mjs,d.cts,d.mts,jsx,tsx,json,jsonc}": ["biome check --write --no-errors-on-unmatched"]
+    "*.{js,ts,cjs,mjs,d.cts,d.mts,jsx,tsx,json,jsonc}": [
+      "biome check --write --no-errors-on-unmatched"
+    ]
   },
   "packageManager": "bun@1.2.0",
   "dependencies": {
