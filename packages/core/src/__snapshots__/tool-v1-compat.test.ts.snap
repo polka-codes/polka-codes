@@ -1,0 +1,151 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`toToolInfoV1 should convert a simple V2 tool to V1 1`] = `
+[
+  {
+    "description": "Parameter 1",
+    "name": "param1",
+    "required": true,
+  },
+  {
+    "description": "Parameter 2",
+    "name": "param2",
+    "required": false,
+  },
+]
+`;
+
+exports[`toToolInfoV1 should handle nested objects 1`] = `
+[
+  {
+    "children": [
+      {
+        "description": "Level 2 parameter",
+        "name": "level2",
+        "required": true,
+      },
+    ],
+    "description": "",
+    "name": "level1",
+    "required": true,
+  },
+]
+`;
+
+exports[`toToolInfoV1 should handle arrays of strings 1`] = `
+[
+  {
+    "allowMultiple": true,
+    "description": "List of items",
+    "name": "items",
+    "required": true,
+  },
+]
+`;
+
+exports[`toToolInfoV1 should handle arrays of objects 1`] = `
+[
+  {
+    "allowMultiple": true,
+    "children": [
+      {
+        "description": "Property 1",
+        "name": "prop1",
+        "required": true,
+      },
+      {
+        "description": "Property 2",
+        "name": "prop2",
+        "required": true,
+      },
+    ],
+    "description": "List of objects",
+    "name": "objects",
+    "required": true,
+  },
+]
+`;
+
+exports[`toToolInfoV1 should match snapshot for a complex tool 1`] = `
+{
+  "description": "A complex tool for snapshot testing",
+  "handler": [Function: AsyncFunction],
+  "isAvailable": [Function],
+  "name": "complex-tool",
+  "parameters": [
+    {
+      "description": "A required string",
+      "name": "requiredString",
+      "required": true,
+    },
+    {
+      "description": "An optional number",
+      "name": "optionalNumber",
+      "required": false,
+    },
+    {
+      "children": [
+        {
+          "description": "A nested string",
+          "name": "nestedString",
+          "required": true,
+        },
+        {
+          "description": "A nested optional boolean",
+          "name": "nestedOptional",
+          "required": false,
+        },
+      ],
+      "description": "",
+      "name": "objectParam",
+      "required": true,
+    },
+    {
+      "allowMultiple": true,
+      "description": "An array of strings",
+      "name": "arrayString",
+      "required": true,
+    },
+    {
+      "allowMultiple": true,
+      "children": [
+        {
+          "description": "An object property",
+          "name": "objProp",
+          "required": true,
+        },
+      ],
+      "description": "An array of objects",
+      "name": "arrayObject",
+      "required": true,
+    },
+  ],
+  "permissionLevel": 2,
+}
+`;
+
+exports[`toToolInfoV1 should correctly convert a tool with nested optional arrays 1`] = `
+[
+  {
+    "allowMultiple": true,
+    "children": [
+      {
+        "description": "The text of the question.",
+        "name": "prompt",
+        "required": true,
+        "usageValue": "question text here",
+      },
+      {
+        "description": "Ordered list of suggested answers (omit if none).",
+        "name": "options",
+        "required": false,
+        "usageValue": "suggested answer here",
+      },
+    ],
+    "description": "One or more follow-up questions you need answered before you can continue.",
+    "name": "questions",
+    "required": true,
+    "usageValue": "questions here",
+  },
+]
+`;

@@ -4,9 +4,11 @@
  */
 
 import { describe, expect, it } from 'bun:test'
+import { z } from 'zod'
 import { getAvailableTools } from './getAvailableTools'
-import type { FullToolInfo, PermissionLevel } from './tool'
+import type { FullToolInfo, FullToolInfoV2, PermissionLevel } from './tool'
 import { ToolResponseType } from './tool'
+import { toToolInfoV1 } from './tool-v1-compat'
 import { delegate, handOver } from './tools'
 import { MockProvider } from './tools/provider'
 
@@ -14,10 +16,10 @@ describe('getAvailableTools', () => {
   const mockProvider = new MockProvider()
 
   // Mock tools for testing
-  const createMockTool = (name: string, isAvailable = true, permissionLevel: PermissionLevel = 1): FullToolInfo => ({
+  const createMockTool = (name: string, isAvailable = true, permissionLevel: PermissionLevel = 1): FullToolInfoV2 => ({
     name,
     description: `Mock tool ${name}`,
-    parameters: [],
+    parameters: z.object({}),
     handler: async () => ({
       type: ToolResponseType.Reply,
       message: 'Mock response',
@@ -27,12 +29,12 @@ describe('getAvailableTools', () => {
   })
 
   const mockTools: FullToolInfo[] = [
-    delegate,
-    handOver,
-    createMockTool('tool1', true, 1),
-    createMockTool('tool2', false, 1),
-    createMockTool('tool3', true, 2),
-    createMockTool('tool4', true, 3),
+    toToolInfoV1(delegate),
+    toToolInfoV1(handOver),
+    toToolInfoV1(createMockTool('tool1', true, 1)),
+    toToolInfoV1(createMockTool('tool2', false, 1)),
+    toToolInfoV1(createMockTool('tool3', true, 2)),
+    toToolInfoV1(createMockTool('tool4', true, 3)),
   ]
 
   it('should filter out agent tools when no agents available', () => {

@@ -9,7 +9,7 @@ describe('listFiles', () => {
 
     const result = await listFiles.handler(mockProvider, {
       path: 'src',
-      max_count: '10',
+      maxCount: '10',
     })
 
     expect(result).toMatchSnapshot()
@@ -47,7 +47,7 @@ describe('listFiles', () => {
 
     const result = await listFiles.handler(mockProvider, {
       path: 'src',
-      max_count: '1',
+      maxCount: '1',
     })
 
     expect(result).toMatchSnapshot()

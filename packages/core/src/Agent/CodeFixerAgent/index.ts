@@ -6,6 +6,7 @@
 import { UsageMeter } from '../../UsageMeter'
 import { getAvailableTools } from '../../getAvailableTools'
 import { PermissionLevel, type ToolResponse, ToolResponseType } from '../../tool'
+import { toToolInfoV1 } from '../../tool-v1-compat'
 import { allTools, attemptCompletion } from '../../tools'
 import { AgentBase } from '../AgentBase'
 import type { AgentInfo, SharedAgentOptions } from '../AgentBase'
@@ -38,7 +39,7 @@ export class CodeFixerAgent extends AgentBase {
       {
         os: options.os,
       },
-      tools,
+      tools.map(toToolInfoV1),
       toolNamePrefix,
       options.customInstructions ?? [],
       options.scripts ?? {},

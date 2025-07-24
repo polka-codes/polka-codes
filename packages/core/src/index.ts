@@ -6,5 +6,5 @@ export * from './getAvailableTools'
 export * from './config'
 export * from './UsageMeter'
 export type { ToolFormat } from './config'
-export * from './tools/utils/getArg'
+
 export { replaceInFile as replaceInFileHelper } from './tools/utils/replaceInFile'

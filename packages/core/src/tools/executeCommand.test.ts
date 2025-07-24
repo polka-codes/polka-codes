@@ -13,9 +13,10 @@ describe('executeCommand', () => {
 
     const result = await executeCommand.handler(mockProvider, {
       command: 'echo test',
-      requires_approval: 'false',
+      requiresApproval: 'false',
     })
 
+    console.log('Result:', result)
     expect(result).toMatchSnapshot()
     expect(mockProvider.executeCommand).toHaveBeenCalledWith('echo test', false)
   })
@@ -26,10 +27,12 @@ describe('executeCommand', () => {
 
     const result = executeCommand.handler(mockProvider, {
       command: 'invalid-command',
-      requires_approval: 'false',
+      requiresApproval: 'false',
     })
 
-    await expect(result).rejects.toMatchSnapshot()
+    // The handler now catches the error and returns a ToolResponseError
+    const toolResponse = await result
+    expect(toolResponse).toMatchSnapshot()
     expect(mockProvider.executeCommand).toHaveBeenCalledWith('invalid-command', false)
   })
 
@@ -43,7 +46,7 @@ describe('executeCommand', () => {
 
     const result = await executeCommand.handler(mockProvider, {
       command: 'invalid-command',
-      requires_approval: 'false',
+      requiresApproval: 'false',
     })
 
     expect(result).toMatchSnapshot()
@@ -60,7 +63,7 @@ describe('executeCommand', () => {
 
     const result = await executeCommand.handler(mockProvider, {
       command: 'rm -rf /',
-      requires_approval: 'true',
+      requiresApproval: 'true',
     })
 
     expect(result).toMatchSnapshot

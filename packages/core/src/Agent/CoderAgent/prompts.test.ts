@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test'
 
+import { toToolInfoV1 } from '../../tool-v1-compat'
 import { allTools } from '../../tools'
 import { fullSystemPrompt } from './prompts'
 
@@ -8,7 +9,7 @@ test('fullSystemPrompt', () => {
     {
       os: 'Linux',
     },
-    Object.values(allTools),
+    Object.values(allTools).map(toToolInfoV1),
     'tool_',
     ['custom instructions', 'more'],
     {

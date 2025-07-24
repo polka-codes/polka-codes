@@ -1,35 +1,26 @@
-import { type FullToolInfo, PermissionLevel, type ToolHandler, type ToolInfo, ToolResponseType } from '../tool'
+import { z } from 'zod'
+import { type FullToolInfoV2, PermissionLevel, type ToolHandler, type ToolInfoV2, ToolResponseType } from '../tool'
 import type { InteractionProvider } from './provider'
-import { getArray, getString } from './utils'
+
+const questionObject = z.object({
+  prompt: z.string().describe('The text of the question.').meta({ usageValue: 'question text here' }),
+  options: z
+    .array(z.string())
+    .default([])
+    .describe('Ordered list of suggested answers (omit if none).')
+    .meta({ usageValue: 'suggested answer here' }),
+})
 
 export const toolInfo = {
   name: 'ask_followup_question',
   description:
     'Call this when vital details are missing. Pose each follow-up as one direct, unambiguous question. If it speeds the reply, add up to five short, mutually-exclusive answer options. Group any related questions in the same call to avoid a back-and-forth chain.',
-  parameters: [
-    {
-      name: 'questions',
-      description: 'One or more follow-up questions you need answered before you can continue.',
-      required: true,
-      allowMultiple: true,
-      usageValue: 'questions here',
-      children: [
-        {
-          name: 'prompt',
-          description: 'The text of the question.',
-          required: true,
-          usageValue: 'question text here',
-        },
-        {
-          name: 'options',
-          description: 'Ordered list of suggested answers (omit if none).',
-          required: false,
-          allowMultiple: true,
-          usageValue: 'suggested answer here',
-        },
-      ],
-    },
-  ],
+  parameters: z.object({
+    questions: z
+      .array(questionObject)
+      .describe('One or more follow-up questions you need answered before you can continue.')
+      .meta({ usageValue: 'questions here' }),
+  }),
   examples: [
     {
       description: 'Single clarifying question (no options)',
@@ -81,7 +72,7 @@ export const toolInfo = {
     },
   ],
   permissionLevel: PermissionLevel.None,
-} as const satisfies ToolInfo
+} as const satisfies ToolInfoV2
 
 export const handler: ToolHandler<typeof toolInfo, InteractionProvider> = async (provider, args) => {
   if (!provider.askFollowupQuestion) {
@@ -91,18 +82,17 @@ export const handler: ToolHandler<typeof toolInfo, InteractionProvider> = async 
     }
   }
 
-  const questions = getArray(args, 'questions')
-  if (!questions || questions.length === 0) {
+  const { questions } = toolInfo.parameters.parse(args)
+  if (questions.length === 0) {
     return {
-      type: ToolResponseType.Error,
+      type: ToolResponseType.Invalid,
       message: 'No questions provided',
     }
   }
 
   const answers = []
   for (const question of questions) {
-    const prompt = getString(question, 'prompt')
-    const options = getArray(question, 'options', []) as string[]
+    const { prompt, options } = question
     const answer = await provider.askFollowupQuestion(prompt, options)
     answers.push(`<ask_followup_question_answer question="${prompt}">
 ${answer}
@@ -123,4 +113,4 @@ export default {
   ...toolInfo,
   handler,
   isAvailable,
-} satisfies FullToolInfo
+} satisfies FullToolInfoV2

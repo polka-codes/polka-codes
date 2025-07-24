@@ -38,7 +38,7 @@ exports[`getAvailableTools should include agent tools when agents are available 
         "description": "Delegate a code analysis task to the analyzer agent",
         "parameters": [
           {
-            "name": "agent_name",
+            "name": "agentName",
             "value": "analyzer",
           },
           {
@@ -62,7 +62,7 @@ exports[`getAvailableTools should include agent tools when agents are available 
     "parameters": [
       {
         "description": "The name of the agent to delegate the task to",
-        "name": "agent_name",
+        "name": "agentName",
         "required": true,
         "usageValue": "Name of the target agent",
       },
@@ -94,7 +94,7 @@ exports[`getAvailableTools should include agent tools when agents are available 
         "description": "Hand over a coding task to the coder agent",
         "parameters": [
           {
-            "name": "agent_name",
+            "name": "agentName",
             "value": "coder",
           },
           {
@@ -118,7 +118,7 @@ exports[`getAvailableTools should include agent tools when agents are available 
     "parameters": [
       {
         "description": "The name of the agent to hand over the task to",
-        "name": "agent_name",
+        "name": "agentName",
         "required": true,
         "usageValue": "Name of the target agent",
       },
@@ -179,7 +179,7 @@ exports[`getAvailableTools should filter based on provider availability 1`] = `
         "description": "Delegate a code analysis task to the analyzer agent",
         "parameters": [
           {
-            "name": "agent_name",
+            "name": "agentName",
             "value": "analyzer",
           },
           {
@@ -203,7 +203,7 @@ exports[`getAvailableTools should filter based on provider availability 1`] = `
     "parameters": [
       {
         "description": "The name of the agent to delegate the task to",
-        "name": "agent_name",
+        "name": "agentName",
         "required": true,
         "usageValue": "Name of the target agent",
       },
@@ -235,7 +235,7 @@ exports[`getAvailableTools should filter based on provider availability 1`] = `
         "description": "Hand over a coding task to the coder agent",
         "parameters": [
           {
-            "name": "agent_name",
+            "name": "agentName",
             "value": "coder",
           },
           {
@@ -259,7 +259,7 @@ exports[`getAvailableTools should filter based on provider availability 1`] = `
     "parameters": [
       {
         "description": "The name of the agent to hand over the task to",
-        "name": "agent_name",
+        "name": "agentName",
         "required": true,
         "usageValue": "Name of the target agent",
       },
@@ -320,7 +320,7 @@ exports[`getAvailableTools should filter based on permission level 1`] = `
         "description": "Delegate a code analysis task to the analyzer agent",
         "parameters": [
           {
-            "name": "agent_name",
+            "name": "agentName",
             "value": "analyzer",
           },
           {
@@ -344,7 +344,7 @@ exports[`getAvailableTools should filter based on permission level 1`] = `
     "parameters": [
       {
         "description": "The name of the agent to delegate the task to",
-        "name": "agent_name",
+        "name": "agentName",
         "required": true,
         "usageValue": "Name of the target agent",
       },
@@ -376,7 +376,7 @@ exports[`getAvailableTools should filter based on permission level 1`] = `
         "description": "Hand over a coding task to the coder agent",
         "parameters": [
           {
-            "name": "agent_name",
+            "name": "agentName",
             "value": "coder",
           },
           {
@@ -400,7 +400,7 @@ exports[`getAvailableTools should filter based on permission level 1`] = `
     "parameters": [
       {
         "description": "The name of the agent to hand over the task to",
-        "name": "agent_name",
+        "name": "agentName",
         "required": true,
         "usageValue": "Name of the target agent",
       },

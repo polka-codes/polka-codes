@@ -5,7 +5,7 @@ import { streamText } from 'ai'
 import type { UsageMeter } from '../UsageMeter'
 import type { ToolFormat } from '../config'
 import {
-  type FullToolInfo,
+  type FullToolInfoV2,
   type ToolResponse,
   type ToolResponseDelegate,
   type ToolResponseExit,
@@ -13,6 +13,7 @@ import {
   type ToolResponseInterrupted,
   ToolResponseType,
 } from '../tool'
+import { toToolInfoV1 } from '../tool-v1-compat'
 import type { ToolProvider } from '../tools'
 import type { AgentPolicy, AgentPolicyInstance } from './AgentPolicy'
 import { type AssistantMessageContent, parseAssistantMessage } from './parseAssistantMessage'
@@ -155,7 +156,7 @@ export type SharedAgentOptions = {
   os: string
   provider: ToolProvider
   interactive: boolean
-  additionalTools?: FullToolInfo[]
+  additionalTools?: FullToolInfoV2[]
   customInstructions?: string[]
   scripts?: Record<string, string | { command: string; description: string }>
   agents?: Readonly<AgentInfo[]>
@@ -170,7 +171,7 @@ export type SharedAgentOptions = {
 
 export type AgentBaseConfig = {
   systemPrompt: string
-  tools: FullToolInfo[]
+  tools: FullToolInfoV2[]
   toolNamePrefix: string
   provider: ToolProvider
   interactive: boolean
@@ -210,7 +211,7 @@ export type ExitReason =
 export abstract class AgentBase {
   readonly ai: LanguageModelV2
   protected readonly config: Readonly<AgentBaseConfig>
-  protected readonly handlers: Record<string, FullToolInfo>
+  protected readonly handlers: Record<string, FullToolInfoV2>
   readonly #policies: Readonly<AgentPolicyInstance[]>
 
   #messages: ModelMessage[] = []
@@ -226,7 +227,7 @@ export abstract class AgentBase {
       config.systemPrompt += `\n${agents}`
     }
 
-    const handlers: Record<string, FullToolInfo> = {}
+    const handlers: Record<string, FullToolInfoV2> = {}
     for (const tool of config.tools) {
       handlers[tool.name] = tool
     }
@@ -462,7 +463,7 @@ export abstract class AgentBase {
       content: currentAssistantMessage,
     })
 
-    const ret = parseAssistantMessage(currentAssistantMessage, this.config.tools, this.config.toolNamePrefix)
+    const ret = parseAssistantMessage(currentAssistantMessage, this.config.tools.map(toToolInfoV1), this.config.toolNamePrefix)
 
     await this.#callback({ kind: TaskEventKind.EndRequest, agent: this, message: currentAssistantMessage })
 

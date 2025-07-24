@@ -5,20 +5,14 @@
 
 import { describe, expect, test } from 'bun:test'
 import { ToolResponseType } from '../tool'
-import { handler, toolInfo } from './delegate'
+import { handler } from './delegate'
 
 describe('delegate tool', () => {
-  test('tool info should be properly defined', () => {
-    expect(toolInfo.name).toBe('delegate')
-    expect(toolInfo.parameters).toHaveLength(4)
-    expect(toolInfo.examples).toHaveLength(1)
-  })
-
   test('handler should return proper delegate response', async () => {
     const result = await handler(
       {},
       {
-        agent_name: 'analyzer',
+        agentName: 'analyzer',
         task: 'analyze code',
         context: 'test context',
         files: 'file1.ts,file2.ts',
@@ -34,7 +28,8 @@ describe('delegate tool', () => {
     })
   })
 
-  test('handler should throw error if required parameters are missing', async () => {
-    await expect(handler({}, {})).rejects.toThrow()
+  test('handler should return invalid if required parameters are missing', async () => {
+    const result = await handler({}, {})
+    expect(result.type).toBe(ToolResponseType.Invalid)
   })
 })

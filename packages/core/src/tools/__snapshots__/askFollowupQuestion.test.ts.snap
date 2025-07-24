@@ -49,6 +49,26 @@ Fallback answer
 }
 `;
 
-exports[`askFollowupQuestion should validate required parameters 1`] = `[Error: Missing required argument: questions]`;
+exports[`askFollowupQuestion should validate required parameters 1`] = `[Definition: [
+  {
+    "expected": "array",
+    "code": "invalid_type",
+    "path": [
+      "questions"
+    ],
+    "message": "Invalid input: expected array, received undefined"
+  }
+]]`;
 
-exports[`askFollowupQuestion should validate required parameters 2`] = `[Error: Missing required argument: prompt]`;
+exports[`askFollowupQuestion should validate required parameters 2`] = `[Definition: [
+  {
+    "expected": "string",
+    "code": "invalid_type",
+    "path": [
+      "questions",
+      0,
+      "prompt"
+    ],
+    "message": "Invalid input: expected string, received undefined"
+  }
+]]`;
