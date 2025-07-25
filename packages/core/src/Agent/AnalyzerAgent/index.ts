@@ -20,7 +20,7 @@ export class AnalyzerAgent extends AgentBase {
       permissionLevel: PermissionLevel.Read,
       interactive: true,
     })
-    const toolNamePrefix = 'tool_'
+    const toolNamePrefix = options.toolFormat === 'native' ? '' : 'tool_'
     const systemPrompt = fullSystemPrompt(
       {
         os: options.os,

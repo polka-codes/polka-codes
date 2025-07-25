@@ -19,7 +19,7 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter) => {
         console.log('\n\n======== New Request ========\n')
 
         if (verbose) {
-          const { userMessage } = event
+          const userMessage = event.userMessage.content
           if (typeof userMessage === 'string') {
             console.log(userMessage)
           } else {
