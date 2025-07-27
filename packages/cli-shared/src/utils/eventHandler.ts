@@ -38,9 +38,15 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter) => {
                 case 'file':
                   console.log(chalk.yellow(`[File name: ${content.filename}, type: ${content.mediaType}]`))
                   break
-                default:
-                  console.log(chalk.red('[Unknown content type]'))
-                  console.log(content)
+                case 'tool-call':
+                  console.log(chalk.yellow(`[Tool call: ${content.toolName}]`))
+                  break
+                case 'tool-result':
+                  console.log(chalk.yellow(`[Tool result: ${content.toolName}]`))
+                  break
+                case 'reasoning':
+                  console.log(chalk.dim(content.text))
+                  break
               }
             }
           }

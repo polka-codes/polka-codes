@@ -5,15 +5,16 @@ export type ModelInfo = {
   outputPrice: number // USD per 1 M completion tokens
   cacheWritesPrice: number // prompt-caching write cost (where offered)
   cacheReadsPrice: number // prompt-caching read/“cached input” cost
+  supportsThinking?: boolean
 }
 
 export default {
   [AiProvider.Anthropic]: {
-    'claude-opus-4-20250514': { inputPrice: 15, outputPrice: 75, cacheWritesPrice: 18.75, cacheReadsPrice: 1.5 },
-    'claude-sonnet-4-20250514': { inputPrice: 3, outputPrice: 15, cacheWritesPrice: 3.75, cacheReadsPrice: 0.3 },
-    'claude-3-7-sonnet-20250219': { inputPrice: 3, outputPrice: 15, cacheWritesPrice: 3.75, cacheReadsPrice: 0.3 },
-    'claude-3-5-sonnet-20241022': { inputPrice: 3, outputPrice: 15, cacheWritesPrice: 3.75, cacheReadsPrice: 0.3 },
-    'claude-3-5-haiku-20241022': { inputPrice: 0.8, outputPrice: 4, cacheWritesPrice: 1, cacheReadsPrice: 0.08 },
+    'claude-opus-4-20250514': { inputPrice: 15, outputPrice: 75, cacheWritesPrice: 18.75, cacheReadsPrice: 1.5, supportsThinking: true },
+    'claude-sonnet-4-20250514': { inputPrice: 3, outputPrice: 15, cacheWritesPrice: 3.75, cacheReadsPrice: 0.3, supportsThinking: true },
+    'claude-3-7-sonnet-20250219': { inputPrice: 3, outputPrice: 15, cacheWritesPrice: 3.75, cacheReadsPrice: 0.3, supportsThinking: true },
+    'claude-3-5-sonnet-20241022': { inputPrice: 3, outputPrice: 15, cacheWritesPrice: 3.75, cacheReadsPrice: 0.3, supportsThinking: false },
+    'claude-3-5-haiku-20241022': { inputPrice: 0.8, outputPrice: 4, cacheWritesPrice: 1, cacheReadsPrice: 0.08, supportsThinking: false },
   },
 
   [AiProvider.Ollama]: {},
@@ -35,8 +36,8 @@ export default {
   },
 
   [AiProvider.GoogleVertex]: {
-    'gemini-25-pro': { inputPrice: 2.5, outputPrice: 10, cacheWritesPrice: 0, cacheReadsPrice: 0 }, // long-context rate
-    'gemini-25-flash': { inputPrice: 0.3, outputPrice: 2.5, cacheWritesPrice: 0, cacheReadsPrice: 0 },
-    'gemini-25-flash-lite': { inputPrice: 0.1, outputPrice: 0.4, cacheWritesPrice: 0, cacheReadsPrice: 0 },
+    'gemini-25-pro': { inputPrice: 2.5, outputPrice: 10, cacheWritesPrice: 0, cacheReadsPrice: 0, supportsThinking: true }, // long-context rate
+    'gemini-25-flash': { inputPrice: 0.3, outputPrice: 2.5, cacheWritesPrice: 0, cacheReadsPrice: 0, supportsThinking: false },
+    'gemini-25-flash-lite': { inputPrice: 0.1, outputPrice: 0.4, cacheWritesPrice: 0, cacheReadsPrice: 0, supportsThinking: false },
   },
 } as const satisfies Record<AiProvider, Record<string, ModelInfo>>

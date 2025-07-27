@@ -25,6 +25,7 @@ import {
 import { merge } from 'lodash'
 import type { ApiProviderConfig } from './ApiProviderConfig'
 import { getModel } from './getModel'
+import { getProviderOptions } from './getProviderOptions'
 import prices from './prices'
 
 export type RunnerOptions = {
@@ -58,7 +59,7 @@ export class Runner {
       rules = [rules]
     }
 
-    const providerOptions: ProviderOptions = {
+    const toolProviderOptions: ProviderOptions = {
       command: {
         onStarted(command) {
           console.log(`$ >>>> $ ${command}`)
@@ -132,6 +133,10 @@ export class Runner {
         const ai = getOrCreateLlm(agentName)
         const config = this.#options.providerConfig.getConfigForAgent(agentName)
 
+        const providerOptions = config
+          ? getProviderOptions(config.provider, config.model, config.parameters?.thinkingBudgetTokens ?? 0)
+          : {}
+
         const args = {
           ai,
           os: platform,
@@ -144,7 +149,10 @@ export class Runner {
           retryCount,
           requestTimeoutSeconds,
           toolFormat: this.#options.config.toolFormat ?? 'polka-codes',
-          parameters: config?.parameters,
+          parameters: {
+            ...config?.parameters,
+            providerOptions,
+          },
           usageMeter: this.usageMeter,
         }
         switch (agentName) {
@@ -152,23 +160,23 @@ export class Runner {
             return new CoderAgent({
               ...args,
               interactive: false,
-              provider: getProvider(agentName, options.config, providerOptions),
+              provider: getProvider(agentName, options.config, toolProviderOptions),
             })
           case architectAgentInfo.name:
             return new ArchitectAgent({
               ...args,
-              provider: getProvider(agentName, options.config, providerOptions),
+              provider: getProvider(agentName, options.config, toolProviderOptions),
             })
           case analyzerAgentInfo.name:
             return new AnalyzerAgent({
               ...args,
               interactive: false,
-              provider: getProvider(agentName, options.config, providerOptions),
+              provider: getProvider(agentName, options.config, toolProviderOptions),
             })
           case codeFixerAgentInfo.name:
             return new CodeFixerAgent({
               ...args,
-              provider: getProvider(agentName, options.config, providerOptions),
+              provider: getProvider(agentName, options.config, toolProviderOptions),
             })
           default:
             throw new Error(`Unknown agent: ${name}`)

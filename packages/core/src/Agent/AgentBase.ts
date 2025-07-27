@@ -383,33 +383,14 @@ export abstract class AgentBase {
       // TODO: this is racy. we should block concurrent requests
       this.#abortController = new AbortController()
 
-      const providerOptions: any = {}
-
-      const thinkingBudgetTokens = this.config.parameters?.thinkingBudgetTokens
-      const enableThinking = thinkingBudgetTokens > 0
-
-      if (enableThinking) {
-        providerOptions.anthropic = {
-          thinking: { type: 'enabled', budgetTokens: thinkingBudgetTokens },
-        }
-        providerOptions.openrouter = {
-          reasoning: {
-            max_tokens: thinkingBudgetTokens,
-          },
-        }
-        providerOptions.google = {
-          thinkingConfig: {
-            includeThoughts: true,
-            thinkingBudget: thinkingBudgetTokens,
-          },
-        }
-      }
+      // TODO: this is racy. we should block concurrent requests
+      this.#abortController = new AbortController()
 
       try {
         const streamTextOptions: Parameters<typeof streamText>[0] = {
           model: this.ai,
           messages,
-          providerOptions,
+          providerOptions: this.config.parameters?.providerOptions,
           onChunk: async ({ chunk }) => {
             resetTimeout()
             switch (chunk.type) {
@@ -441,7 +422,6 @@ export abstract class AgentBase {
             }
           }
           streamTextOptions.tools = tools
-          streamTextOptions.toolChoice = 'required'
         }
 
         const stream = streamText(streamTextOptions)
@@ -494,8 +474,6 @@ export abstract class AgentBase {
           params: toolCall.input as any,
         })
       }
-
-      console.log('!!! Assistant message with tool calls:', ret)
 
       return ret
     }
