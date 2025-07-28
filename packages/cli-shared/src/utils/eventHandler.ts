@@ -45,7 +45,6 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter) => {
                   console.log(chalk.yellow(`[Tool result: ${content.toolName}]`))
                   break
                 case 'reasoning':
-                  console.log(chalk.dim(content.text))
                   break
               }
             }

@@ -1,6 +1,13 @@
 import type { LanguageModelV2 } from '@ai-sdk/provider'
-import type { ModelMessage, ToolCallPart, ToolModelMessage, ToolResultPart, UserContent, UserModelMessage } from '@ai-sdk/provider-utils'
-import { streamText, type TextPart, type ToolSet } from 'ai'
+import type {
+  AssistantModelMessage,
+  ModelMessage,
+  ToolModelMessage,
+  ToolResultPart,
+  UserContent,
+  UserModelMessage,
+} from '@ai-sdk/provider-utils'
+import { streamText, type ToolSet } from 'ai'
 import type { ToolFormat } from '../config'
 import {
   type FullToolInfoV2,
@@ -357,15 +364,13 @@ export abstract class AgentBase {
       }
     }
 
-    let currentAssistantMessage = ''
-    const toolCalls: ToolCallPart[] = []
-
     const retryCount = this.config.retryCount ?? 5
-    const requestTimeoutSeconds = this.config.requestTimeoutSeconds ?? 10
+    const requestTimeoutSeconds = this.config.requestTimeoutSeconds ?? 30
+
+    let respMessages: (AssistantModelMessage | ToolModelMessage)[] = []
 
     for (let i = 0; i < retryCount; i++) {
-      currentAssistantMessage = ''
-      toolCalls.length = 0
+      respMessages = []
       let timeout: ReturnType<typeof setTimeout> | undefined
 
       const resetTimeout = () => {
@@ -395,14 +400,13 @@ export abstract class AgentBase {
             resetTimeout()
             switch (chunk.type) {
               case 'text':
-                currentAssistantMessage += chunk.text
                 await this.#callback({ kind: TaskEventKind.Text, agent: this, newText: chunk.text })
                 break
               case 'reasoning':
                 await this.#callback({ kind: TaskEventKind.Reasoning, agent: this, newText: chunk.text })
                 break
               case 'tool-call':
-                toolCalls.push(chunk)
+                await this.#callback({ kind: TaskEventKind.ToolUse, agent: this, tool: chunk.toolName })
                 break
             }
           },
@@ -426,7 +430,14 @@ export abstract class AgentBase {
 
         const stream = streamText(streamTextOptions)
 
-        await stream.consumeStream()
+        await stream.consumeStream({
+          onError: (error) => {
+            console.error('Error in stream:', error)
+          },
+        })
+
+        const resp = await stream.response
+        respMessages = resp.messages
       } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') {
           break
@@ -438,7 +449,7 @@ export abstract class AgentBase {
         }
       }
 
-      if (currentAssistantMessage || toolCalls.length > 0) {
+      if (respMessages.length > 0) {
         break
       }
 
@@ -449,36 +460,7 @@ export abstract class AgentBase {
       console.debug(`Retrying request ${i + 1} of ${retryCount}`)
     }
 
-    if (this.config.toolFormat === 'native' && toolCalls.length > 0) {
-      // TODO: this assumes there is one text part before tool calls
-      // which is not always true
-      const content: (TextPart | ToolCallPart)[] = []
-      if (currentAssistantMessage) {
-        content.push({ type: 'text', text: currentAssistantMessage })
-      }
-      content.push(...toolCalls)
-      this.#messages.push({
-        role: 'assistant',
-        content,
-      })
-
-      const ret: AssistantMessageContent[] = []
-      if (currentAssistantMessage) {
-        ret.push({ type: 'text', content: currentAssistantMessage } as any)
-      }
-      for (const toolCall of toolCalls) {
-        ret.push({
-          id: toolCall.toolCallId,
-          type: 'tool_use',
-          name: toolCall.toolName,
-          params: toolCall.input as any,
-        })
-      }
-
-      return ret
-    }
-
-    if (!currentAssistantMessage) {
+    if (respMessages.length === 0) {
       if (this.#aborted) {
         return []
       }
@@ -486,12 +468,42 @@ export abstract class AgentBase {
       throw new Error('No assistant message received')
     }
 
-    console.log('Assistant message:', currentAssistantMessage)
+    this.#messages.push(...respMessages)
 
-    this.#messages.push({
-      role: 'assistant',
-      content: currentAssistantMessage,
-    })
+    if (this.config.toolFormat === 'native') {
+      return respMessages.flatMap((msg): AssistantMessageContent[] => {
+        if (msg.role === 'assistant') {
+          const content = msg.content
+          if (typeof content === 'string') {
+            return [{ type: 'text', content }]
+          }
+          return content.flatMap((part): AssistantMessageContent[] => {
+            if (part.type === 'text') {
+              return [{ type: 'text', content: part.text }]
+            }
+            if (part.type === 'tool-call') {
+              return [{ type: 'tool_use', id: part.toolCallId, name: part.toolName, params: part.input as any }]
+            }
+            return []
+          })
+        }
+        return []
+      })
+    }
+
+    const currentAssistantMessage = respMessages
+      .map((msg) => {
+        if (typeof msg.content === 'string') {
+          return msg.content
+        }
+        return msg.content.map((part) => {
+          if (part.type === 'text') {
+            return part.text
+          }
+          return ''
+        })
+      })
+      .join('\n')
 
     const ret = parseAssistantMessage(currentAssistantMessage, this.config.tools.map(toToolInfoV1), this.config.toolNamePrefix)
 
