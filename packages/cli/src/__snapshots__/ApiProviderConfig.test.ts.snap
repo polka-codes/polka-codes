@@ -44,7 +44,7 @@ exports[`ApiProviderConfig getConfigForCommand resolves parameters correctly 1`]
   },
   "project": undefined,
   "provider": "anthropic",
-  "toolFormat": "polka-codes",
+  "toolFormat": "native",
 }
 `;
 
@@ -62,7 +62,7 @@ exports[`ApiProviderConfig getConfigForCommand resolves parameters correctly 2`]
   },
   "project": undefined,
   "provider": "anthropic",
-  "toolFormat": "polka-codes",
+  "toolFormat": "native",
 }
 `;
 
@@ -80,7 +80,7 @@ exports[`ApiProviderConfig getConfigForCommand resolves parameters correctly 3`]
   },
   "project": undefined,
   "provider": "anthropic",
-  "toolFormat": "polka-codes",
+  "toolFormat": "native",
 }
 `;
 
@@ -98,7 +98,7 @@ exports[`ApiProviderConfig getConfigForAgent resolves parameters correctly 1`] =
   },
   "project": undefined,
   "provider": "anthropic",
-  "toolFormat": "polka-codes",
+  "toolFormat": "native",
 }
 `;
 
@@ -116,7 +116,7 @@ exports[`ApiProviderConfig getConfigForAgent resolves parameters correctly 2`] =
   },
   "project": undefined,
   "provider": "anthropic",
-  "toolFormat": "polka-codes",
+  "toolFormat": "native",
 }
 `;
 
@@ -152,7 +152,7 @@ exports[`ApiProviderConfig getConfigForAgent resolves parameters correctly 4`] =
   },
   "project": undefined,
   "provider": "anthropic",
-  "toolFormat": "polka-codes",
+  "toolFormat": "native",
 }
 `;
 
@@ -307,7 +307,7 @@ exports[`ApiProviderConfig resolves toolFormat correctly for agents and commands
   "parameters": {},
   "project": undefined,
   "provider": "anthropic",
-  "toolFormat": "polka-codes",
+  "toolFormat": "native",
 }
 `;
 
