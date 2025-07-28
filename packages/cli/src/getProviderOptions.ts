@@ -47,9 +47,10 @@ export function getProviderOptions(
       break
     case AiProvider.GoogleVertex:
       providerOptions.google = {
-        model: 'gpt-3.5-turbo',
-        temperature: 0.5,
-        max_tokens: thinkingBudgetTokens,
+        thinkingConfig: {
+          includeThoughts: true,
+          thinkingBudget: thinkingBudgetTokens,
+        },
       }
       break
     case AiProvider.Ollama:
