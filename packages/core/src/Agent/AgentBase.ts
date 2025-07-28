@@ -105,6 +105,7 @@ export interface TaskEventTool extends TaskEventBase {
     | TaskEventKind.ToolError
     | TaskEventKind.ToolInterrupted
   tool: string
+  content: any
 }
 
 export interface TaskEventToolPause extends TaskEventBase {
@@ -365,7 +366,7 @@ export abstract class AgentBase {
     }
 
     const retryCount = this.config.retryCount ?? 5
-    const requestTimeoutSeconds = this.config.requestTimeoutSeconds ?? 30
+    const requestTimeoutSeconds = this.config.requestTimeoutSeconds ?? 90
 
     let respMessages: (AssistantModelMessage | ToolModelMessage)[] = []
 
@@ -388,9 +389,6 @@ export abstract class AgentBase {
       // TODO: this is racy. we should block concurrent requests
       this.#abortController = new AbortController()
 
-      // TODO: this is racy. we should block concurrent requests
-      this.#abortController = new AbortController()
-
       try {
         const streamTextOptions: Parameters<typeof streamText>[0] = {
           model: this.ai,
@@ -406,7 +404,7 @@ export abstract class AgentBase {
                 await this.#callback({ kind: TaskEventKind.Reasoning, agent: this, newText: chunk.text })
                 break
               case 'tool-call':
-                await this.#callback({ kind: TaskEventKind.ToolUse, agent: this, tool: chunk.toolName })
+                await this.#callback({ kind: TaskEventKind.ToolUse, agent: this, tool: chunk.toolName, content: chunk.input })
                 break
             }
           },
@@ -524,12 +522,12 @@ export abstract class AgentBase {
           textMessages += content.content
           break
         case 'tool_use': {
-          await this.#callback({ kind: TaskEventKind.ToolUse, agent: this, tool: content.name })
+          await this.#callback({ kind: TaskEventKind.ToolUse, agent: this, tool: content.name, content: content.params })
           const toolResp = await this.#invokeTool(content.name, content.params)
           switch (toolResp.type) {
             case ToolResponseType.Reply: {
               // reply to the tool use
-              await this.#callback({ kind: TaskEventKind.ToolReply, agent: this, tool: content.name })
+              await this.#callback({ kind: TaskEventKind.ToolReply, agent: this, tool: content.name, content: toolResp.message })
               toolResponses.push({ type: 'response', tool: content.name, response: toolResp.message, id: content.id })
               break
             }
@@ -543,19 +541,19 @@ export abstract class AgentBase {
               return { type: 'exit', reason: toolResp }
             case ToolResponseType.Invalid: {
               // tell AI about the invalid arguments
-              await this.#callback({ kind: TaskEventKind.ToolInvalid, agent: this, tool: content.name })
+              await this.#callback({ kind: TaskEventKind.ToolInvalid, agent: this, tool: content.name, content: toolResp.message })
               toolResponses.push({ type: 'response', tool: content.name, response: toolResp.message, id: content.id })
               break outer
             }
             case ToolResponseType.Error: {
               // tell AI about the error
-              await this.#callback({ kind: TaskEventKind.ToolError, agent: this, tool: content.name })
+              await this.#callback({ kind: TaskEventKind.ToolError, agent: this, tool: content.name, content: toolResp.message })
               toolResponses.push({ type: 'response', tool: content.name, response: toolResp.message, id: content.id })
               break outer
             }
             case ToolResponseType.Interrupted:
               // the execution is killed
-              await this.#callback({ kind: TaskEventKind.ToolInterrupted, agent: this, tool: content.name })
+              await this.#callback({ kind: TaskEventKind.ToolInterrupted, agent: this, tool: content.name, content: toolResp.message })
               return { type: 'exit', reason: toolResp }
             case ToolResponseType.HandOver: {
               if (toolResponses.length > 0) {

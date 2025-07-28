@@ -91,6 +91,10 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter) => {
       case TaskEventKind.ToolInvalid:
         break
       case TaskEventKind.ToolError: {
+        if (verbose > 1) {
+          console.error(chalk.red('\n\n[Tool error:', event.tool, ']'))
+          console.error(chalk.red(event.content))
+        }
         const stats = toolCallStats.get(event.tool) ?? { calls: 0, success: 0, errors: 0 }
         stats.errors++
         toolCallStats.set(event.tool, stats)
