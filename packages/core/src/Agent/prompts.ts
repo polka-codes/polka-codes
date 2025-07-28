@@ -224,6 +224,8 @@ Ensure the opening and closing tags are correctly nested and closed, and that yo
 Avoid unnecessary text or symbols before or after the tool use.
 Avoid unnecessary escape characters or special characters.
 `,
+  requireUseToolNative: `Error: No tool use detected. You MUST use a tool before proceeding.
+`,
   toolResults: (tool: string, result: UserContent): Array<TextPart | ImagePart | FilePart> => {
     if (typeof result === 'string') {
       return [
