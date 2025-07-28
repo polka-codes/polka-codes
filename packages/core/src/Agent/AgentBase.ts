@@ -505,11 +505,11 @@ export abstract class AgentBase {
   ): Promise<{ type: 'reply'; message: UserModelMessage | ToolModelMessage } | { type: 'exit'; reason: ExitReason }> {
     const toolResponses: ToolResponseOrToolPause[] = []
     let hasPause = false
-
+    let textMessages = ''
     outer: for (const content of response) {
       switch (content.type) {
         case 'text':
-          // no need to handle text content
+          textMessages += content.content
           break
         case 'tool_use': {
           await this.#callback({ kind: TaskEventKind.ToolUse, agent: this, tool: content.name })
@@ -597,18 +597,17 @@ export abstract class AgentBase {
       return { type: 'exit', reason: { type: 'Pause', responses: toolResponses } }
     }
 
-    if (toolResponses.length === 0) {
-      // always require a tool usage
-      return {
-        type: 'reply',
-        message: {
-          role: 'user',
-          content: responsePrompts.requireUseTool,
-        },
-      }
-    }
-
     if (this.config.toolFormat === 'native') {
+      if (toolResponses.length === 0) {
+        // completed
+        return {
+          type: 'exit',
+          reason: {
+            type: ToolResponseType.Exit,
+            message: textMessages,
+          },
+        }
+      }
       const toolResults = toolResponses
         .filter((resp): resp is { type: 'response'; tool: string; response: string; id: string } => resp.type === 'response')
         .map(
@@ -628,6 +627,17 @@ export abstract class AgentBase {
         message: {
           role: 'tool',
           content: toolResults,
+        },
+      }
+    }
+
+    if (toolResponses.length === 0) {
+      // always require a tool usage
+      return {
+        type: 'reply',
+        message: {
+          role: 'user',
+          content: responsePrompts.requireUseTool,
         },
       }
     }

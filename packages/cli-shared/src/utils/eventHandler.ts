@@ -74,29 +74,29 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter) => {
         process.stdout.write(chalk.dim(event.newText))
         hadReasoning = true
         break
-      case TaskEventKind.ToolUse:
-        {
-          const stats = toolCallStats.get(event.tool) ?? { calls: 0, success: 0, errors: 0 }
-          stats.calls++
-          toolCallStats.set(event.tool, stats)
+      case TaskEventKind.ToolUse: {
+        if (verbose > 1) {
+          console.log(chalk.yellow('\n\n[Tool use:', event.tool, ']'))
         }
+        const stats = toolCallStats.get(event.tool) ?? { calls: 0, success: 0, errors: 0 }
+        stats.calls++
+        toolCallStats.set(event.tool, stats)
         break
-      case TaskEventKind.ToolReply:
-        {
-          const stats = toolCallStats.get(event.tool) ?? { calls: 0, success: 0, errors: 0 }
-          stats.success++
-          toolCallStats.set(event.tool, stats)
-        }
+      }
+      case TaskEventKind.ToolReply: {
+        const stats = toolCallStats.get(event.tool) ?? { calls: 0, success: 0, errors: 0 }
+        stats.success++
+        toolCallStats.set(event.tool, stats)
         break
+      }
       case TaskEventKind.ToolInvalid:
         break
-      case TaskEventKind.ToolError:
-        {
-          const stats = toolCallStats.get(event.tool) ?? { calls: 0, success: 0, errors: 0 }
-          stats.errors++
-          toolCallStats.set(event.tool, stats)
-        }
+      case TaskEventKind.ToolError: {
+        const stats = toolCallStats.get(event.tool) ?? { calls: 0, success: 0, errors: 0 }
+        stats.errors++
+        toolCallStats.set(event.tool, stats)
         break
+      }
       case TaskEventKind.ToolInterrupted:
         break
       case TaskEventKind.ToolHandOver:
