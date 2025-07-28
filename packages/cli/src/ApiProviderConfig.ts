@@ -2,13 +2,13 @@ import type { Config } from '@polka-codes/cli-shared'
 import type { ToolFormat } from '@polka-codes/core'
 import { AiProvider } from './getModel'
 
-const isSonnet4 = (model: string) => model.includes('claude-sonnet-4')
+const isClaude = (model: string) => model.includes('claude')
 
 const getToolFormat = (model: string, toolFormat?: ToolFormat) => {
   if (toolFormat) {
     return toolFormat
   }
-  if (isSonnet4(model)) {
+  if (isClaude(model)) {
     return 'native'
   }
   return 'polka-codes'
