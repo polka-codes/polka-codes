@@ -148,7 +148,7 @@ export class Runner {
           policies,
           retryCount,
           requestTimeoutSeconds,
-          toolFormat: this.#options.config.toolFormat ?? 'polka-codes',
+          toolFormat: this.#options.config.toolFormat ?? config?.toolFormat ?? 'polka-codes',
           parameters: {
             ...config?.parameters,
             providerOptions,
