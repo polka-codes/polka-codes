@@ -56,8 +56,6 @@ export function parseOptions(
     process.chdir(options.baseDir)
     cwd = options.baseDir
     console.log('Changed working directory to', cwd)
-  } else {
-    cwd = process.cwd()
   }
 
   const config = loadConfig(options.config, cwd, home) ?? {}
