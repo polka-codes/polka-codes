@@ -43,9 +43,16 @@ export function toToolInfoV1(tool: FullToolInfoV2): FullToolInfo {
   const { parameters: zodSchema, ...rest } = tool
 
   const v1Parameters = zodSchemaToParameters(zodSchema)
+  const examples = zodSchema.meta()?.examples as any
 
-  return {
+  const v1Tool: FullToolInfo = {
     ...rest,
     parameters: v1Parameters,
   }
+
+  if (examples) {
+    v1Tool.examples = examples
+  }
+
+  return v1Tool
 }

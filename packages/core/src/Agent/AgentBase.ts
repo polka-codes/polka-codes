@@ -1,6 +1,14 @@
 import type { LanguageModelV2 } from '@ai-sdk/provider'
-import type { ModelMessage, UserContent } from '@ai-sdk/provider-utils'
-import { streamText } from 'ai'
+import type {
+  AssistantModelMessage,
+  ModelMessage,
+  ToolModelMessage,
+  ToolResultPart,
+  UserContent,
+  UserModelMessage,
+} from '@ai-sdk/provider-utils'
+import { jsonSchema, streamText, type ToolSet } from 'ai'
+import { toJSONSchema } from 'zod'
 import type { ToolFormat } from '../config'
 import {
   type FullToolInfoV2,
@@ -61,7 +69,7 @@ export interface TaskEventStartTask extends TaskEventBase {
  */
 export interface TaskEventStartRequest extends TaskEventBase {
   kind: TaskEventKind.StartRequest
-  userMessage: UserContent
+  userMessage: ModelMessage
 }
 
 /**
@@ -98,6 +106,7 @@ export interface TaskEventTool extends TaskEventBase {
     | TaskEventKind.ToolError
     | TaskEventKind.ToolInterrupted
   tool: string
+  content: any
 }
 
 export interface TaskEventToolPause extends TaskEventBase {
@@ -191,8 +200,8 @@ export type AgentInfo = {
 }
 
 export type ToolResponseOrToolPause =
-  | { type: 'response'; tool: string; response: UserContent }
-  | { type: 'pause'; tool: string; object: any }
+  | { type: 'response'; tool: string; response: UserContent; id?: string }
+  | { type: 'pause'; tool: string; object: any; id?: string }
 
 export type ExitReason =
   | { type: 'UsageExceeded' }
@@ -212,6 +221,7 @@ export abstract class AgentBase {
   protected readonly config: Readonly<AgentBaseConfig>
   protected readonly handlers: Record<string, FullToolInfoV2>
   readonly #policies: Readonly<AgentPolicyInstance[]>
+  readonly #toolSet: Readonly<ToolSet>
 
   #messages: ModelMessage[] = []
   #aborted = false
@@ -258,6 +268,19 @@ export abstract class AgentBase {
       role: 'system',
       content: this.config.systemPrompt,
     })
+
+    if (this.config.toolFormat === 'native') {
+      const tools: ToolSet = {}
+      for (const tool of Object.values(this.handlers)) {
+        tools[tool.name] = {
+          description: tool.description,
+          inputSchema: jsonSchema(toJSONSchema(tool.parameters)),
+        }
+      }
+      this.#toolSet = tools
+    } else {
+      this.#toolSet = {}
+    }
   }
 
   abort() {
@@ -294,7 +317,10 @@ export abstract class AgentBase {
       this.#callback({ kind: TaskEventKind.StartTask, agent: this, systemPrompt: this.config.systemPrompt })
     }
 
-    return await this.#request(prompt)
+    return await this.#request({
+      role: 'user',
+      content: prompt,
+    })
   }
 
   async handleStepResponse(response: AssistantMessageContent[]) {
@@ -302,7 +328,10 @@ export abstract class AgentBase {
   }
 
   async #processLoop(userMessage: UserContent): Promise<ExitReason> {
-    let nextRequest: UserContent | string = userMessage
+    let nextRequest: UserModelMessage | ToolModelMessage = {
+      role: 'user',
+      content: userMessage,
+    }
     while (true) {
       if (this.#aborted) {
         return { type: 'Aborted' }
@@ -328,17 +357,14 @@ export abstract class AgentBase {
     return await this.#processLoop(userMessage)
   }
 
-  async #request(userMessage: UserContent | string) {
+  async #request(userMessage: UserModelMessage | ToolModelMessage): Promise<AssistantMessageContent[]> {
     if (!userMessage) {
       throw new Error('userMessage is missing')
     }
 
     await this.#callback({ kind: TaskEventKind.StartRequest, agent: this, userMessage })
 
-    this.#messages.push({
-      role: 'user',
-      content: userMessage,
-    })
+    this.#messages.push(userMessage)
 
     // Call onBeforeRequest hooks from policies
     for (const instance of this.#policies) {
@@ -354,13 +380,13 @@ export abstract class AgentBase {
       }
     }
 
-    let currentAssistantMessage = ''
-
     const retryCount = this.config.retryCount ?? 5
-    const requestTimeoutSeconds = this.config.requestTimeoutSeconds ?? 10
+    const requestTimeoutSeconds = this.config.requestTimeoutSeconds ?? 90
+
+    let respMessages: (AssistantModelMessage | ToolModelMessage)[] = []
 
     for (let i = 0; i < retryCount; i++) {
-      currentAssistantMessage = ''
+      respMessages = []
       let timeout: ReturnType<typeof setTimeout> | undefined
 
       const resetTimeout = () => {
@@ -378,42 +404,21 @@ export abstract class AgentBase {
       // TODO: this is racy. we should block concurrent requests
       this.#abortController = new AbortController()
 
-      const providerOptions: any = {}
-
-      const thinkingBudgetTokens = this.config.parameters?.thinkingBudgetTokens
-      const enableThinking = thinkingBudgetTokens > 0
-
-      if (enableThinking) {
-        providerOptions.anthropic = {
-          thinking: { type: 'enabled', budgetTokens: thinkingBudgetTokens },
-        }
-        providerOptions.openrouter = {
-          reasoning: {
-            max_tokens: thinkingBudgetTokens,
-          },
-        }
-        providerOptions.google = {
-          thinkingConfig: {
-            includeThoughts: true,
-            thinkingBudget: thinkingBudgetTokens,
-          },
-        }
-      }
-
       try {
-        const stream = streamText({
+        const streamTextOptions: Parameters<typeof streamText>[0] = {
           model: this.ai,
           messages,
-          providerOptions,
+          providerOptions: this.config.parameters?.providerOptions,
           onChunk: async ({ chunk }) => {
             resetTimeout()
             switch (chunk.type) {
               case 'text':
-                currentAssistantMessage += chunk.text
                 await this.#callback({ kind: TaskEventKind.Text, agent: this, newText: chunk.text })
                 break
               case 'reasoning':
                 await this.#callback({ kind: TaskEventKind.Reasoning, agent: this, newText: chunk.text })
+                break
+              case 'tool-call':
                 break
             }
           },
@@ -422,9 +427,22 @@ export abstract class AgentBase {
             console.error('Error in stream:', error)
           },
           abortSignal: this.#abortController.signal,
+        }
+
+        if (this.config.toolFormat === 'native') {
+          streamTextOptions.tools = this.#toolSet
+        }
+
+        const stream = streamText(streamTextOptions)
+
+        await stream.consumeStream({
+          onError: (error) => {
+            console.error('Error in stream:', error)
+          },
         })
 
-        await stream.consumeStream()
+        const resp = await stream.response
+        respMessages = resp.messages
       } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') {
           break
@@ -436,7 +454,7 @@ export abstract class AgentBase {
         }
       }
 
-      if (currentAssistantMessage) {
+      if (respMessages.length > 0) {
         break
       }
 
@@ -447,7 +465,7 @@ export abstract class AgentBase {
       console.debug(`Retrying request ${i + 1} of ${retryCount}`)
     }
 
-    if (!currentAssistantMessage) {
+    if (respMessages.length === 0) {
       if (this.#aborted) {
         return []
       }
@@ -455,12 +473,42 @@ export abstract class AgentBase {
       throw new Error('No assistant message received')
     }
 
-    console.log('Assistant message:', currentAssistantMessage)
+    this.#messages.push(...respMessages)
 
-    this.#messages.push({
-      role: 'assistant',
-      content: currentAssistantMessage,
-    })
+    if (this.config.toolFormat === 'native') {
+      return respMessages.flatMap((msg): AssistantMessageContent[] => {
+        if (msg.role === 'assistant') {
+          const content = msg.content
+          if (typeof content === 'string') {
+            return [{ type: 'text', content }]
+          }
+          return content.flatMap((part): AssistantMessageContent[] => {
+            if (part.type === 'text') {
+              return [{ type: 'text', content: part.text }]
+            }
+            if (part.type === 'tool-call') {
+              return [{ type: 'tool_use', id: part.toolCallId, name: part.toolName, params: part.input as any }]
+            }
+            return []
+          })
+        }
+        return []
+      })
+    }
+
+    const currentAssistantMessage = respMessages
+      .map((msg) => {
+        if (typeof msg.content === 'string') {
+          return msg.content
+        }
+        return msg.content.map((part) => {
+          if (part.type === 'text') {
+            return part.text
+          }
+          return ''
+        })
+      })
+      .join('\n')
 
     const ret = parseAssistantMessage(currentAssistantMessage, this.config.tools.map(toToolInfoV1), this.config.toolNamePrefix)
 
@@ -471,23 +519,23 @@ export abstract class AgentBase {
 
   async #handleResponse(
     response: AssistantMessageContent[],
-  ): Promise<{ type: 'reply'; message: UserContent } | { type: 'exit'; reason: ExitReason }> {
+  ): Promise<{ type: 'reply'; message: UserModelMessage | ToolModelMessage } | { type: 'exit'; reason: ExitReason }> {
     const toolResponses: ToolResponseOrToolPause[] = []
     let hasPause = false
-
+    let textMessages = ''
     outer: for (const content of response) {
       switch (content.type) {
         case 'text':
-          // no need to handle text content
+          textMessages += content.content
           break
         case 'tool_use': {
-          await this.#callback({ kind: TaskEventKind.ToolUse, agent: this, tool: content.name })
+          await this.#callback({ kind: TaskEventKind.ToolUse, agent: this, tool: content.name, content: content.params })
           const toolResp = await this.#invokeTool(content.name, content.params)
           switch (toolResp.type) {
             case ToolResponseType.Reply: {
               // reply to the tool use
-              await this.#callback({ kind: TaskEventKind.ToolReply, agent: this, tool: content.name })
-              toolResponses.push({ type: 'response', tool: content.name, response: toolResp.message })
+              await this.#callback({ kind: TaskEventKind.ToolReply, agent: this, tool: content.name, content: toolResp.message })
+              toolResponses.push({ type: 'response', tool: content.name, response: toolResp.message, id: content.id })
               break
             }
             case ToolResponseType.Exit:
@@ -500,19 +548,19 @@ export abstract class AgentBase {
               return { type: 'exit', reason: toolResp }
             case ToolResponseType.Invalid: {
               // tell AI about the invalid arguments
-              await this.#callback({ kind: TaskEventKind.ToolInvalid, agent: this, tool: content.name })
-              toolResponses.push({ type: 'response', tool: content.name, response: toolResp.message })
+              await this.#callback({ kind: TaskEventKind.ToolInvalid, agent: this, tool: content.name, content: toolResp.message })
+              toolResponses.push({ type: 'response', tool: content.name, response: toolResp.message, id: content.id })
               break outer
             }
             case ToolResponseType.Error: {
               // tell AI about the error
-              await this.#callback({ kind: TaskEventKind.ToolError, agent: this, tool: content.name })
-              toolResponses.push({ type: 'response', tool: content.name, response: toolResp.message })
+              await this.#callback({ kind: TaskEventKind.ToolError, agent: this, tool: content.name, content: toolResp.message })
+              toolResponses.push({ type: 'response', tool: content.name, response: toolResp.message, id: content.id })
               break outer
             }
             case ToolResponseType.Interrupted:
               // the execution is killed
-              await this.#callback({ kind: TaskEventKind.ToolInterrupted, agent: this, tool: content.name })
+              await this.#callback({ kind: TaskEventKind.ToolInterrupted, agent: this, tool: content.name, content: toolResp.message })
               return { type: 'exit', reason: toolResp }
             case ToolResponseType.HandOver: {
               if (toolResponses.length > 0) {
@@ -553,7 +601,7 @@ export abstract class AgentBase {
             case ToolResponseType.Pause: {
               // pause the execution
               await this.#callback({ kind: TaskEventKind.ToolPause, agent: this, tool: content.name, object: toolResp.object })
-              toolResponses.push({ type: 'pause', tool: content.name, object: toolResp.object })
+              toolResponses.push({ type: 'pause', tool: content.name, object: toolResp.object, id: content.id })
               hasPause = true
             }
           }
@@ -566,16 +614,62 @@ export abstract class AgentBase {
       return { type: 'exit', reason: { type: 'Pause', responses: toolResponses } }
     }
 
+    if (this.config.toolFormat === 'native') {
+      if (toolResponses.length === 0) {
+        // completed
+        return {
+          type: 'exit',
+          reason: {
+            type: ToolResponseType.Exit,
+            message: textMessages,
+          },
+        }
+      }
+      const toolResults = toolResponses
+        .filter((resp): resp is { type: 'response'; tool: string; response: string; id: string } => resp.type === 'response')
+        .map(
+          (resp) =>
+            ({
+              type: 'tool-result',
+              toolCallId: resp.id,
+              toolName: resp.tool,
+              output: {
+                type: 'text',
+                value: resp.response,
+              },
+            }) as ToolResultPart,
+        )
+      return {
+        type: 'reply',
+        message: {
+          role: 'tool',
+          content: toolResults,
+        },
+      }
+    }
+
     if (toolResponses.length === 0) {
       // always require a tool usage
-      return { type: 'reply', message: responsePrompts.requireUseTool }
+      return {
+        type: 'reply',
+        message: {
+          role: 'user',
+          content: responsePrompts.requireUseTool,
+        },
+      }
     }
 
     const finalResp = toolResponses
       .filter((resp): resp is { type: 'response'; tool: string; response: UserContent } => resp.type === 'response')
       .flatMap(({ tool, response }) => responsePrompts.toolResults(tool, response))
 
-    return { type: 'reply', message: finalResp }
+    return {
+      type: 'reply',
+      message: {
+        role: 'user',
+        content: finalResp,
+      },
+    }
   }
 
   async #invokeTool(name: string, args: Record<string, string>): Promise<ToolResponse> {

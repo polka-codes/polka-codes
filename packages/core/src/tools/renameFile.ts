@@ -8,25 +8,22 @@ import type { FilesystemProvider } from './provider'
 export const toolInfo = {
   name: 'rename_file',
   description: 'Request to rename a file from source path to target path.',
-  parameters: z.object({
-    source_path: z.string().describe('The current path of the file').meta({ usageValue: 'Source file path here' }),
-    target_path: z.string().describe('The new path for the file').meta({ usageValue: 'Target file path here' }),
-  }),
-  examples: [
-    {
-      description: 'Request to rename a file',
-      parameters: [
+  parameters: z
+    .object({
+      source_path: z.string().describe('The current path of the file').meta({ usageValue: 'Source file path here' }),
+      target_path: z.string().describe('The new path for the file').meta({ usageValue: 'Target file path here' }),
+    })
+    .meta({
+      examples: [
         {
-          name: 'source_path',
-          value: 'src/old-name.js',
-        },
-        {
-          name: 'target_path',
-          value: 'src/new-name.js',
+          description: 'Request to rename a file',
+          input: {
+            source_path: 'src/old-name.js',
+            target_path: 'src/new-name.js',
+          },
         },
       ],
-    },
-  ],
+    }),
   permissionLevel: PermissionLevel.Write,
 } as const satisfies ToolInfoV2
 

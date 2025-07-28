@@ -4,41 +4,34 @@
  */
 
 import { describe, expect, test } from 'bun:test'
-import { PermissionLevel, type ToolInfo } from '../tool'
+import { z } from 'zod'
+import { type FullToolInfoV2, PermissionLevel, ToolResponseType } from '../tool'
 import type { AgentInfo } from './AgentBase'
 import { agentsPrompt, responsePrompts, toolUsePrompt } from './prompts'
 
 describe('Agent prompts', () => {
   describe('toolUsePrompt', () => {
     test('should generate tool use documentation with tools', () => {
-      const tools: ToolInfo[] = [
+      const tools: FullToolInfoV2[] = [
         {
           name: 'test_tool',
           description: 'A test tool',
-          parameters: [
-            {
-              name: 'param1',
-              description: 'First parameter',
-              required: true,
-              usageValue: 'value1',
-            },
-            {
-              name: 'param2',
-              description: 'Second parameter',
-              required: false,
-              usageValue: 'value2',
-            },
-          ],
-          examples: [
-            {
-              description: 'Example usage',
-              parameters: [
-                { name: 'param1', value: 'test1' },
-                { name: 'param2', value: 'test2' },
+          parameters: z
+            .object({
+              param1: z.string().describe('First parameter').meta({ usageValue: 'value1' }),
+              param2: z.string().optional().describe('Second parameter').meta({ usageValue: 'value2' }),
+            })
+            .meta({
+              examples: [
+                {
+                  description: 'Example usage',
+                  input: { param1: 'test1', param2: 'test2' },
+                },
               ],
-            },
-          ],
+            }),
           permissionLevel: PermissionLevel.None,
+          handler: async () => ({ type: ToolResponseType.Exit, message: 'test' }),
+          isAvailable: () => true,
         },
       ]
 

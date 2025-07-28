@@ -1,9 +1,9 @@
-import type { ToolInfo } from '../../tool'
+import type { FullToolInfoV2 } from '../../tool'
 import { capabilities, customInstructions, customScripts, systemInformation, toolUsePrompt } from '../prompts'
 
 export const fullSystemPrompt = (
   info: { os: string },
-  tools: ToolInfo[],
+  tools: FullToolInfoV2[],
   toolNamePrefix: string,
   instructions: string[],
   scripts: Record<string, string | { command: string; description: string }>,

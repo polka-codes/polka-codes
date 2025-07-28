@@ -8,12 +8,13 @@ export const toolInfo = {
   name: 'replace_in_file',
   description:
     'Request to replace sections of content in an existing file using SEARCH/REPLACE blocks that define exact changes to specific parts of the file. This tool should be used when you need to make targeted changes to specific parts of a file.',
-  parameters: z.object({
-    path: z.string().describe('The path of the file to modify').meta({ usageValue: 'File path here' }),
-    diff: z
-      .string()
-      .describe(
-        `One or more SEARCH/REPLACE blocks following this exact format:
+  parameters: z
+    .object({
+      path: z.string().describe('The path of the file to modify').meta({ usageValue: 'File path here' }),
+      diff: z
+        .string()
+        .describe(
+          `One or more SEARCH/REPLACE blocks following this exact format:
 \`\`\`
 <<<<<<< SEARCH
 [exact content to find]
@@ -37,20 +38,16 @@ Critical rules:
 4. Special operations:
     * To move code: Use two SEARCH/REPLACE blocks (one to delete from original + one to insert at new location)
     * To delete code: Use empty REPLACE section`,
-      )
-      .meta({ usageValue: 'Search and replace blocks here' }),
-  }),
-  examples: [
-    {
-      description: 'Request to replace sections of content in a file',
-      parameters: [
+        )
+        .meta({ usageValue: 'Search and replace blocks here' }),
+    })
+    .meta({
+      examples: [
         {
-          name: 'path',
-          value: 'src/main.js',
-        },
-        {
-          name: 'diff',
-          value: `<<<<<<< SEARCH
+          description: 'Request to replace sections of content in a file',
+          input: {
+            path: 'src/main.js',
+            diff: `<<<<<<< SEARCH
 import React from 'react';
 =======
 import React, { useState } from 'react';
@@ -77,36 +74,24 @@ function handleSubmit() {
 return (
   <div>
 >>>>>>> REPLACE`,
-        },
-      ],
-    },
-    {
-      description: 'Request to perform a simple, single-line replacement',
-      parameters: [
-        {
-          name: 'path',
-          value: 'src/config.js',
+          },
         },
         {
-          name: 'diff',
-          value: `<<<<<<< SEARCH
+          description: 'Request to perform a simple, single-line replacement',
+          input: {
+            path: 'src/config.js',
+            diff: `<<<<<<< SEARCH
 const API_URL = 'https://api.example.com';
 =======
 const API_URL = 'https://api.staging.example.com';
 >>>>>>> REPLACE`,
-        },
-      ],
-    },
-    {
-      description: 'Request to add a new function to a file',
-      parameters: [
-        {
-          name: 'path',
-          value: 'src/utils.js',
+          },
         },
         {
-          name: 'diff',
-          value: `<<<<<<< SEARCH
+          description: 'Request to add a new function to a file',
+          input: {
+            path: 'src/utils.js',
+            diff: `<<<<<<< SEARCH
 function helperA() {
   // ...
 }
@@ -119,29 +104,23 @@ function newHelper() {
   // implementation
 }
 >>>>>>> REPLACE`,
-        },
-      ],
-    },
-    {
-      description: 'Request to delete a block of code from a file',
-      parameters: [
-        {
-          name: 'path',
-          value: 'src/app.js',
+          },
         },
         {
-          name: 'diff',
-          value: `<<<<<<< SEARCH
+          description: 'Request to delete a block of code from a file',
+          input: {
+            path: 'src/app.js',
+            diff: `<<<<<<< SEARCH
 function oldFeature() {
   // This is no longer needed
 }
 
 =======
 >>>>>>> REPLACE`,
+          },
         },
       ],
-    },
-  ],
+    }),
   permissionLevel: PermissionLevel.Write,
 } as const satisfies ToolInfoV2
 
@@ -161,7 +140,7 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
     if (fileContent == null) {
       return {
         type: ToolResponseType.Error,
-        message: `<replace_in_file_result path="${path}" status="failed" message="File not found" />`,
+        message: `<replace_in_file_result path=\"${path}\" status=\"failed\" message=\"File not found\" />`,
       }
     }
 
@@ -170,8 +149,8 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
     if (result.status === 'no_diff_applied') {
       return {
         type: ToolResponseType.Error,
-        message: `<replace_in_file_result path="${path}" status="failed" message="Unable to apply changes">
-  <file_content path="${path}">${fileContent}</file_content>
+        message: `<replace_in_file_result path=\"${path}\" status=\"failed\" message=\"Unable to apply changes\">
+  <file_content path=\"${path}\">${fileContent}</file_content>
 </replace_in_file_result>`,
       }
     }
@@ -181,15 +160,15 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
     if (result.status === 'some_diff_applied') {
       return {
         type: ToolResponseType.Reply,
-        message: `<replace_in_file_result path="${path}" status="some_diff_applied" applied_count="${result.appliedCount}" total_count="${result.totalCount}">
-  <file_content path="${path}">${result.content}</file_content>
+        message: `<replace_in_file_result path=\"${path}\" status=\"some_diff_applied\" applied_count=\"${result.appliedCount}\" total_count=\"${result.totalCount}\">
+  <file_content path=\"${path}\">${result.content}</file_content>
 </replace_in_file_result>`,
       }
     }
 
     return {
       type: ToolResponseType.Reply,
-      message: `<replace_in_file_result path="${path}" status="all_diff_applied" />`,
+      message: `<replace_in_file_result path=\"${path}\" status=\"all_diff_applied\" />`,
     }
   } catch (error) {
     return {

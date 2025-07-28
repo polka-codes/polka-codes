@@ -19,7 +19,7 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter) => {
         console.log('\n\n======== New Request ========\n')
 
         if (verbose) {
-          const { userMessage } = event
+          const userMessage = event.userMessage.content
           if (typeof userMessage === 'string') {
             console.log(userMessage)
           } else {
@@ -38,9 +38,17 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter) => {
                 case 'file':
                   console.log(chalk.yellow(`[File name: ${content.filename}, type: ${content.mediaType}]`))
                   break
-                default:
-                  console.log(chalk.red('[Unknown content type]'))
-                  console.log(content)
+                case 'tool-call':
+                  console.log(chalk.yellow(`[Tool call: ${content.toolName}]`))
+                  break
+                case 'tool-result':
+                  console.log(chalk.yellow(`[Tool result: ${content.toolName}]`))
+                  if (verbose > 0) {
+                    console.log(content.output)
+                  }
+                  break
+                case 'reasoning':
+                  break
               }
             }
           }
@@ -68,29 +76,29 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter) => {
         process.stdout.write(chalk.dim(event.newText))
         hadReasoning = true
         break
-      case TaskEventKind.ToolUse:
-        {
-          const stats = toolCallStats.get(event.tool) ?? { calls: 0, success: 0, errors: 0 }
-          stats.calls++
-          toolCallStats.set(event.tool, stats)
-        }
+      case TaskEventKind.ToolUse: {
+        console.log(chalk.yellow('\n\nTool use:', event.tool), event.content)
+        const stats = toolCallStats.get(event.tool) ?? { calls: 0, success: 0, errors: 0 }
+        stats.calls++
+        toolCallStats.set(event.tool, stats)
         break
-      case TaskEventKind.ToolReply:
-        {
-          const stats = toolCallStats.get(event.tool) ?? { calls: 0, success: 0, errors: 0 }
-          stats.success++
-          toolCallStats.set(event.tool, stats)
-        }
+      }
+      case TaskEventKind.ToolReply: {
+        const stats = toolCallStats.get(event.tool) ?? { calls: 0, success: 0, errors: 0 }
+        stats.success++
+        toolCallStats.set(event.tool, stats)
         break
+      }
       case TaskEventKind.ToolInvalid:
         break
-      case TaskEventKind.ToolError:
-        {
-          const stats = toolCallStats.get(event.tool) ?? { calls: 0, success: 0, errors: 0 }
-          stats.errors++
-          toolCallStats.set(event.tool, stats)
-        }
+      case TaskEventKind.ToolError: {
+        console.error(chalk.red('\n\nTool error:', event.tool))
+        console.error(chalk.red(event.content))
+        const stats = toolCallStats.get(event.tool) ?? { calls: 0, success: 0, errors: 0 }
+        stats.errors++
+        toolCallStats.set(event.tool, stats)
         break
+      }
       case TaskEventKind.ToolInterrupted:
         break
       case TaskEventKind.ToolHandOver:

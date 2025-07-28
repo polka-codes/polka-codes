@@ -31,7 +31,8 @@ export const getModel = (config: ModelConfig, debugLogging = false): LanguageMod
         // log outgoing request
         console.log('-> Request URL:', url)
         console.log('-> Request Headers:', options?.headers)
-        console.log('-> Request Body:', JSON.parse(options?.body as any))
+        console.log('-> Request Body:')
+        console.dir(JSON.parse(options?.body as any), { depth: null })
 
         const res = await fetch(url, options)
         console.log('<- Response Status:', res.status)

@@ -1,6 +1,5 @@
 import { getAvailableTools } from '../../getAvailableTools'
 import { PermissionLevel } from '../../tool'
-import { toToolInfoV1 } from '../../tool-v1-compat'
 import { allTools } from '../../tools'
 import { UsageMeter } from '../../UsageMeter'
 import { AgentBase, type AgentInfo, type SharedAgentOptions } from '../AgentBase'
@@ -18,12 +17,12 @@ export class ArchitectAgent extends AgentBase {
       permissionLevel: PermissionLevel.Read,
       interactive: true,
     })
-    const toolNamePrefix = 'tool_'
+    const toolNamePrefix = options.toolFormat === 'native' ? '' : 'tool_'
     const systemPrompt = fullSystemPrompt(
       {
         os: options.os,
       },
-      tools.map(toToolInfoV1),
+      tools,
       toolNamePrefix,
       options.customInstructions ?? [],
       options.scripts ?? {},

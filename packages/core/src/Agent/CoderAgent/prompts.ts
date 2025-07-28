@@ -1,6 +1,6 @@
 // source: https://github.com/cline/cline/blob/f6c19c29a64ca84e9360df7ab2c07d128dcebe64/src/core/prompts/system.ts#L1
 
-import type { ToolInfo } from '../../tool'
+import type { FullToolInfoV2 } from '../../tool'
 import { capabilities, customInstructions, customScripts, systemInformation, toolUsePrompt } from '../prompts'
 
 export const basePrompt =
@@ -111,7 +111,7 @@ You solve the user's task by working in small, verifiable steps.
 
 export const fullSystemPrompt = (
   info: { os: string },
-  tools: ToolInfo[],
+  tools: FullToolInfoV2[],
   toolNamePrefix: string,
   instructions: string[],
   scripts: Record<string, string | { command: string; description: string }>,

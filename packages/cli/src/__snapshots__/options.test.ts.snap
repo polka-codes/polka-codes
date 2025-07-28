@@ -24,7 +24,7 @@ exports[`ApiProviderConfig getConfigForCommand falls back to default provider 1`
   "parameters": {},
   "project": undefined,
   "provider": "anthropic",
-  "toolFormat": "polka-codes",
+  "toolFormat": "native",
 }
 `;
 
@@ -38,7 +38,7 @@ exports[`ApiProviderConfig getConfigForAgent with agent-specific config 1`] = `
   "parameters": {},
   "project": undefined,
   "provider": "anthropic",
-  "toolFormat": "polka-codes",
+  "toolFormat": "native",
 }
 `;
 

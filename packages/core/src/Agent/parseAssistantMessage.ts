@@ -6,9 +6,10 @@ export interface TextContent {
 }
 
 export interface ToolUse {
+  id?: string
   type: 'tool_use'
   name: string
-  params: Record<string, any> // Changed from Record<string, string> to support arrays and nested objects
+  params: Record<string, any>
 }
 
 export type AssistantMessageContent = TextContent | ToolUse
