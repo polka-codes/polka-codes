@@ -43,6 +43,9 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter) => {
                   break
                 case 'tool-result':
                   console.log(chalk.yellow(`[Tool result: ${content.toolName}]`))
+                  if (verbose > 0) {
+                    console.log(content.output)
+                  }
                   break
                 case 'reasoning':
                   break
@@ -74,9 +77,7 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter) => {
         hadReasoning = true
         break
       case TaskEventKind.ToolUse: {
-        if (verbose > 1) {
-          console.log(chalk.yellow('\n\n[Tool use:', event.tool, ']'))
-        }
+        console.log(chalk.yellow('\n\nTool use:', event.tool), event.content)
         const stats = toolCallStats.get(event.tool) ?? { calls: 0, success: 0, errors: 0 }
         stats.calls++
         toolCallStats.set(event.tool, stats)
@@ -91,10 +92,8 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter) => {
       case TaskEventKind.ToolInvalid:
         break
       case TaskEventKind.ToolError: {
-        if (verbose > 1) {
-          console.error(chalk.red('\n\n[Tool error:', event.tool, ']'))
-          console.error(chalk.red(event.content))
-        }
+        console.error(chalk.red('\n\nTool error:', event.tool))
+        console.error(chalk.red(event.content))
         const stats = toolCallStats.get(event.tool) ?? { calls: 0, success: 0, errors: 0 }
         stats.errors++
         toolCallStats.set(event.tool, stats)

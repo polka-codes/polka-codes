@@ -404,7 +404,6 @@ export abstract class AgentBase {
                 await this.#callback({ kind: TaskEventKind.Reasoning, agent: this, newText: chunk.text })
                 break
               case 'tool-call':
-                await this.#callback({ kind: TaskEventKind.ToolUse, agent: this, tool: chunk.toolName, content: chunk.input })
                 break
             }
           },
