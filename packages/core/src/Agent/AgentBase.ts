@@ -7,7 +7,8 @@ import type {
   UserContent,
   UserModelMessage,
 } from '@ai-sdk/provider-utils'
-import { streamText, type ToolSet } from 'ai'
+import { jsonSchema, streamText, type ToolSet } from 'ai'
+import { toJSONSchema } from 'zod'
 import type { ToolFormat } from '../config'
 import {
   type FullToolInfoV2,
@@ -220,6 +221,7 @@ export abstract class AgentBase {
   protected readonly config: Readonly<AgentBaseConfig>
   protected readonly handlers: Record<string, FullToolInfoV2>
   readonly #policies: Readonly<AgentPolicyInstance[]>
+  readonly #toolSet: Readonly<ToolSet>
 
   #messages: ModelMessage[] = []
   #aborted = false
@@ -266,6 +268,19 @@ export abstract class AgentBase {
       role: 'system',
       content: this.config.systemPrompt,
     })
+
+    if (this.config.toolFormat === 'native') {
+      const tools: ToolSet = {}
+      for (const tool of Object.values(this.handlers)) {
+        tools[tool.name] = {
+          description: tool.description,
+          inputSchema: jsonSchema(toJSONSchema(tool.parameters)),
+        }
+      }
+      this.#toolSet = tools
+    } else {
+      this.#toolSet = {}
+    }
   }
 
   abort() {
@@ -415,14 +430,7 @@ export abstract class AgentBase {
         }
 
         if (this.config.toolFormat === 'native') {
-          const tools: ToolSet = {}
-          for (const tool of Object.values(this.handlers)) {
-            tools[tool.name] = {
-              description: tool.description,
-              inputSchema: tool.parameters,
-            }
-          }
-          streamTextOptions.tools = tools
+          streamTextOptions.tools = this.#toolSet
         }
 
         const stream = streamText(streamTextOptions)

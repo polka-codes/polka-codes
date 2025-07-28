@@ -17,16 +17,10 @@ export const toolInfo = {
       examples: [
         {
           description: 'Request to rename a file',
-          parameters: [
-            {
-              name: 'source_path',
-              value: 'src/old-name.js',
-            },
-            {
-              name: 'target_path',
-              value: 'src/new-name.js',
-            },
-          ],
+          input: {
+            source_path: 'src/old-name.js',
+            target_path: 'src/new-name.js',
+          },
         },
       ],
     }),

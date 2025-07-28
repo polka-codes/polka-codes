@@ -31,10 +31,10 @@ export const toolInfo = {
       examples: [
         {
           description: 'Make a build',
-          parameters: [
-            { name: 'command', value: 'npm run build' },
-            { name: 'requiresApproval', value: 'false' },
-          ],
+          input: {
+            command: 'npm run build',
+            requiresApproval: 'false',
+          },
         },
       ],
     }),

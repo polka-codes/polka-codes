@@ -46,7 +46,9 @@ const toolInfoExamplesPrompt = (tool: ToolInfo, example: ToolExample, toolNamePr
 ## Example: ${example.description}
 
 <${toolNamePrefix}${tool.name}>
-${example.parameters.map((param) => `${renderParameterValue(param.name, param.value, parameterPrefix)}`).join('\n')}
+${Object.entries(example.input)
+  .map(([name, value]) => renderParameterValue(name, value, parameterPrefix))
+  .join('\n')}
 </${toolNamePrefix}${tool.name}>
 `
 

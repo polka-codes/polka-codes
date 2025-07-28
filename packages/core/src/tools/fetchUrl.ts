@@ -22,30 +22,21 @@ export const toolInfo = {
       examples: [
         {
           description: 'Fetch a single webpage',
-          parameters: [
-            {
-              name: 'url',
-              value: 'https://example.com',
-            },
-          ],
+          input: {
+            url: 'https://example.com',
+          },
         },
         {
           description: 'Fetch multiple webpages',
-          parameters: [
-            {
-              name: 'url',
-              value: 'https://example.com,https://developer.mozilla.org/en-US/docs/Web/HTTP',
-            },
-          ],
+          input: {
+            url: 'https://example.com,https://developer.mozilla.org/en-US/docs/Web/HTTP',
+          },
         },
         {
           description: 'Fetch a raw file from GitHub',
-          parameters: [
-            {
-              name: 'url',
-              value: 'https://raw.githubusercontent.com/user/repo/main/README.md',
-            },
-          ],
+          input: {
+            url: 'https://raw.githubusercontent.com/user/repo/main/README.md',
+          },
         },
       ],
     }),

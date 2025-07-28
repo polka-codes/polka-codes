@@ -13,12 +13,9 @@ export const toolInfo = {
       examples: [
         {
           description: 'Request to remove a file',
-          parameters: [
-            {
-              name: 'path',
-              value: 'src/main.js',
-            },
-          ],
+          input: {
+            path: 'src/main.js',
+          },
         },
       ],
     }),

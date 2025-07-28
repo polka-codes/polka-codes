@@ -5,7 +5,7 @@ export type ToolParameterValue = string | { [key: string]: ToolParameterValue } 
 
 export type ToolExample = {
   description: string
-  parameters: { name: string; value: ToolParameterValue }[]
+  input: Record<string, ToolParameterValue>
 }
 
 export enum PermissionLevel {

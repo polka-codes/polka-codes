@@ -21,21 +21,15 @@ export const toolInfo = {
       examples: [
         {
           description: 'Request to read the contents of a file',
-          parameters: [
-            {
-              name: 'path',
-              value: 'src/main.js',
-            },
-          ],
+          input: {
+            path: 'src/main.js',
+          },
         },
         {
           description: 'Request to read multiple files',
-          parameters: [
-            {
-              name: 'path',
-              value: 'src/main.js,src/index.js',
-            },
-          ],
+          input: {
+            path: 'src/main.js,src/index.js',
+          },
         },
       ],
     }),

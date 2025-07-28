@@ -26,51 +26,39 @@ export const toolInfo = {
       examples: [
         {
           description: 'Single clarifying question (no options)',
-          parameters: [
-            {
-              name: 'questions',
-              value: { prompt: 'What is the target deployment environment?' },
-            },
-          ],
+          input: {
+            questions: { prompt: 'What is the target deployment environment?' },
+          },
         },
         {
           description: 'Single question with multiple-choice options',
-          parameters: [
-            {
-              name: 'questions',
-              value: {
-                prompt: 'Which frontend framework are you using?',
-                options: ['React', 'Angular', 'Vue', 'Svelte'],
-              },
+          input: {
+            questions: {
+              prompt: 'Which frontend framework are you using?',
+              options: ['React', 'Angular', 'Vue', 'Svelte'],
             },
-          ],
+          },
         },
         {
           description: 'Two related questions in one call',
-          parameters: [
-            {
-              name: 'questions',
-              value: [
-                { prompt: 'What type of application are you building?' },
-                {
-                  prompt: 'Preferred programming language?',
-                  options: ['JavaScript', 'TypeScript', 'Python', 'Java'],
-                },
-              ],
-            },
-          ],
+          input: {
+            questions: [
+              { prompt: 'What type of application are you building?' },
+              {
+                prompt: 'Preferred programming language?',
+                options: ['JavaScript', 'TypeScript', 'Python', 'Java'],
+              },
+            ],
+          },
         },
         {
           description: 'Binary (yes/no) confirmation',
-          parameters: [
-            {
-              name: 'questions',
-              value: {
-                prompt: 'Is it acceptable to refactor existing tests to improve performance?',
-                options: ['Yes', 'No'],
-              },
+          input: {
+            questions: {
+              prompt: 'Is it acceptable to refactor existing tests to improve performance?',
+              options: ['Yes', 'No'],
             },
-          ],
+          },
         },
       ],
     }),

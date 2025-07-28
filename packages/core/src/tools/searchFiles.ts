@@ -31,20 +31,11 @@ export const toolInfo = {
       examples: [
         {
           description: 'Request to perform a regex search across files',
-          parameters: [
-            {
-              name: 'path',
-              value: 'src',
-            },
-            {
-              name: 'regex',
-              value: '^components/',
-            },
-            {
-              name: 'filePattern',
-              value: '*.ts,*.tsx',
-            },
-          ],
+          input: {
+            path: 'src',
+            regex: '^components/',
+            filePattern: '*.ts,*.tsx',
+          },
         },
       ],
     }),

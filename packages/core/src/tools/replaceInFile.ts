@@ -45,14 +45,9 @@ Critical rules:
       examples: [
         {
           description: 'Request to replace sections of content in a file',
-          parameters: [
-            {
-              name: 'path',
-              value: 'src/main.js',
-            },
-            {
-              name: 'diff',
-              value: `<<<<<<< SEARCH
+          input: {
+            path: 'src/main.js',
+            diff: `<<<<<<< SEARCH
 import React from 'react';
 =======
 import React, { useState } from 'react';
@@ -79,36 +74,24 @@ function handleSubmit() {
 return (
   <div>
 >>>>>>> REPLACE`,
-            },
-          ],
+          },
         },
         {
           description: 'Request to perform a simple, single-line replacement',
-          parameters: [
-            {
-              name: 'path',
-              value: 'src/config.js',
-            },
-            {
-              name: 'diff',
-              value: `<<<<<<< SEARCH
+          input: {
+            path: 'src/config.js',
+            diff: `<<<<<<< SEARCH
 const API_URL = 'https://api.example.com';
 =======
 const API_URL = 'https://api.staging.example.com';
 >>>>>>> REPLACE`,
-            },
-          ],
+          },
         },
         {
           description: 'Request to add a new function to a file',
-          parameters: [
-            {
-              name: 'path',
-              value: 'src/utils.js',
-            },
-            {
-              name: 'diff',
-              value: `<<<<<<< SEARCH
+          input: {
+            path: 'src/utils.js',
+            diff: `<<<<<<< SEARCH
 function helperA() {
   // ...
 }
@@ -121,27 +104,20 @@ function newHelper() {
   // implementation
 }
 >>>>>>> REPLACE`,
-            },
-          ],
+          },
         },
         {
           description: 'Request to delete a block of code from a file',
-          parameters: [
-            {
-              name: 'path',
-              value: 'src/app.js',
-            },
-            {
-              name: 'diff',
-              value: `<<<<<<< SEARCH
+          input: {
+            path: 'src/app.js',
+            diff: `<<<<<<< SEARCH
 function oldFeature() {
   // This is no longer needed
 }
 
 =======
 >>>>>>> REPLACE`,
-            },
-          ],
+          },
         },
       ],
     }),
@@ -164,7 +140,7 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
     if (fileContent == null) {
       return {
         type: ToolResponseType.Error,
-        message: `<replace_in_file_result path="${path}" status="failed" message="File not found" />`,
+        message: `<replace_in_file_result path=\"${path}\" status=\"failed\" message=\"File not found\" />`,
       }
     }
 
@@ -173,8 +149,8 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
     if (result.status === 'no_diff_applied') {
       return {
         type: ToolResponseType.Error,
-        message: `<replace_in_file_result path="${path}" status="failed" message="Unable to apply changes">
-  <file_content path="${path}">${fileContent}</file_content>
+        message: `<replace_in_file_result path=\"${path}\" status=\"failed\" message=\"Unable to apply changes\">
+  <file_content path=\"${path}\">${fileContent}</file_content>
 </replace_in_file_result>`,
       }
     }
@@ -184,15 +160,15 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
     if (result.status === 'some_diff_applied') {
       return {
         type: ToolResponseType.Reply,
-        message: `<replace_in_file_result path="${path}" status="some_diff_applied" applied_count="${result.appliedCount}" total_count="${result.totalCount}">
-  <file_content path="${path}">${result.content}</file_content>
+        message: `<replace_in_file_result path=\"${path}\" status=\"some_diff_applied\" applied_count=\"${result.appliedCount}\" total_count=\"${result.totalCount}\">
+  <file_content path=\"${path}\">${result.content}</file_content>
 </replace_in_file_result>`,
       }
     }
 
     return {
       type: ToolResponseType.Reply,
-      message: `<replace_in_file_result path="${path}" status="all_diff_applied" />`,
+      message: `<replace_in_file_result path=\"${path}\" status=\"all_diff_applied\" />`,
     }
   } catch (error) {
     return {

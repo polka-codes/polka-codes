@@ -20,14 +20,9 @@ export const toolInfo = {
       examples: [
         {
           description: 'Request to write content to a file',
-          parameters: [
-            {
-              name: 'path',
-              value: 'src/main.js',
-            },
-            {
-              name: 'content',
-              value: `import React from 'react';
+          input: {
+            path: 'src/main.js',
+            content: `import React from 'react';
 
 function App() {
   return (
@@ -39,8 +34,7 @@ function App() {
 
 export default App;
 `,
-            },
-          ],
+          },
         },
       ],
     }),

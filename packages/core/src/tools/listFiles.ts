@@ -34,16 +34,10 @@ export const toolInfo = {
       examples: [
         {
           description: 'Request to list files',
-          parameters: [
-            {
-              name: 'path',
-              value: 'src',
-            },
-            {
-              name: 'maxCount',
-              value: '100',
-            },
-          ],
+          input: {
+            path: 'src',
+            maxCount: '100',
+          },
         },
       ],
     }),

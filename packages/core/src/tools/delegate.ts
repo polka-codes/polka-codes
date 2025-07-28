@@ -29,24 +29,12 @@ export const toolInfo = {
       examples: [
         {
           description: 'Delegate a code analysis task to the analyzer agent',
-          parameters: [
-            {
-              name: 'agentName',
-              value: 'analyzer',
-            },
-            {
-              name: 'task',
-              value: 'Analyze the authentication implementation',
-            },
-            {
-              name: 'context',
-              value: 'Need to understand the security implications of the current auth system',
-            },
-            {
-              name: 'files',
-              value: 'src/auth/login.ts,src/auth/types.ts',
-            },
-          ],
+          input: {
+            agentName: 'analyzer',
+            task: 'Analyze the authentication implementation',
+            context: 'Need to understand the security implications of the current auth system',
+            files: 'src/auth/login.ts,src/auth/types.ts',
+          },
         },
       ],
     }),

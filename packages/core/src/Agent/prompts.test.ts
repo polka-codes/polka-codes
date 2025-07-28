@@ -25,10 +25,7 @@ describe('Agent prompts', () => {
               examples: [
                 {
                   description: 'Example usage',
-                  parameters: [
-                    { name: 'param1', value: 'test1' },
-                    { name: 'param2', value: 'test2' },
-                  ],
+                  input: { param1: 'test1', param2: 'test2' },
                 },
               ],
             }),

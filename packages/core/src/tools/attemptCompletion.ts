@@ -19,12 +19,9 @@ export const toolInfo = {
       examples: [
         {
           description: 'Request to present the result of the task',
-          parameters: [
-            {
-              name: 'result',
-              value: 'Your final result description here',
-            },
-          ],
+          input: {
+            result: 'Your final result description here',
+          },
         },
       ],
     }),

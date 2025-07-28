@@ -36,24 +36,12 @@ exports[`getAvailableTools should include agent tools when agents are available 
     "examples": [
       {
         "description": "Delegate a code analysis task to the analyzer agent",
-        "parameters": [
-          {
-            "name": "agentName",
-            "value": "analyzer",
-          },
-          {
-            "name": "task",
-            "value": "Analyze the authentication implementation",
-          },
-          {
-            "name": "context",
-            "value": "Need to understand the security implications of the current auth system",
-          },
-          {
-            "name": "files",
-            "value": "src/auth/login.ts,src/auth/types.ts",
-          },
-        ],
+        "input": {
+          "agentName": "analyzer",
+          "context": "Need to understand the security implications of the current auth system",
+          "files": "src/auth/login.ts,src/auth/types.ts",
+          "task": "Analyze the authentication implementation",
+        },
       },
     ],
     "handler": [Function: AsyncFunction],
@@ -92,24 +80,12 @@ exports[`getAvailableTools should include agent tools when agents are available 
     "examples": [
       {
         "description": "Hand over a coding task to the coder agent",
-        "parameters": [
-          {
-            "name": "agentName",
-            "value": "coder",
-          },
-          {
-            "name": "task",
-            "value": "Implement the login feature",
-          },
-          {
-            "name": "context",
-            "value": "We need a secure login system with email and password",
-          },
-          {
-            "name": "files",
-            "value": "src/auth/login.ts,src/auth/types.ts",
-          },
-        ],
+        "input": {
+          "agentName": "coder",
+          "context": "We need a secure login system with email and password",
+          "files": "src/auth/login.ts,src/auth/types.ts",
+          "task": "Implement the login feature",
+        },
       },
     ],
     "handler": [Function: AsyncFunction],
@@ -177,24 +153,12 @@ exports[`getAvailableTools should filter based on provider availability 1`] = `
     "examples": [
       {
         "description": "Delegate a code analysis task to the analyzer agent",
-        "parameters": [
-          {
-            "name": "agentName",
-            "value": "analyzer",
-          },
-          {
-            "name": "task",
-            "value": "Analyze the authentication implementation",
-          },
-          {
-            "name": "context",
-            "value": "Need to understand the security implications of the current auth system",
-          },
-          {
-            "name": "files",
-            "value": "src/auth/login.ts,src/auth/types.ts",
-          },
-        ],
+        "input": {
+          "agentName": "analyzer",
+          "context": "Need to understand the security implications of the current auth system",
+          "files": "src/auth/login.ts,src/auth/types.ts",
+          "task": "Analyze the authentication implementation",
+        },
       },
     ],
     "handler": [Function: AsyncFunction],
@@ -233,24 +197,12 @@ exports[`getAvailableTools should filter based on provider availability 1`] = `
     "examples": [
       {
         "description": "Hand over a coding task to the coder agent",
-        "parameters": [
-          {
-            "name": "agentName",
-            "value": "coder",
-          },
-          {
-            "name": "task",
-            "value": "Implement the login feature",
-          },
-          {
-            "name": "context",
-            "value": "We need a secure login system with email and password",
-          },
-          {
-            "name": "files",
-            "value": "src/auth/login.ts,src/auth/types.ts",
-          },
-        ],
+        "input": {
+          "agentName": "coder",
+          "context": "We need a secure login system with email and password",
+          "files": "src/auth/login.ts,src/auth/types.ts",
+          "task": "Implement the login feature",
+        },
       },
     ],
     "handler": [Function: AsyncFunction],
@@ -318,24 +270,12 @@ exports[`getAvailableTools should filter based on permission level 1`] = `
     "examples": [
       {
         "description": "Delegate a code analysis task to the analyzer agent",
-        "parameters": [
-          {
-            "name": "agentName",
-            "value": "analyzer",
-          },
-          {
-            "name": "task",
-            "value": "Analyze the authentication implementation",
-          },
-          {
-            "name": "context",
-            "value": "Need to understand the security implications of the current auth system",
-          },
-          {
-            "name": "files",
-            "value": "src/auth/login.ts,src/auth/types.ts",
-          },
-        ],
+        "input": {
+          "agentName": "analyzer",
+          "context": "Need to understand the security implications of the current auth system",
+          "files": "src/auth/login.ts,src/auth/types.ts",
+          "task": "Analyze the authentication implementation",
+        },
       },
     ],
     "handler": [Function: AsyncFunction],
@@ -374,24 +314,12 @@ exports[`getAvailableTools should filter based on permission level 1`] = `
     "examples": [
       {
         "description": "Hand over a coding task to the coder agent",
-        "parameters": [
-          {
-            "name": "agentName",
-            "value": "coder",
-          },
-          {
-            "name": "task",
-            "value": "Implement the login feature",
-          },
-          {
-            "name": "context",
-            "value": "We need a secure login system with email and password",
-          },
-          {
-            "name": "files",
-            "value": "src/auth/login.ts,src/auth/types.ts",
-          },
-        ],
+        "input": {
+          "agentName": "coder",
+          "context": "We need a secure login system with email and password",
+          "files": "src/auth/login.ts,src/auth/types.ts",
+          "task": "Implement the login feature",
+        },
       },
     ],
     "handler": [Function: AsyncFunction],

@@ -28,24 +28,12 @@ export const toolInfo = {
       examples: [
         {
           description: 'Hand over a coding task to the coder agent',
-          parameters: [
-            {
-              name: 'agentName',
-              value: 'coder',
-            },
-            {
-              name: 'task',
-              value: 'Implement the login feature',
-            },
-            {
-              name: 'context',
-              value: 'We need a secure login system with email and password',
-            },
-            {
-              name: 'files',
-              value: 'src/auth/login.ts,src/auth/types.ts',
-            },
-          ],
+          input: {
+            agentName: 'coder',
+            task: 'Implement the login feature',
+            context: 'We need a secure login system with email and password',
+            files: 'src/auth/login.ts,src/auth/types.ts',
+          },
         },
       ],
     }),
