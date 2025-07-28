@@ -36,8 +36,8 @@ export default {
   },
 
   [AiProvider.GoogleVertex]: {
-    'gemini-25-pro': { inputPrice: 2.5, outputPrice: 10, cacheWritesPrice: 0, cacheReadsPrice: 0, supportsThinking: true }, // long-context rate
-    'gemini-25-flash': { inputPrice: 0.3, outputPrice: 2.5, cacheWritesPrice: 0, cacheReadsPrice: 0, supportsThinking: false },
-    'gemini-25-flash-lite': { inputPrice: 0.1, outputPrice: 0.4, cacheWritesPrice: 0, cacheReadsPrice: 0, supportsThinking: false },
+    'gemini-2.5-pro': { inputPrice: 2.5, outputPrice: 10, cacheWritesPrice: 0, cacheReadsPrice: 0, supportsThinking: true }, // long-context rate
+    'gemini-2.5-flash': { inputPrice: 0.3, outputPrice: 2.5, cacheWritesPrice: 0, cacheReadsPrice: 0, supportsThinking: false },
+    'gemini-2.5-flash-lite': { inputPrice: 0.1, outputPrice: 0.4, cacheWritesPrice: 0, cacheReadsPrice: 0, supportsThinking: false },
   },
 } as const satisfies Record<AiProvider, Record<string, ModelInfo>>

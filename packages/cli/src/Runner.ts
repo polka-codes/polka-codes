@@ -133,9 +133,7 @@ export class Runner {
         const ai = getOrCreateLlm(agentName)
         const config = this.#options.providerConfig.getConfigForAgent(agentName)
 
-        const providerOptions = config
-          ? getProviderOptions(config.provider, config.model, config.parameters?.thinkingBudgetTokens ?? 0)
-          : {}
+        const providerOptions = config ? getProviderOptions(config.provider, ai.modelId, config.parameters?.thinkingBudgetTokens ?? 0) : {}
 
         const args = {
           ai,
