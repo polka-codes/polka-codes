@@ -24,6 +24,7 @@ Polka Codes is a powerful TypeScript-based AI coding assistant framework that he
   - **Code Fixer Agent**: Fixes bugs and addresses issues.
 - 💻 **Interactive CLI**: A powerful command-line interface for task execution and interactive chat.
 - 🔄 **GitHub Integration**: A GitHub Action that allows you to run Polka Codes by mentioning it in pull requests and issues.
+- 🕵️ **Code Review**: Get AI-powered feedback on your pull requests and local changes.
 - 📦 **Extensible Architecture**: A modular design that allows for adding new AI providers, tools, and agents.
 - ⚡ **Type Safety**: Fully typed with TypeScript for a better developer experience.
 - 🧪 **Thoroughly Tested**: Comprehensive test suite using `bun:test` with snapshot testing.
@@ -52,11 +53,54 @@ polka init
 # Run a task
 polka "improve README.md"
 
+# Review a pull request
+polka review --pr 123
+
+# Review local changes (staged or unstaged)
+polka review
+
 # Start an interactive chat session
 polka
 
 # Get help
 polka --help
+'''
+
+## Code Review
+
+The `review` command provides AI-powered code reviews for your projects. It can be used to review GitHub pull requests or local changes.
+
+### Reviewing Pull Requests
+
+To review a pull request, use the `--pr` option with the pull request number or URL. This feature requires the [GitHub CLI](https://cli.github.com/) (`gh`) to be installed and authenticated.
+
+'''bash
+# Review a pull request by number
+polka review --pr 123
+
+# Review a pull request by URL
+polka review --pr https://github.com/owner/repo/pull/123
+'''
+
+### Reviewing Local Changes
+
+To review local changes, run the `review` command without any arguments. It will automatically detect changes in the following order:
+1. Staged changes (`git diff --staged`)
+2. Unstaged changes (`git diff`)
+
+If no local changes are found, it will fall back to reviewing the diff between the current branch and the repository's default branch (e.g., `main` or `master`). This also requires `gh`.
+
+'''bash
+# Review staged or unstaged changes
+polka review
+'''
+
+### JSON Output
+
+For programmatic use, you can get the review in JSON format by adding the `--json` flag.
+
+'''bash
+polka review --json
 '''
 
 For more information, see the [CLI README](packages/cli/README.md).
