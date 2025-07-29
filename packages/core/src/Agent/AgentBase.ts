@@ -8,6 +8,7 @@ import type {
   UserModelMessage,
 } from '@ai-sdk/provider-utils'
 import { jsonSchema, streamText, type ToolSet } from 'ai'
+import { camelCase } from 'lodash'
 import { toJSONSchema } from 'zod'
 import type { ToolFormat } from '../config'
 import {
@@ -272,7 +273,7 @@ export abstract class AgentBase {
     if (this.config.toolFormat === 'native') {
       const tools: ToolSet = {}
       for (const tool of Object.values(this.handlers)) {
-        tools[tool.name] = {
+        tools[camelCase(tool.name)] = {
           description: tool.description,
           inputSchema: jsonSchema(toJSONSchema(tool.parameters)),
         }
