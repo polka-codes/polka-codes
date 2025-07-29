@@ -17,15 +17,15 @@ export const commitCommand = new Command('commit')
     const options = command.parent?.opts() ?? {}
     const { providerConfig } = parseOptions(options)
 
-    const { provider, model, apiKey } = providerConfig.getConfigForCommand('commit') ?? {}
+    const commandConfig = providerConfig.getConfigForCommand('commit')
 
-    console.log('Provider:', provider)
-    console.log('Model:', model)
-
-    if (!provider || !model) {
-      console.error('Error: No provider specified. Please run "pokla config" to configure your AI provider.')
+    if (!commandConfig || !commandConfig.provider || !commandConfig.model) {
+      console.error('Error: No provider specified. Please run "polka config" to configure your AI provider.')
       process.exit(1)
     }
+
+    console.log('Provider:', commandConfig.provider)
+    console.log('Model:', commandConfig.model)
 
     const usage = new UsageMeter()
 
@@ -61,11 +61,7 @@ export const commitCommand = new Command('commit')
 
       spinner.text = 'Generating commit message...'
 
-      const llm = getModel({
-        provider,
-        model,
-        apiKey,
-      })
+      const llm = getModel(commandConfig)
 
       const _schema = z.object({
         reasoning: z.string().describe('Reasoning if any'),

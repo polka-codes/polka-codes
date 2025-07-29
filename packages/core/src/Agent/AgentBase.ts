@@ -273,10 +273,12 @@ export abstract class AgentBase {
     if (this.config.toolFormat === 'native') {
       const tools: ToolSet = {}
       for (const tool of Object.values(this.handlers)) {
-        tools[camelCase(tool.name)] = {
+        const toolName = camelCase(tool.name)
+        tools[toolName] = {
           description: tool.description,
           inputSchema: jsonSchema(toJSONSchema(tool.parameters)),
         }
+        this.handlers[toolName] = tool
       }
       this.#toolSet = tools
     } else {

@@ -6,6 +6,7 @@ import { commitCommand } from './commands/commit'
 import { createCommand } from './commands/create'
 import { initCommand } from './commands/init'
 import { prCommand } from './commands/pr'
+import { reviewCommand } from './commands/review'
 import { runTask } from './commands/task'
 import { addSharedOptions } from './options'
 
@@ -27,6 +28,9 @@ program.addCommand(commitCommand)
 
 // PR command
 program.addCommand(prCommand)
+
+// Review command
+program.addCommand(reviewCommand)
 
 // Create command
 program.addCommand(createCommand)

@@ -13,17 +13,17 @@ export const prCommand = new Command('pr')
     const options = command.parent?.opts() ?? {}
     const { providerConfig, config } = parseOptions(options)
 
-    const { provider, model, apiKey } = providerConfig.getConfigForCommand('pr') ?? {}
+    const commandConfig = providerConfig.getConfigForCommand('pr')
 
-    const spinner = ora('Gathering information...').start()
-
-    if (!provider || !model) {
-      console.error('Error: No provider specified. Please run "pokla config" to configure your AI provider.')
+    if (!commandConfig || !commandConfig.provider || !commandConfig.model) {
+      console.error('Error: No provider specified. Please run "polka config" to configure your AI provider.')
       process.exit(1)
     }
 
-    console.log('Provider:', provider)
-    console.log('Model:', model)
+    const spinner = ora('Gathering information...').start()
+
+    console.log('Provider:', commandConfig.provider)
+    console.log('Model:', commandConfig.model)
 
     try {
       // Check if gh CLI is installed
@@ -67,11 +67,7 @@ export const prCommand = new Command('pr')
 
       const usage = new UsageMeter(config.prices)
 
-      const ai = getModel({
-        provider,
-        apiKey,
-        model,
-      })
+      const ai = getModel(commandConfig)
 
       spinner.text = 'Generating pull request details...'
 

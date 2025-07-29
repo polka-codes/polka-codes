@@ -1,4 +1,4 @@
-import type { AgentNameType } from '../Agent'
+import type { AgentBase, AgentNameType, SharedAgentOptions } from '../Agent'
 
 export type AiToolDefinition<Input, Output = string> = {
   name: string
@@ -6,7 +6,14 @@ export type AiToolDefinition<Input, Output = string> = {
   prompt: string
   formatInput: (params: Input) => string
   parseOutput: (output: string) => Output
-  agent?: AgentNameType
+}
+
+export type AiToolDefinitionWithMultiAgent<Input, Output = string> = AiToolDefinition<Input, Output> & {
+  agent: AgentNameType
+}
+
+export type AiToolDefinitionWithAgent<Input, Output = string> = AiToolDefinition<Input, Output> & {
+  agent: (options: SharedAgentOptions) => AgentBase
 }
 
 export type GetInput<T> = T extends AiToolDefinition<infer Input, any> ? Input : never
