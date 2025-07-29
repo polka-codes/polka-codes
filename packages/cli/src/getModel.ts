@@ -1,3 +1,4 @@
+import { appendFileSync } from 'node:fs'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { createDeepSeek } from '@ai-sdk/deepseek'
 import { createVertex } from '@ai-sdk/google-vertex'
@@ -5,7 +6,7 @@ import { createOpenAI } from '@ai-sdk/openai'
 import type { LanguageModelV2 } from '@ai-sdk/provider'
 import { createOpenRouter } from '@openrouter/ai-sdk-provider'
 import { createOllama } from 'ollama-ai-provider-v2'
-
+import { getEnv } from './env'
 export enum AiProvider {
   Anthropic = 'anthropic',
   Ollama = 'ollama',
@@ -26,52 +27,110 @@ export type ModelConfig = {
 }
 
 export const getModel = (config: ModelConfig, debugLogging = false): LanguageModelV2 => {
-  const fetchOverride: typeof fetch | undefined = debugLogging
-    ? ((async (url, options) => {
-        // log outgoing request
-        console.log('-> Request URL:', url)
-        console.log('-> Request Headers:', options?.headers)
-        console.log('-> Request Body:')
-        console.dir(JSON.parse(options?.body as any), { depth: null })
+  const { TRACING_FILE } = getEnv()
 
-        const res = await fetch(url, options)
-        console.log('<- Response Status:', res.status)
+  const fetchOverride: typeof fetch | undefined =
+    debugLogging || TRACING_FILE
+      ? ((async (url, options) => {
+          const requestBody = options?.body ? JSON.parse(options.body as string) : undefined
 
-        const contentType = res.headers.get('content-type') || ''
-        // if it's a streaming response, clone the body stream
-        if (contentType.includes('text/event-stream') && res.body) {
-          const [branch, clientStream] = res.body.tee()
-          // consume branch to log chunks
-          ;(async () => {
-            const reader = branch.getReader()
-            const decoder = new TextDecoder()
-            let done = false
-            while (!done) {
-              const { value, done: d } = await reader.read()
-              done = d
-              if (value) {
-                const text = decoder.decode(value)
-                console.log('<- Stream chunk:', text.replace(/\n/g, '\\n'))
+          if (debugLogging) {
+            console.log('-> Request URL:', url)
+            console.log('-> Request Headers:', options?.headers)
+            console.log('-> Request Body:')
+            console.dir(requestBody, { depth: null })
+          }
+          if (TRACING_FILE) {
+            appendFileSync(
+              TRACING_FILE,
+              JSON.stringify(
+                {
+                  type: 'request',
+                  timestamp: new Date().toISOString(),
+                  url,
+                  headers: options?.headers,
+                  body: requestBody,
+                },
+                null,
+                2,
+              ),
+            )
+          }
+
+          const res = await fetch(url, options)
+
+          if (debugLogging) {
+            console.log('<- Response Status:', res.status)
+          }
+
+          const contentType = res.headers.get('content-type') || ''
+          if (contentType.includes('text/event-stream') && res.body) {
+            const [branch, clientStream] = res.body.tee()
+            ;(async () => {
+              const reader = branch.getReader()
+              const decoder = new TextDecoder()
+              let done = false
+              while (!done) {
+                const { value, done: d } = await reader.read()
+                done = d
+                if (value) {
+                  const text = decoder.decode(value)
+                  if (debugLogging) {
+                    console.log('<- Stream chunk:', text.replace(/\n/g, '\\n'))
+                  }
+                  if (TRACING_FILE) {
+                    appendFileSync(
+                      TRACING_FILE,
+                      JSON.stringify(
+                        {
+                          type: 'response-chunk',
+                          timestamp: new Date().toISOString(),
+                          chunk: text,
+                        },
+                        null,
+                        2,
+                      ),
+                    )
+                  }
+                }
               }
-            }
-          })()
-          // return the other branch to the SDK
-          return new Response(clientStream, {
+            })()
+            return new Response(clientStream, {
+              headers: res.headers,
+              status: res.status,
+            })
+          }
+
+          const full = await res.text()
+          const responseBody = JSON.parse(full)
+
+          if (debugLogging) {
+            console.log('<- Response Body:')
+            console.dir(responseBody, { depth: null })
+          }
+          if (TRACING_FILE) {
+            appendFileSync(
+              TRACING_FILE,
+              JSON.stringify(
+                {
+                  type: 'response',
+                  timestamp: new Date().toISOString(),
+                  status: res.status,
+                  headers: Object.fromEntries(res.headers.entries()),
+                  body: responseBody,
+                },
+                null,
+                2,
+              ),
+            )
+          }
+
+          return new Response(full, {
             headers: res.headers,
             status: res.status,
           })
-        }
-
-        // non-stream: read and log full body
-        const full = await res.text()
-        console.log('<- Response Body:')
-        console.dir(JSON.parse(full), { depth: null })
-        return new Response(full, {
-          headers: res.headers,
-          status: res.status,
-        })
-      }) as typeof fetch)
-    : undefined
+        }) as typeof fetch)
+      : undefined
 
   switch (config.provider) {
     case AiProvider.Anthropic: {
