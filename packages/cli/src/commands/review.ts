@@ -23,10 +23,15 @@ export const reviewCommand = new Command('review')
       process.exit(1)
     }
 
-    console.log('Provider:', commandConfig.provider)
-    console.log('Model:', commandConfig.model)
+    if (!options.json) {
+      console.log('Provider:', commandConfig.provider)
+      console.log('Model:', commandConfig.model)
+    }
 
-    const spinner = ora('Gathering information...').start()
+    const spinner = ora({
+      text: 'Gathering information...',
+      stream: options.json ? process.stderr : process.stdout,
+    }).start()
 
     const usage = new UsageMeter(merge(prices, config.prices ?? {}))
     const ai = getModel(commandConfig)
@@ -56,7 +61,9 @@ export const reviewCommand = new Command('review')
       console.error(error)
       process.exit(1)
     }
-    usage.printUsage()
+    if (!options.json) {
+      usage.printUsage()
+    }
   })
 
 async function reviewPR(prIdentifier: string, spinner: Ora, sharedAiOptions: any, isJsonOutput: boolean) {
