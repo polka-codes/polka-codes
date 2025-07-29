@@ -8,7 +8,16 @@ export const toolInfo = {
   description:
     'Get the git diff for the current repository. Can be used to get staged changes, unstaged changes, or changes between commits. By default, it returns unstaged changes.',
   parameters: z.object({
-    staged: z.boolean().optional().describe('Get staged changes instead of unstaged changes.'),
+    staged: z
+      .preprocess((val) => {
+        if (typeof val === 'string') {
+          const lower = val.toLowerCase()
+          if (lower === 'false') return false
+          if (lower === 'true') return true
+        }
+        return val
+      }, z.boolean().optional().default(false))
+      .describe('Get staged changes instead of unstaged changes.'),
     commitRange: z.string().optional().describe('The commit range to get the diff for (e.g., "main...HEAD").'),
     file: z.string().optional().describe('Get the diff for a specific file.'),
   }),

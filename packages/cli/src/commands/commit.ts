@@ -2,10 +2,12 @@ import { execSync, spawnSync } from 'node:child_process'
 import { confirm } from '@inquirer/prompts'
 import { generateGitCommitMessage, UsageMeter } from '@polka-codes/core'
 import { Command } from 'commander'
+import { merge } from 'lodash'
 import ora from 'ora'
 import { z } from 'zod'
 import { getModel } from '../getModel'
 import { parseOptions } from '../options'
+import prices from '../prices'
 
 export const commitCommand = new Command('commit')
   .description('Create a commit with AI-generated message')
@@ -15,7 +17,7 @@ export const commitCommand = new Command('commit')
     const spinner = ora('Gathering information...').start()
 
     const options = command.parent?.opts() ?? {}
-    const { providerConfig } = parseOptions(options)
+    const { providerConfig, config } = parseOptions(options)
 
     const commandConfig = providerConfig.getConfigForCommand('commit')
 
@@ -27,7 +29,7 @@ export const commitCommand = new Command('commit')
     console.log('Provider:', commandConfig.provider)
     console.log('Model:', commandConfig.model)
 
-    const usage = new UsageMeter()
+    const usage = new UsageMeter(merge(prices, config.prices ?? {}))
 
     try {
       // Check if there are any staged files

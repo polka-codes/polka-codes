@@ -1,10 +1,11 @@
 import { execSync, spawnSync } from 'node:child_process'
 import { generateGithubPullRequestDetails, UsageMeter } from '@polka-codes/core'
 import { Command } from 'commander'
+import { merge } from 'lodash'
 import ora from 'ora'
-
 import { getModel } from '../getModel'
 import { parseOptions } from '../options'
+import prices from '../prices'
 
 export const prCommand = new Command('pr')
   .description('Create a GitHub pull request')
@@ -65,7 +66,7 @@ export const prCommand = new Command('pr')
 
       const diff = execSync(`git diff --cached -U50 ${defaultBranch}`, { encoding: 'utf-8' })
 
-      const usage = new UsageMeter(config.prices)
+      const usage = new UsageMeter(merge(prices, config.prices ?? {}))
 
       const ai = getModel(commandConfig)
 

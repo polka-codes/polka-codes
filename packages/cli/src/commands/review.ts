@@ -3,14 +3,17 @@ import { execSync } from 'node:child_process'
 import { getProvider, type ProviderOptions } from '@polka-codes/cli-shared'
 import { reviewDiff, UsageMeter } from '@polka-codes/core'
 import { Command } from 'commander'
+import { merge } from 'lodash'
 import ora, { type Ora } from 'ora'
 import { getModel } from '../getModel'
 import { parseOptions } from '../options'
+import prices from '../prices'
 
 export const reviewCommand = new Command('review')
   .description('Review a GitHub pull request or local changes')
   .option('--pr <pr>', 'The pull request number or URL to review')
-  .action(async (options: { pr?: string }, command: Command) => {
+  .option('--json', 'Output the review in JSON format', false)
+  .action(async (options: { pr?: string; json: boolean }, command: Command) => {
     const parentOptions = command.parent?.opts() ?? {}
     const { providerConfig, config } = parseOptions(parentOptions)
     const commandConfig = providerConfig.getConfigForCommand('review')
@@ -25,7 +28,7 @@ export const reviewCommand = new Command('review')
 
     const spinner = ora('Gathering information...').start()
 
-    const usage = new UsageMeter(config.prices)
+    const usage = new UsageMeter(merge(prices, config.prices ?? {}))
     const ai = getModel(commandConfig)
     const toolProviderOptions: ProviderOptions = {
       excludeFiles: parentOptions.config.excludeFiles,
@@ -44,9 +47,9 @@ export const reviewCommand = new Command('review')
 
     try {
       if (options.pr) {
-        await reviewPR(options.pr, spinner, sharedAiOptions)
+        await reviewPR(options.pr, spinner, sharedAiOptions, options.json)
       } else {
-        await reviewLocal(spinner, sharedAiOptions)
+        await reviewLocal(spinner, sharedAiOptions, options.json)
       }
     } catch (error) {
       spinner.fail(`Error reviewing: ${error instanceof Error ? error.message : String(error)}`)
@@ -56,7 +59,7 @@ export const reviewCommand = new Command('review')
     usage.printUsage()
   })
 
-async function reviewPR(prIdentifier: string, spinner: Ora, sharedAiOptions: any) {
+async function reviewPR(prIdentifier: string, spinner: Ora, sharedAiOptions: any, isJsonOutput: boolean) {
   const prNumberMatch = prIdentifier.match(/\d+$/)
   if (!prNumberMatch) {
     spinner.fail('Invalid PR number or URL.')
@@ -95,7 +98,7 @@ async function reviewPR(prIdentifier: string, spinner: Ora, sharedAiOptions: any
   }).trim()
   const commitMessages = prDetails.commits.map((c: any) => c.messageBody).join('\n---\n')
   spinner.text = 'Generating review...'
-  const { review } = await reviewDiff(sharedAiOptions, {
+  const result = await reviewDiff(sharedAiOptions, {
     commitRange: `${defaultBranch}...HEAD`,
     pullRequestTitle: prDetails.title,
     pullRequestDescription: prDetails.body,
@@ -103,17 +106,25 @@ async function reviewPR(prIdentifier: string, spinner: Ora, sharedAiOptions: any
   })
 
   spinner.succeed('Review generated successfully')
-  console.log(review)
+  if (isJsonOutput) {
+    console.log(JSON.stringify(result, null, 2))
+  } else {
+    console.log(formatReviewForConsole(result))
+  }
 }
 
-async function reviewLocal(spinner: Ora, sharedAiOptions: any) {
+async function reviewLocal(spinner: Ora, sharedAiOptions: any, isJsonOutput: boolean) {
   const hasStagedChanges = execSync('git diff --staged --quiet || echo "staged"', { encoding: 'utf-8' }).trim() === 'staged'
 
   if (hasStagedChanges) {
     spinner.text = 'Generating review for staged changes...'
-    const { review } = await reviewDiff(sharedAiOptions, { staged: true })
+    const result = await reviewDiff(sharedAiOptions, { staged: true })
     spinner.succeed('Review generated successfully')
-    console.log(review)
+    if (isJsonOutput) {
+      console.log(JSON.stringify(result, null, 2))
+    } else {
+      console.log(formatReviewForConsole(result))
+    }
     return
   }
 
@@ -121,9 +132,13 @@ async function reviewLocal(spinner: Ora, sharedAiOptions: any) {
 
   if (hasUnstagedChanges) {
     spinner.text = 'Generating review for unstaged changes...'
-    const { review } = await reviewDiff(sharedAiOptions, { staged: false })
+    const result = await reviewDiff(sharedAiOptions, { staged: false })
     spinner.succeed('Review generated successfully')
-    console.log(review)
+    if (isJsonOutput) {
+      console.log(JSON.stringify(result, null, 2))
+    } else {
+      console.log(formatReviewForConsole(result))
+    }
     return
   }
 
@@ -151,10 +166,26 @@ async function reviewLocal(spinner: Ora, sharedAiOptions: any) {
   }
 
   spinner.text = `Generating review for changes between '${defaultBranch}' and '${currentBranch}'...`
-  const { review } = await reviewDiff(sharedAiOptions, {
+  const result = await reviewDiff(sharedAiOptions, {
     commitRange: `${defaultBranch}...${currentBranch}`,
   })
 
   spinner.succeed('Review generated successfully')
-  console.log(review)
+  if (isJsonOutput) {
+    console.log(JSON.stringify(result, null, 2))
+  } else {
+    console.log(formatReviewForConsole(result))
+  }
+}
+
+function formatReviewForConsole(output: { overview: string; specificReviews: { file: string; lines: string; review: string }[] }): string {
+  let formatted = `### Overview\n\n${output.overview}`
+
+  if (output.specificReviews.length > 0) {
+    formatted += `\n\n### File-specific feedback\n`
+    for (const item of output.specificReviews) {
+      formatted += `\n**${item.file}:${item.lines}**\n\n${item.review}\n`
+    }
+  }
+  return formatted
 }

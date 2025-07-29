@@ -4,48 +4,47 @@ import gitDiff from './tools/gitDiff'
 import type { AiToolDefinitionWithAgent } from './types'
 
 const prompt = `
-# Review Code Changes
+# Code Review Prompt
 
-You are a senior software engineer responsible for reviewing code changes.
+You are a senior software engineer reviewing code changes.
 
-To see the changes, you must use the git_diff tool.
-- For pull request reviews, a commit range is provided. Use it with git_diff.
-- For local changes, you can view staged or unstaged changes with git_diff.
+## Viewing Changes
+- Use **git_diff** to inspect code.
+  - **Pull request**: use the provided commit range.
+  - **Local changes**: diff staged or unstaged files.
+- If a pull request is present you may receive:
+  - <pr_title>
+  - <pr_description>
+  - <commit_messages>
+- A <review_instructions> tag tells you the focus of the review.
 
-If pull request information is available, it will be provided in the following tags:
-- <pr_title>: The title of the pull request.
-- <pr_description>: The description of the pull request.
-- <commit_messages>: A list of commit messages associated with the pull request.
+## Focus Areas
+- Readability and maintainability
+- Correctness, edge cases, potential bugs
+- Performance implications
+- Clarity of intent
+- Best-practice adherence
 
-A <review_instructions> tag will tell you what to review.
+## Output Format
+Do **not** include praise or positive feedback. Ignore generated files such as lock files.
 
-Your task is to provide a constructive code review of all changed files. Do not review lock files or other generated files. The review should be in Markdown format.
-
-Focus on:
-- **Code Quality**: Readability, maintainability, and best practices.
-- **Bugs**: Potential bugs or edge cases that might have been missed.
-- **Performance**: Any performance implications of the changes.
-- **Clarity**: Whether the code is clear and easy to understand.
-- **Suggestions**: Offer specific suggestions for improvement.
-
-Structure your review with the following sections:
-
----
-**Overall Impression**:
-- A brief summary of your thoughts on the pull request.
-
-**Suggestions for Improvement**:
-- A bulleted list of specific suggestions. For each suggestion, include a brief explanation of why you are suggesting the change.
-
-**Bugs or Potential Issues**:
-- A bulleted list of any bugs or potential issues you have identified.
-
-**Praise**:
-- A bulleted list of things you liked about the pull request.
-
----
-
-Output your review in a <review> tag.
+Return your review as a JSON object inside a \`\`\`json block, wrapped like:
+<tool_attempt_completion>
+<tool_parameter_result>
+\`\`\`json
+{
+  "overview": "Summary of overall concerns.",
+  "specificReviews": [
+    {
+      "file": "path/filename.ext",
+      "lines": "N or N-M",
+      "review": "Describe the issue and actionable fix or improvement."
+    }
+  ]
+}
+\`\`\`
+</tool_parameter_result>
+</tool_attempt_completion>
 `
 
 type Input = {
@@ -56,8 +55,15 @@ type Input = {
   staged?: boolean
 }
 
-type Output = {
+type SpecificReview = {
+  file: string
+  lines: string
   review: string
+}
+
+type Output = {
+  overview: string
+  specificReviews: SpecificReview[]
 }
 
 export default {
@@ -89,16 +95,18 @@ export default {
     return parts.join('\n')
   },
   parseOutput: (output: string): Output => {
-    const regex = /<review>([\s\S]*)<\/review>/gm
-    const match = regex.exec(output)
-    if (match) {
-      return {
-        review: match[1].trim(),
-      }
-    }
+    const jsonBlockRegex = /```json\n([\s\S]*?)\n```/
+    const match = output.match(jsonBlockRegex)
+    const content = match ? match[1] : output
 
-    return {
-      review: output.trim(),
+    try {
+      return JSON.parse(content)
+    } catch (error) {
+      console.error('Error parsing JSON output:', error)
+      return {
+        overview: `Could not parse review output. Raw output:\n${output}`,
+        specificReviews: [],
+      }
     }
   },
   agent: (options) => {
