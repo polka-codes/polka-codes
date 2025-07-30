@@ -389,25 +389,37 @@ export abstract class AgentBase {
     let respMessages: (AssistantModelMessage | ToolModelMessage)[] = []
 
     for (let i = 0; i < retryCount; i++) {
+      // Check for user abort before each retry attempt
+      if (this.#aborted) {
+        break
+      }
+
       respMessages = []
       let timeout: ReturnType<typeof setTimeout> | undefined
+      let requestAbortController: AbortController | undefined
+
+      // Create a fresh AbortController for each retry attempt
+      requestAbortController = new AbortController()
+      this.#abortController = requestAbortController
 
       const resetTimeout = () => {
         if (timeout) {
           clearTimeout(timeout)
         }
-        if (requestTimeoutSeconds > 0) {
+        if (requestTimeoutSeconds > 0 && requestAbortController) {
           timeout = setTimeout(() => {
-            console.debug(`No data received for ${requestTimeoutSeconds} seconds. Aborting request.`)
-            this.abort()
+            console.debug(
+              `Request timeout after ${requestTimeoutSeconds} seconds. Canceling current request attempt ${i + 1}/${retryCount}.`,
+            )
+            // Only abort the current request, not the entire agent
+            requestAbortController?.abort()
           }, requestTimeoutSeconds * 1000)
         }
       }
 
-      // TODO: this is racy. we should block concurrent requests
-      this.#abortController = new AbortController()
-
       try {
+        resetTimeout()
+
         const streamTextOptions: Parameters<typeof streamText>[0] = {
           model: this.ai,
           messages,
@@ -429,7 +441,7 @@ export abstract class AgentBase {
           onError: async (error) => {
             console.error('Error in stream:', error)
           },
-          abortSignal: this.#abortController.signal,
+          abortSignal: requestAbortController.signal,
         }
 
         if (this.config.toolFormat === 'native') {
@@ -446,11 +458,24 @@ export abstract class AgentBase {
 
         const resp = await stream.response
         respMessages = resp.messages
+
+        // Clear timeout on successful completion
+        if (timeout) {
+          clearTimeout(timeout)
+          timeout = undefined
+        }
       } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') {
-          break
+          // Check if this was a user abort or just a request timeout
+          if (this.#aborted) {
+            // User aborted the entire agent - break out of retry loop
+            break
+          }
+          // Otherwise, this was just a request timeout - continue to next retry
+          console.debug(`Request attempt ${i + 1} timed out, will retry`)
+        } else {
+          console.error('Error in stream:', error)
         }
-        console.error('Error in stream:', error)
       } finally {
         if (timeout) {
           clearTimeout(timeout)
@@ -461,19 +486,22 @@ export abstract class AgentBase {
         break
       }
 
+      // Only break on user abort, not on request timeout
       if (this.#aborted) {
         break
       }
 
-      console.debug(`Retrying request ${i + 1} of ${retryCount}`)
+      if (i < retryCount - 1) {
+        console.debug(`Retrying request ${i + 2} of ${retryCount}`)
+      }
     }
 
     if (respMessages.length === 0) {
       if (this.#aborted) {
         return []
       }
-      // something went wrong
-      throw new Error('No assistant message received')
+      // All retry attempts failed
+      throw new Error('No assistant message received after all retry attempts')
     }
 
     this.#messages.push(...respMessages)
