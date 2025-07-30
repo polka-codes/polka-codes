@@ -16,6 +16,17 @@ export const toolInfo = {
         }, z.array(z.string()))
         .describe('The path of the file to read')
         .meta({ usageValue: 'Comma separated paths here' }),
+      includeIgnored: z
+        .preprocess((val) => {
+          if (typeof val === 'string') {
+            const lower = val.toLowerCase()
+            if (lower === 'false') return false
+            if (lower === 'true') return true
+          }
+          return val
+        }, z.boolean().optional().default(false))
+        .describe('Whether to include ignored files. Use true to include files ignored by .gitignore.')
+        .meta({ usageValue: 'true or false (optional)' }),
     })
     .meta({
       examples: [
@@ -44,11 +55,11 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
     }
   }
 
-  const { path: paths } = toolInfo.parameters.parse(args)
+  const { path: paths, includeIgnored } = toolInfo.parameters.parse(args)
 
   const resp = []
   for (const path of paths) {
-    const fileContent = await provider.readFile(path)
+    const fileContent = await provider.readFile(path, includeIgnored)
     if (!fileContent) {
       resp.push(`<read_file_file_content path="${path}" file_not_found="true" />`)
     } else {

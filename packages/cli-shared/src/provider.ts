@@ -24,8 +24,8 @@ export type ProviderOptions = {
 export const getProvider = (_agentName: AgentNameType, _config: Config, options: ProviderOptions = {}): ToolProvider => {
   const ig = ignore().add(options.excludeFiles ?? [])
   const provider: ToolProvider = {
-    readFile: async (path: string): Promise<string | undefined> => {
-      if (ig.ignores(path)) {
+    readFile: async (path: string, includeIgnored: boolean): Promise<string | undefined> => {
+      if (ig.ignores(path) || !includeIgnored) {
         throw new Error(`Not allow to access file ${path}`)
       }
       try {
@@ -55,8 +55,8 @@ export const getProvider = (_agentName: AgentNameType, _config: Config, options:
       }
       return await rename(sourcePath, targetPath)
     },
-    listFiles: async (path: string, recursive: boolean, maxCount: number): Promise<[string[], boolean]> => {
-      return await listFiles(path, recursive, maxCount, process.cwd(), options.excludeFiles)
+    listFiles: async (path: string, recursive: boolean, maxCount: number, includeIgnored: boolean): Promise<[string[], boolean]> => {
+      return await listFiles(path, recursive, maxCount, process.cwd(), options.excludeFiles, includeIgnored)
     },
 
     executeCommand: (command: string, _needApprove: boolean): Promise<{ stdout: string; stderr: string; exitCode: number }> => {

@@ -1,9 +1,9 @@
 export type FilesystemProvider = {
-  readFile?: (path: string) => Promise<string | undefined>
+  readFile?: (path: string, includeIgnored: boolean) => Promise<string | undefined>
   writeFile?: (path: string, content: string) => Promise<void>
   removeFile?: (path: string) => Promise<void>
   renameFile?: (sourcePath: string, targetPath: string) => Promise<void>
-  listFiles?: (path: string, recursive: boolean, maxCount: number) => Promise<[string[], boolean]>
+  listFiles?: (path: string, recursive: boolean, maxCount: number, includeIgnored: boolean) => Promise<[string[], boolean]>
   searchFiles?: (path: string, regex: string, filePattern: string) => Promise<string[]>
 }
 
@@ -23,7 +23,7 @@ export type WebProvider = {
 export type ToolProvider = FilesystemProvider & CommandProvider & InteractionProvider & WebProvider
 
 export class MockProvider implements ToolProvider {
-  async readFile(_path: string): Promise<string> {
+  async readFile(_path: string, _includeIgnored?: boolean): Promise<string> {
     return 'mock content'
   }
 
@@ -39,7 +39,7 @@ export class MockProvider implements ToolProvider {
     return
   }
 
-  async listFiles(_path: string, _recursive: boolean, _maxCount: number): Promise<[string[], boolean]> {
+  async listFiles(_path: string, _recursive: boolean, _maxCount: number, _includeIgnored?: boolean): Promise<[string[], boolean]> {
     return [['mock-file.txt'], false]
   }
 

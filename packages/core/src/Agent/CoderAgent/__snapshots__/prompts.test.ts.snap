@@ -157,12 +157,14 @@ Parameters:
 - tool_parameter_path: (required) The path of the directory to list contents for (relative to the current working directory)
 - tool_parameter_maxCount: (optional) The maximum number of files to list. Default to 2000
 - tool_parameter_recursive: (optional) Whether to list files recursively. Use true for recursive listing, false or omit for top-level only.
+- tool_parameter_includeIgnored: (optional) Whether to include ignored files. Use true to include files ignored by .gitignore.
 
 Usage:
 <tool_list_files>
 <tool_parameter_path>Directory path here</tool_parameter_path>
 <tool_parameter_maxCount>Maximum number of files to list (optional)</tool_parameter_maxCount>
 <tool_parameter_recursive>true or false (optional)</tool_parameter_recursive>
+<tool_parameter_includeIgnored>true or false (optional)</tool_parameter_includeIgnored>
 </tool_list_files>
 
 ## tool_read_file
@@ -171,10 +173,12 @@ Description: Request to read the contents of one or multiple files at the specif
 
 Parameters:
 - tool_parameter_path: (optional) The path of the file to read
+- tool_parameter_includeIgnored: (optional) Whether to include ignored files. Use true to include files ignored by .gitignore.
 
 Usage:
 <tool_read_file>
 <tool_parameter_path>Comma separated paths here</tool_parameter_path>
+<tool_parameter_includeIgnored>true or false (optional)</tool_parameter_includeIgnored>
 </tool_read_file>
 
 ## tool_remove_file

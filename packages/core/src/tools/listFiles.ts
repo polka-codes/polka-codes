@@ -29,6 +29,17 @@ export const toolInfo = {
         }, z.boolean().optional().default(true))
         .describe('Whether to list files recursively. Use true for recursive listing, false or omit for top-level only.')
         .meta({ usageValue: 'true or false (optional)' }),
+      includeIgnored: z
+        .preprocess((val) => {
+          if (typeof val === 'string') {
+            const lower = val.toLowerCase()
+            if (lower === 'false') return false
+            if (lower === 'true') return true
+          }
+          return val
+        }, z.boolean().optional().default(false))
+        .describe('Whether to include ignored files. Use true to include files ignored by .gitignore.')
+        .meta({ usageValue: 'true or false (optional)' }),
     })
     .meta({
       examples: [
@@ -52,8 +63,8 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
     }
   }
 
-  const { path, maxCount, recursive } = toolInfo.parameters.parse(args)
-  const [files, limitReached] = await provider.listFiles(path, recursive, maxCount)
+  const { path, maxCount, recursive, includeIgnored } = toolInfo.parameters.parse(args)
+  const [files, limitReached] = await provider.listFiles(path, recursive, maxCount, includeIgnored)
 
   return {
     type: ToolResponseType.Reply,

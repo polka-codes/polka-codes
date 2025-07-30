@@ -57,15 +57,19 @@ export async function listFiles(
   maxCount: number,
   cwd: string,
   excludeFiles?: string[],
+  includeIgnored?: boolean,
 ): Promise<[string[], boolean]> {
   // Merge default ignores with root .gitignore and excludeFiles (if found)
-  let rootPatterns = [...DEFAULT_IGNORES, ...(excludeFiles || [])]
-  try {
-    const rootGitignore = await fs.readFile(join(cwd, '.gitignore'), 'utf8')
-    const lines = rootGitignore.split(/\r?\n/).filter(Boolean)
-    rootPatterns = [...rootPatterns, ...lines]
-  } catch {
-    // No .gitignore at root or unreadable; ignore silently
+  let rootPatterns = [...(excludeFiles || [])]
+  if (!includeIgnored) {
+    rootPatterns.push(...DEFAULT_IGNORES)
+    try {
+      const rootGitignore = await fs.readFile(join(cwd, '.gitignore'), 'utf8')
+      const lines = rootGitignore.split(/\r?\n/).filter(Boolean)
+      rootPatterns = [...rootPatterns, ...lines]
+    } catch {
+      // No .gitignore at root or unreadable; ignore silently
+    }
   }
 
   // Final results (relative to `cwd`) and indicator if we reached the limit
@@ -93,7 +97,7 @@ export async function listFiles(
     processedDirs.add(currentRelPath)
 
     // Merge parent's patterns with local .gitignore
-    const mergedPatterns = await extendPatterns(parentPatterns, currentPath)
+    const mergedPatterns = includeIgnored ? parentPatterns : await extendPatterns(parentPatterns, currentPath)
     const folderIg = createIgnore(mergedPatterns)
 
     const entries = await fs.readdir(currentPath, { withFileTypes: true })

@@ -135,7 +135,7 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
   try {
     const { path, diff } = toolInfo.parameters.parse(args)
 
-    const fileContent = await provider.readFile(path)
+    const fileContent = await provider.readFile(path, false)
 
     if (fileContent == null) {
       return {
