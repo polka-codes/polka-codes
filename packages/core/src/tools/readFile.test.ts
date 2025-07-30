@@ -9,10 +9,11 @@ describe('readFile', () => {
 
     const result = await readFile.handler(mockProvider, {
       path: 'file.txt',
+      includeIgnored: 'false',
     })
 
     expect(result).toMatchSnapshot()
-    expect(mockProvider.readFile).toHaveBeenCalledWith('file.txt')
+    expect(mockProvider.readFile).toHaveBeenCalledWith('file.txt', false)
   })
 
   it('should read multiple files', async () => {
@@ -21,11 +22,12 @@ describe('readFile', () => {
 
     const result = await readFile.handler(mockProvider, {
       path: 'file1.txt,file2.txt',
+      includeIgnored: 'false',
     })
 
     expect(result).toMatchSnapshot()
-    expect(mockProvider.readFile).toHaveBeenCalledWith('file1.txt')
-    expect(mockProvider.readFile).toHaveBeenCalledWith('file2.txt')
+    expect(mockProvider.readFile).toHaveBeenCalledWith('file1.txt', false)
+    expect(mockProvider.readFile).toHaveBeenCalledWith('file2.txt', false)
   })
 
   it('should handle file not found', async () => {
@@ -34,9 +36,10 @@ describe('readFile', () => {
 
     const result = readFile.handler(mockProvider, {
       path: 'missing.txt',
+      includeIgnored: 'false',
     })
 
     await expect(result).rejects.toMatchSnapshot()
-    expect(mockProvider.readFile).toHaveBeenCalledWith('missing.txt')
+    expect(mockProvider.readFile).toHaveBeenCalledWith('missing.txt', false)
   })
 })
