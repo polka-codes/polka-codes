@@ -81,7 +81,7 @@ export const getModel = (config: ModelConfig, debugLogging = false): LanguageMod
                   if (TRACING_FILE) {
                     appendFileSync(
                       TRACING_FILE,
-                      JSON.stringify(
+                      `${JSON.stringify(
                         {
                           type: 'response-chunk',
                           timestamp: new Date().toISOString(),
@@ -89,7 +89,7 @@ export const getModel = (config: ModelConfig, debugLogging = false): LanguageMod
                         },
                         null,
                         2,
-                      ),
+                      )}\n`,
                     )
                   }
                 }
@@ -111,7 +111,7 @@ export const getModel = (config: ModelConfig, debugLogging = false): LanguageMod
           if (TRACING_FILE) {
             appendFileSync(
               TRACING_FILE,
-              JSON.stringify(
+              `${JSON.stringify(
                 {
                   type: 'response',
                   timestamp: new Date().toISOString(),
@@ -121,7 +121,7 @@ export const getModel = (config: ModelConfig, debugLogging = false): LanguageMod
                 },
                 null,
                 2,
-              ),
+              )}\n`,
             )
           }
 
