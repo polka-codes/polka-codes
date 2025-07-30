@@ -25,7 +25,7 @@ export const getProvider = (_agentName: AgentNameType, _config: Config, options:
   const ig = ignore().add(options.excludeFiles ?? [])
   const provider: ToolProvider = {
     readFile: async (path: string, includeIgnored: boolean): Promise<string | undefined> => {
-      if (ig.ignores(path) || !includeIgnored) {
+      if (!includeIgnored && ig.ignores(path)) {
         throw new Error(`Not allow to access file ${path}`)
       }
       try {
