@@ -43,7 +43,7 @@ export const getModel = (config: ModelConfig, debugLogging = false): LanguageMod
           if (TRACING_FILE) {
             appendFileSync(
               TRACING_FILE,
-              JSON.stringify(
+              `${JSON.stringify(
                 {
                   type: 'request',
                   timestamp: new Date().toISOString(),
@@ -53,7 +53,7 @@ export const getModel = (config: ModelConfig, debugLogging = false): LanguageMod
                 },
                 null,
                 2,
-              ),
+              )}\n`,
             )
           }
 
