@@ -514,7 +514,7 @@ export abstract class AgentBase {
             return [{ type: 'text', content }]
           }
           return content.flatMap((part): AssistantMessageContent[] => {
-            if (part.type === 'text') {
+            if (part.type === 'text' || part.type === 'reasoning') {
               return [{ type: 'text', content: part.text }]
             }
             if (part.type === 'tool-call') {
