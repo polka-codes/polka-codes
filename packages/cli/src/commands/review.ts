@@ -9,6 +9,98 @@ import { getModel } from '../getModel'
 import { parseOptions } from '../options'
 import prices from '../prices'
 
+type FileChange = {
+  path: string
+  status: string
+}
+
+function parseGitStatus(statusOutput: string): FileChange[] {
+  const statusLines = statusOutput.split('\n').filter((line) => line)
+  const files: FileChange[] = []
+
+  for (const line of statusLines) {
+    const indexStatus = line[0]
+    const workingTreeStatus = line[1]
+    const filepath = line.slice(3)
+
+    const statuses = []
+    if (indexStatus !== ' ' && indexStatus !== '?') {
+      switch (indexStatus) {
+        case 'A':
+          statuses.push('Added (staged)')
+          break
+        case 'M':
+          statuses.push('Modified (staged)')
+          break
+        case 'D':
+          statuses.push('Deleted (staged)')
+          break
+        case 'R':
+          statuses.push('Renamed (staged)')
+          break
+        case 'C':
+          statuses.push('Copied (staged)')
+          break
+        default:
+          statuses.push('Changed (staged)')
+      }
+    }
+    if (workingTreeStatus !== ' ') {
+      switch (workingTreeStatus) {
+        case 'M':
+          statuses.push('Modified (unstaged)')
+          break
+        case 'D':
+          statuses.push('Deleted (unstaged)')
+          break
+        case '?':
+          statuses.push('Untracked')
+          break
+        default:
+          statuses.push('Changed (unstaged)')
+      }
+    }
+
+    if (statuses.length > 0) {
+      files.push({ path: filepath, status: statuses.join(', ') })
+    }
+  }
+
+  return files
+}
+
+function parseGitDiffNameStatus(diffOutput: string): FileChange[] {
+  const lines = diffOutput.split('\n').filter((line) => line.trim())
+  return lines.map((line) => {
+    const [status, ...pathParts] = line.split('\t')
+    const path = pathParts.join('\t')
+    let statusDescription: string
+    switch (status[0]) {
+      case 'A':
+        statusDescription = 'Added'
+        break
+      case 'M':
+        statusDescription = 'Modified'
+        break
+      case 'D':
+        statusDescription = 'Deleted'
+        break
+      case 'R':
+        statusDescription = 'Renamed'
+        break
+      case 'C':
+        statusDescription = 'Copied'
+        break
+      case 'T':
+        statusDescription = 'Type changed'
+        break
+      default:
+        statusDescription = 'Unknown'
+    }
+    return { path, status: statusDescription }
+  })
+}
+
 export const reviewCommand = new Command('review')
   .description('Review a GitHub pull request or local changes')
   .option('--pr <pr>', 'The pull request number or URL to review')
@@ -104,12 +196,23 @@ async function reviewPR(prIdentifier: string, spinner: Ora, sharedAiOptions: any
     encoding: 'utf-8',
   }).trim()
   const commitMessages = prDetails.commits.map((c: any) => c.messageBody).join('\n---\n')
+  spinner.text = 'Getting file changes...'
+  let changedFiles: FileChange[] = []
+  try {
+    const diffNameStatus = execSync(`git diff --name-status --no-color ${defaultBranch}...HEAD`, { encoding: 'utf-8' })
+    changedFiles = parseGitDiffNameStatus(diffNameStatus)
+  } catch (_error) {
+    // If we can't get file changes, continue without them
+    console.warn('Warning: Could not retrieve file changes list')
+  }
+
   spinner.text = 'Generating review...'
   const result = await reviewDiff(sharedAiOptions, {
     commitRange: `${defaultBranch}...HEAD`,
     pullRequestTitle: prDetails.title,
     pullRequestDescription: prDetails.body,
     commitMessages,
+    changedFiles,
   })
 
   spinner.succeed('Review generated successfully')
@@ -127,9 +230,15 @@ async function reviewLocal(spinner: Ora, sharedAiOptions: any, isJsonOutput: boo
   const hasStagedChanges = statusLines.some((line) => 'MARC'.includes(line[0]))
   const hasUnstagedChanges = statusLines.some((line) => 'MARCDU'.includes(line[1]))
 
+  const changedFiles = parseGitStatus(gitStatus)
+
   if (hasStagedChanges) {
     spinner.text = 'Generating review for staged changes...'
-    const result = await reviewDiff(sharedAiOptions, { staged: true })
+    const stagedFiles = changedFiles.filter((file) => file.status.includes('staged'))
+    const result = await reviewDiff(sharedAiOptions, {
+      staged: true,
+      changedFiles: stagedFiles,
+    })
     spinner.succeed('Review generated successfully')
     if (isJsonOutput) {
       console.log(JSON.stringify(result, null, 2))
@@ -141,7 +250,11 @@ async function reviewLocal(spinner: Ora, sharedAiOptions: any, isJsonOutput: boo
 
   if (hasUnstagedChanges) {
     spinner.text = 'Generating review for unstaged changes...'
-    const result = await reviewDiff(sharedAiOptions, { staged: false })
+    const unstagedFiles = changedFiles.filter((file) => file.status.includes('unstaged') || file.status.includes('Untracked'))
+    const result = await reviewDiff(sharedAiOptions, {
+      staged: false,
+      changedFiles: unstagedFiles,
+    })
     spinner.succeed('Review generated successfully')
     if (isJsonOutput) {
       console.log(JSON.stringify(result, null, 2))
@@ -174,9 +287,20 @@ async function reviewLocal(spinner: Ora, sharedAiOptions: any, isJsonOutput: boo
     process.exit(0)
   }
 
+  spinner.text = 'Getting file changes...'
+  let branchChangedFiles: FileChange[] = []
+  try {
+    const diffNameStatus = execSync(`git diff --name-status --no-color ${defaultBranch}...${currentBranch}`, { encoding: 'utf-8' })
+    branchChangedFiles = parseGitDiffNameStatus(diffNameStatus)
+  } catch (_error) {
+    // If we can't get file changes, continue without them
+    console.warn('Warning: Could not retrieve file changes list')
+  }
+
   spinner.text = `Generating review for changes between '${defaultBranch}' and '${currentBranch}'...`
   const result = await reviewDiff(sharedAiOptions, {
     commitRange: `${defaultBranch}...${currentBranch}`,
+    changedFiles: branchChangedFiles,
   })
 
   spinner.succeed('Review generated successfully')

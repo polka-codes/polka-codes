@@ -8,37 +8,48 @@ const prompt = `
 
 You are a senior software engineer reviewing code changes.
 
+## Critical Instructions
+**ONLY review the actual changes shown in the diff.** Do not comment on existing code that wasn't modified.
+
 ## Viewing Changes
-- Use **git_diff** to inspect code.
-  - **Pull request**: use the provided commit range.
-  - **Local changes**: diff staged or unstaged files.
+- **Use git_diff** to inspect the actual code changes for each relevant file.
+  - **Pull request**: use the provided commit range for the git_diff tool.
+  - **Local changes**: diff staged or unstaged files using the git_diff tool.
 - If a pull request is present you may receive:
   - <pr_title>
   - <pr_description>
   - <commit_messages>
 - A <review_instructions> tag tells you the focus of the review.
+- File status information is provided in <file_status> - use this to understand which files were modified, added, deleted, or renamed.
 
-## Focus Areas
-- Readability and maintainability
-- Correctness, edge cases, potential bugs
-- Performance implications
-- Clarity of intent
-- Best-practice adherence
+## Review Guidelines
+Focus exclusively on the changed lines (+ additions, - deletions, modified lines):
+- **Specific issues**: Point to exact problems in the changed code with line references
+- **Actionable fixes**: Provide concrete solutions, not vague suggestions
+- **Clear reasoning**: Explain why each issue matters and how to fix it
+- **Avoid generic advice**: No generic suggestions like "add more tests", "improve documentation", or "follow best practices" unless directly related to a specific problem in the diff
+
+## What NOT to review
+- Existing unchanged code
+- Overall project structure or architecture (unless directly impacted by changes)
+- Generic best practices unrelated to the specific changes
+- Missing features or functionality not part of this diff
 
 ## Output Format
 Do **not** include praise or positive feedback. Ignore generated files such as lock files.
+Only include reviews for actual issues found in the changed code.
 
 Return your review as a JSON object inside a \`\`\`json block, wrapped like:
 <tool_attempt_completion>
 <tool_parameter_result>
 \`\`\`json
 {
-  "overview": "Summary of overall concerns.",
+  "overview": "Summary of specific issues found in the diff changes, or 'No issues found' if the changes look good.",
   "specificReviews": [
     {
       "file": "path/filename.ext",
       "lines": "N or N-M",
-      "review": "Describe the issue and actionable fix or improvement."
+      "review": "Specific issue with the changed code and exact actionable fix."
     }
   ]
 }
@@ -53,6 +64,10 @@ type Input = {
   commitMessages?: string
   commitRange?: string
   staged?: boolean
+  changedFiles?: Array<{
+    path: string
+    status: string
+  }>
 }
 
 type SpecificReview = {
@@ -82,13 +97,20 @@ export default {
       parts.push(`<commit_messages>\n${params.commitMessages}\n</commit_messages>`)
     }
 
+    if (params.changedFiles && params.changedFiles.length > 0) {
+      const fileList = params.changedFiles.map((file) => `${file.status}: ${file.path}`).join('\n')
+      parts.push(`<file_status>\n${fileList}\n</file_status>`)
+    }
+
     let instructions = ''
     if (params.commitRange) {
-      instructions = `Review the pull request. Get the diff using the git_diff tool with the commit range '${params.commitRange}'.`
+      instructions = `Review the pull request. Use the git_diff tool with commit range '${params.commitRange}' to inspect the actual code changes. File status information is already provided above.`
     } else if (params.staged) {
-      instructions = 'Review the staged changes. Get the diff using the git_diff tool with staged: true.'
+      instructions =
+        'Review the staged changes. Use the git_diff tool with staged: true to inspect the actual code changes. File status information is already provided above.'
     } else {
-      instructions = 'Review the unstaged changes. Get the diff using the git_diff tool.'
+      instructions =
+        'Review the unstaged changes. Use the git_diff tool to inspect the actual code changes. File status information is already provided above.'
     }
     parts.push(`<review_instructions>\n${instructions}\n</review_instructions>`)
 
