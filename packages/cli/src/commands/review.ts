@@ -121,7 +121,11 @@ async function reviewPR(prIdentifier: string, spinner: Ora, sharedAiOptions: any
 }
 
 async function reviewLocal(spinner: Ora, sharedAiOptions: any, isJsonOutput: boolean) {
-  const hasStagedChanges = execSync('git diff --staged --quiet || echo "staged"', { encoding: 'utf-8' }).trim() === 'staged'
+  const gitStatus = execSync('git status --porcelain=v1', { encoding: 'utf-8' }).trim()
+  const statusLines = gitStatus.split('\n').filter((line) => line)
+
+  const hasStagedChanges = statusLines.some((line) => 'MARC'.includes(line[0]))
+  const hasUnstagedChanges = statusLines.some((line) => 'MARCDU'.includes(line[1]))
 
   if (hasStagedChanges) {
     spinner.text = 'Generating review for staged changes...'
@@ -134,8 +138,6 @@ async function reviewLocal(spinner: Ora, sharedAiOptions: any, isJsonOutput: boo
     }
     return
   }
-
-  const hasUnstagedChanges = execSync('git diff --quiet || echo "unstaged"', { encoding: 'utf-8' }).trim() === 'unstaged'
 
   if (hasUnstagedChanges) {
     spinner.text = 'Generating review for unstaged changes...'
