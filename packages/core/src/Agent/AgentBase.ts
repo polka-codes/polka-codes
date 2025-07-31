@@ -507,6 +507,17 @@ export abstract class AgentBase {
     this.#messages.push(...respMessages)
 
     if (this.config.toolFormat === 'native') {
+      // Notify listeners that the request finished (was previously skipped for native format)
+      const assistantText = respMessages
+        .map((msg) => {
+          if (typeof msg.content === 'string') {
+            return msg.content
+          }
+          return msg.content.map((part) => (part.type === 'text' || part.type === 'reasoning' ? part.text : '')).join('')
+        })
+        .join('\n')
+      await this.#callback({ kind: TaskEventKind.EndRequest, agent: this, message: assistantText })
+
       return respMessages.flatMap((msg): AssistantMessageContent[] => {
         if (msg.role === 'assistant') {
           const content = msg.content
