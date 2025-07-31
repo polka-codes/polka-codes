@@ -23,6 +23,7 @@ scripts:
     command: bun fix --unsafe
     description: Run code formatter.
 rules: |
+  Use #methodName / #fieldName for private methods and fields
   Use `bun` as the package manager
   When adding new dependencies, cd to the package directory and run `bun add <dependency>`
   Use `bun:test` to write tests. DO NOT use jest or mocha or vi
@@ -30,6 +31,5 @@ rules: |
   When writing unit tests, use `.toMatchSnapshot()` if suitable.
   In tests, ensure no redundant assertions. i.e. if `.toMatchSnapshot()` is used, then there is no need to have other assertions.
   NEVER mock modules
-  Prefer ASCII over Unicode
 policies:
   - TruncateContext

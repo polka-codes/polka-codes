@@ -70,10 +70,18 @@ Example Output:
 <tool_output>
 <tool_output_pr_title>Refactor Order Validation and Remove Debug Logs</tool_output_pr_title>
 <tool_output_pr_description>
-closes #123
+Closes #123
 
-This PR removes unnecessary debug print statements and updates order validation
-to use the new validate_and_process method for improved maintainability.
+**Context**:
+- Implementing changes for issue #123 - Focus on clean code and maintainability
+
+**Summary of Changes**:
+- Refactored order validation logic to use a new \`validate_and_process\` method.
+- Removed debug print statements from \`user_service.py\`.
+
+**Highlights of Changed Code**:
+- \`order_service.py\`: Replaced direct call to \`process_order\` with \`validate_and_process\`.
+- \`user_service.py\`: Removed \`print("Debug info")\`.
 </tool_output_pr_description>
 </tool_output>
 

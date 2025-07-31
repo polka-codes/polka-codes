@@ -132,9 +132,16 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
     }
   }
 
-  try {
-    const { path, diff } = toolInfo.parameters.parse(args)
+  const parsed = toolInfo.parameters.safeParse(args)
+  if (!parsed.success) {
+    return {
+      type: ToolResponseType.Invalid,
+      message: `Invalid arguments for replace_in_file: ${parsed.error.message}`,
+    }
+  }
+  const { path, diff } = parsed.data
 
+  try {
     const fileContent = await provider.readFile(path, false)
 
     if (fileContent == null) {

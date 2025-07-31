@@ -50,8 +50,16 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
     }
   }
 
+  const parsed = toolInfo.parameters.safeParse(args)
+  if (!parsed.success) {
+    return {
+      type: ToolResponseType.Invalid,
+      message: `Invalid arguments for search_files: ${parsed.error.message}`,
+    }
+  }
+  const { path, regex, filePattern } = parsed.data
+
   try {
-    const { path, regex, filePattern } = toolInfo.parameters.parse(args)
     const files = await provider.searchFiles(path, regex, filePattern ?? '*')
 
     return {
@@ -66,8 +74,8 @@ ${files.join('\n')}
     }
   } catch (error) {
     return {
-      type: ToolResponseType.Invalid,
-      message: `Invalid arguments for search_files: ${error}`,
+      type: ToolResponseType.Error,
+      message: `Error searching files: ${error}`,
     }
   }
 }

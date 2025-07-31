@@ -67,7 +67,7 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
       if (isEmpty) {
         resp.push(`<read_file_file_content path="${path}" is_empty="true" />`)
       } else {
-        resp.push(`<read_file_file_conten path="${path}">${fileContent}</read_file_file_content>`)
+        resp.push(`<read_file_file_content path="${path}">${fileContent}</read_file_file_content>`)
       }
     }
   }
