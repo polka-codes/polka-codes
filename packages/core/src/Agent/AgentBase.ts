@@ -422,6 +422,7 @@ export abstract class AgentBase {
 
         const streamTextOptions: Parameters<typeof streamText>[0] = {
           model: this.ai,
+          temperature: 0,
           messages,
           providerOptions: this.config.parameters?.providerOptions,
           onChunk: async ({ chunk }) => {
@@ -458,6 +459,8 @@ export abstract class AgentBase {
 
         const resp = await stream.response
         respMessages = resp.messages
+
+        console.dir(resp, { depth: null })
 
         // Clear timeout on successful completion
         if (timeout) {

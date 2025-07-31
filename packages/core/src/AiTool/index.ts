@@ -19,6 +19,7 @@ export const executeTool = async <T extends AiToolDefinition<any, any>>(
 ): Promise<GetOutput<T>> => {
   const resp = await generateText({
     model: ai,
+    temperature: 0,
     system: definition.prompt,
     messages: [
       {
