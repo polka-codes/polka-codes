@@ -19,7 +19,7 @@
     },
     "packages/cli": {
       "name": "@polka-codes/cli",
-      "version": "0.9.1",
+      "version": "0.9.4",
       "bin": {
         "polka": "cli.mjs",
       },
@@ -31,7 +31,7 @@
         "@ai-sdk/provider": "2.0.0-beta.1",
         "@ai-sdk/provider-utils": "3.0.0-beta.5",
         "@inquirer/prompts": "^7.2.3",
-        "@openrouter/ai-sdk-provider": "^1.0.0-beta.3",
+        "@openrouter/ai-sdk-provider": "^1.0.0-beta.6",
         "@polka-codes/cli-shared": "workspace:*",
         "@polka-codes/core": "workspace:*",
         "ai": "5.0.0-beta.24",
@@ -49,7 +49,7 @@
     },
     "packages/cli-shared": {
       "name": "@polka-codes/cli-shared",
-      "version": "0.9.1",
+      "version": "0.9.4",
       "dependencies": {
         "@polka-codes/core": "workspace:*",
         "ignore": "^7.0.3",
@@ -60,7 +60,7 @@
     },
     "packages/core": {
       "name": "@polka-codes/core",
-      "version": "0.9.1",
+      "version": "0.9.4",
       "dependencies": {
         "@ai-sdk/provider": "2.0.0-beta.1",
         "@ai-sdk/provider-utils": "3.0.0-beta.5",
@@ -72,7 +72,7 @@
     },
     "packages/github": {
       "name": "@polka-codes/github",
-      "version": "0.9.1",
+      "version": "0.9.4",
       "dependencies": {
         "@octokit/core": "^6.1.4",
         "mdast": "^3.0.0",
@@ -85,7 +85,7 @@
     },
     "packages/runner": {
       "name": "@polka-codes/runner",
-      "version": "0.9.1",
+      "version": "0.9.4",
       "bin": {
         "polka-runner": "cli.mjs",
       },
@@ -393,7 +393,7 @@
 
     "@octokit/types": ["@octokit/types@14.1.0", "", { "dependencies": { "@octokit/openapi-types": "^25.1.0" } }, "sha512-1y6DgTy8Jomcpu33N+p5w58l6xyt55Ar2I91RPiIA0xCJBXyUAhXCcmZaDWSANiha7R9a6qJJ2CRomGPZ6f46g=="],
 
-    "@openrouter/ai-sdk-provider": ["@openrouter/ai-sdk-provider@1.0.0-beta.5", "", { "peerDependencies": { "ai": "^5.0.0-beta.12", "zod": "^3.24.1 || ^v4" } }, "sha512-KEsvc+6n80O7tPXanRelcoRvIv9RAVLFKQFKiQoXLDwVdxY9J/g8dNXVEfWsBOOSiyt/0N392RCku0TaYZIRlg=="],
+    "@openrouter/ai-sdk-provider": ["@openrouter/ai-sdk-provider@1.0.0-beta.6", "", { "peerDependencies": { "ai": "^5.0.0-beta.12", "zod": "^3.24.1 || ^v4" } }, "sha512-1cj8yUek4ib10MqZ+9fw1p1a3SR0Zhx3HH1J3+WQIXXuH/rUhiAkwovgPi1ADuC1QECPSPiwfhK2GecnDm8hGg=="],
 
     "@opentelemetry/api": ["@opentelemetry/api@1.9.0", "", {}, "sha512-3giAOQvZiH5F9bMlMiv8+GSPMeqg0dbaeo58/0SlA9sxSqZhnUtxzX9/2FzyhS9sWQf5S0GJE0AKBrFqjpeYcg=="],
 
