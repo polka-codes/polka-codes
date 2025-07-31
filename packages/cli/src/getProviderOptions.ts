@@ -39,6 +39,12 @@ export function getProviderOptions(
       }
       break
     case AiProvider.OpenRouter:
+      if (modelId.startsWith('anthropic/')) {
+        // TODO: support thinking for anthropic models
+        // openrouter ai sdk doesn't appear to expose reasining details
+        // so we can't construct multi step messages correctly when thinking is enabled
+        break
+      }
       providerOptions.openrouter = {
         reasoning: {
           max_tokens: thinkingBudgetTokens,

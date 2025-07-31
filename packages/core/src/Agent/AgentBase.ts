@@ -460,8 +460,6 @@ export abstract class AgentBase {
         const resp = await stream.response
         respMessages = resp.messages
 
-        console.dir(resp, { depth: null })
-
         // Clear timeout on successful completion
         if (timeout) {
           clearTimeout(timeout)
