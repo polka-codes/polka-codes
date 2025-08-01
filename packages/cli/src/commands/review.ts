@@ -176,17 +176,9 @@ async function reviewPR(prIdentifier: string, spinner: Ora, sharedAiOptions: any
   try {
     spinner.text = `Checking out PR #${prNumber}...`
     execSync(`gh pr checkout ${prNumber}`, { stdio: 'pipe' })
-  } catch (_error) {
+  } catch (error) {
     spinner.fail(`Error checking out PR #${prNumber}. Make sure the PR number is correct and you have access to the repository.`)
-    process.exit(1)
-  }
-
-  const gitRoot = execSync('git rev-parse --show-toplevel', { encoding: 'utf-8' }).trim()
-  const remoteUrl = execSync('git remote get-url origin', { cwd: gitRoot, encoding: 'utf-8' }).trim()
-  const remoteMatch = remoteUrl.match(/github\.com[/:](?<owner>[^/]+)\/(?<repo>[^/]+)\.git$/)
-
-  if (!remoteMatch?.groups) {
-    spinner.fail('Could not determine GitHub repository owner and repo from remote URL.')
+    console.error(error)
     process.exit(1)
   }
 
