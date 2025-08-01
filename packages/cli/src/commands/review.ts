@@ -206,6 +206,8 @@ async function reviewPR(prIdentifier: string, spinner: Ora, sharedAiOptions: any
     console.warn('Warning: Could not retrieve file changes list')
   }
 
+  printChangedFiles(changedFiles, spinner, isJsonOutput)
+
   spinner.text = 'Generating review...'
   const result = await reviewDiff(sharedAiOptions, {
     commitRange: `${defaultBranch}...HEAD`,
@@ -235,6 +237,7 @@ async function reviewLocal(spinner: Ora, sharedAiOptions: any, isJsonOutput: boo
   if (hasStagedChanges) {
     spinner.text = 'Generating review for staged changes...'
     const stagedFiles = changedFiles.filter((file) => file.status.includes('staged'))
+    printChangedFiles(stagedFiles, spinner, isJsonOutput)
     const result = await reviewDiff(sharedAiOptions, {
       staged: true,
       changedFiles: stagedFiles,
@@ -251,6 +254,7 @@ async function reviewLocal(spinner: Ora, sharedAiOptions: any, isJsonOutput: boo
   if (hasUnstagedChanges) {
     spinner.text = 'Generating review for unstaged changes...'
     const unstagedFiles = changedFiles.filter((file) => file.status.includes('unstaged') || file.status.includes('Untracked'))
+    printChangedFiles(unstagedFiles, spinner, isJsonOutput)
     const result = await reviewDiff(sharedAiOptions, {
       staged: false,
       changedFiles: unstagedFiles,
@@ -297,6 +301,8 @@ async function reviewLocal(spinner: Ora, sharedAiOptions: any, isJsonOutput: boo
     console.warn('Warning: Could not retrieve file changes list')
   }
 
+  printChangedFiles(branchChangedFiles, spinner, isJsonOutput)
+
   spinner.text = `Generating review for changes between '${defaultBranch}' and '${currentBranch}'...`
   const result = await reviewDiff(sharedAiOptions, {
     commitRange: `${defaultBranch}...${currentBranch}`,
@@ -321,4 +327,20 @@ function formatReviewForConsole(output: { overview: string; specificReviews: { f
     }
   }
   return formatted
+}
+
+function printChangedFiles(changedFiles: FileChange[], spinner: Ora, isJsonOutput: boolean) {
+  if (changedFiles.length === 0) {
+    return
+  }
+  spinner.stop()
+  const stream = isJsonOutput ? process.stderr : process.stdout
+  const log = (message: string) =>
+    stream.write(`${message}
+`)
+  log('Changed files:')
+  for (const file of changedFiles) {
+    log(`- ${file.status}: ${file.path}`)
+  }
+  spinner.start()
 }
