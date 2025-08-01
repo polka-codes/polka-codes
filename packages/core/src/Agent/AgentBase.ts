@@ -483,8 +483,16 @@ export abstract class AgentBase {
         }
       }
 
-      if (respMessages.length > 0) {
-        break
+      if (this.config.toolFormat === 'native') {
+        // require at least one tool call
+        // or we will count it as invalid and retry
+        if (respMessages.some((m) => m.role === 'tool')) {
+          break
+        }
+      } else {
+        if (respMessages.length > 0) {
+          break
+        }
       }
 
       // Only break on user abort, not on request timeout
