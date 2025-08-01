@@ -1,8 +1,4 @@
-defaultProvider: anthropic
-defaultModel: claude-sonnet-4-20250514
-commands:
-  default:
-    provider: openrouter
-    model: google/gemini-2.5-pro
+defaultProvider: google-vertex
+defaultModel: gemini-2.5-pro
 maxMessageCount: 150
 budget: 2
