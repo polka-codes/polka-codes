@@ -59,6 +59,7 @@ export class CodeFixerAgent extends AgentBase {
       toolFormat: options.toolFormat,
       parameters: options.parameters ?? {},
       usageMeter: options.usageMeter ?? new UsageMeter(),
+      requestTimeoutSeconds: options.requestTimeoutSeconds,
     })
 
     this.#maxRetries = options.maxRetries ?? 5

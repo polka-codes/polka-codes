@@ -48,6 +48,7 @@ export class CoderAgent extends AgentBase {
       toolFormat: options.toolFormat,
       parameters: options.parameters ?? {},
       usageMeter: options.usageMeter ?? new UsageMeter(),
+      requestTimeoutSeconds: options.requestTimeoutSeconds,
     })
   }
 
