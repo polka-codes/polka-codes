@@ -7,6 +7,35 @@ import type { LanguageModelV2 } from '@ai-sdk/provider'
 import { createOpenRouter } from '@openrouter/ai-sdk-provider'
 import { createOllama } from 'ollama-ai-provider-v2'
 import { getEnv } from './env'
+
+function headersToObject(headers: HeadersInit | undefined): Record<string, string> | undefined {
+  if (!headers) {
+    return undefined
+  }
+  if (headers instanceof Headers) {
+    return Object.fromEntries(headers.entries())
+  }
+  if (Array.isArray(headers)) {
+    return Object.fromEntries(headers)
+  }
+  return headers
+}
+
+function redactHeaders(headers: Record<string, string> | undefined): Record<string, string> | undefined {
+  if (!headers) {
+    return undefined
+  }
+  const redactedHeaders: Record<string, string> = {}
+  const sensitiveKeywords = ['authorization', 'cookie', 'key', 'token']
+  for (const [key, value] of Object.entries(headers)) {
+    if (sensitiveKeywords.some((keyword) => key.toLowerCase().includes(keyword))) {
+      redactedHeaders[key] = 'REDACTED'
+    } else {
+      redactedHeaders[key] = value
+    }
+  }
+  return redactedHeaders
+}
 export enum AiProvider {
   Anthropic = 'anthropic',
   Ollama = 'ollama',
@@ -48,7 +77,7 @@ export const getModel = (config: ModelConfig, debugLogging = false): LanguageMod
                   type: 'request',
                   timestamp: new Date().toISOString(),
                   url,
-                  headers: options?.headers,
+                  headers: redactHeaders(headersToObject(options?.headers)),
                   body: requestBody,
                 },
                 null,
@@ -79,18 +108,41 @@ export const getModel = (config: ModelConfig, debugLogging = false): LanguageMod
                     console.log('<- Stream chunk:', text.replace(/\n/g, '\\n'))
                   }
                   if (TRACING_FILE) {
-                    appendFileSync(
-                      TRACING_FILE,
-                      `${JSON.stringify(
-                        {
-                          type: 'response-chunk',
-                          timestamp: new Date().toISOString(),
-                          chunk: text,
-                        },
-                        null,
-                        2,
-                      )}\n`,
-                    )
+                    for (const line of text.split('\n')) {
+                      if (line.startsWith('data:')) {
+                        const content = line.slice('data:'.length).trim()
+                        if (content) {
+                          try {
+                            const json = JSON.parse(content)
+                            appendFileSync(
+                              TRACING_FILE,
+                              `${JSON.stringify(
+                                {
+                                  type: 'response-chunk',
+                                  timestamp: new Date().toISOString(),
+                                  chunk: json,
+                                },
+                                null,
+                                2,
+                              )}\n`,
+                            )
+                          } catch (_e) {
+                            appendFileSync(
+                              TRACING_FILE,
+                              `${JSON.stringify(
+                                {
+                                  type: 'response-chunk',
+                                  timestamp: new Date().toISOString(),
+                                  chunk: content,
+                                },
+                                null,
+                                2,
+                              )}\n`,
+                            )
+                          }
+                        }
+                      }
+                    }
                   }
                 }
               }
@@ -116,7 +168,7 @@ export const getModel = (config: ModelConfig, debugLogging = false): LanguageMod
                   type: 'response',
                   timestamp: new Date().toISOString(),
                   status: res.status,
-                  headers: Object.fromEntries(res.headers.entries()),
+                  headers: redactHeaders(Object.fromEntries(res.headers.entries())),
                   body: responseBody,
                 },
                 null,
