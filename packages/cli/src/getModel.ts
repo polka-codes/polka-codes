@@ -216,6 +216,10 @@ export const getModel = (config: ModelConfig, debugLogging = false): LanguageMod
         apiKey: config.apiKey,
         baseURL: config.baseUrl,
         fetch: fetchOverride,
+        headers: {
+          'HTTP-Referer': 'https://polka.codes',
+          'X-Title': 'Polka Codes',
+        },
       })
       return openrouter.chat(config.model, {
         usage: { include: true },
