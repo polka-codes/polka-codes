@@ -409,7 +409,7 @@ export abstract class AgentBase {
         if (requestTimeoutSeconds > 0 && requestAbortController) {
           timeout = setTimeout(() => {
             console.debug(
-              `Request timeout after ${requestTimeoutSeconds} seconds. Canceling current request attempt ${i + 1}/${retryCount}.`,
+              `\nRequest timeout after ${requestTimeoutSeconds} seconds. Canceling current request attempt ${i + 1}/${retryCount}.`,
             )
             // Only abort the current request, not the entire agent
             requestAbortController?.abort()
