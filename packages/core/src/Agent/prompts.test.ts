@@ -35,12 +35,12 @@ describe('Agent prompts', () => {
         },
       ]
 
-      const prompt = toolUsePrompt(tools, 'tool_')
+      const prompt = toolUsePrompt(false, tools, 'tool_')
       expect(prompt).toMatchSnapshot()
     })
 
     test('should return empty string when no tools provided', () => {
-      const prompt = toolUsePrompt([], 'tool_')
+      const prompt = toolUsePrompt(false, [], 'tool_')
       expect(prompt).toBe('')
     })
   })

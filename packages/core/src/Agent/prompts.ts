@@ -52,7 +52,18 @@ ${Object.entries(example.input)
 </${toolNamePrefix}${tool.name}>
 `
 
-export const toolUsePrompt = (tools: FullToolInfoV2[], toolNamePrefix: string) => {
+export const toolUsePrompt = (useNativeTool: boolean, tools: FullToolInfoV2[], toolNamePrefix: string) => {
+  if (useNativeTool) {
+    return `
+====
+
+TOOL USE
+
+- You MUST use a tool.
+- Batch tool use when feasible; avoid redundant calls.
+`
+  }
+
   if (tools.length === 0) {
     return ''
   }

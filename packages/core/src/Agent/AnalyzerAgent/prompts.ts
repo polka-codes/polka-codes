@@ -32,7 +32,7 @@ You are the **Analyzer** agent, responsible for:
 5. **Documentation Assessment**: Review documentation quality and completeness.
 6. **Non-Modification**: Never modify code or files - focus solely on analysis.
 
-${useNativeTool ? '' : toolUsePrompt(tools, toolNamePrefix)}
+${toolUsePrompt(useNativeTool, tools, toolNamePrefix)}
 ${capabilities(toolNamePrefix)}
 ${systemInformation(info)}
 ${customInstructions(instructions)}

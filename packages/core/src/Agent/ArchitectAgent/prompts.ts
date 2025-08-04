@@ -44,7 +44,7 @@ You are the **Architect** agent, responsible for:
    - If multiple steps are required, break them into numbered tasks to delegate to the **Coder** agent.
    - Provide all necessary context, implementation plan, file references, and clarifications for successful execution.
 
-${useNativeTool ? '' : toolUsePrompt(tools, toolNamePrefix)}
+${toolUsePrompt(useNativeTool, tools, toolNamePrefix)}
 ${capabilities(toolNamePrefix)}
 ${systemInformation(info)}
 ${customInstructions(instructions)}

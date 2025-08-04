@@ -501,7 +501,7 @@ export abstract class AgentBase {
       }
 
       if (i < retryCount - 1) {
-        console.debug(`Retrying request ${i + 2} of ${retryCount}`)
+        console.debug(`\nRetrying request ${i + 2} of ${retryCount}`)
       }
     }
 
