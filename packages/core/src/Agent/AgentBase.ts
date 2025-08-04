@@ -484,9 +484,17 @@ export abstract class AgentBase {
       }
 
       if (this.config.toolFormat === 'native') {
-        // require at least one tool call
-        // or we will count it as invalid and retry
-        if (respMessages.some((m) => m.role === 'tool')) {
+        if (
+          respMessages.some((m) => {
+            if (m.role === 'tool') {
+              return true
+            }
+            if (typeof m.content === 'string') {
+              return true
+            }
+            return m.content.some((part) => part.type === 'tool-call' || part.type === 'tool-result' || part.type === 'text')
+          })
+        ) {
           break
         }
       } else {
