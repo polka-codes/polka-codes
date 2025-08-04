@@ -4,47 +4,47 @@ import chalk from 'chalk'
 type ToolStat = { calls: number; success: number; errors: number }
 const toolCallStats = new Map<string, ToolStat>()
 
-export const printEvent = (verbose: number, usageMeter: UsageMeter) => {
+export const printEvent = (verbose: number, usageMeter: UsageMeter, customConsole: Console = console) => {
   let hadReasoning = false
   return (event: TaskEvent) => {
     switch (event.kind) {
       case TaskEventKind.StartTask:
         toolCallStats.clear()
         if (verbose > 1) {
-          console.log(`\n====== System Prompt ======\n${event.systemPrompt}`)
-          console.log('\n\n================\n')
+          customConsole.log(`\n====== System Prompt ======\n${event.systemPrompt}`)
+          customConsole.log('\n\n================\n')
         }
         break
       case TaskEventKind.StartRequest:
-        console.log('\n\n======== New Request ========\n')
+        customConsole.log('\n\n======== New Request ========\n')
 
         if (verbose) {
           const userMessage = event.userMessage.content
           if (typeof userMessage === 'string') {
-            console.log(userMessage)
+            customConsole.log(userMessage)
           } else {
             for (const content of userMessage) {
               switch (content.type) {
                 case 'text':
-                  console.log(content.text)
+                  customConsole.log(content.text)
                   break
                 case 'image':
                   if (content.image instanceof URL) {
-                    console.log(chalk.yellow(`[Image content from URL: ${content.image}]`))
+                    customConsole.log(chalk.yellow(`[Image content from URL: ${content.image}]`))
                   } else {
-                    console.log(chalk.yellow(`[Image content: ${content.mediaType}]`))
+                    customConsole.log(chalk.yellow(`[Image content: ${content.mediaType}]`))
                   }
                   break
                 case 'file':
-                  console.log(chalk.yellow(`[File name: ${content.filename}, type: ${content.mediaType}]`))
+                  customConsole.log(chalk.yellow(`[File name: ${content.filename}, type: ${content.mediaType}]`))
                   break
                 case 'tool-call':
-                  console.log(chalk.yellow(`[Tool call: ${content.toolName}]`))
+                  customConsole.log(chalk.yellow(`[Tool call: ${content.toolName}]`))
                   break
                 case 'tool-result':
-                  console.log(chalk.yellow(`[Tool result: ${content.toolName}]`))
+                  customConsole.log(chalk.yellow(`[Tool result: ${content.toolName}]`))
                   if (verbose > 0) {
-                    console.log(content.output)
+                    customConsole.log(content.output)
                   }
                   break
                 case 'reasoning':
@@ -52,11 +52,11 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter) => {
               }
             }
           }
-          console.log('\n\n======== Request Message Ended ========\n')
+          customConsole.log('\n\n======== Request Message Ended ========\n')
         }
         break
       case TaskEventKind.EndRequest:
-        console.log('\n\n======== Request Ended ========\n')
+        customConsole.log('\n\n======== Request Ended ========\n')
 
         if (verbose) {
           usageMeter.printUsage()
@@ -66,6 +66,9 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter) => {
       case TaskEventKind.Usage:
         break
       case TaskEventKind.Text:
+        if (customConsole !== console) {
+          break
+        }
         if (hadReasoning) {
           process.stdout.write('\n\n')
           hadReasoning = false
@@ -73,11 +76,14 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter) => {
         process.stdout.write(event.newText)
         break
       case TaskEventKind.Reasoning:
+        if (customConsole !== console) {
+          break
+        }
         process.stdout.write(chalk.dim(event.newText))
         hadReasoning = true
         break
       case TaskEventKind.ToolUse: {
-        console.log(chalk.yellow('\n\nTool use:', event.tool), event.content)
+        customConsole.log(chalk.yellow('\n\nTool use:', event.tool), event.content)
         const stats = toolCallStats.get(event.tool) ?? { calls: 0, success: 0, errors: 0 }
         stats.calls++
         toolCallStats.set(event.tool, stats)
@@ -92,8 +98,8 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter) => {
       case TaskEventKind.ToolInvalid:
         break
       case TaskEventKind.ToolError: {
-        console.error(chalk.red('\n\nTool error:', event.tool))
-        console.error(chalk.red(event.content))
+        customConsole.error(chalk.red('\n\nTool error:', event.tool))
+        customConsole.error(chalk.red(event.content))
         const stats = toolCallStats.get(event.tool) ?? { calls: 0, success: 0, errors: 0 }
         stats.errors++
         toolCallStats.set(event.tool, stats)
@@ -102,36 +108,36 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter) => {
       case TaskEventKind.ToolInterrupted:
         break
       case TaskEventKind.ToolHandOver:
-        console.log('\n\n======== Task Handed Over ========\n')
-        console.log('Agent:', event.agentName)
-        console.log('Task:', event.task)
-        console.log('Context:', event.context)
-        console.log('Files:', event.files)
-        console.log()
+        customConsole.log('\n\n======== Task Handed Over ========\n')
+        customConsole.log('Agent:', event.agentName)
+        customConsole.log('Task:', event.task)
+        customConsole.log('Context:', event.context)
+        customConsole.log('Files:', event.files)
+        customConsole.log()
         break
       case TaskEventKind.ToolDelegate:
-        console.log('\n\n======== Task Delegated ========\n')
-        console.log('Agent:', event.agentName)
-        console.log('Task:', event.task)
-        console.log('Context:', event.context)
-        console.log('Files:', event.files)
-        console.log()
+        customConsole.log('\n\n======== Task Delegated ========\n')
+        customConsole.log('Agent:', event.agentName)
+        customConsole.log('Task:', event.task)
+        customConsole.log('Context:', event.context)
+        customConsole.log('Files:', event.files)
+        customConsole.log()
         break
       case TaskEventKind.UsageExceeded:
-        console.log('\n\n======= Usage Exceeded ========\n')
+        customConsole.log('\n\n======= Usage Exceeded ========\n')
         break
       case TaskEventKind.EndTask:
-        console.log('\n\n======== Task Ended ========\n')
-        console.log('Reason:', event.exitReason.type)
+        customConsole.log('\n\n======== Task Ended ========\n')
+        customConsole.log('Reason:', event.exitReason.type)
         switch (event.exitReason.type) {
           case ToolResponseType.Exit:
-            console.log('Exit Message:', event.exitReason.message)
+            customConsole.log('Exit Message:', event.exitReason.message)
             break
           case ToolResponseType.Interrupted:
-            console.log('Interrupted Message:', event.exitReason.message)
+            customConsole.log('Interrupted Message:', event.exitReason.message)
             break
         }
-        console.log('\n\n======== Tool Call Stats ========')
+        customConsole.log('\n\n======== Tool Call Stats ========')
         if (toolCallStats.size > 0) {
           const tableData = [...toolCallStats.entries()].map(([tool, stats]) => {
             const successRate = stats.calls > 0 ? (stats.success / stats.calls) * 100 : 0
@@ -143,9 +149,9 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter) => {
               'Success Rate': `${successRate.toFixed(2)}%`,
             }
           })
-          console.table(tableData)
+          customConsole.table(tableData)
         } else {
-          console.log('No tools were called.')
+          customConsole.log('No tools were called.')
         }
         break
     }
