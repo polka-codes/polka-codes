@@ -190,7 +190,9 @@ export class Runner {
               const fileContent = await readFile(file, 'utf8')
               ret += `\n<file_content path="${file}">${fileContent}</file_content>`
             } catch (error) {
-              console.warn(`Failed to read file: ${file}`, error)
+              if (options.verbose > 0) {
+                console.log(`Failed to read file: ${file}`, error)
+              }
               unreadableFiles.push(file)
             }
           }
