@@ -319,7 +319,7 @@ function formatReviewForConsole(output: { overview: string; specificReviews: { f
   if (output.specificReviews.length > 0) {
     formatted += `\n\n### File-specific feedback\n`
     for (const item of output.specificReviews) {
-      formatted += `\n**${item.file}:${item.lines}**\n\n${item.review}\n`
+      formatted += `\n- ${item.file}#${item.lines}\n\n${item.review}\n`
     }
   }
   return formatted
