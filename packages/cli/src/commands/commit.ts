@@ -14,8 +14,6 @@ export const commitCommand = new Command('commit')
   .option('-a, --all', 'Stage all files before committing')
   .argument('[message]', 'Optional context for the commit message generation')
   .action(async (message, localOptions, command: Command) => {
-    const spinner = ora('Gathering information...').start()
-
     const options = command.parent?.opts() ?? {}
     const { providerConfig, config } = parseOptions(options)
 
@@ -28,6 +26,8 @@ export const commitCommand = new Command('commit')
 
     console.log('Provider:', commandConfig.provider)
     console.log('Model:', commandConfig.model)
+
+    const spinner = ora('Gathering information...').start()
 
     const usage = new UsageMeter(merge(prices, config.prices ?? {}))
 
