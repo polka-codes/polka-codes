@@ -4,7 +4,6 @@ import { generateGitCommitMessage, UsageMeter } from '@polka-codes/core'
 import { Command } from 'commander'
 import { merge } from 'lodash'
 import ora from 'ora'
-import { z } from 'zod'
 import { getModel } from '../getModel'
 import { parseOptions } from '../options'
 import prices from '../prices'
@@ -64,11 +63,6 @@ export const commitCommand = new Command('commit')
       spinner.text = 'Generating commit message...'
 
       const llm = getModel(commandConfig)
-
-      const _schema = z.object({
-        reasoning: z.string().describe('Reasoning if any'),
-        message: z.string().describe('The generated commit message'),
-      })
 
       const commitMessage = await generateGitCommitMessage(llm, { diff, context: message }, usage)
 
