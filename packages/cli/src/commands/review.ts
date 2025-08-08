@@ -190,15 +190,14 @@ async function reviewPR(prIdentifier: string, spinner: Ora, sharedAiOptions: any
   }
 
   spinner.text = 'Fetching pull request details...'
-  const prDetails = JSON.parse(execSync(`gh pr view ${prNumber} --json title,body,commits`, { encoding: 'utf-8' }))
-  const defaultBranch = execSync('gh repo view --json defaultBranchRef --jq .defaultBranchRef.name', {
-    encoding: 'utf-8',
-  }).trim()
+  const prDetails = JSON.parse(execSync(`gh pr view ${prNumber} --json title,body,commits,baseRefName`, { encoding: 'utf-8' }))
   const commitMessages = prDetails.commits.map((c: any) => c.messageBody).join('\n---\n')
   spinner.text = 'Getting file changes...'
   let changedFiles: FileChange[] = []
   try {
-    const diffNameStatus = execSync(`git diff --name-status --no-color ${defaultBranch}...HEAD`, { encoding: 'utf-8' })
+    const diffNameStatus = execSync(`git diff --name-status --no-color ${prDetails.baseRefName}...HEAD`, {
+      encoding: 'utf-8',
+    })
     changedFiles = parseGitDiffNameStatus(diffNameStatus)
   } catch (_error) {
     // If we can't get file changes, continue without them
@@ -209,7 +208,7 @@ async function reviewPR(prIdentifier: string, spinner: Ora, sharedAiOptions: any
 
   spinner.text = 'Generating review...'
   const result = await reviewDiff(sharedAiOptions, {
-    commitRange: `${defaultBranch}...HEAD`,
+    commitRange: `${prDetails.baseRefName}...HEAD`,
     pullRequestTitle: prDetails.title,
     pullRequestDescription: prDetails.body,
     commitMessages,
