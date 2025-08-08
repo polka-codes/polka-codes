@@ -59,7 +59,7 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter, customConsol
         customConsole.log('\n\n======== Request Ended ========\n')
 
         if (verbose) {
-          usageMeter.printUsage()
+          usageMeter.printUsage(customConsole)
         }
 
         break

@@ -179,9 +179,9 @@ export class UsageMeter {
   }
 
   /** Print a concise usage summary to console. */
-  printUsage() {
+  printUsage(customConsole: Console = console) {
     const u = this.usage
-    console.log(
+    customConsole.log(
       `Usage - messages: ${u.messageCount}, input: ${u.input}, cached: ${u.cachedRead}, ` +
         `output: ${u.output}, cost: $${u.cost.toFixed(4)}`,
     )
