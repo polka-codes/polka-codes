@@ -34,7 +34,7 @@ export const handler: ToolHandler<typeof toolInfo, CommandProvider> = async (pro
 
   const { staged, file, commitRange } = toolInfo.parameters.parse(args)
 
-  const commandParts = ['git', 'diff', '--no-color']
+  const commandParts = ['git', 'diff', '--no-color', '-U50']
   if (staged) {
     commandParts.push('--staged')
   }
