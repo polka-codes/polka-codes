@@ -316,6 +316,7 @@ async function handleReviewResult(
   if (process.stdin.isTTY && result.specificReviews.length > 0) {
     const shouldRunTask = await confirm({
       message: 'Do you wish polka-codes to address the review results?',
+      default: false,
     })
 
     if (shouldRunTask) {
