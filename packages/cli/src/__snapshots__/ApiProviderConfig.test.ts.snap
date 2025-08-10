@@ -134,7 +134,7 @@ exports[`ApiProviderConfig getConfigForAgent resolves parameters correctly 3`] =
   },
   "project": undefined,
   "provider": "openrouter",
-  "toolFormat": "polka-codes",
+  "toolFormat": "native",
 }
 `;
 
@@ -363,7 +363,7 @@ exports[`ApiProviderConfig resolves toolFormat correctly for agents and commands
   "parameters": {},
   "project": undefined,
   "provider": "openrouter",
-  "toolFormat": "polka-codes",
+  "toolFormat": "native",
 }
 `;
 
@@ -377,7 +377,7 @@ exports[`ApiProviderConfig should correctly read Google Vertex provider config 1
   "parameters": {},
   "project": "my-gcp-project",
   "provider": "google-vertex",
-  "toolFormat": "polka-codes",
+  "toolFormat": "native",
 }
 `;
 
@@ -391,6 +391,6 @@ exports[`ApiProviderConfig should correctly read Google Vertex provider config 2
   "parameters": {},
   "project": "my-gcp-project",
   "provider": "google-vertex",
-  "toolFormat": "polka-codes",
+  "toolFormat": "native",
 }
 `;

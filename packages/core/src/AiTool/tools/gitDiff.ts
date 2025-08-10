@@ -2,6 +2,7 @@
 import { z } from 'zod'
 import { type FullToolInfoV2, PermissionLevel, type ToolHandler, type ToolInfoV2, ToolResponseType } from '../../tool'
 import type { CommandProvider } from '../../tools'
+import { annotateDiffWithLineNumbers } from './utils/diffLineNumbers'
 
 export const toolInfo = {
   name: 'git_diff',
@@ -20,6 +21,17 @@ export const toolInfo = {
       .describe('Get staged changes instead of unstaged changes.'),
     commitRange: z.string().optional().describe('The commit range to get the diff for (e.g., "main...HEAD").'),
     file: z.string().optional().describe('Get the diff for a specific file.'),
+    contextLines: z.coerce.number().optional().default(5).describe('Number of context lines to include around changes.'),
+    includeLineNumbers: z
+      .preprocess((val) => {
+        if (typeof val === 'string') {
+          const lower = val.toLowerCase()
+          if (lower === 'false') return false
+          if (lower === 'true') return true
+        }
+        return val
+      }, z.boolean().optional().default(false))
+      .describe('Annotate the diff with line numbers for additions and deletions.'),
   }),
   permissionLevel: PermissionLevel.Read,
 } as const satisfies ToolInfoV2
@@ -32,9 +44,9 @@ export const handler: ToolHandler<typeof toolInfo, CommandProvider> = async (pro
     }
   }
 
-  const { staged, file, commitRange } = toolInfo.parameters.parse(args)
+  const { staged, file, commitRange, contextLines, includeLineNumbers } = toolInfo.parameters.parse(args)
 
-  const commandParts = ['git', 'diff', '--no-color', '-U50']
+  const commandParts = ['git', 'diff', '--no-color', `-U${contextLines}`]
   if (staged) {
     commandParts.push('--staged')
   }
@@ -55,9 +67,15 @@ export const handler: ToolHandler<typeof toolInfo, CommandProvider> = async (pro
           message: 'No diff found.',
         }
       }
+
+      let diffOutput = result.stdout
+      if (includeLineNumbers) {
+        diffOutput = annotateDiffWithLineNumbers(diffOutput)
+      }
+
       return {
         type: ToolResponseType.Reply,
-        message: `<diff file="${file ?? 'all'}">\n${result.stdout}\n</diff>`,
+        message: `<diff file="${file ?? 'all'}">\n${diffOutput}\n</diff>`,
       }
     }
     return {

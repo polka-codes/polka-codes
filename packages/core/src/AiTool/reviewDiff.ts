@@ -13,8 +13,9 @@ You are a senior software engineer reviewing code changes.
 
 ## Viewing Changes
 - **Use git_diff** to inspect the actual code changes for each relevant file.
-  - **Pull request**: use the provided commit range for the git_diff tool.
-  - **Local changes**: diff staged or unstaged files using the git_diff tool.
+  - **Pull request**: use the provided commit range for the git_diff tool with contextLines: 5 and includeLineNumbers: true
+  - **Local changes**: diff staged or unstaged files using the git_diff tool with contextLines: 5 and includeLineNumbers: true
+- The diff will include line number annotations: [Line N] for additions and [Line N removed] for deletions
 - If a pull request is present you may receive:
   - <pr_title>
   - <pr_description>
@@ -22,9 +23,16 @@ You are a senior software engineer reviewing code changes.
 - A <review_instructions> tag tells you the focus of the review.
 - File status information is provided in <file_status> - use this to understand which files were modified, added, deleted, or renamed.
 
+## Line Number Reporting
+- **IMPORTANT**: Use the line numbers from the annotations in the diff output
+- For additions: Look for [Line N] annotations after the + lines
+- For deletions: Look for [Line N removed] annotations after the - lines
+- For modifications: Report the line number of the new/current code (from [Line N] annotations)
+- Report single lines as "N" and ranges as "N-M"
+
 ## Review Guidelines
 Focus exclusively on the changed lines (+ additions, - deletions, modified lines):
-- **Specific issues**: Point to exact problems in the changed code with line references
+- **Specific issues**: Point to exact problems in the changed code with accurate line references from the annotations
 - **Actionable fixes**: Provide concrete solutions, not vague suggestions
 - **Clear reasoning**: Explain why each issue matters and how to fix it
 - **Avoid generic advice**: No generic suggestions like "add more tests", "improve documentation", or "follow best practices" unless directly related to a specific problem in the diff
@@ -104,13 +112,13 @@ export default {
 
     let instructions = ''
     if (params.commitRange) {
-      instructions = `Review the pull request. Use the git_diff tool with commit range '${params.commitRange}' to inspect the actual code changes. File status information is already provided above.`
+      instructions = `Review the pull request. Use the git_diff tool with commit range '${params.commitRange}', contextLines: 5, and includeLineNumbers: true to inspect the actual code changes. The diff will include line number annotations to help you report accurate line numbers. File status information is already provided above.`
     } else if (params.staged) {
       instructions =
-        'Review the staged changes. Use the git_diff tool with staged: true to inspect the actual code changes. File status information is already provided above.'
+        'Review the staged changes. Use the git_diff tool with staged: true, contextLines: 5, and includeLineNumbers: true to inspect the actual code changes. The diff will include line number annotations to help you report accurate line numbers. File status information is already provided above.'
     } else {
       instructions =
-        'Review the unstaged changes. Use the git_diff tool to inspect the actual code changes. File status information is already provided above.'
+        'Review the unstaged changes. Use the git_diff tool with contextLines: 5 and includeLineNumbers: true to inspect the actual code changes. The diff will include line number annotations to help you report accurate line numbers. File status information is already provided above.'
     }
     parts.push(`<review_instructions>\n${instructions}\n</review_instructions>`)
 
