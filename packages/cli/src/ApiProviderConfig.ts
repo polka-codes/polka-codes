@@ -2,13 +2,14 @@ import type { Config } from '@polka-codes/cli-shared'
 import type { ToolFormat } from '@polka-codes/core'
 import { AiProvider } from './getModel'
 
-const isClaude = (model: string) => model.includes('claude')
-
 const getToolFormat = (model: string, toolFormat?: ToolFormat) => {
   if (toolFormat) {
     return toolFormat
   }
-  if (isClaude(model)) {
+
+  // claude are designed to work with the native tool format
+  // gemini works with both format but native saves tokens
+  if (model.includes('claude') || model.includes('gemini')) {
     return 'native'
   }
   return 'polka-codes'
@@ -19,7 +20,7 @@ const defaultModels = {
   [AiProvider.Ollama]: 'deepseek-r1:32b',
   [AiProvider.DeepSeek]: 'deepseek-chat',
   [AiProvider.OpenRouter]: 'google/gemini-2.5-pro',
-  [AiProvider.OpenAI]: 'gpt-4.1',
+  [AiProvider.OpenAI]: 'gpt-5-2025-08-07',
   [AiProvider.GoogleVertex]: 'gemini-2.5-pro',
 }
 
