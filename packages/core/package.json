@@ -17,9 +17,9 @@
     "build": "tsup src/index.ts --experimental-dts --format esm --clean"
   },
   "dependencies": {
-    "@ai-sdk/provider": "2.0.0-beta.1",
-    "@ai-sdk/provider-utils": "3.0.0-beta.5",
-    "ai": "5.0.0-beta.24",
+    "@ai-sdk/provider": "^2.0.0",
+    "@ai-sdk/provider-utils": "^3.0.0",
+    "ai": "^5.0.0",
     "lodash": "^4.17.21",
     "yaml": "^2.7.1",
     "zod": "^4.0.8"

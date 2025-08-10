@@ -19,19 +19,15 @@
     "commit": "bun cli commit",
     "codegen": "cd packages/github; graphql-codegen"
   },
-  "resolutions": {
-    "@ai-sdk/google-vertex": "3.0.0-beta.15",
-    "@ai-sdk/provider-utils": "3.0.0-beta.5"
-  },
   "devDependencies": {
-    "@biomejs/biome": "^2.1.3",
+    "@biomejs/biome": "^2.1.4",
     "@microsoft/api-extractor": "^7.52.10",
-    "bun-types": "^1.2.0",
+    "bun-types": "^1.2.20",
     "husky": "^9.1.7",
-    "lint-staged": "^16.1.2",
+    "lint-staged": "^16.1.5",
     "tslib": "^2.8.1",
-    "tsup": "^8.4.0",
-    "typescript": "^5.7.3"
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.2"
   },
   "lint-staged": {
     "*.{js,ts,cjs,mjs,d.cts,d.mts,jsx,tsx,json,jsonc}": [
@@ -40,6 +36,6 @@
   },
   "packageManager": "bun@1.2.0",
   "dependencies": {
-    "@graphql-codegen/cli": "^5.0.5"
+    "@graphql-codegen/cli": "^5.0.7"
   }
 }
