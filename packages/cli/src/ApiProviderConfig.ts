@@ -7,9 +7,8 @@ const getToolFormat = (model: string, toolFormat?: ToolFormat) => {
     return toolFormat
   }
 
-  // claude are designed to work with the native tool format
-  // gemini works with both format but native saves tokens
-  if (model.includes('claude') || model.includes('gemini')) {
+  // claude are designed to work with the native tool format and have compatibility with custom tool use format
+  if (model.includes('claude')) {
     return 'native'
   }
   return 'polka-codes'
