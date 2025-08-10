@@ -428,10 +428,10 @@ export abstract class AgentBase {
           onChunk: async ({ chunk }) => {
             resetTimeout()
             switch (chunk.type) {
-              case 'text':
+              case 'text-delta':
                 await this.#callback({ kind: TaskEventKind.Text, agent: this, newText: chunk.text })
                 break
-              case 'reasoning':
+              case 'reasoning-delta':
                 await this.#callback({ kind: TaskEventKind.Reasoning, agent: this, newText: chunk.text })
                 break
               case 'tool-call':
