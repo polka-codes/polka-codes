@@ -119,6 +119,18 @@ Usage:
 <tool_parameter_requiresApproval>true | false</tool_parameter_requiresApproval>
 </tool_execute_command>
 
+## tool_fetch_file
+
+Description: Fetch a file from a URL and return it as a FilePart object.
+
+Parameters:
+- tool_parameter_url: (required) The URL of the file to fetch.
+
+Usage:
+<tool_fetch_file>
+<tool_parameter_url>undefined</tool_parameter_url>
+</tool_fetch_file>
+
 ## tool_fetch_url
 
 Description: Fetch the content located at one or more HTTP(S) URLs and return it in Markdown format. This works for standard web pages as well as raw files (e.g. README.md, source code) hosted on platforms like GitHub.

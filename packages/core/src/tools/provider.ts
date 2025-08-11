@@ -1,3 +1,5 @@
+import type { FilePart } from '@ai-sdk/provider-utils'
+
 export type FilesystemProvider = {
   readFile?: (path: string, includeIgnored: boolean) => Promise<string | undefined>
   writeFile?: (path: string, content: string) => Promise<void>
@@ -5,6 +7,7 @@ export type FilesystemProvider = {
   renameFile?: (sourcePath: string, targetPath: string) => Promise<void>
   listFiles?: (path: string, recursive: boolean, maxCount: number, includeIgnored: boolean) => Promise<[string[], boolean]>
   searchFiles?: (path: string, regex: string, filePattern: string) => Promise<string[]>
+  fetchFile?: (url: string) => Promise<FilePart>
 }
 
 export type CommandProvider = {

@@ -1,9 +1,11 @@
 import { spawn } from 'node:child_process'
 import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
+import type { FilePart } from '@ai-sdk/provider-utils'
 import { input, select } from '@inquirer/prompts'
 import type { AgentNameType, ToolProvider } from '@polka-codes/core'
 import ignore from 'ignore'
+import { lookup } from 'mime-types'
 import type { Config } from './config'
 import { checkRipgrep } from './utils/checkRipgrep'
 import { listFiles } from './utils/listFiles'
@@ -57,6 +59,22 @@ export const getProvider = (_agentName: AgentNameType, _config: Config, options:
     },
     listFiles: async (path: string, recursive: boolean, maxCount: number, includeIgnored: boolean): Promise<[string[], boolean]> => {
       return await listFiles(path, recursive, maxCount, process.cwd(), options.excludeFiles, includeIgnored)
+    },
+    fetchFile: async (url: string): Promise<FilePart> => {
+      const response = await fetch(url)
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      const data = await response.arrayBuffer()
+      const mediaType = lookup(url) || 'application/octet-stream'
+      const filename = url.split('/').pop()
+
+      return {
+        type: 'file',
+        data: new Uint8Array(data),
+        mediaType,
+        filename,
+      }
     },
 
     executeCommand: (command: string, _needApprove: boolean): Promise<{ stdout: string; stderr: string; exitCode: number }> => {
