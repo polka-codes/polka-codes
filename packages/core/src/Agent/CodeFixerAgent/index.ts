@@ -89,7 +89,10 @@ export class CodeFixerAgent extends AgentBase {
           if (exitCode !== 0) {
             return {
               type: ToolResponseType.Reply,
-              message: responsePrompts.commandResult(checkCommand, exitCode, stdout, stderr),
+              message: {
+                type: 'error-text',
+                value: responsePrompts.commandResult(checkCommand, exitCode, stdout, stderr),
+              },
             }
           }
         } catch (error) {
@@ -106,7 +109,10 @@ export class CodeFixerAgent extends AgentBase {
           if (exitCode !== 0) {
             return {
               type: ToolResponseType.Reply,
-              message: responsePrompts.commandResult(testCommand, exitCode, stdout, stderr),
+              message: {
+                type: 'error-text',
+                value: responsePrompts.commandResult(testCommand, exitCode, stdout, stderr),
+              },
             }
           }
         } catch (error) {

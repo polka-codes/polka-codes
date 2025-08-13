@@ -45,7 +45,10 @@ export const handler: ToolHandler<typeof toolInfo, CommandProvider> = async (pro
   if (!provider.executeCommand) {
     return {
       type: ToolResponseType.Error,
-      message: 'Not possible to execute command. Abort.',
+      message: {
+        type: 'error-text',
+        value: 'Not possible to execute command. Abort.',
+      },
     }
   }
 
@@ -65,17 +68,26 @@ ${result.stderr}
     if (result.exitCode === 0) {
       return {
         type: ToolResponseType.Reply,
-        message,
+        message: {
+          type: 'text',
+          value: message,
+        },
       }
     }
     return {
       type: ToolResponseType.Error,
-      message,
+      message: {
+        type: 'error-text',
+        value: message,
+      },
     }
   } catch (error) {
     return {
       type: ToolResponseType.Error,
-      message: error instanceof Error ? error.message : String(error),
+      message: {
+        type: 'error-text',
+        value: error instanceof Error ? error.message : String(error),
+      },
     }
   }
 }

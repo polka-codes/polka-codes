@@ -46,7 +46,10 @@ export const handler: ToolHandler<typeof toolInfo, any> = async (_provider, args
   if (!parsed.success) {
     return {
       type: ToolResponseType.Invalid,
-      message: `Invalid arguments for delegate: ${parsed.error.message}`,
+      message: {
+        type: 'error-text',
+        value: `Invalid arguments for delegate: ${parsed.error.message}`,
+      },
     }
   }
   const { agentName, task, context, files } = parsed.data

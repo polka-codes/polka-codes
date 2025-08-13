@@ -1,4 +1,4 @@
-import type { LanguageModelV2 } from '@ai-sdk/provider'
+import type { LanguageModelV2, LanguageModelV2ToolResultOutput } from '@ai-sdk/provider'
 import type {
   AssistantModelMessage,
   ModelMessage,
@@ -201,7 +201,7 @@ export type AgentInfo = {
 }
 
 export type ToolResponseOrToolPause =
-  | { type: 'response'; tool: string; response: UserContent; id?: string }
+  | { type: 'response'; tool: string; response: LanguageModelV2ToolResultOutput; id?: string }
   | { type: 'pause'; tool: string; object: any; id?: string }
 
 export type ExitReason =
@@ -684,18 +684,15 @@ export abstract class AgentBase {
 
     if (this.config.toolFormat === 'native') {
       const toolResults = toolResponses
-        .filter((resp): resp is { type: 'response'; tool: string; response: string; id: string } => resp.type === 'response')
+        .filter((resp) => resp.type === 'response')
         .map(
           (resp) =>
             ({
               type: 'tool-result',
-              toolCallId: resp.id,
+              toolCallId: resp.id as string,
               toolName: resp.tool,
-              output: {
-                type: 'text',
-                value: resp.response,
-              },
-            }) as ToolResultPart,
+              output: resp.response,
+            }) satisfies ToolResultPart,
         )
       return {
         type: 'reply',
@@ -718,7 +715,7 @@ export abstract class AgentBase {
     }
 
     const finalResp = toolResponses
-      .filter((resp): resp is { type: 'response'; tool: string; response: UserContent } => resp.type === 'response')
+      .filter((resp) => resp.type === 'response')
       .flatMap(({ tool, response }) => responsePrompts.toolResults(tool, response))
 
     return {
@@ -736,7 +733,10 @@ export abstract class AgentBase {
       if (!handler) {
         return {
           type: ToolResponseType.Error,
-          message: responsePrompts.errorInvokeTool(name, 'Tool not found'),
+          message: {
+            type: 'error-text',
+            value: responsePrompts.errorInvokeTool(name, 'Tool not found'),
+          },
           canRetry: false,
         }
       }
@@ -756,7 +756,10 @@ export abstract class AgentBase {
     } catch (error) {
       return {
         type: ToolResponseType.Error,
-        message: responsePrompts.errorInvokeTool(name, error),
+        message: {
+          type: 'error-text',
+          value: responsePrompts.errorInvokeTool(name, error),
+        },
         canRetry: false,
       }
     }

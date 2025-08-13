@@ -22,7 +22,10 @@ describe('getAvailableTools', () => {
     parameters: z.object({}),
     handler: async () => ({
       type: ToolResponseType.Reply,
-      message: 'Mock response',
+      message: {
+        type: 'text',
+        value: `Mock tool ${name} response`,
+      },
     }),
     isAvailable: () => isAvailable,
     permissionLevel,

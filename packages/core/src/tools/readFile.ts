@@ -51,7 +51,10 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
   if (!provider.readFile) {
     return {
       type: ToolResponseType.Error,
-      message: 'Not possible to read file. Abort.',
+      message: {
+        type: 'error-text',
+        value: 'Not possible to read file.',
+      },
     }
   }
 
@@ -74,7 +77,10 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
 
   return {
     type: ToolResponseType.Reply,
-    message: resp.join('\n'),
+    message: {
+      type: 'text',
+      value: resp.join('\n'),
+    },
   }
 }
 

@@ -2,17 +2,23 @@
 
 exports[`readFile should read single file 1`] = `
 {
-  "message": "<read_file_file_content path="file.txt">file content</read_file_file_content>",
+  "message": {
+    "type": "text",
+    "value": "<read_file_file_content path="file.txt">file content</read_file_file_content>",
+  },
   "type": "Reply",
 }
 `;
 
 exports[`readFile should read multiple files 1`] = `
 {
-  "message": 
+  "message": {
+    "type": "text",
+    "value": 
 "<read_file_file_content path="file1.txt">file1 content</read_file_file_content>
 <read_file_file_content path="file2.txt">file2 content</read_file_file_content>"
 ,
+  },
   "type": "Reply",
 }
 `;

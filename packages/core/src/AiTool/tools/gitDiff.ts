@@ -40,7 +40,10 @@ export const handler: ToolHandler<typeof toolInfo, CommandProvider> = async (pro
   if (!provider.executeCommand) {
     return {
       type: ToolResponseType.Error,
-      message: 'Not possible to execute command. Abort.',
+      message: {
+        type: 'error-text',
+        value: 'Not possible to execute command. Abort.',
+      },
     }
   }
 
@@ -64,7 +67,10 @@ export const handler: ToolHandler<typeof toolInfo, CommandProvider> = async (pro
       if (!result.stdout.trim()) {
         return {
           type: ToolResponseType.Reply,
-          message: 'No diff found.',
+          message: {
+            type: 'text',
+            value: 'No diff found.',
+          },
         }
       }
 
@@ -75,17 +81,26 @@ export const handler: ToolHandler<typeof toolInfo, CommandProvider> = async (pro
 
       return {
         type: ToolResponseType.Reply,
-        message: `<diff file="${file ?? 'all'}">\n${diffOutput}\n</diff>`,
+        message: {
+          type: 'text',
+          value: `<diff file="${file ?? 'all'}">\n${diffOutput}\n</diff>`,
+        },
       }
     }
     return {
       type: ToolResponseType.Error,
-      message: `\`${command}\` exited with code ${result.exitCode}:\n${result.stderr}`,
+      message: {
+        type: 'error-text',
+        value: `\`${command}\` exited with code ${result.exitCode}:\n${result.stderr}`,
+      },
     }
   } catch (error) {
     return {
       type: ToolResponseType.Error,
-      message: error instanceof Error ? error.message : String(error),
+      message: {
+        type: 'error-text',
+        value: error instanceof Error ? error.message : String(error),
+      },
     }
   }
 }

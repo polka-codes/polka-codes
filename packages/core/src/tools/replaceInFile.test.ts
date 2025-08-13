@@ -30,7 +30,10 @@ describe('replaceInFile tool', () => {
     const result = await (handler as ToolHandler<any, any>)(incompleteProvider, {})
     expect(result).toEqual({
       type: ToolResponseType.Error,
-      message: 'Not possible to replace in file. Abort.',
+      message: {
+        type: 'error-text',
+        value: 'Not possible to replace in file.',
+      },
     })
   })
 

@@ -45,7 +45,10 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
   if (!provider.writeFile) {
     return {
       type: ToolResponseType.Error,
-      message: 'Not possible to write file. Abort.',
+      message: {
+        type: 'error-text',
+        value: 'Not possible to write file.',
+      },
     }
   }
 
@@ -53,7 +56,10 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
   if (!parsed.success) {
     return {
       type: ToolResponseType.Invalid,
-      message: `Invalid arguments for write_to_file: ${parsed.error.message}`,
+      message: {
+        type: 'error-text',
+        value: `Invalid arguments for write_to_file: ${parsed.error.message}`,
+      },
     }
   }
   let { path, content } = parsed.data
@@ -67,7 +73,10 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
 
   return {
     type: ToolResponseType.Reply,
-    message: `<write_to_file_path>${path}</write_to_file_path><status>Success</status>`,
+    message: {
+      type: 'text',
+      value: `<write_to_file_path>${path}</write_to_file_path><status>Success</status>`,
+    },
   }
 }
 

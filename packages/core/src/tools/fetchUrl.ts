@@ -47,7 +47,10 @@ export const handler: ToolHandler<typeof toolInfo, WebProvider> = async (provide
   if (!provider.fetchUrl) {
     return {
       type: ToolResponseType.Error,
-      message: 'Not possible to fetch url. Abort.',
+      message: {
+        type: 'error-text',
+        value: 'Not possible to fetch url.',
+      },
     }
   }
 
@@ -56,7 +59,10 @@ export const handler: ToolHandler<typeof toolInfo, WebProvider> = async (provide
   if (urls.length === 0) {
     return {
       type: ToolResponseType.Error,
-      message: 'No URLs provided. Please provide at least one URL to fetch.',
+      message: {
+        type: 'error-text',
+        value: 'No URLs provided. Please provide at least one URL to fetch.',
+      },
     }
   }
 
@@ -75,7 +81,10 @@ export const handler: ToolHandler<typeof toolInfo, WebProvider> = async (provide
 
   return {
     type: ToolResponseType.Reply,
-    message: resolvedResults.join('\n'),
+    message: {
+      type: 'text',
+      value: resolvedResults.join('\n'),
+    },
   }
 }
 

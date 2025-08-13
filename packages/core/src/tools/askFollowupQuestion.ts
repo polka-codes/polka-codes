@@ -69,7 +69,10 @@ export const handler: ToolHandler<typeof toolInfo, InteractionProvider> = async 
   if (!provider.askFollowupQuestion) {
     return {
       type: ToolResponseType.Error,
-      message: 'Not possible to ask followup question. Abort.',
+      message: {
+        type: 'error-text',
+        value: 'Not possible to ask followup question.',
+      },
     }
   }
 
@@ -77,7 +80,10 @@ export const handler: ToolHandler<typeof toolInfo, InteractionProvider> = async 
   if (questions.length === 0) {
     return {
       type: ToolResponseType.Invalid,
-      message: 'No questions provided',
+      message: {
+        type: 'error-text',
+        value: 'No questions provided',
+      },
     }
   }
 
@@ -92,7 +98,10 @@ ${answer}
 
   return {
     type: ToolResponseType.Reply,
-    message: answers.join('\n'),
+    message: {
+      type: 'text',
+      value: answers.join('\n'),
+    },
   }
 }
 

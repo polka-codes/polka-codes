@@ -2,7 +2,10 @@
 
 exports[`attemptCompletion should return the correct response 1`] = `
 {
-  "message": "<user_message>Test completion</user_message>",
+  "message": {
+    "type": "text",
+    "value": "<user_message>Test completion</user_message>",
+  },
   "type": "Reply",
 }
 `;

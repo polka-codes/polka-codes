@@ -26,7 +26,10 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
   if (!provider.removeFile) {
     return {
       type: ToolResponseType.Error,
-      message: 'Not possible to remove file. Abort.',
+      message: {
+        type: 'error-text',
+        value: 'Not possible to remove file.',
+      },
     }
   }
 
@@ -34,7 +37,10 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
   if (!parsed.success) {
     return {
       type: ToolResponseType.Invalid,
-      message: `Invalid arguments for remove_file: ${parsed.error.message}`,
+      message: {
+        type: 'error-text',
+        value: `Invalid arguments for remove_file: ${parsed.error.message}`,
+      },
     }
   }
   const { path } = parsed.data
@@ -43,7 +49,10 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
 
   return {
     type: ToolResponseType.Reply,
-    message: `<remove_file_path>${path}</remove_file_path><status>Success</status>`,
+    message: {
+      type: 'text',
+      value: `<remove_file_path>${path}</remove_file_path><status>Success</status>`,
+    },
   }
 }
 

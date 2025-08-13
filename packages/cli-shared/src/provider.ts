@@ -1,7 +1,6 @@
 import { spawn } from 'node:child_process'
 import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises'
-import { dirname } from 'node:path'
-import type { FilePart } from '@ai-sdk/provider-utils'
+import { dirname, normalize, resolve } from 'node:path'
 import { input, select } from '@inquirer/prompts'
 import type { AgentNameType, ToolProvider } from '@polka-codes/core'
 import ignore from 'ignore'
@@ -60,20 +59,33 @@ export const getProvider = (_agentName: AgentNameType, _config: Config, options:
     listFiles: async (path: string, recursive: boolean, maxCount: number, includeIgnored: boolean): Promise<[string[], boolean]> => {
       return await listFiles(path, recursive, maxCount, process.cwd(), options.excludeFiles, includeIgnored)
     },
-    fetchFile: async (url: string): Promise<FilePart> => {
+    fetchFile: async (url: string) => {
+      if (url.startsWith('file://')) {
+        const filePath = decodeURIComponent(url.substring('file://'.length))
+        const resolvedPath = normalize(resolve(process.cwd(), filePath))
+
+        if (!resolvedPath.startsWith(process.cwd())) {
+          throw new Error(`Access to file path "${filePath}" is restricted.`)
+        }
+
+        const data = await readFile(resolvedPath)
+        const mediaType = lookup(resolvedPath) || 'application/octet-stream'
+
+        return {
+          base64Data: data.toBase64(),
+          mediaType,
+        }
+      }
       const response = await fetch(url)
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
       const data = await response.arrayBuffer()
       const mediaType = lookup(url) || 'application/octet-stream'
-      const filename = url.split('/').pop()
 
       return {
-        type: 'file',
-        data: new Uint8Array(data),
+        base64Data: Buffer.from(data).toBase64(),
         mediaType,
-        filename,
       }
     },
 

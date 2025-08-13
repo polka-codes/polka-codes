@@ -46,7 +46,10 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
   if (!provider.searchFiles) {
     return {
       type: ToolResponseType.Error,
-      message: 'Not possible to search files. Abort.',
+      message: {
+        type: 'error-text',
+        value: 'Not possible to search files.',
+      },
     }
   }
 
@@ -54,7 +57,10 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
   if (!parsed.success) {
     return {
       type: ToolResponseType.Invalid,
-      message: `Invalid arguments for search_files: ${parsed.error.message}`,
+      message: {
+        type: 'error-text',
+        value: `Invalid arguments for search_files: ${parsed.error.message}`,
+      },
     }
   }
   const { path, regex, filePattern } = parsed.data
@@ -64,18 +70,24 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
 
     return {
       type: ToolResponseType.Reply,
-      message: `<search_files_path>${path}</search_files_path>
+      message: {
+        type: 'text',
+        value: `<search_files_path>${path}</search_files_path>
 <search_files_regex>${regex}</search_files_regex>
 <search_files_file_pattern>${filePattern}</search_files_file_pattern>
 <search_files_files>
 ${files.join('\n')}
 </search_files_files>
 `,
+      },
     }
   } catch (error) {
     return {
       type: ToolResponseType.Error,
-      message: `Error searching files: ${error}`,
+      message: {
+        type: 'error-text',
+        value: `Error searching files: ${error}`,
+      },
     }
   }
 }

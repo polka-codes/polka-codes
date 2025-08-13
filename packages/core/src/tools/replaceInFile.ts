@@ -128,7 +128,10 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
   if (!provider.readFile || !provider.writeFile) {
     return {
       type: ToolResponseType.Error,
-      message: 'Not possible to replace in file. Abort.',
+      message: {
+        type: 'error-text',
+        value: 'Not possible to replace in file.',
+      },
     }
   }
 
@@ -136,7 +139,10 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
   if (!parsed.success) {
     return {
       type: ToolResponseType.Invalid,
-      message: `Invalid arguments for replace_in_file: ${parsed.error.message}`,
+      message: {
+        type: 'error-text',
+        value: `Invalid arguments for replace_in_file: ${parsed.error.message}`,
+      },
     }
   }
   const { path, diff } = parsed.data
@@ -147,7 +153,10 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
     if (fileContent == null) {
       return {
         type: ToolResponseType.Error,
-        message: `<replace_in_file_result path=\"${path}\" status=\"failed\" message=\"File not found\" />`,
+        message: {
+          type: 'error-text',
+          value: `<replace_in_file_result path="${path}" status="failed" message="File not found" />`,
+        },
       }
     }
 
@@ -156,9 +165,12 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
     if (result.status === 'no_diff_applied') {
       return {
         type: ToolResponseType.Error,
-        message: `<replace_in_file_result path=\"${path}\" status=\"failed\" message=\"Unable to apply changes\">
-  <file_content path=\"${path}\">${fileContent}</file_content>
+        message: {
+          type: 'error-text',
+          value: `<replace_in_file_result path="${path}" status="failed" message="Unable to apply changes">
+  <file_content path="${path}">${fileContent}</file_content>
 </replace_in_file_result>`,
+        },
       }
     }
 
@@ -167,20 +179,29 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
     if (result.status === 'some_diff_applied') {
       return {
         type: ToolResponseType.Reply,
-        message: `<replace_in_file_result path=\"${path}\" status=\"some_diff_applied\" applied_count=\"${result.appliedCount}\" total_count=\"${result.totalCount}\">
-  <file_content path=\"${path}\">${result.content}</file_content>
+        message: {
+          type: 'text',
+          value: `<replace_in_file_result path="${path}" status="some_diff_applied" applied_count="${result.appliedCount}" total_count="${result.totalCount}">
+  <file_content path="${path}">${result.content}</file_content>
 </replace_in_file_result>`,
+        },
       }
     }
 
     return {
       type: ToolResponseType.Reply,
-      message: `<replace_in_file_result path=\"${path}\" status=\"all_diff_applied\" />`,
+      message: {
+        type: 'text',
+        value: `<replace_in_file_result path="${path}" status="all_diff_applied" />`,
+      },
     }
   } catch (error) {
     return {
       type: ToolResponseType.Invalid,
-      message: `Invalid arguments for replace_in_file: ${error}`,
+      message: {
+        type: 'error-text',
+        value: `Invalid arguments for replace_in_file: ${error}`,
+      },
     }
   }
 }

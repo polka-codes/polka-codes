@@ -33,7 +33,10 @@ export const handler: ToolHandler<typeof toolInfo, InteractionProvider> = async 
   if (!parsed.success) {
     return {
       type: ToolResponseType.Invalid,
-      message: `Invalid arguments for attempt_completion: ${parsed.error.message}`,
+      message: {
+        type: 'error-text',
+        value: `Invalid arguments for attempt_completion: ${parsed.error.message}`,
+      },
     }
   }
   const { result } = parsed.data
@@ -48,7 +51,10 @@ export const handler: ToolHandler<typeof toolInfo, InteractionProvider> = async 
 
   return {
     type: ToolResponseType.Reply,
-    message: `<user_message>${moreMessage}</user_message>`,
+    message: {
+      type: 'text',
+      value: `<user_message>${moreMessage}</user_message>`,
+    },
   }
 }
 

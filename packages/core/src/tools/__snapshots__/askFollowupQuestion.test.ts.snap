@@ -2,11 +2,14 @@
 
 exports[`askFollowupQuestion should return the correct response 1`] = `
 {
-  "message": 
+  "message": {
+    "type": "text",
+    "value": 
 "<ask_followup_question_answer question="Test question">
 Test response
 </ask_followup_question_answer>"
 ,
+  },
   "type": "Reply",
 }
 `;
@@ -15,7 +18,9 @@ exports[`askFollowupQuestion should handle errors 1`] = `[Error: Test error]`;
 
 exports[`askFollowupQuestion should handle multiple questions 1`] = `
 {
-  "message": 
+  "message": {
+    "type": "text",
+    "value": 
 "<ask_followup_question_answer question="First question?">
 Answer1|Answer2
 </ask_followup_question_answer>
@@ -23,28 +28,35 @@ Answer1|Answer2
 Answer1|Answer2
 </ask_followup_question_answer>"
 ,
+  },
   "type": "Reply",
 }
 `;
 
 exports[`askFollowupQuestion should handle questions without options 1`] = `
 {
-  "message": 
+  "message": {
+    "type": "text",
+    "value": 
 "<ask_followup_question_answer question="Open-ended question">
 Free text answer
 </ask_followup_question_answer>"
 ,
+  },
   "type": "Reply",
 }
 `;
 
 exports[`askFollowupQuestion should handle empty options array 1`] = `
 {
-  "message": 
+  "message": {
+    "type": "text",
+    "value": 
 "<ask_followup_question_answer question="Question with empty options">
 Fallback answer
 </ask_followup_question_answer>"
 ,
+  },
   "type": "Reply",
 }
 `;

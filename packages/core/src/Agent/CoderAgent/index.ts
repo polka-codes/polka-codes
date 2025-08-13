@@ -69,7 +69,10 @@ export class CoderAgent extends AgentBase {
         if (exitCode !== 0 && shouldReplyWithError) {
           return {
             type: ToolResponseType.Reply,
-            message: responsePrompts.commandResult(command, exitCode, stdout, stderr),
+            message: {
+              type: 'error-text',
+              value: responsePrompts.commandResult(command, exitCode, stdout, stderr),
+            },
           }
         }
       } catch (error) {

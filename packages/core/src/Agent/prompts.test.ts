@@ -89,7 +89,10 @@ describe('Agent prompts', () => {
     })
 
     test('toolResults should format tool results', () => {
-      const results = responsePrompts.toolResults('test_tool', 'Test result')
+      const results = responsePrompts.toolResults('test_tool', {
+        type: 'text',
+        value: 'Test result',
+      })
       expect(results).toMatchSnapshot()
     })
   })

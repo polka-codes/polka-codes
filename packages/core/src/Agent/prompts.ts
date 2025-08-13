@@ -1,4 +1,5 @@
-import type { FilePart, ImagePart, TextPart, UserContent } from 'ai'
+import type { LanguageModelV2ToolResultOutput } from '@ai-sdk/provider'
+import type { FilePart, ImagePart, TextPart } from 'ai'
 import type { FullToolInfoV2, ToolExample, ToolInfo, ToolParameterValue } from '../tool'
 import { toToolInfoV1 } from '../tool-v1-compat'
 import type { AgentInfo } from './AgentBase'
@@ -237,26 +238,65 @@ Avoid unnecessary escape characters or special characters.
 `,
   requireUseToolNative: `Error: No tool use detected. You MUST use a tool before proceeding.
 `,
-  toolResults: (tool: string, result: UserContent): Array<TextPart | ImagePart | FilePart> => {
-    if (typeof result === 'string') {
-      return [
-        {
-          type: 'text',
-          text: `<tool_response name=${tool}>${result}</tool_response>`,
-        },
-      ]
+  toolResults: (tool: string, result: LanguageModelV2ToolResultOutput): Array<TextPart | ImagePart | FilePart> => {
+    switch (result.type) {
+      case 'text':
+        return [
+          {
+            type: 'text',
+            text: `<tool_response name=${tool}>${result.value}</tool_response>`,
+          },
+        ]
+      case 'error-text':
+        return [
+          {
+            type: 'text',
+            text: `<tool_response_error name=${tool}>${result.value}</tool_response_error>`,
+          },
+        ]
+      case 'json':
+        return [
+          {
+            type: 'text',
+            text: `<tool_response_json name=${tool}>${JSON.stringify(result.value)}</tool_response_json>`,
+          },
+        ]
+      case 'error-json':
+        return [
+          {
+            type: 'text',
+            text: `<tool_response_error_json name=${tool}>${JSON.stringify(result.value)}</tool_response_error_json>`,
+          },
+        ]
+      case 'content':
+        return [
+          {
+            type: 'text',
+            text: `<tool_response name=${tool}>`,
+          },
+          ...result.value.map((part) => {
+            if (part.type === 'text') {
+              return part
+            }
+            if (part.mediaType.startsWith('image/')) {
+              return {
+                type: 'image',
+                mediaType: part.mediaType,
+                image: part.data,
+              } as const
+            }
+            return {
+              type: 'file',
+              mediaType: part.mediaType,
+              data: part.data,
+            } as const
+          }),
+          {
+            type: 'text',
+            text: '</tool_response>',
+          },
+        ]
     }
-    return [
-      {
-        type: 'text',
-        text: `<tool_response name=${tool}>`,
-      },
-      ...result,
-      {
-        type: 'text',
-        text: '</tool_response>',
-      },
-    ]
   },
   commandResult: (command: string, exitCode: number, stdout: string, stderr: string) => `<command>${command}</command>
 <command_exit_code>${exitCode}</command_exit_code>

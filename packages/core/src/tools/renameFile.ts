@@ -31,7 +31,10 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
   if (!provider.renameFile) {
     return {
       type: ToolResponseType.Error,
-      message: 'Not possible to rename file. Abort.',
+      message: {
+        type: 'error-text',
+        value: 'Not possible to rename file.',
+      },
     }
   }
 
@@ -40,7 +43,10 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
 
   return {
     type: ToolResponseType.Reply,
-    message: `<rename_file_path>${target_path}</rename_file_path><status>Success</status>`,
+    message: {
+      type: 'text',
+      value: `<rename_file_path>${target_path}</rename_file_path><status>Success</status>`,
+    },
   }
 }
 

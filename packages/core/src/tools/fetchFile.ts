@@ -4,7 +4,7 @@ import type { FilesystemProvider } from './provider'
 
 export const toolInfo = {
   name: 'fetch_file',
-  description: 'Fetch a file from a URL.',
+  description: 'Fetch a file from a URL. Use file:// prefix to access local files. This can be used to access non-text files such as PDFs.',
   parameters: z.object({
     url: z.string().describe('The URL of the file to fetch.'),
   }),
@@ -15,7 +15,10 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
   if (!provider.fetchFile) {
     return {
       type: ToolResponseType.Error,
-      message: 'Not possible to fetch files. Abort.',
+      message: {
+        type: 'error-text',
+        value: 'Not possible to fetch files. Abort.',
+      },
     }
   }
 
@@ -23,15 +26,28 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
 
   try {
     const filePart = await provider.fetchFile(url)
+
     return {
       type: ToolResponseType.Reply,
-      message: [filePart],
+      message: {
+        type: 'content',
+        value: [
+          {
+            type: 'media',
+            data: filePart.base64Data,
+            mediaType: filePart.mediaType,
+          },
+        ],
+      },
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     return {
       type: ToolResponseType.Error,
-      message: `Error fetching file from ${url}: ${errorMessage}`,
+      message: {
+        type: 'error-text',
+        value: `Error fetching file from ${url}: ${errorMessage}`,
+      },
     }
   }
 }

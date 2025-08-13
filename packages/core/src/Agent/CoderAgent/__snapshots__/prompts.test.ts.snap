@@ -121,7 +121,7 @@ Usage:
 
 ## tool_fetch_file
 
-Description: Fetch a file from a URL and return it as a FilePart object.
+Description: Fetch a file from a URL. Use file:// prefix to access local files. This can be used to access non-text files such as PDFs.
 
 Parameters:
 - tool_parameter_url: (required) The URL of the file to fetch.

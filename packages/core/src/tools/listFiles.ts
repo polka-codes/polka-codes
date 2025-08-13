@@ -59,7 +59,10 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
   if (!provider.listFiles) {
     return {
       type: ToolResponseType.Error,
-      message: 'Not possible to list files. Abort.',
+      message: {
+        type: 'error-text',
+        value: 'Not possible to list files.',
+      },
     }
   }
 
@@ -68,11 +71,14 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
 
   return {
     type: ToolResponseType.Reply,
-    message: `<list_files_path>${path}</list_files_path>
+    message: {
+      type: 'text',
+      value: `<list_files_path>${path}</list_files_path>
 <list_files_files>
 ${files.join('\n')}
 </list_files_files>
 <list_files_truncated>${limitReached}</list_files_truncated>`,
+    },
   }
 }
 

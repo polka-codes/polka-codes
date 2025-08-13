@@ -1,4 +1,4 @@
-import type { UserContent } from '@ai-sdk/provider-utils'
+import type { LanguageModelV2ToolResultOutput } from '@ai-sdk/provider'
 import type { z } from 'zod'
 
 export type ToolParameterValue = string | { [key: string]: ToolParameterValue } | ToolParameterValue[]
@@ -67,7 +67,7 @@ export enum ToolResponseType {
 // Reply to the tool use
 export type ToolResponseReply = {
   type: ToolResponseType.Reply
-  message: UserContent
+  message: LanguageModelV2ToolResultOutput
 }
 
 // Should end the message thread
@@ -81,14 +81,14 @@ export type ToolResponseExit = {
 // The tool arguments are invalid
 export type ToolResponseInvalid = {
   type: ToolResponseType.Invalid
-  message: string
+  message: LanguageModelV2ToolResultOutput
 }
 
 // Some error occurred when executing the tool
 // e.g. network request error, IO error
 export type ToolResponseError = {
   type: ToolResponseType.Error
-  message: string
+  message: LanguageModelV2ToolResultOutput
   // If true, the tool can be retried
   // e.g. network request error are generally retryable
   // but IO errors are not
