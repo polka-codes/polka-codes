@@ -36,6 +36,7 @@ export type RunnerOptions = {
   interactive: boolean
   verbose: number
   availableAgents?: AgentInfo[] // empty to enable all agents
+  silent?: boolean
 }
 
 /** Core orchestrator managing AI agents, service provisioning, and task execution lifecycle */
@@ -60,23 +61,25 @@ export class Runner {
     }
 
     const toolProviderOptions: ProviderOptions = {
-      command: {
-        onStarted(command) {
-          console.log(`$ >>>> $ ${command}`)
-        },
-        onStdout(data) {
-          process.stdout.write(data)
-        },
-        onStderr(data) {
-          process.stderr.write(data)
-        },
-        onExit(code) {
-          console.log(`$ <<<< $ Command exited with code: ${code}`)
-        },
-        onError(error) {
-          console.log(`$ <<<< $ Command error: ${error}`)
-        },
-      },
+      command: this.#options.silent
+        ? undefined
+        : {
+            onStarted(command) {
+              console.log(`$ >>>> $ ${command}`)
+            },
+            onStdout(data) {
+              process.stdout.write(data)
+            },
+            onStderr(data) {
+              process.stderr.write(data)
+            },
+            onExit(code) {
+              console.log(`$ <<<< $ Command exited with code: ${code}`)
+            },
+            onError(error) {
+              console.log(`$ <<<< $ Command error: ${error}`)
+            },
+          },
       excludeFiles: options.config.excludeFiles,
       interactive: options.interactive,
     }
@@ -105,20 +108,24 @@ export class Runner {
       return service
     }
 
-    const callback = printEvent(options.verbose, this.usageMeter)
+    const callback = options.silent ? undefined : printEvent(options.verbose, this.usageMeter)
 
     const policies: AgentPolicy[] = [EnableCachePolicy]
     for (const policy of options.config.policies ?? []) {
       switch (policy.trim().toLowerCase()) {
         case Policies.TruncateContext:
           policies.push(TruncateContextPolicy)
-          console.log('TruncateContextPolicy enabled')
+          if (!options.silent) {
+            console.log('TruncateContextPolicy enabled')
+          }
           break
         case Policies.EnableCache:
           // Already added by default
           break
         default:
-          console.log('Unknown policy:', policy)
+          if (!options.silent) {
+            console.log('Unknown policy:', policy)
+          }
           break
       }
     }

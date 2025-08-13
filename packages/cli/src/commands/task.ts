@@ -1,3 +1,4 @@
+import { ToolResponseType } from '@polka-codes/core'
 import type { Command } from 'commander'
 import { parseOptions } from '../options'
 import { Runner } from '../Runner'
@@ -60,7 +61,7 @@ export async function runTask(taskArg: string | undefined, _options: any, comman
     }
   }
 
-  const { config, providerConfig, verbose, maxMessageCount, budget, agent } = parseOptions(command.opts())
+  const { config, providerConfig, verbose, maxMessageCount, budget, agent, silent } = parseOptions(command.opts())
 
   const { provider, model, parameters } = providerConfig.getConfigForAgent(agent) ?? {}
 
@@ -69,10 +70,12 @@ export async function runTask(taskArg: string | undefined, _options: any, comman
     process.exit(1)
   }
 
-  console.log('Provider:', provider)
-  console.log('Model:', model)
-  for (const [key, value] of Object.entries(parameters ?? {})) {
-    console.log(`${key}:`, value)
+  if (!silent) {
+    console.log('Provider:', provider)
+    console.log('Model:', model)
+    for (const [key, value] of Object.entries(parameters ?? {})) {
+      console.log(`${key}:`, value)
+    }
   }
 
   const runner = new Runner({
@@ -82,20 +85,29 @@ export async function runTask(taskArg: string | undefined, _options: any, comman
     budget,
     interactive: process.stdin.isTTY,
     verbose,
+    silent,
   })
 
   const sigintHandler = () => {
     runner.abort()
-    console.log()
-    runner.printUsage()
+    if (!silent) {
+      console.log()
+      runner.printUsage()
+    }
     process.exit(0)
   }
 
   process.on('SIGINT', sigintHandler)
 
-  await runner.startTask(task, agent)
+  const exitReason = await runner.startTask(task, agent)
 
   process.off('SIGINT', sigintHandler)
 
-  runner.printUsage()
+  if (silent) {
+    if (exitReason.type === ToolResponseType.Exit) {
+      console.log(exitReason.message)
+    }
+  } else {
+    runner.printUsage()
+  }
 }
