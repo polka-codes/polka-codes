@@ -5,7 +5,7 @@ export type FilesystemProvider = {
   renameFile?: (sourcePath: string, targetPath: string) => Promise<void>
   listFiles?: (path: string, recursive: boolean, maxCount: number, includeIgnored: boolean) => Promise<[string[], boolean]>
   searchFiles?: (path: string, regex: string, filePattern: string) => Promise<string[]>
-  fetchFile?: (url: string) => Promise<{
+  readBinaryFile?: (url: string) => Promise<{
     base64Data: string
     mediaType: string
   }>

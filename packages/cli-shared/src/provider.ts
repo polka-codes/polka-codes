@@ -59,7 +59,7 @@ export const getProvider = (_agentName: AgentNameType, _config: Config, options:
     listFiles: async (path: string, recursive: boolean, maxCount: number, includeIgnored: boolean): Promise<[string[], boolean]> => {
       return await listFiles(path, recursive, maxCount, process.cwd(), options.excludeFiles, includeIgnored)
     },
-    fetchFile: async (url: string) => {
+    readBinaryFile: async (url: string) => {
       if (url.startsWith('file://')) {
         const filePath = decodeURIComponent(url.substring('file://'.length))
         const resolvedPath = normalize(resolve(process.cwd(), filePath))

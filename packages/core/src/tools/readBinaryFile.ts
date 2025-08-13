@@ -3,16 +3,17 @@ import { type FullToolInfoV2, PermissionLevel, type ToolHandler, type ToolInfoV2
 import type { FilesystemProvider } from './provider'
 
 export const toolInfo = {
-  name: 'fetch_file',
-  description: 'Fetch a file from a URL. Use file:// prefix to access local files. This can be used to access non-text files such as PDFs.',
+  name: 'read_binary_file',
+  description:
+    'Read a binary file from a URL or local path. Use file:// prefix to access local files. This can be used to access non-text files such as PDFs or images.',
   parameters: z.object({
-    url: z.string().describe('The URL of the file to fetch.'),
+    url: z.string().describe('The URL or local path of the file to read.'),
   }),
   permissionLevel: PermissionLevel.Read,
 } as const satisfies ToolInfoV2
 
 export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (provider, args) => {
-  if (!provider.fetchFile) {
+  if (!provider.readBinaryFile) {
     return {
       type: ToolResponseType.Error,
       message: {
@@ -25,7 +26,7 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
   const { url } = toolInfo.parameters.parse(args)
 
   try {
-    const filePart = await provider.fetchFile(url)
+    const filePart = await provider.readBinaryFile(url)
 
     return {
       type: ToolResponseType.Reply,
@@ -53,7 +54,7 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
 }
 
 export const isAvailable = (provider: FilesystemProvider): boolean => {
-  return typeof provider.fetchFile === 'function'
+  return typeof provider.readBinaryFile === 'function'
 }
 
 export default {

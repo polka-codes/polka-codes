@@ -119,18 +119,6 @@ Usage:
 <tool_parameter_requiresApproval>true | false</tool_parameter_requiresApproval>
 </tool_execute_command>
 
-## tool_fetch_file
-
-Description: Fetch a file from a URL. Use file:// prefix to access local files. This can be used to access non-text files such as PDFs.
-
-Parameters:
-- tool_parameter_url: (required) The URL of the file to fetch.
-
-Usage:
-<tool_fetch_file>
-<tool_parameter_url>undefined</tool_parameter_url>
-</tool_fetch_file>
-
 ## tool_fetch_url
 
 Description: Fetch the content located at one or more HTTP(S) URLs and return it in Markdown format. This works for standard web pages as well as raw files (e.g. README.md, source code) hosted on platforms like GitHub.
@@ -178,6 +166,18 @@ Usage:
 <tool_parameter_recursive>true or false (optional)</tool_parameter_recursive>
 <tool_parameter_includeIgnored>true or false (optional)</tool_parameter_includeIgnored>
 </tool_list_files>
+
+## tool_read_binary_file
+
+Description: Read a binary file from a URL or local path. Use file:// prefix to access local files. This can be used to access non-text files such as PDFs.
+
+Parameters:
+- tool_parameter_url: (required) The URL or local path of the file to read.
+
+Usage:
+<tool_read_binary_file>
+<tool_parameter_url>undefined</tool_parameter_url>
+</tool_read_binary_file>
 
 ## tool_read_file
 
