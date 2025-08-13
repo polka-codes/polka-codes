@@ -312,18 +312,24 @@ async function handleReviewResult(
   const formatted = formatReviewForConsole(result)
   console.log(formatted)
 
-  if (process.stdin.isTTY && result.specificReviews.length > 0) {
-    const shouldRunTask = await confirm({
-      message: 'Do you wish polka-codes to address the review results?',
-      default: false,
-    })
+  let shouldRunTask = false
 
-    if (shouldRunTask) {
-      const taskInstruction = `please address the review result:
+  if (process.stdin.isTTY && result.specificReviews.length > 0) {
+    try {
+      shouldRunTask = await confirm({
+        message: 'Do you wish polka-codes to address the review results?',
+        default: false,
+      })
+    } catch {
+      process.exit(0)
+    }
+  }
+
+  if (shouldRunTask) {
+    const taskInstruction = `please address the review result:
 
 ${formatted}`
-      await runTask(taskInstruction, {}, command)
-    }
+    await runTask(taskInstruction, {}, command)
   }
 }
 
