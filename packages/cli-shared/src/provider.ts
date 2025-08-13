@@ -72,7 +72,7 @@ export const getProvider = (_agentName: AgentNameType, _config: Config, options:
         const mediaType = lookup(resolvedPath) || 'application/octet-stream'
 
         return {
-          base64Data: data.toBase64(),
+          base64Data: data.toString('base64'),
           mediaType,
         }
       }
@@ -84,7 +84,7 @@ export const getProvider = (_agentName: AgentNameType, _config: Config, options:
       const mediaType = lookup(url) || 'application/octet-stream'
 
       return {
-        base64Data: Buffer.from(data).toBase64(),
+        base64Data: Buffer.from(data).toString('base64'),
         mediaType,
       }
     },
