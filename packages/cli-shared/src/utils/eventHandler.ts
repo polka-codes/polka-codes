@@ -19,36 +19,38 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter, customConsol
         customConsole.log('\n\n======== New Request ========\n')
 
         if (verbose) {
-          const userMessage = event.userMessage.content
-          if (typeof userMessage === 'string') {
-            customConsole.log(userMessage)
-          } else {
-            for (const content of userMessage) {
-              switch (content.type) {
-                case 'text':
-                  customConsole.log(content.text)
-                  break
-                case 'image':
-                  if (content.image instanceof URL) {
-                    customConsole.log(chalk.yellow(`[Image content from URL: ${content.image}]`))
-                  } else {
-                    customConsole.log(chalk.yellow(`[Image content: ${content.mediaType}]`))
-                  }
-                  break
-                case 'file':
-                  customConsole.log(chalk.yellow(`[File name: ${content.filename}, type: ${content.mediaType}]`))
-                  break
-                case 'tool-call':
-                  customConsole.log(chalk.yellow(`[Tool call: ${content.toolName}]`))
-                  break
-                case 'tool-result':
-                  customConsole.log(chalk.yellow(`[Tool result: ${content.toolName}]`))
-                  if (verbose > 0) {
-                    customConsole.log(content.output)
-                  }
-                  break
-                case 'reasoning':
-                  break
+          for (const message of event.userMessage) {
+            const userMessage = message.content
+            if (typeof userMessage === 'string') {
+              customConsole.log(userMessage)
+            } else {
+              for (const content of userMessage) {
+                switch (content.type) {
+                  case 'text':
+                    customConsole.log(content.text)
+                    break
+                  case 'image':
+                    if (content.image instanceof URL) {
+                      customConsole.log(chalk.yellow(`[Image content from URL: ${content.image}]`))
+                    } else {
+                      customConsole.log(chalk.yellow(`[Image content: ${content.mediaType}]`))
+                    }
+                    break
+                  case 'file':
+                    customConsole.log(chalk.yellow(`[File name: ${content.filename}, type: ${content.mediaType}]`))
+                    break
+                  case 'tool-call':
+                    customConsole.log(chalk.yellow(`[Tool call: ${content.toolName}]`))
+                    break
+                  case 'tool-result':
+                    customConsole.log(chalk.yellow(`[Tool result: ${content.toolName}]`))
+                    if (verbose > 0) {
+                      customConsole.log(content.output)
+                    }
+                    break
+                  case 'reasoning':
+                    break
+                }
               }
             }
           }

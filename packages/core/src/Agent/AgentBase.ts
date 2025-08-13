@@ -18,6 +18,8 @@ import {
   type ToolResponseExit,
   type ToolResponseHandOver,
   type ToolResponseInterrupted,
+  type ToolResponseResult,
+  type ToolResponseResultMedia,
   ToolResponseType,
 } from '../tool'
 import { toToolInfoV1 } from '../tool-v1-compat'
@@ -70,7 +72,7 @@ export interface TaskEventStartTask extends TaskEventBase {
  */
 export interface TaskEventStartRequest extends TaskEventBase {
   kind: TaskEventKind.StartRequest
-  userMessage: ModelMessage
+  userMessage: ModelMessage[]
 }
 
 /**
@@ -320,10 +322,12 @@ export abstract class AgentBase {
       this.#callback({ kind: TaskEventKind.StartTask, agent: this, systemPrompt: this.config.systemPrompt })
     }
 
-    return await this.#request({
-      role: 'user',
-      content: prompt,
-    })
+    return await this.#request([
+      {
+        role: 'user',
+        content: prompt,
+      },
+    ])
   }
 
   async handleStepResponse(response: AssistantMessageContent[]) {
@@ -331,10 +335,12 @@ export abstract class AgentBase {
   }
 
   async #processLoop(userMessage: UserContent): Promise<ExitReason> {
-    let nextRequest: UserModelMessage | ToolModelMessage = {
-      role: 'user',
-      content: userMessage,
-    }
+    let nextRequest: (UserModelMessage | ToolModelMessage)[] = [
+      {
+        role: 'user',
+        content: userMessage,
+      },
+    ]
     while (true) {
       if (this.#aborted) {
         return { type: 'Aborted' }
@@ -360,14 +366,14 @@ export abstract class AgentBase {
     return await this.#processLoop(userMessage)
   }
 
-  async #request(userMessage: UserModelMessage | ToolModelMessage): Promise<AssistantMessageContent[]> {
+  async #request(userMessage: (UserModelMessage | ToolModelMessage)[]): Promise<AssistantMessageContent[]> {
     if (!userMessage) {
       throw new Error('userMessage is missing')
     }
 
     await this.#callback({ kind: TaskEventKind.StartRequest, agent: this, userMessage })
 
-    this.#messages.push(userMessage)
+    this.#messages.push(...userMessage)
 
     // Call onBeforeRequest hooks from policies
     for (const instance of this.#policies) {
@@ -578,8 +584,32 @@ export abstract class AgentBase {
 
   async #handleResponse(
     response: AssistantMessageContent[],
-  ): Promise<{ type: 'reply'; message: UserModelMessage | ToolModelMessage } | { type: 'exit'; reason: ExitReason }> {
+  ): Promise<{ type: 'reply'; message: (UserModelMessage | ToolModelMessage)[] } | { type: 'exit'; reason: ExitReason }> {
     const toolResponses: ToolResponseOrToolPause[] = []
+
+    // gemini and gpt-5 don't support non JSON tool response
+    // so we need to remove them from tool response and have a user message to provide the files
+    const medias: ToolResponseResultMedia[] = []
+
+    const processResponse = (resp: ToolResponseResult): LanguageModelV2ToolResultOutput => {
+      if (resp.type === 'content') {
+        return {
+          type: 'content',
+          value: resp.value.map((part) => {
+            if (part.type === 'media') {
+              medias.push(part)
+              return {
+                type: 'text',
+                text: `<media url="${part.url}" media-type="${part.mediaType}" />`,
+              } as const
+            }
+            return part
+          }),
+        }
+      }
+      return resp
+    }
+
     let hasPause = false
     outer: for (const content of response) {
       switch (content.type) {
@@ -592,7 +622,7 @@ export abstract class AgentBase {
             case ToolResponseType.Reply: {
               // reply to the tool use
               await this.#callback({ kind: TaskEventKind.ToolReply, agent: this, tool: content.name, content: toolResp.message })
-              toolResponses.push({ type: 'response', tool: content.name, response: toolResp.message, id: content.id })
+              toolResponses.push({ type: 'response', tool: content.name, response: processResponse(toolResp.message), id: content.id })
               break
             }
             case ToolResponseType.Exit:
@@ -606,13 +636,13 @@ export abstract class AgentBase {
             case ToolResponseType.Invalid: {
               // tell AI about the invalid arguments
               await this.#callback({ kind: TaskEventKind.ToolInvalid, agent: this, tool: content.name, content: toolResp.message })
-              toolResponses.push({ type: 'response', tool: content.name, response: toolResp.message, id: content.id })
+              toolResponses.push({ type: 'response', tool: content.name, response: processResponse(toolResp.message), id: content.id })
               break outer
             }
             case ToolResponseType.Error: {
               // tell AI about the error
               await this.#callback({ kind: TaskEventKind.ToolError, agent: this, tool: content.name, content: toolResp.message })
-              toolResponses.push({ type: 'response', tool: content.name, response: toolResp.message, id: content.id })
+              toolResponses.push({ type: 'response', tool: content.name, response: processResponse(toolResp.message), id: content.id })
               break outer
             }
             case ToolResponseType.Interrupted:
@@ -675,12 +705,38 @@ export abstract class AgentBase {
       // always require a tool usage
       return {
         type: 'reply',
-        message: {
-          role: 'user',
-          content: responsePrompts.requireUseToolNative,
-        },
+        message: [
+          {
+            role: 'user',
+            content: responsePrompts.requireUseToolNative,
+          },
+        ],
       }
     }
+
+    const mediaUserMessage: UserModelMessage[] =
+      medias.length > 0
+        ? [
+            {
+              role: 'user',
+              content: medias.map((m) => {
+                if (m.mediaType.startsWith('image/')) {
+                  return {
+                    type: 'image',
+                    image: m.base64Data,
+                    mediaType: m.mediaType,
+                  }
+                }
+                return {
+                  type: 'file',
+                  data: m.base64Data,
+                  mediaType: m.mediaType,
+                  filename: m.url.split('/').pop(),
+                }
+              }),
+            },
+          ]
+        : []
 
     if (this.config.toolFormat === 'native') {
       const toolResults = toolResponses
@@ -696,10 +752,13 @@ export abstract class AgentBase {
         )
       return {
         type: 'reply',
-        message: {
-          role: 'tool',
-          content: toolResults,
-        },
+        message: [
+          {
+            role: 'tool',
+            content: toolResults,
+          },
+          ...mediaUserMessage,
+        ],
       }
     }
 
@@ -707,10 +766,12 @@ export abstract class AgentBase {
       // always require a tool usage
       return {
         type: 'reply',
-        message: {
-          role: 'user',
-          content: responsePrompts.requireUseTool,
-        },
+        message: [
+          {
+            role: 'user',
+            content: responsePrompts.requireUseTool,
+          },
+        ],
       }
     }
 
@@ -720,10 +781,13 @@ export abstract class AgentBase {
 
     return {
       type: 'reply',
-      message: {
-        role: 'user',
-        content: finalResp,
-      },
+      message: [
+        {
+          role: 'user',
+          content: finalResp,
+        },
+        ...mediaUserMessage,
+      ],
     }
   }
 

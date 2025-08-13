@@ -1,4 +1,4 @@
-import type { LanguageModelV2ToolResultOutput } from '@ai-sdk/provider'
+import type { JSONValue } from '@ai-sdk/provider'
 import type { z } from 'zod'
 
 export type ToolParameterValue = string | { [key: string]: ToolParameterValue } | ToolParameterValue[]
@@ -64,10 +64,46 @@ export enum ToolResponseType {
   Pause = 'Pause',
 }
 
+export type ToolResponseResultMedia = {
+  type: 'media'
+  base64Data: string
+  mediaType: string
+  url: string
+}
+
+// Modified LanguageModelV2ToolResultOutput
+export type ToolResponseResult =
+  | {
+      type: 'text'
+      value: string
+    }
+  | {
+      type: 'json'
+      value: JSONValue
+    }
+  | {
+      type: 'error-text'
+      value: string
+    }
+  | {
+      type: 'error-json'
+      value: JSONValue
+    }
+  | {
+      type: 'content'
+      value: Array<
+        | {
+            type: 'text'
+            text: string
+          }
+        | ToolResponseResultMedia
+      >
+    }
+
 // Reply to the tool use
 export type ToolResponseReply = {
   type: ToolResponseType.Reply
-  message: LanguageModelV2ToolResultOutput
+  message: ToolResponseResult
 }
 
 // Should end the message thread
@@ -81,14 +117,14 @@ export type ToolResponseExit = {
 // The tool arguments are invalid
 export type ToolResponseInvalid = {
   type: ToolResponseType.Invalid
-  message: LanguageModelV2ToolResultOutput
+  message: ToolResponseResult
 }
 
 // Some error occurred when executing the tool
 // e.g. network request error, IO error
 export type ToolResponseError = {
   type: ToolResponseType.Error
-  message: LanguageModelV2ToolResultOutput
+  message: ToolResponseResult
   // If true, the tool can be retried
   // e.g. network request error are generally retryable
   // but IO errors are not
