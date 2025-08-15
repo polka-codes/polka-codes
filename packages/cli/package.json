@@ -31,11 +31,11 @@
     "commander": "^14.0.0",
     "dotenv": "^16.4.7",
     "lodash": "^4.17.21",
+    "mime-types": "^3.0.1",
     "ollama-ai-provider-v2": "^1.0.0",
     "ora": "^8.1.1",
     "yaml": "^2.7.0",
-    "zod": "^4.0.8",
-    "mime-types": "^2.1.35"
+    "zod": "^4.0.8"
   },
   "files": [
     "dist",
@@ -43,6 +43,6 @@
   ],
   "devDependencies": {
     "@types/lodash": "^4.17.14",
-    "@types/mime-types": "^2.1.4"
+    "@types/mime-types": "^3.0.1"
   }
 }

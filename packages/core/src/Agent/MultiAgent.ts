@@ -98,7 +98,7 @@ export class MultiAgent {
     return this.#startTask(options.agentName, userContent)
   }
 
-  async continueTask(userMessage: string): Promise<ExitReason> {
+  async continueTask(userMessage: UserContent): Promise<ExitReason> {
     if (!this.#agents.length) {
       throw new Error('No active agent')
     }

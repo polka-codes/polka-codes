@@ -1,7 +1,8 @@
+import { existsSync } from 'node:fs'
 import readline from 'node:readline'
 
 export type ChatOptions = {
-  onMessage: (message: string) => Promise<string | undefined>
+  onMessage: (message: string, files: string[]) => Promise<string | undefined>
   onExit: () => Promise<void>
   onInterrupt?: () => void
 }
@@ -13,6 +14,7 @@ export class Chat {
   #isMultilineMode = false
   #multilineBuffer: string[] = []
   #busy = false
+  #attachedFiles = new Set<string>()
 
   constructor(options: ChatOptions) {
     this.#options = options
@@ -24,6 +26,9 @@ export class Chat {
 Available commands:
   .h, .help       - Show this help message
   .m, .multi      - Enter multiline mode (Ctrl+D to finish, Ctrl+C to cancel)
+  .f, .file <path> - Attach a file to the message. To remove use .unfile <path>
+  .unfile <path>  - Remove an attached file.
+  .files          - List attached files.
   .e, .exit       - Exit the chat
 `)
   }
@@ -50,8 +55,9 @@ Available commands:
       this.#consecutiveCtrlCCount = 0
 
       const trimmedInput = input.trim()
+      const [command, ...args] = trimmedInput.split(/\s+/)
 
-      switch (trimmedInput) {
+      switch (command) {
         case '.h':
         case '.help':
           this.#showHelp()
@@ -64,6 +70,60 @@ Available commands:
           this.#multilineBuffer = []
           console.log('Entering multiline mode. Press Ctrl+D to finish, Ctrl+C to cancel.')
           this.#rl.setPrompt('... ')
+          this.#rl.prompt()
+          return
+
+        case '.f':
+        case '.file':
+          if (args.length === 0) {
+            console.log('Usage: .file <path>')
+          } else {
+            for (const file of args) {
+              if (existsSync(file)) {
+                this.#attachedFiles.add(file)
+                console.log(`Attached file: ${file}`)
+              } else {
+                console.log(`File not found: ${file}`)
+              }
+            }
+            if (this.#attachedFiles.size > 0) {
+              this.#rl.setPrompt(`[${this.#attachedFiles.size} file(s)] > `)
+            } else {
+              this.#rl.setPrompt('> ')
+            }
+          }
+          this.#rl.prompt()
+          return
+
+        case '.unfile':
+          if (args.length === 0) {
+            console.log('Usage: .unfile <path>')
+          } else {
+            for (const file of args) {
+              if (this.#attachedFiles.delete(file)) {
+                console.log(`Unattached file: ${file}`)
+              } else {
+                console.log(`File not attached: ${file}`)
+              }
+            }
+            if (this.#attachedFiles.size > 0) {
+              this.#rl.setPrompt(`[${this.#attachedFiles.size} file(s)] > `)
+            } else {
+              this.#rl.setPrompt('> ')
+            }
+          }
+          this.#rl.prompt()
+          return
+
+        case '.files':
+          if (this.#attachedFiles.size === 0) {
+            console.log('No files attached.')
+          } else {
+            console.log('Attached files:')
+            for (const file of this.#attachedFiles) {
+              console.log(`- ${file}`)
+            }
+          }
           this.#rl.prompt()
           return
 
@@ -82,7 +142,12 @@ Available commands:
 
       this.#busy = true
       try {
-        const message = await this.#options.onMessage(input)
+        const files = Array.from(this.#attachedFiles)
+        if (files.length > 0) {
+          this.#attachedFiles.clear()
+          this.#rl.setPrompt('> ')
+        }
+        const message = await this.#options.onMessage(input, files)
         if (message) {
           console.log(message)
         }
@@ -100,7 +165,12 @@ Available commands:
         const message = this.#multilineBuffer.join('\n')
         this.#rl.resume()
         console.log()
-        this.#options.onMessage(message)
+        const files = Array.from(this.#attachedFiles)
+        if (files.length > 0) {
+          this.#attachedFiles.clear()
+          this.#rl.setPrompt('> ')
+        }
+        this.#options.onMessage(message, files)
         this.#multilineBuffer = []
         this.#isMultilineMode = false
         this.#start()

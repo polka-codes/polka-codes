@@ -1,7 +1,11 @@
+import { readFile } from 'node:fs/promises'
+import { basename } from 'node:path'
 import { confirm } from '@inquirer/prompts'
 import { type ExitReason, ToolResponseType } from '@polka-codes/core'
+import type { FilePart, ImagePart } from 'ai'
 import type { Command } from 'commander'
 import { set } from 'lodash'
+import { lookup } from 'mime-types'
 
 import { ApiProviderConfig } from '../ApiProviderConfig'
 import { Chat } from '../Chat'
@@ -56,13 +60,39 @@ export const runChat = async (opts: any, command?: Command) => {
   })
 
   const chat = new Chat({
-    onMessage: async (message) => {
+    onMessage: async (message, files) => {
       let exitReason: ExitReason
+      const fileParts: (FilePart | ImagePart)[] = []
+      for (const file of files) {
+        try {
+          const content = await readFile(file)
+          const mimeType = lookup(file)
+
+          if (typeof mimeType === 'string' && mimeType.startsWith('image/')) {
+            fileParts.push({
+              type: 'image',
+              mediaType: mimeType,
+              image: content,
+            })
+          } else {
+            fileParts.push({
+              type: 'file',
+              mediaType: mimeType || 'application/octet-stream',
+              filename: basename(file),
+              data: content,
+            })
+          }
+        } catch (e: any) {
+          console.error(`Error reading file ${file}: ${e.message}`)
+          // continue with other files
+        }
+      }
+
       if (runner.hasActiveAgent) {
-        const reason = await runner.continueTask(message)
+        const reason = await runner.continueTask(message, fileParts)
         exitReason = reason
       } else {
-        const reason = await runner.startTask(message, agent)
+        const reason = await runner.startTask(message, agent, fileParts)
         exitReason = reason
       }
       switch (exitReason.type) {

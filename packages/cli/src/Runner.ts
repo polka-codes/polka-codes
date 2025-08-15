@@ -22,7 +22,7 @@ import {
   TruncateContextPolicy,
   UsageMeter,
 } from '@polka-codes/core'
-import type { FilePart, ImagePart } from 'ai'
+import type { FilePart, ImagePart, TextPart } from 'ai'
 import { merge } from 'lodash'
 import type { ApiProviderConfig } from './ApiProviderConfig'
 import { getModel } from './getModel'
@@ -251,8 +251,16 @@ export class Runner {
     return exitReason
   }
 
-  async continueTask(message: string) {
-    return await this.multiAgent.continueTask(message)
+  async continueTask(message: string, files?: (FilePart | ImagePart)[]) {
+    if (!files || files.length === 0) {
+      return await this.multiAgent.continueTask(message)
+    }
+    const userContent: Array<TextPart | ImagePart | FilePart> = [...files]
+    userContent.push({
+      type: 'text',
+      text: message,
+    })
+    return await this.multiAgent.continueTask(userContent)
   }
 
   abort() {
