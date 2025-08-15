@@ -1,3 +1,4 @@
+import type { FilePart, ImagePart, TextPart, UserContent } from 'ai'
 import { ToolResponseType } from '../tool'
 import type { AgentBase, ExitReason } from './AgentBase'
 
@@ -72,7 +73,7 @@ export class MultiAgent {
     }
   }
 
-  async #startTask(agentName: string, task: string): Promise<ExitReason> {
+  async #startTask(agentName: string, task: UserContent): Promise<ExitReason> {
     const newAgent = await this.#config.createAgent(agentName)
 
     this.#agents.push(newAgent)
@@ -82,12 +83,19 @@ export class MultiAgent {
     return await this.#handleTaskResult(exitReason)
   }
 
-  async startTask(options: { agentName: string; task: string; context: string }): Promise<ExitReason> {
+  async startTask(options: { agentName: string; task: string; context: string; files?: (ImagePart | FilePart)[] }): Promise<ExitReason> {
     if (this.#agents.length > 0) {
       throw new Error('An active agent already exists')
     }
     this.#originalTask = options.task
-    return this.#startTask(options.agentName, `<task>${options.task}</task>\n<context>${options.context}</context>`)
+
+    const userContent: Array<TextPart | ImagePart | FilePart> = options.files ?? []
+    userContent.push({
+      type: 'text',
+      text: `<task>${options.task}</task>\n<context>${options.context}</context>`,
+    })
+
+    return this.#startTask(options.agentName, userContent)
   }
 
   async continueTask(userMessage: string): Promise<ExitReason> {

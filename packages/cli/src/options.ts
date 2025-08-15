@@ -22,6 +22,7 @@ export interface CliOptions {
   retryCount?: number
   requestTimeoutSeconds?: number
   silent?: boolean
+  file?: string[]
 }
 
 export function addSharedOptions(command: Command) {
@@ -37,6 +38,7 @@ export function addSharedOptions(command: Command) {
     .option('-v --verbose', 'Enable verbose output. Use -v for level 1, -vv for level 2', (_value, prev) => prev + 1, 0)
     .option('-d --base-dir <path>', 'Base directory to run commands in')
     .option('--agent <agent>', 'Initial agent to use (default: architect)')
+    .option('--file <path...>', 'File to include in the task')
     .option('--silent', 'Enable silent mode')
 }
 
@@ -53,6 +55,7 @@ export function parseOptions(
   providerConfig: ApiProviderConfig
   agent: string
   silent: boolean
+  file: string[] | undefined
 } {
   let cwd = cwdArg
   if (options.baseDir) {
@@ -113,5 +116,6 @@ export function parseOptions(
     providerConfig,
     agent: options.agent ?? config.agent ?? 'architect',
     silent: options.silent ?? false,
+    file: options.file,
   }
 }

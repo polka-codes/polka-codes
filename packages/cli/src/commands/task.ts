@@ -1,5 +1,8 @@
+import { readFile } from 'node:fs/promises'
 import { ToolResponseType } from '@polka-codes/core'
+import type { FilePart, ImagePart } from 'ai'
 import type { Command } from 'commander'
+import { lookup } from 'mime-types'
 import { parseOptions } from '../options'
 import { Runner } from '../Runner'
 import { runChat } from './chat'
@@ -61,7 +64,7 @@ export async function runTask(taskArg: string | undefined, _options: any, comman
     }
   }
 
-  const { config, providerConfig, verbose, maxMessageCount, budget, agent, silent } = parseOptions(command.opts())
+  const { config, providerConfig, verbose, maxMessageCount, budget, agent, silent, file: files } = parseOptions(command.opts())
 
   const { provider, model, parameters } = providerConfig.getConfigForAgent(agent) ?? {}
 
@@ -99,7 +102,37 @@ export async function runTask(taskArg: string | undefined, _options: any, comman
 
   process.on('SIGINT', sigintHandler)
 
-  const exitReason = await runner.startTask(task, agent)
+  const fileContents: (FilePart | ImagePart)[] = []
+  if (files) {
+    for (const file of files) {
+      try {
+        const mimeType = lookup(file)
+        if (mimeType) {
+          if (mimeType.startsWith('image/')) {
+            fileContents.push({
+              type: 'image',
+              mediaType: mimeType,
+              image: await readFile(file),
+            })
+          } else {
+            const buffer = await readFile(file)
+            fileContents.push({
+              type: 'file',
+              mediaType: mimeType,
+              filename: file,
+              data: buffer,
+            })
+          }
+        } else {
+          console.warn(`Unknown mime type for file: ${file}`)
+        }
+      } catch (error) {
+        console.error(`Error reading file '${file}': ${(error as Error).message}`)
+      }
+    }
+  }
+
+  const exitReason = await runner.startTask(task, agent, fileContents)
 
   process.off('SIGINT', sigintHandler)
 

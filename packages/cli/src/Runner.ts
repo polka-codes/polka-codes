@@ -22,6 +22,7 @@ import {
   TruncateContextPolicy,
   UsageMeter,
 } from '@polka-codes/core'
+import type { FilePart, ImagePart } from 'ai'
 import { merge } from 'lodash'
 import type { ApiProviderConfig } from './ApiProviderConfig'
 import { getModel } from './getModel'
@@ -238,12 +239,13 @@ export class Runner {
   }
 
   /** Execute a task through the agent system, initializing context if not provided */
-  async startTask(task: string, agentName: string = architectAgentInfo.name) {
+  async startTask(task: string, agentName: string = architectAgentInfo.name, files?: (FilePart | ImagePart)[]) {
     const finalContext = await this.#defaultContext(agentName)
     const exitReason = await this.multiAgent.startTask({
       agentName,
       task,
       context: finalContext,
+      files,
     })
 
     return exitReason

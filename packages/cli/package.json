@@ -34,13 +34,15 @@
     "ollama-ai-provider-v2": "^1.0.0",
     "ora": "^8.1.1",
     "yaml": "^2.7.0",
-    "zod": "^4.0.8"
+    "zod": "^4.0.8",
+    "mime-types": "^2.1.35"
   },
   "files": [
     "dist",
     "cli.mjs"
   ],
   "devDependencies": {
-    "@types/lodash": "^4.17.14"
+    "@types/lodash": "^4.17.14",
+    "@types/mime-types": "^2.1.4"
   }
 }
