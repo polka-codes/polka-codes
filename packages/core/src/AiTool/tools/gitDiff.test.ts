@@ -33,20 +33,21 @@ describe('gitDiff', () => {
 
   it('should use default context lines of 5', async () => {
     const spy = spyOn(mockProvider, 'executeCommand')
-    await gitDiff.handler(mockProvider, {})
+    await gitDiff.handler(mockProvider, { file: 'src/test.ts' })
 
-    expect(spy).toHaveBeenCalledWith('git diff --no-color -U5', false)
+    expect(spy).toHaveBeenCalledWith("git diff --no-color -U5 -- 'src/test.ts'", false)
   })
 
   it('should use custom context lines when specified', async () => {
     const spy = spyOn(mockProvider, 'executeCommand')
-    await gitDiff.handler(mockProvider, { contextLines: '5' })
+    await gitDiff.handler(mockProvider, { file: 'src/test.ts', contextLines: '5' })
 
-    expect(spy).toHaveBeenCalledWith('git diff --no-color -U5', false)
+    expect(spy).toHaveBeenCalledWith("git diff --no-color -U5 -- 'src/test.ts'", false)
   })
 
   it('should include line numbers when requested', async () => {
     const result = await gitDiff.handler(mockProvider, {
+      file: 'src/test.ts',
       contextLines: '5',
       includeLineNumbers: 'true',
     })
@@ -55,23 +56,23 @@ describe('gitDiff', () => {
   })
 
   it('should not include line numbers by default', async () => {
-    const result = await gitDiff.handler(mockProvider, { contextLines: '5' })
+    const result = await gitDiff.handler(mockProvider, { file: 'src/test.ts', contextLines: '5' })
 
     expect(result).toMatchSnapshot()
   })
 
   it('should handle staged changes', async () => {
     const spy = spyOn(mockProvider, 'executeCommand')
-    await gitDiff.handler(mockProvider, { staged: 'true' })
+    await gitDiff.handler(mockProvider, { file: 'src/test.ts', staged: 'true' })
 
-    expect(spy).toHaveBeenCalledWith('git diff --no-color -U5 --staged', false)
+    expect(spy).toHaveBeenCalledWith("git diff --no-color -U5 --staged -- 'src/test.ts'", false)
   })
 
   it('should handle commit ranges', async () => {
     const spy = spyOn(mockProvider, 'executeCommand')
-    await gitDiff.handler(mockProvider, { commitRange: 'main...HEAD' })
+    await gitDiff.handler(mockProvider, { file: 'src/test.ts', commitRange: 'main...HEAD' })
 
-    expect(spy).toHaveBeenCalledWith('git diff --no-color -U5 main...HEAD', false)
+    expect(spy).toHaveBeenCalledWith("git diff --no-color -U5 main...HEAD -- 'src/test.ts'", false)
   })
 
   it('should handle specific files', async () => {
@@ -105,7 +106,7 @@ describe('gitDiff', () => {
       executeCommand: async () => ({ exitCode: 0, stdout: '', stderr: '' }),
     }
 
-    const result = await gitDiff.handler(emptyProvider, {})
+    const result = await gitDiff.handler(emptyProvider, { file: 'src/test.ts' })
     expect(result).toMatchSnapshot()
   })
 
@@ -114,12 +115,12 @@ describe('gitDiff', () => {
       executeCommand: async () => ({ exitCode: 1, stdout: '', stderr: 'error message' }),
     }
 
-    const result = await gitDiff.handler(errorProvider, {})
+    const result = await gitDiff.handler(errorProvider, { file: 'src/test.ts' })
     expect(result).toMatchSnapshot()
   })
 
   it('should handle missing executeCommand', async () => {
-    const result = await gitDiff.handler({} as CommandProvider, {})
+    const result = await gitDiff.handler({} as CommandProvider, { file: 'src/test.ts' })
     expect(result).toMatchSnapshot()
   })
 })

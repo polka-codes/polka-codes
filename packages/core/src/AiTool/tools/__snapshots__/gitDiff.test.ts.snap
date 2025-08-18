@@ -5,7 +5,7 @@ exports[`gitDiff should include line numbers when requested 1`] = `
   "message": {
     "type": "text",
     "value": 
-"<diff file="all">
+"<diff file="src/test.ts">
 @@ -10,3 +10,3 @@
  context line
 -old line [Line 11 removed]
@@ -22,7 +22,7 @@ exports[`gitDiff should not include line numbers by default 1`] = `
   "message": {
     "type": "text",
     "value": 
-"<diff file="all">
+"<diff file="src/test.ts">
 @@ -10,3 +10,3 @@
  context line
 -old line
@@ -49,7 +49,7 @@ exports[`gitDiff should handle command errors 1`] = `
   "message": {
     "type": "error-text",
     "value": 
-"\`git diff --no-color -U5\` exited with code 1:
+"\`git diff --no-color -U5 -- 'src/test.ts'\` exited with code 1:
 error message"
 ,
   },

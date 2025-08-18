@@ -20,7 +20,7 @@ export const toolInfo = {
       }, z.boolean().optional().default(false))
       .describe('Get staged changes instead of unstaged changes.'),
     commitRange: z.string().optional().describe('The commit range to get the diff for (e.g., "main...HEAD").'),
-    file: z.string().optional().describe('Get the diff for a specific file.'),
+    file: z.string().describe('Get the diff for a specific file.'),
     contextLines: z.coerce.number().optional().default(5).describe('Number of context lines to include around changes.'),
     includeLineNumbers: z
       .preprocess((val) => {
