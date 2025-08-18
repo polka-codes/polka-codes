@@ -97,7 +97,7 @@ export async function runTask(taskArg: string | undefined, _options: any, comman
       console.log()
       runner.printUsage()
     }
-    process.exit(0)
+    process.exit(130)
   }
 
   process.on('SIGINT', sigintHandler)

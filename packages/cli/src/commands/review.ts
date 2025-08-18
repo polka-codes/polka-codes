@@ -321,7 +321,7 @@ async function handleReviewResult(
         default: false,
       })
     } catch {
-      process.exit(0)
+      process.exit(130)
     }
   }
 
