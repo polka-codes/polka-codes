@@ -85,7 +85,7 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter, customConsol
         hadReasoning = true
         break
       case TaskEventKind.ToolUse: {
-        customConsole.log(chalk.yellow('\n\nTool use:', event.tool), event.content)
+        customConsole.log(chalk.yellow('\n\nTool use:', event.tool), event.params)
         const stats = toolCallStats.get(event.tool) ?? { calls: 0, success: 0, errors: 0 }
         stats.calls++
         toolCallStats.set(event.tool, stats)
@@ -101,7 +101,7 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter, customConsol
         break
       case TaskEventKind.ToolError: {
         customConsole.error(chalk.red('\n\nTool error:', event.tool))
-        customConsole.error(chalk.red(event.content))
+        customConsole.error(event.error)
         const stats = toolCallStats.get(event.tool) ?? { calls: 0, success: 0, errors: 0 }
         stats.errors++
         toolCallStats.set(event.tool, stats)

@@ -102,15 +102,22 @@ export interface TaskEventText extends TaskEventBase {
 /**
  * Event for tool-related updates
  */
-export interface TaskEventTool extends TaskEventBase {
-  kind:
-    | TaskEventKind.ToolUse
-    | TaskEventKind.ToolReply
-    | TaskEventKind.ToolInvalid
-    | TaskEventKind.ToolError
-    | TaskEventKind.ToolInterrupted
+export interface TaskEventToolUse extends TaskEventBase {
+  kind: TaskEventKind.ToolUse
   tool: string
-  content: any
+  params: Record<string, any>
+}
+
+export interface TaskEventToolResult extends TaskEventBase {
+  kind: TaskEventKind.ToolReply | TaskEventKind.ToolInvalid | TaskEventKind.ToolInterrupted
+  tool: string
+  content: ToolResponseResult
+}
+
+export interface TaskEventToolError extends TaskEventBase {
+  kind: TaskEventKind.ToolError
+  tool: string
+  error: ToolResponseError | ToolResponseResult
 }
 
 export interface TaskEventToolPause extends TaskEventBase {
@@ -155,7 +162,9 @@ export type TaskEvent =
   | TaskEventEndRequest
   | TaskEventUsage
   | TaskEventText
-  | TaskEventTool
+  | TaskEventToolUse
+  | TaskEventToolResult
+  | TaskEventToolError
   | TaskEventToolPause
   | TaskEventToolHandOverDelegate
   | TaskEventUsageExceeded
@@ -618,7 +627,7 @@ export abstract class AgentBase {
         case 'text':
           break
         case 'tool_use': {
-          await this.#callback({ kind: TaskEventKind.ToolUse, agent: this, tool: content.name, content: content.params })
+          await this.#callback({ kind: TaskEventKind.ToolUse, agent: this, tool: content.name, params: content.params })
           const toolResp = await this.#invokeTool(content.name, content.params)
           switch (toolResp.type) {
             case ToolResponseType.Reply: {
@@ -639,7 +648,7 @@ export abstract class AgentBase {
                   },
                   canRetry: false,
                 }
-                await this.#callback({ kind: TaskEventKind.ToolError, agent: this, tool: content.name, content: message })
+                await this.#callback({ kind: TaskEventKind.ToolError, agent: this, tool: content.name, error: message })
                 toolResponses.push({
                   type: 'response',
                   tool: content.name,
@@ -700,7 +709,7 @@ export abstract class AgentBase {
             }
             case ToolResponseType.Error: {
               // tell AI about the error
-              await this.#callback({ kind: TaskEventKind.ToolError, agent: this, tool: content.name, content: toolResp.message })
+              await this.#callback({ kind: TaskEventKind.ToolError, agent: this, tool: content.name, error: toolResp.message })
               toolResponses.push({ type: 'response', tool: content.name, response: processResponse(toolResp.message), id: content.id })
               if (this.config.toolFormat !== 'native') {
                 break outer
