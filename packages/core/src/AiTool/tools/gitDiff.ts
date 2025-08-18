@@ -57,7 +57,7 @@ export const handler: ToolHandler<typeof toolInfo, CommandProvider> = async (pro
     commandParts.push(commitRange)
   }
   if (file) {
-    commandParts.push('--', file)
+    commandParts.push('--', `'${file}'`)
   }
 
   const command = commandParts.join(' ')

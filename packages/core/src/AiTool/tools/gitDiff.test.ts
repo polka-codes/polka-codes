@@ -78,7 +78,14 @@ describe('gitDiff', () => {
     const spy = spyOn(mockProvider, 'executeCommand')
     await gitDiff.handler(mockProvider, { file: 'src/test.ts' })
 
-    expect(spy).toHaveBeenCalledWith('git diff --no-color -U5 -- src/test.ts', false)
+    expect(spy).toHaveBeenCalledWith("git diff --no-color -U5 -- 'src/test.ts'", false)
+  })
+
+  it('should correctly escape file paths with special characters', async () => {
+    const spy = spyOn(mockProvider, 'executeCommand')
+    await gitDiff.handler(mockProvider, { file: 'app/(stack)/_layout.tsx' })
+
+    expect(spy).toHaveBeenCalledWith("git diff --no-color -U5 -- 'app/(stack)/_layout.tsx'", false)
   })
 
   it('should combine all options correctly', async () => {
@@ -90,7 +97,7 @@ describe('gitDiff', () => {
       includeLineNumbers: 'true',
     })
 
-    expect(spy).toHaveBeenCalledWith('git diff --no-color -U10 --staged -- src/test.ts', false)
+    expect(spy).toHaveBeenCalledWith("git diff --no-color -U10 --staged -- 'src/test.ts'", false)
   })
 
   it('should handle no diff found', async () => {
