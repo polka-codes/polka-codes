@@ -15,6 +15,7 @@ import {
   type FullToolInfoV2,
   type ToolResponse,
   type ToolResponseDelegate,
+  type ToolResponseError,
   type ToolResponseExit,
   type ToolResponseHandOver,
   type ToolResponseInterrupted,
@@ -611,6 +612,7 @@ export abstract class AgentBase {
     }
 
     let hasPause = false
+    const toolUseContents = response.filter((c) => c.type === 'tool_use')
     outer: for (const content of response) {
       switch (content.type) {
         case 'text':
@@ -626,64 +628,84 @@ export abstract class AgentBase {
               break
             }
             case ToolResponseType.Exit:
+            case ToolResponseType.HandOver:
+            case ToolResponseType.Delegate: {
+              if (this.config.toolFormat === 'native' && toolUseContents.length > 1) {
+                const message: ToolResponseError = {
+                  type: ToolResponseType.Error,
+                  message: {
+                    type: 'error-text',
+                    value: `Error: The tool '${content.name}' must be called alone, but it was called with other tools.`,
+                  },
+                  canRetry: false,
+                }
+                await this.#callback({ kind: TaskEventKind.ToolError, agent: this, tool: content.name, content: message })
+                toolResponses.push({
+                  type: 'response',
+                  tool: content.name,
+                  response: processResponse(message.message),
+                  id: content.id,
+                })
+                break
+              }
+
               if (toolResponses.length > 0) {
                 // agent is trying run too many tools in a single request
                 // stop the tool execution
                 break outer
               }
-              // task completed
-              return { type: 'exit', reason: toolResp }
+
+              if (toolResp.type === ToolResponseType.Exit) {
+                // task completed
+                return { type: 'exit', reason: toolResp }
+              }
+
+              if (toolResp.type === ToolResponseType.HandOver) {
+                // hand over the task to another agent
+                await this.#callback({
+                  kind: TaskEventKind.ToolHandOver,
+                  agent: this,
+                  tool: content.name,
+                  agentName: toolResp.agentName,
+                  task: toolResp.task,
+                  context: toolResp.context,
+                  files: toolResp.files,
+                })
+                return { type: 'exit', reason: toolResp }
+              }
+
+              if (toolResp.type === ToolResponseType.Delegate) {
+                // delegate the task to another agent
+                await this.#callback({
+                  kind: TaskEventKind.ToolDelegate,
+                  agent: this,
+                  tool: content.name,
+                  agentName: toolResp.agentName,
+                  task: toolResp.task,
+                  context: toolResp.context,
+                  files: toolResp.files,
+                })
+                return { type: 'exit', reason: toolResp }
+              }
+              break
+            }
             case ToolResponseType.Invalid: {
               // tell AI about the invalid arguments
               await this.#callback({ kind: TaskEventKind.ToolInvalid, agent: this, tool: content.name, content: toolResp.message })
               toolResponses.push({ type: 'response', tool: content.name, response: processResponse(toolResp.message), id: content.id })
-              break outer
+              if (this.config.toolFormat !== 'native') {
+                break outer
+              }
+              break
             }
             case ToolResponseType.Error: {
               // tell AI about the error
               await this.#callback({ kind: TaskEventKind.ToolError, agent: this, tool: content.name, content: toolResp.message })
               toolResponses.push({ type: 'response', tool: content.name, response: processResponse(toolResp.message), id: content.id })
-              break outer
-            }
-            case ToolResponseType.Interrupted:
-              // the execution is killed
-              await this.#callback({ kind: TaskEventKind.ToolInterrupted, agent: this, tool: content.name, content: toolResp.message })
-              return { type: 'exit', reason: toolResp }
-            case ToolResponseType.HandOver: {
-              if (toolResponses.length > 0) {
-                // agent is trying run too many tools in a single request
-                // stop the tool execution
+              if (this.config.toolFormat !== 'native') {
                 break outer
               }
-              // hand over the task to another agent
-              await this.#callback({
-                kind: TaskEventKind.ToolHandOver,
-                agent: this,
-                tool: content.name,
-                agentName: toolResp.agentName,
-                task: toolResp.task,
-                context: toolResp.context,
-                files: toolResp.files,
-              })
-              return { type: 'exit', reason: toolResp }
-            }
-            case ToolResponseType.Delegate: {
-              if (toolResponses.length > 0) {
-                // agent is trying run too many tools in a single request
-                // stop the tool execution
-                break outer
-              }
-              // delegate the task to another agent
-              await this.#callback({
-                kind: TaskEventKind.ToolDelegate,
-                agent: this,
-                tool: content.name,
-                agentName: toolResp.agentName,
-                task: toolResp.task,
-                context: toolResp.context,
-                files: toolResp.files,
-              })
-              return { type: 'exit', reason: toolResp }
+              break
             }
             case ToolResponseType.Pause: {
               // pause the execution
