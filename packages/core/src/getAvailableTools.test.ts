@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'bun:test'
 import { z } from 'zod'
 import { getAvailableTools } from './getAvailableTools'
-import type { FullToolInfo, FullToolInfoV2, PermissionLevel } from './tool'
+import type { FullToolInfo, FullToolInfoV2 } from './tool'
 import { ToolResponseType } from './tool'
 import { toToolInfoV1 } from './tool-v1-compat'
 import { delegate, handOver } from './tools'
@@ -16,7 +16,7 @@ describe('getAvailableTools', () => {
   const mockProvider = new MockProvider()
 
   // Mock tools for testing
-  const createMockTool = (name: string, isAvailable = true, permissionLevel: PermissionLevel = 1): FullToolInfoV2 => ({
+  const createMockTool = (name: string, isAvailable = true): FullToolInfoV2 => ({
     name,
     description: `Mock tool ${name}`,
     parameters: z.object({}),
@@ -28,16 +28,15 @@ describe('getAvailableTools', () => {
       },
     }),
     isAvailable: () => isAvailable,
-    permissionLevel,
   })
 
   const mockTools: FullToolInfo[] = [
     toToolInfoV1(delegate),
     toToolInfoV1(handOver),
-    toToolInfoV1(createMockTool('tool1', true, 1)),
-    toToolInfoV1(createMockTool('tool2', false, 1)),
-    toToolInfoV1(createMockTool('tool3', true, 2)),
-    toToolInfoV1(createMockTool('tool4', true, 3)),
+    toToolInfoV1(createMockTool('tool1', true)),
+    toToolInfoV1(createMockTool('tool2', false)),
+    toToolInfoV1(createMockTool('tool3', true)),
+    toToolInfoV1(createMockTool('tool4', true)),
   ]
 
   it('should filter out agent tools when no agents available', () => {
@@ -45,7 +44,6 @@ describe('getAvailableTools', () => {
       provider: mockProvider,
       allTools: mockTools,
       hasAgent: false,
-      permissionLevel: 3,
       interactive: true,
     })
 
@@ -60,7 +58,7 @@ describe('getAvailableTools', () => {
   })
 
   it('should include agent tools when agents are available', () => {
-    const result = getAvailableTools({ provider: mockProvider, allTools: mockTools, hasAgent: true, permissionLevel: 3, interactive: true })
+    const result = getAvailableTools({ provider: mockProvider, allTools: mockTools, hasAgent: true, interactive: true })
 
     // Should include delegate and handOver
     expect(result.some((tool) => tool.name === delegate.name)).toBe(true)
@@ -70,7 +68,7 @@ describe('getAvailableTools', () => {
   })
 
   it('should filter based on provider availability', () => {
-    const result = getAvailableTools({ provider: mockProvider, allTools: mockTools, hasAgent: true, permissionLevel: 3, interactive: true })
+    const result = getAvailableTools({ provider: mockProvider, allTools: mockTools, hasAgent: true, interactive: true })
 
     // Should include available tools
     expect(result.some((tool) => tool.name === 'tool1')).toBe(true)
@@ -81,25 +79,11 @@ describe('getAvailableTools', () => {
     expect(result).toMatchSnapshot()
   })
 
-  it('should filter based on permission level', () => {
-    const result = getAvailableTools({ provider: mockProvider, allTools: mockTools, hasAgent: true, permissionLevel: 2, interactive: true })
-
-    // Should include tools with permissionLevel <= 2
-    expect(result.some((tool) => tool.name === 'tool1')).toBe(true)
-    expect(result.some((tool) => tool.name === 'tool3')).toBe(true)
-
-    // Should exclude tools with permissionLevel > 2
-    expect(result.some((tool) => tool.name === 'tool4')).toBe(false)
-
-    expect(result).toMatchSnapshot()
-  })
-
   it('should correctly apply all filters together', () => {
     const result = getAvailableTools({
       provider: mockProvider,
       allTools: mockTools,
       hasAgent: false,
-      permissionLevel: 1,
       interactive: true,
     })
 
@@ -110,12 +94,10 @@ describe('getAvailableTools', () => {
     // Should exclude unavailable tools
     expect(result.some((tool) => tool.name === 'tool2')).toBe(false)
 
-    // Should exclude tools with higher permission level
-    expect(result.some((tool) => tool.name === 'tool3')).toBe(false)
-    expect(result.some((tool) => tool.name === 'tool4')).toBe(false)
-
     // Should only include available tools with correct permission level
     expect(result.some((tool) => tool.name === 'tool1')).toBe(true)
+    expect(result.some((tool) => tool.name === 'tool3')).toBe(true)
+    expect(result.some((tool) => tool.name === 'tool4')).toBe(true)
 
     expect(result).toMatchSnapshot()
   })

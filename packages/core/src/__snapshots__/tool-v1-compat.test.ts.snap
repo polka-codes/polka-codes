@@ -120,7 +120,6 @@ exports[`toToolInfoV1 should match snapshot for a complex tool 1`] = `
       "required": true,
     },
   ],
-  "permissionLevel": 2,
 }
 `;
 

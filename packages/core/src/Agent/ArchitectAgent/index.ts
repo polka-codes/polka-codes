@@ -1,20 +1,30 @@
 import { getAvailableTools } from '../../getAvailableTools'
-import { PermissionLevel } from '../../tool'
-import { allTools } from '../../tools'
+import {
+  askFollowupQuestion,
+  attemptCompletion,
+  delegate,
+  fetchUrl,
+  handOver,
+  listFiles,
+  readBinaryFile,
+  readFile,
+  searchFiles,
+} from '../../tools'
 import { UsageMeter } from '../../UsageMeter'
 import { AgentBase, type AgentInfo, type SharedAgentOptions } from '../AgentBase'
 import { fullSystemPrompt } from './prompts'
 
 export type ArchitectAgentOptions = SharedAgentOptions
 
+const agentTools = [askFollowupQuestion, attemptCompletion, delegate, fetchUrl, handOver, listFiles, readBinaryFile, readFile, searchFiles]
+
 export class ArchitectAgent extends AgentBase {
   constructor(options: ArchitectAgentOptions) {
-    const combinedTools = [...(options.additionalTools ?? []), ...Object.values(allTools)]
+    const combinedTools = [...(options.additionalTools ?? []), ...agentTools]
     const tools = getAvailableTools({
       provider: options.provider,
       allTools: combinedTools,
       hasAgent: (options.agents?.length ?? 0) > 0,
-      permissionLevel: PermissionLevel.Read,
       interactive: true,
     })
     const toolNamePrefix = options.toolFormat === 'native' ? '' : 'tool_'

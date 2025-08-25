@@ -5,7 +5,7 @@
 
 import { describe, expect, test } from 'bun:test'
 import { z } from 'zod'
-import { type FullToolInfoV2, PermissionLevel, ToolResponseType } from '../tool'
+import { type FullToolInfoV2, ToolResponseType } from '../tool'
 import type { AgentInfo } from './AgentBase'
 import { agentsPrompt, responsePrompts, toolUsePrompt } from './prompts'
 
@@ -29,7 +29,6 @@ describe('Agent prompts', () => {
                 },
               ],
             }),
-          permissionLevel: PermissionLevel.None,
           handler: async () => ({ type: ToolResponseType.Exit, message: 'test' }),
           isAvailable: () => true,
         },

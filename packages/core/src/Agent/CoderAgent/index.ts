@@ -1,5 +1,5 @@
 import { getAvailableTools } from '../../getAvailableTools'
-import { PermissionLevel, type ToolResponse, ToolResponseType } from '../../tool'
+import { type ToolResponse, ToolResponseType } from '../../tool'
 import { allTools, attemptCompletion } from '../../tools'
 import { UsageMeter } from '../../UsageMeter'
 import type { AgentInfo, SharedAgentOptions } from './../AgentBase'
@@ -20,7 +20,6 @@ export class CoderAgent extends AgentBase {
       provider: options.provider,
       allTools: combinedTools,
       hasAgent: (options.agents?.length ?? 0) > 0,
-      permissionLevel: PermissionLevel.Arbitrary,
       interactive: true,
     })
     const toolNamePrefix = options.toolFormat === 'native' ? '' : 'tool_'

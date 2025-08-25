@@ -8,7 +8,6 @@ exports[`getAvailableTools should filter out agent tools when no agents availabl
     "isAvailable": [Function],
     "name": "tool1",
     "parameters": [],
-    "permissionLevel": 1,
   },
   {
     "description": "Mock tool tool3",
@@ -16,7 +15,6 @@ exports[`getAvailableTools should filter out agent tools when no agents availabl
     "isAvailable": [Function],
     "name": "tool3",
     "parameters": [],
-    "permissionLevel": 2,
   },
   {
     "description": "Mock tool tool4",
@@ -24,7 +22,6 @@ exports[`getAvailableTools should filter out agent tools when no agents availabl
     "isAvailable": [Function],
     "name": "tool4",
     "parameters": [],
-    "permissionLevel": 3,
   },
 ]
 `;
@@ -73,7 +70,6 @@ exports[`getAvailableTools should include agent tools when agents are available 
         "usageValue": "Relevant files",
       },
     ],
-    "permissionLevel": 0,
   },
   {
     "description": "Hand over the current task to another agent to complete. This tool MUST NOT to be used with any other tool.",
@@ -117,7 +113,6 @@ exports[`getAvailableTools should include agent tools when agents are available 
         "usageValue": "Relevant files",
       },
     ],
-    "permissionLevel": 0,
   },
   {
     "description": "Mock tool tool1",
@@ -125,7 +120,6 @@ exports[`getAvailableTools should include agent tools when agents are available 
     "isAvailable": [Function],
     "name": "tool1",
     "parameters": [],
-    "permissionLevel": 1,
   },
   {
     "description": "Mock tool tool3",
@@ -133,7 +127,6 @@ exports[`getAvailableTools should include agent tools when agents are available 
     "isAvailable": [Function],
     "name": "tool3",
     "parameters": [],
-    "permissionLevel": 2,
   },
   {
     "description": "Mock tool tool4",
@@ -141,7 +134,6 @@ exports[`getAvailableTools should include agent tools when agents are available 
     "isAvailable": [Function],
     "name": "tool4",
     "parameters": [],
-    "permissionLevel": 3,
   },
 ]
 `;
@@ -190,7 +182,6 @@ exports[`getAvailableTools should filter based on provider availability 1`] = `
         "usageValue": "Relevant files",
       },
     ],
-    "permissionLevel": 0,
   },
   {
     "description": "Hand over the current task to another agent to complete. This tool MUST NOT to be used with any other tool.",
@@ -234,7 +225,6 @@ exports[`getAvailableTools should filter based on provider availability 1`] = `
         "usageValue": "Relevant files",
       },
     ],
-    "permissionLevel": 0,
   },
   {
     "description": "Mock tool tool1",
@@ -242,7 +232,6 @@ exports[`getAvailableTools should filter based on provider availability 1`] = `
     "isAvailable": [Function],
     "name": "tool1",
     "parameters": [],
-    "permissionLevel": 1,
   },
   {
     "description": "Mock tool tool3",
@@ -250,7 +239,6 @@ exports[`getAvailableTools should filter based on provider availability 1`] = `
     "isAvailable": [Function],
     "name": "tool3",
     "parameters": [],
-    "permissionLevel": 2,
   },
   {
     "description": "Mock tool tool4",
@@ -258,116 +246,6 @@ exports[`getAvailableTools should filter based on provider availability 1`] = `
     "isAvailable": [Function],
     "name": "tool4",
     "parameters": [],
-    "permissionLevel": 3,
-  },
-]
-`;
-
-exports[`getAvailableTools should filter based on permission level 1`] = `
-[
-  {
-    "description": "Temporarily delegate a task to another agent and receive the result back. This tool MUST NOT to be used with any other tool.",
-    "examples": [
-      {
-        "description": "Delegate a code analysis task to the analyzer agent",
-        "input": {
-          "agentName": "analyzer",
-          "context": "Need to understand the security implications of the current auth system",
-          "files": "src/auth/login.ts,src/auth/types.ts",
-          "task": "Analyze the authentication implementation",
-        },
-      },
-    ],
-    "handler": [Function: AsyncFunction],
-    "isAvailable": [Function],
-    "name": "delegate",
-    "parameters": [
-      {
-        "description": "The name of the agent to delegate the task to",
-        "name": "agentName",
-        "required": true,
-        "usageValue": "Name of the target agent",
-      },
-      {
-        "description": "The task to be completed by the target agent",
-        "name": "task",
-        "required": true,
-        "usageValue": "Task description",
-      },
-      {
-        "description": "The context information for the task",
-        "name": "context",
-        "required": true,
-        "usageValue": "Context information",
-      },
-      {
-        "description": "The files relevant to the task. Comma separated paths",
-        "name": "files",
-        "required": false,
-        "usageValue": "Relevant files",
-      },
-    ],
-    "permissionLevel": 0,
-  },
-  {
-    "description": "Hand over the current task to another agent to complete. This tool MUST NOT to be used with any other tool.",
-    "examples": [
-      {
-        "description": "Hand over a coding task to the coder agent",
-        "input": {
-          "agentName": "coder",
-          "context": "We need a secure login system with email and password",
-          "files": "src/auth/login.ts,src/auth/types.ts",
-          "task": "Implement the login feature",
-        },
-      },
-    ],
-    "handler": [Function: AsyncFunction],
-    "isAvailable": [Function],
-    "name": "hand_over",
-    "parameters": [
-      {
-        "description": "The name of the agent to hand over the task to",
-        "name": "agentName",
-        "required": true,
-        "usageValue": "Name of the target agent",
-      },
-      {
-        "description": "The task to be completed by the target agent",
-        "name": "task",
-        "required": true,
-        "usageValue": "Task description",
-      },
-      {
-        "description": "The context information for the task",
-        "name": "context",
-        "required": true,
-        "usageValue": "Context information",
-      },
-      {
-        "description": "The files relevant to the task. Comma separated paths",
-        "name": "files",
-        "required": false,
-        "usageValue": "Relevant files",
-      },
-    ],
-    "permissionLevel": 0,
-  },
-  {
-    "description": "Mock tool tool1",
-    "handler": [Function: AsyncFunction],
-    "isAvailable": [Function],
-    "name": "tool1",
-    "parameters": [],
-    "permissionLevel": 1,
-  },
-  {
-    "description": "Mock tool tool3",
-    "handler": [Function: AsyncFunction],
-    "isAvailable": [Function],
-    "name": "tool3",
-    "parameters": [],
-    "permissionLevel": 2,
   },
 ]
 `;
@@ -380,7 +258,20 @@ exports[`getAvailableTools should correctly apply all filters together 1`] = `
     "isAvailable": [Function],
     "name": "tool1",
     "parameters": [],
-    "permissionLevel": 1,
+  },
+  {
+    "description": "Mock tool tool3",
+    "handler": [Function: AsyncFunction],
+    "isAvailable": [Function],
+    "name": "tool3",
+    "parameters": [],
+  },
+  {
+    "description": "Mock tool tool4",
+    "handler": [Function: AsyncFunction],
+    "isAvailable": [Function],
+    "name": "tool4",
+    "parameters": [],
   },
 ]
 `;

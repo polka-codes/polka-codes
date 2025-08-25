@@ -1,4 +1,4 @@
-import type { FullToolInfo, FullToolInfoV2, PermissionLevel } from './tool'
+import type { FullToolInfo, FullToolInfoV2 } from './tool'
 import { askFollowupQuestion, delegate, handOver } from './tools'
 
 /**
@@ -6,7 +6,6 @@ import { askFollowupQuestion, delegate, handOver } from './tools'
  * @param provider The provider to use.
  * @param allTools All possible tools.
  * @param hasAgent Whether the agent has agents.
- * @param permissionLevel Determines which tools are available based on the agent's assigned level.
  * @param interactive Determines whether the `askFollowupQuestion` tool is available.
  * @returns The available tools
  */
@@ -14,13 +13,11 @@ export const getAvailableTools = <T extends FullToolInfoV2 | FullToolInfo>({
   provider,
   allTools,
   hasAgent,
-  permissionLevel,
   interactive,
 }: {
   provider: any
   allTools: T[]
   hasAgent: boolean
-  permissionLevel: PermissionLevel
   interactive: boolean
 }) => {
   const filteredTools = interactive ? allTools : allTools.filter((tool) => tool.name !== askFollowupQuestion.name)
@@ -34,7 +31,7 @@ export const getAvailableTools = <T extends FullToolInfoV2 | FullToolInfo>({
           continue
       }
     }
-    if (tool.isAvailable(provider) && tool.permissionLevel <= permissionLevel) {
+    if (tool.isAvailable(provider)) {
       tools.push(tool)
     }
   }
