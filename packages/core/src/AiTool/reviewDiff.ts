@@ -64,8 +64,6 @@ Do not include praise or positive feedback.
 Only include reviews for actual issues found in the changed code.
 
 Return your review as a JSON object inside a \`\`\`json block, wrapped like:
-<tool_attempt_completion>
-<tool_parameter_result>
 \`\`\`json
 {
   "overview": "Summary of specific issues found in the diff changes, 'No issues found', or 'No reviewable changes' if all modified files were excluded.",
@@ -78,8 +76,6 @@ Return your review as a JSON object inside a \`\`\`json block, wrapped like:
   ]
 }
 \`\`\`
-</tool_parameter_result>
-</tool_attempt_completion>
 `
 
 type Input = {
@@ -159,6 +155,7 @@ export default {
     return new AnalyzerAgent({
       ...options,
       additionalTools: [gitDiff],
+      requireToolUse: false,
     })
   },
 } as const satisfies AiToolDefinitionWithAgent<Input, Output>

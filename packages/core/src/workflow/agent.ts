@@ -143,6 +143,7 @@ export const makeAgentStepSpecHandler = (
                 toolFormat,
                 parameters: modelParameters,
                 usageMeter,
+                requireToolUse: true,
               })
             }
           }

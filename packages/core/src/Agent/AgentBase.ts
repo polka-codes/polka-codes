@@ -188,6 +188,7 @@ export type SharedAgentOptions = {
   toolFormat: ToolFormat
   parameters?: Record<string, any>
   usageMeter?: UsageMeter
+  requireToolUse?: boolean
 }
 
 export type AgentBaseConfig = {
@@ -205,6 +206,7 @@ export type AgentBaseConfig = {
   toolFormat: ToolFormat
   parameters: Record<string, any>
   usageMeter: UsageMeter
+  requireToolUse: boolean
 }
 
 export type AgentInfo = {
@@ -733,15 +735,26 @@ export abstract class AgentBase {
     }
 
     if (toolResponses.length === 0) {
-      // always require a tool usage
+      if (this.config.requireToolUse) {
+        return {
+          type: 'reply',
+          message: [
+            {
+              role: 'user',
+              content: responsePrompts.requireUseToolNative,
+            },
+          ],
+        }
+      }
       return {
-        type: 'reply',
-        message: [
-          {
-            role: 'user',
-            content: responsePrompts.requireUseToolNative,
-          },
-        ],
+        type: 'exit',
+        reason: {
+          type: ToolResponseType.Exit,
+          message: response
+            .filter((c) => c.type === 'text')
+            .map((c) => c.content)
+            .join(''),
+        },
       }
     }
 
@@ -794,15 +807,26 @@ export abstract class AgentBase {
     }
 
     if (toolResponses.length === 0) {
-      // always require a tool usage
+      if (this.config.requireToolUse) {
+        return {
+          type: 'reply',
+          message: [
+            {
+              role: 'user',
+              content: responsePrompts.requireUseTool,
+            },
+          ],
+        }
+      }
       return {
-        type: 'reply',
-        message: [
-          {
-            role: 'user',
-            content: responsePrompts.requireUseTool,
-          },
-        ],
+        type: 'exit',
+        reason: {
+          type: ToolResponseType.Exit,
+          message: response
+            .filter((c) => c.type === 'text')
+            .map((c) => c.content)
+            .join(''),
+        },
       }
     }
 

@@ -56,6 +56,7 @@ export class AnalyzerAgent extends AgentBase {
       parameters: options.parameters ?? {},
       usageMeter: options.usageMeter ?? new UsageMeter(),
       requestTimeoutSeconds: options.requestTimeoutSeconds,
+      requireToolUse: options.requireToolUse ?? true,
     })
   }
 
