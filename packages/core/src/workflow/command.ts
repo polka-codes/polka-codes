@@ -31,7 +31,7 @@ export const commandStepSpecHandler: StepSpecHandler = {
           const commandString = command
             .map((arg) => {
               if (/[^A-Za-z0-9_/:=-]/.test(arg)) {
-                return `"${arg.replace(/"/g, '\\"')}"`
+                return `"${arg.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
               }
               return arg
             })
