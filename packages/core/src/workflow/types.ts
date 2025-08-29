@@ -29,17 +29,17 @@ export type WorkflowContext = {
   parameters: Record<string, any>
 }
 
+type InputType = {
+  $: Record<string, Record<string, Json>>
+  [key: string]: Json
+}
+
 export type StepSpecRaw = {
   id: string
   type: string
   inputSchema?: z.ZodType<any>
   outputSchema?: z.ZodType<any>
-  run: (
-    input: Record<string, Json>,
-    context: WorkflowContext,
-    resumedState?: any,
-    allOutputs?: Record<string, Record<string, Json>>,
-  ) => Promise<StepRunResult<Record<string, Json>>>
+  run: (input: InputType, context: WorkflowContext, resumedState?: any) => Promise<StepRunResult<Record<string, Json>>>
 }
 
 export interface SequentialStepSpec<
@@ -64,7 +64,11 @@ export interface CustomStepSpec<
   TOutput extends Record<string, Json> = Record<string, Json>,
 > extends BaseStepSpec<TInput, TOutput> {
   type: 'custom'
-  run: (input: TInput, context: WorkflowContext, resumedState?: any) => Promise<StepRunResult<TOutput>>
+  run: (
+    input: TInput & { $: Record<string, Record<string, Json>> },
+    context: WorkflowContext,
+    resumedState?: any,
+  ) => Promise<StepRunResult<TOutput>>
 }
 
 export type StepRunResultSuccess<T extends Record<string, Json>> = {

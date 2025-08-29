@@ -2,7 +2,7 @@
 import { describe, expect, spyOn, test } from 'bun:test'
 import { z } from 'zod'
 import { combineHandlers, customStepSpecHandler, sequentialStepSpecHandler } from './steps'
-import type { CustomStepSpec, StepSpecHandlerFn, WorkflowContext, WorkflowSpec } from './types'
+import type { CustomStepSpec, SequentialStepSpec, StepSpecHandlerFn, WorkflowContext, WorkflowSpec } from './types'
 import { resume, run } from './workflow'
 
 describe('workflow', () => {
@@ -33,7 +33,7 @@ describe('workflow', () => {
 
       const result = await run(mockWorkflow, mockContext, handler, { value: 'test' })
 
-      expect(runSpy).toHaveBeenCalledWith({ value: 'test' }, mockContext, undefined, {})
+      expect(runSpy).toHaveBeenCalledWith({ value: 'test', $: {} }, mockContext, undefined)
       expect(result).toEqual({ type: 'success', output: { result: 'SUCCESS' } })
     })
 
@@ -78,11 +78,56 @@ describe('workflow', () => {
 
       await resume(mockWorkflow, mockContext, handler, 'RESUMED_STATE', { value: 'new-test' })
 
-      expect(runSpy).toHaveBeenCalledWith({ value: 'new-test' }, mockContext, 'RESUMED_STATE', {})
+      expect(runSpy).toHaveBeenCalledWith({ value: 'new-test', $: {} }, mockContext, 'RESUMED_STATE')
     })
 
-    // Tests for success, error, and paused results on resume are similar to run
-    // and are omitted for brevity, as they follow the same logic.
+    test('should return success on resume', async () => {
+      const rootStep = {
+        id: 'root',
+        type: 'custom',
+        run: async (_input: any, _ctx: any, resumedState?: any) => {
+          if (resumedState) {
+            return { type: 'success' as const, output: { result: 'RESUMED_SUCCESS' } }
+          }
+          return { type: 'paused' as const, state: 'PAUSED' }
+        },
+      }
+      const handler: StepSpecHandlerFn<any, any> = () => rootStep
+      const result = await resume(mockWorkflow, mockContext, handler, 'PAUSED', {})
+      expect(result).toEqual({ type: 'success', output: { result: 'RESUMED_SUCCESS' } })
+    })
+
+    test('should return error on resume', async () => {
+      const rootStep = {
+        id: 'root',
+        type: 'custom',
+        run: async (_input: any, _ctx: any, resumedState?: any) => {
+          if (resumedState) {
+            return { type: 'error' as const, error: 'RESUMED_FAILURE' }
+          }
+          return { type: 'paused' as const, state: 'PAUSED' }
+        },
+      }
+      const handler: StepSpecHandlerFn<any, any> = () => rootStep
+      const result = await resume(mockWorkflow, mockContext, handler, 'PAUSED', {})
+      expect(result).toEqual({ type: 'error', error: 'RESUMED_FAILURE' })
+    })
+
+    test('should return paused on resume', async () => {
+      const rootStep = {
+        id: 'root',
+        type: 'custom',
+        run: async (_input: any, _ctx: any, resumedState?: any) => {
+          if (resumedState === 'PAUSED_1') {
+            return { type: 'paused' as const, state: 'PAUSED_2' }
+          }
+          return { type: 'paused' as const, state: 'PAUSED_1' }
+        },
+      }
+      const handler: StepSpecHandlerFn<any, any> = () => rootStep
+      const result = await resume(mockWorkflow, mockContext, handler, 'PAUSED_1', {})
+      expect(result).toEqual({ type: 'paused', state: 'PAUSED_2' })
+    })
   })
 
   describe('sequential workflow', () => {
@@ -119,7 +164,7 @@ describe('workflow', () => {
     })
 
     test('a step should be able to access the output of a previous step using $. syntax', async () => {
-      const workflow: WorkflowSpec = {
+      const workflow: WorkflowSpec<any, any, SequentialStepSpec<any, any, CustomStepSpec>> = {
         name: 'test-sequential-ref',
         step: {
           id: 'seq',
@@ -130,28 +175,25 @@ describe('workflow', () => {
             {
               id: 'step1',
               type: 'custom',
-              inputSchema: z.object({}),
               outputSchema: z.object({ message: z.string() }),
               run: async () => ({ type: 'success', output: { message: 'hello' } }),
-            } as CustomStepSpec,
+            },
             {
               id: 'step2_input_builder',
               type: 'custom',
-              inputSchema: z.any(), // It receives output of step1
               outputSchema: z.object({ fromStep1: z.string() }),
-              run: async () => ({ type: 'success', output: { fromStep1: '$.step1.message' } }),
-            } as CustomStepSpec,
+              run: async (input) => ({ type: 'success', output: { fromStep1: input.$.step1.message } }),
+            },
             {
               id: 'step2',
               type: 'custom',
               inputSchema: z.object({ fromStep1: z.string() }),
               outputSchema: z.object({ final: z.string() }),
-              run: async (input: any) => ({ type: 'success', output: { final: `${input.fromStep1} world` } }),
-            } as CustomStepSpec,
+              run: async (input) => ({ type: 'success', output: { final: `${input.fromStep1} world` } }),
+            },
           ],
-        } as any,
+        },
       }
-
       const result = await run(workflow, mockContext, handler, {})
       expect(result).toEqual({ type: 'success', output: { final: 'hello world' } })
     })

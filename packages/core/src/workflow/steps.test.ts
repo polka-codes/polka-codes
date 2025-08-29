@@ -33,11 +33,11 @@ describe('steps', () => {
 
       const step1 = { id: 'test1', type: 'test1', inputSchema: emptySchema, outputSchema: emptySchema } as any
       const runnable1 = combined(step1, rootHandler)
-      expect(runnable1.run({}, mockContext)).resolves.toEqual({ type: 'success', output: { value: 'test1' } })
+      expect(runnable1.run({ $: {} }, mockContext)).resolves.toEqual({ type: 'success', output: { value: 'test1' } })
 
       const step2 = { id: 'test2', type: 'test2', inputSchema: emptySchema, outputSchema: emptySchema } as any
       const runnable2 = combined(step2, rootHandler)
-      expect(runnable2.run({}, mockContext)).resolves.toEqual({ type: 'success', output: { value: 'test2' } })
+      expect(runnable2.run({ $: {} }, mockContext)).resolves.toEqual({ type: 'success', output: { value: 'test2' } })
     })
 
     test('should throw on duplicate handler types', () => {
@@ -56,39 +56,34 @@ describe('steps', () => {
   })
 
   describe('sequentialStepSpecHandler', () => {
-    const baseStep = {
-      inputSchema: emptySchema,
-      outputSchema: emptySchema,
-    }
     test('should run steps in sequence and pass output', async () => {
       const step1 = {
-        ...baseStep,
         id: 'step1',
         run: async (input: any) => ({ type: 'success', output: { ...input, step1: true } }),
       }
       const step2 = {
-        ...baseStep,
         id: 'step2',
         run: async (input: any) => ({ type: 'success', output: { ...input, step2: true } }),
       }
       const rootHandler = (step: any) => (step.id === 'step1' ? step1 : step2)
-      const handler = sequentialStepSpecHandler.handler(
-        { ...baseStep, id: 'seq', type: 'sequential', steps: [step1 as any, step2 as any] },
-        rootHandler as any,
-      )
+      const handler = sequentialStepSpecHandler.handler({ id: 'seq', type: 'sequential', steps: [step1, step2] }, rootHandler as any)
 
-      const result = await handler.run({ initial: true }, mockContext)
-      expect(result).toEqual({ type: 'success', output: { initial: true, step1: true, step2: true } })
+      const result = await handler.run({ initial: true, $: {} }, mockContext)
+      expect(result.type).toBe('success')
+      if (result.type === 'success') {
+        expect(result.output.initial).toBe(true)
+        expect(result.output.step1).toBe(true)
+        expect(result.output.step2).toBe(true)
+        expect(result.output.$).toBeDefined()
+      }
     })
 
     test('should pause and resume with new input', async () => {
       const step1 = {
-        ...baseStep,
         id: 'step1',
         run: async (input: { value: number }) => ({ type: 'success' as const, output: { value: input.value * 2 } }),
       }
       const step2 = {
-        ...baseStep,
         id: 'step2',
         run: async (input: { value: number }, _ctx: any, resumedState?: any) => {
           if (!resumedState) {
@@ -99,18 +94,18 @@ describe('steps', () => {
       }
       const rootHandler = (step: any) => (step.id === 'step1' ? step1 : step2)
       const handler = sequentialStepSpecHandler.handler(
-        { ...baseStep, id: 'seq', type: 'sequential', steps: [step1 as any, step2 as any] },
+        { id: 'seq', type: 'sequential', steps: [step1 as any, step2 as any] },
         rootHandler as any,
       )
 
       // Run and pause
-      const pausedResult = await handler.run({ value: 10 }, mockContext)
+      const pausedResult = await handler.run({ value: 10, $: {} }, mockContext)
       expect(pausedResult.type).toBe('paused')
 
       const pausedState = (pausedResult as any).state
 
       // Resume with new input
-      const resumedResult = await handler.run({ value: 100 }, mockContext, pausedState)
+      const resumedResult = await handler.run({ value: 100, $: {} }, mockContext, pausedState)
       expect(resumedResult).toEqual({ type: 'success', output: { value: 101 } })
     })
 
@@ -118,19 +113,16 @@ describe('steps', () => {
       const rootHandler = combineHandlers(customStepSpecHandler)
 
       const step1: CustomStepSpec = {
-        ...baseStep,
         id: 'step1',
         type: 'custom',
         run: async () => ({ type: 'success', output: { message: 'from step1' } }),
       }
       const step2: CustomStepSpec = {
-        ...baseStep,
         id: 'step2',
         type: 'custom',
-        run: async () => ({ type: 'success', output: { ref: '$.step1.message' } }),
+        run: async (input: any) => ({ type: 'success', output: { ref: input.$.step1.message } }),
       }
       const step3: CustomStepSpec = {
-        ...baseStep,
         id: 'step3',
         type: 'custom',
         run: async (input: any) => ({ type: 'success', output: { value: input.ref } }),
@@ -138,7 +130,6 @@ describe('steps', () => {
 
       const handler = sequentialStepSpecHandler.handler(
         {
-          ...baseStep,
           id: 'seq',
           type: 'sequential',
           steps: [step1, step2, step3],
@@ -146,39 +137,35 @@ describe('steps', () => {
         (step, rh) => rootHandler(step, rh),
       )
 
-      const result = await handler.run({}, mockContext)
+      const result = await handler.run({ $: {} }, mockContext)
       expect(result).toEqual({ type: 'success', output: { value: 'from step1' } })
     })
 
     test('should resume with allOutputs', async () => {
       const step1: CustomStepSpec = {
-        ...baseStep,
         id: 'step1',
         type: 'custom',
         run: async () => ({ type: 'success', output: { message: 'from step1' } }),
       }
       const step2: CustomStepSpec = {
-        ...baseStep,
         id: 'step2',
         type: 'custom',
-        run: async (_input: any, _ctx: any, resumedState?: any) => {
+        run: async (input: any, _ctx: any, resumedState?: any) => {
           if (!resumedState) {
             return { type: 'paused', state: { a: 1 } }
           }
-          return { type: 'success', output: { ref: '$.step1.message' } }
+          return { type: 'success', output: { ref: input.$.step1.message } }
         },
       }
       const step3: CustomStepSpec = {
-        ...baseStep,
         id: 'step3',
         type: 'custom',
-        run: async (input: any) => ({ type: 'success', output: { value: input.ref } }),
+        run: async (input) => ({ type: 'success', output: { value: input.ref } }),
       }
 
       const rootHandler = combineHandlers(customStepSpecHandler)
       const handler = sequentialStepSpecHandler.handler(
         {
-          ...baseStep,
           id: 'seq',
           type: 'sequential',
           steps: [step1, step2, step3],
@@ -187,13 +174,13 @@ describe('steps', () => {
       )
 
       // Run and pause at step2
-      const pausedResult = await handler.run({}, mockContext)
+      const pausedResult = await handler.run({ $: {} }, mockContext)
       expect(pausedResult.type).toBe('paused')
       const pausedState = (pausedResult as any).state
       expect(pausedState.allOutputs.step1).toEqual({ message: 'from step1' })
 
       // Resume
-      const resumedResult = await handler.run({}, mockContext, pausedState)
+      const resumedResult = await handler.run({ $: {} }, mockContext, pausedState)
       expect(resumedResult).toEqual({ type: 'success', output: { value: 'from step1' } })
     })
   })
@@ -222,11 +209,94 @@ describe('steps', () => {
         rootHandler as any,
       )
 
-      const result = await handler.run({ items: [{ value: 1 }, { value: 2 }, { value: 3 }] }, mockContext)
+      const result = await handler.run({ items: [{ value: 1 }, { value: 2 }, { value: 3 }], $: {} }, mockContext)
       expect(result).toEqual({ type: 'success', output: { results: [{ result: 2 }, { result: 4 }, { result: 6 }] } })
     })
 
-    // More tests for parallel steps (error, pause) would go here
+    test('should return an error if one of the steps fails', async () => {
+      const innerStep: CustomStepSpec = {
+        id: 'inner',
+        type: 'custom',
+        inputSchema: z.object({ value: z.number() }) as any,
+        outputSchema: z.object({ result: z.number() }) as any,
+        run: async (input: Record<string, Json>) => {
+          if ((input as { value: number }).value === 2) {
+            return { type: 'error', error: 'Step failed' }
+          }
+          return {
+            type: 'success',
+            output: { result: (input as { value: number }).value * 2 },
+          }
+        },
+      }
+      const rootHandler = () => innerStep
+      const handler = parallelStepSpecHandler.handler(
+        {
+          id: 'par',
+          type: 'parallel',
+          step: innerStep as any,
+          inputSchema: z.object({ items: z.array(z.any()) }),
+          outputSchema: z.object({ results: z.array(z.any()) }),
+        },
+        rootHandler as any,
+      )
+
+      const result = await handler.run({ items: [{ value: 1 }, { value: 2 }, { value: 3 }], $: {} }, mockContext)
+      expect(result.type).toBe('error')
+      expect((result as any).error).toBeInstanceOf(Error)
+      expect((result as any).error.message).toBe('Multiple errors: Step failed')
+    })
+
+    test('should pause and resume', async () => {
+      let runCount = 0
+      const innerStep: CustomStepSpec = {
+        id: 'inner',
+        type: 'custom',
+        inputSchema: z.object({ value: z.number() }) as any,
+        outputSchema: z.object({ result: z.number() }) as any,
+        run: async (input: Record<string, Json>, _ctx, resumedState) => {
+          runCount++
+          if ((input as { value: number }).value === 2 && !resumedState) {
+            return { type: 'paused', state: { a: 1 } }
+          }
+          return {
+            type: 'success',
+            output: { result: (input as { value: number }).value * 2 },
+          }
+        },
+      }
+      const rootHandler = () => innerStep
+      const handler = parallelStepSpecHandler.handler(
+        {
+          id: 'par',
+          type: 'parallel',
+          step: innerStep as any,
+          inputSchema: z.object({ items: z.array(z.any()) }),
+          outputSchema: z.object({ results: z.array(z.any()) }),
+        },
+        rootHandler as any,
+      )
+
+      const pausedResult = await handler.run({ items: [{ value: 1 }, { value: 2 }, { value: 3 }], $: {} }, mockContext)
+      expect(pausedResult.type).toBe('paused')
+      expect(runCount).toBe(3)
+
+      const pausedState = (pausedResult as any).state
+      expect(pausedState).toEqual([
+        { type: 'success', output: { result: 2 } },
+        { type: 'paused', state: { a: 1 } },
+        { type: 'success', output: { result: 6 } },
+      ])
+
+      runCount = 0
+      const resumedResult = await handler.run({ items: [{ value: 1 }, { value: 2 }, { value: 3 }], $: {} }, mockContext, pausedState)
+      expect(resumedResult).toEqual({
+        type: 'success',
+        output: { results: [{ result: 2 }, { result: 4 }, { result: 6 }] },
+      })
+      // Only the paused step should run again
+      expect(runCount).toBe(1)
+    })
   })
 
   describe('customStepSpecHandler', () => {
@@ -241,10 +311,10 @@ describe('steps', () => {
         },
       }
       const handler = customStepSpecHandler.handler(customStep, () => ({}) as any)
-      const result = await handler.run({ initial: true }, mockContext)
+      const result = await handler.run({ initial: true, $: {} }, mockContext)
       expect(result).toEqual({
         type: 'success',
-        output: { initial: true, custom: true, contextReceived: true },
+        output: { $: {}, initial: true, custom: true, contextReceived: true },
       })
     })
   })

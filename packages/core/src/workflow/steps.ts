@@ -82,21 +82,20 @@ export const parallelStepSpecHandler: StepSpecHandler = {
     return {
       ...step,
       async run(
-        input: Record<string, Json>,
-        context: WorkflowContext,
+        input,
+        context,
         resumedState?: (StepRunResult<Record<string, Json>> | undefined)[],
-        allOutputs?: Record<string, Record<string, Json>>,
       ): Promise<StepRunResult<Record<string, Json>>> {
         const items = (input.items as Record<string, Json>[]) ?? []
         const promises = items.map((innerInput, index) => {
           const previousResult = resumedState?.[index]
           if (previousResult) {
             if (previousResult.type === 'paused') {
-              return runStep(innerStep, innerInput, context, previousResult.state, allOutputs ?? {})
+              return runStep(innerStep, innerInput, context, previousResult.state, input.$)
             }
-            return Promise.resolve(previousResult)
+            return previousResult
           }
-          return runStep(innerStep, innerInput, context, undefined, allOutputs ?? {})
+          return runStep(innerStep, innerInput, context, undefined, input.$)
         })
         const results = await Promise.all(promises)
 
@@ -125,7 +124,7 @@ export const customStepSpecHandler: StepSpecHandler = {
   handler(step: CustomStepSpec) {
     return {
       ...step,
-      async run(input: Record<string, Json>, context: WorkflowContext, resumedState?: any) {
+      async run(input, context, resumedState) {
         return step.run(input, context, resumedState)
       },
     }

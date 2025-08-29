@@ -2,7 +2,10 @@
 import { template } from 'lodash'
 import type { Json, TemplatedString } from './types'
 
-export const resolveTemplatedString = <T extends { [k: string]: Json }>(templatedString: string | TemplatedString<T>, input: T): string => {
+export const resolveTemplatedString = (
+  templatedString: string | TemplatedString<{ [k: string]: Json }>,
+  input: { [k: string]: Json },
+): string => {
   if (typeof templatedString === 'string') {
     return templatedString
   }

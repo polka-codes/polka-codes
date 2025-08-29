@@ -23,7 +23,7 @@ describe('resolveTemplatedString', () => {
     const result = resolveTemplatedString(
       {
         type: 'function',
-        fn: (input: { name: string }) => `hello ${input.name.toUpperCase()}`,
+        fn: (input: Record<string, any>) => `hello ${input.name.toUpperCase()}`,
       },
       { name: 'world' },
     )

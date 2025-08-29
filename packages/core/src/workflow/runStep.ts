@@ -9,9 +9,8 @@ export const runStep = async (
 ): Promise<StepRunResult<Record<string, Json>>> => {
   try {
     const validatedInput = step.inputSchema?.parse(input) ?? input
-    validatedInput.$ = allOutputs
 
-    const result = await step.run(validatedInput, context, resumedState, allOutputs)
+    const result = await step.run({ ...validatedInput, $: allOutputs }, context, resumedState)
 
     if (result.type === 'success') {
       const validatedOutput = step.outputSchema?.parse(result.output) ?? result.output

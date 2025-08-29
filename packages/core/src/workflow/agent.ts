@@ -20,7 +20,10 @@ import { UsageMeter } from '../UsageMeter'
 import type { BaseStepSpec, Json, StepRunResult, StepSpecHandler, TemplatedString, WorkflowContext } from './types'
 import { resolveTemplatedString } from './utils'
 
-export type AgentStepSpec = BaseStepSpec & {
+export type AgentStepSpec<
+  TInput extends Record<string, Json> = Record<string, Json>,
+  TOutput extends Record<string, Json> = Record<string, Json>,
+> = BaseStepSpec<TInput, TOutput> & {
   type: 'agent'
   messages: (UserContent | TemplatedString)[]
   outputSchema: z.ZodType

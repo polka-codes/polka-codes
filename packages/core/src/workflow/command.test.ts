@@ -27,7 +27,7 @@ describe('commandStepSpecHandler', () => {
     }
     const executeCommandSpy = spyOn(context.provider, 'executeCommand')
     const handler = commandStepSpecHandler.handler(step, rootHandler)
-    const result = await handler.run({}, context)
+    const result = await handler.run({ $: {} }, context)
 
     expect(executeCommandSpy).toHaveBeenCalledWith(`echo hello`, false)
     expect(result).toEqual({ type: 'success', output: {} })
@@ -48,7 +48,7 @@ describe('commandStepSpecHandler', () => {
     }
     const executeCommandSpy = spyOn(context.provider, 'executeCommand')
     const handler = commandStepSpecHandler.handler(step, rootHandler)
-    await handler.run({ message: 'hello world' }, context)
+    await handler.run({ message: 'hello world', $: {} }, context)
     expect(executeCommandSpy).toHaveBeenCalledWith(`echo "hello world"`, false)
   })
 
@@ -67,7 +67,7 @@ describe('commandStepSpecHandler', () => {
       parameters: {},
     }
     const handler = commandStepSpecHandler.handler(step, rootHandler)
-    const result = await handler.run({}, context)
+    const result = await handler.run({ $: {} }, context)
     expect(result).toEqual({
       type: 'success',
       output: { stdout: 'hello', exitCode: 0 },
@@ -91,7 +91,7 @@ describe('commandStepSpecHandler', () => {
       parameters: {},
     }
     const handler = commandStepSpecHandler.handler(step, rootHandler)
-    const result = await handler.run({}, context)
+    const result = await handler.run({ $: {} }, context)
     expect(result).toEqual({ type: 'error', error })
   })
 
@@ -107,7 +107,7 @@ describe('commandStepSpecHandler', () => {
       parameters: {},
     }
     const handler = commandStepSpecHandler.handler(step, rootHandler)
-    const result = await handler.run({}, context)
+    const result = await handler.run({ $: {} }, context)
     expect(result.type).toBe('error')
     expect((result as any).error).toBeInstanceOf(Error)
     expect((result as any).error.message).toBe('executeCommand is not available in the provider')
