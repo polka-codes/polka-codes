@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'bun:test'
 import { z } from 'zod'
 import type { FullToolInfoV2 } from './tool'
-import { PermissionLevel, ToolResponseType } from './tool'
+import { ToolResponseType } from './tool'
 import { toToolInfoV1 } from './tool-v1-compat'
 import { askFollowupQuestion } from './tools'
 
@@ -11,7 +11,6 @@ describe('toToolInfoV1', () => {
     const toolV2: FullToolInfoV2 = {
       name: 'test-tool',
       description: 'A test tool',
-      permissionLevel: PermissionLevel.None,
       isAvailable: () => true,
       handler: async () => ({ type: ToolResponseType.Exit, message: 'test' }),
       parameters: z.object({
@@ -31,7 +30,6 @@ describe('toToolInfoV1', () => {
     const toolV2: FullToolInfoV2 = {
       name: 'nested-tool',
       description: 'A tool with nested objects',
-      permissionLevel: PermissionLevel.None,
       isAvailable: () => true,
       handler: async () => ({ type: ToolResponseType.Exit, message: 'test' }),
       parameters: z.object({
@@ -50,7 +48,6 @@ describe('toToolInfoV1', () => {
     const toolV2: FullToolInfoV2 = {
       name: 'array-tool',
       description: 'A tool with an array of strings',
-      permissionLevel: PermissionLevel.None,
       isAvailable: () => true,
       handler: async () => ({ type: ToolResponseType.Exit, message: 'test' }),
       parameters: z.object({
@@ -67,7 +64,6 @@ describe('toToolInfoV1', () => {
     const toolV2: FullToolInfoV2 = {
       name: 'array-of-objects-tool',
       description: 'A tool with an array of objects',
-      permissionLevel: PermissionLevel.None,
       isAvailable: () => true,
       handler: async () => ({ type: ToolResponseType.Exit, message: 'test' }),
       parameters: z.object({
@@ -91,7 +87,6 @@ describe('toToolInfoV1', () => {
     const toolV2: FullToolInfoV2 = {
       name: 'complex-tool',
       description: 'A complex tool for snapshot testing',
-      permissionLevel: PermissionLevel.Write,
       isAvailable: () => true,
       handler: async () => ({ type: ToolResponseType.Exit, message: 'test' }),
       parameters: z.object({

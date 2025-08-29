@@ -2,7 +2,7 @@
 // Tool for renaming files in the filesystem
 
 import { z } from 'zod'
-import { type FullToolInfoV2, PermissionLevel, type ToolHandler, type ToolInfoV2, ToolResponseType } from '../tool'
+import { type FullToolInfoV2, type ToolHandler, type ToolInfoV2, ToolResponseType } from '../tool'
 import type { FilesystemProvider } from './provider'
 
 export const toolInfo = {
@@ -24,7 +24,6 @@ export const toolInfo = {
         },
       ],
     }),
-  permissionLevel: PermissionLevel.Write,
 } as const satisfies ToolInfoV2
 
 export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (provider, args) => {

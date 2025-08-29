@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { type FullToolInfoV2, PermissionLevel, type ToolHandler, type ToolInfoV2, ToolResponseType } from '../tool'
+import { type FullToolInfoV2, type ToolHandler, type ToolInfoV2, ToolResponseType } from '../tool'
 import type { CommandProvider } from './provider'
 
 export const toolInfo = {
@@ -38,7 +38,6 @@ export const toolInfo = {
         },
       ],
     }),
-  permissionLevel: PermissionLevel.Arbitrary,
 } as const satisfies ToolInfoV2
 
 export const handler: ToolHandler<typeof toolInfo, CommandProvider> = async (provider, args) => {

@@ -8,17 +8,6 @@ export type ToolExample = {
   input: Record<string, ToolParameterValue>
 }
 
-export enum PermissionLevel {
-  // This tool is completely safe
-  None = 0,
-  // This tool can read files
-  Read = 1,
-  // This tool can write files
-  Write = 2,
-  // This tool can perform arbitrary action
-  Arbitrary = 3,
-}
-
 export type ToolParameter = {
   name: string
   description: string
@@ -33,14 +22,12 @@ export type ToolInfo = {
   description: string
   parameters: ToolParameter[]
   examples?: ToolExample[]
-  permissionLevel: PermissionLevel
 }
 
 export type ToolInfoV2 = {
   name: string
   description: string
   parameters: z.ZodObject<any>
-  permissionLevel: PermissionLevel
 }
 
 export type FullToolInfo = ToolInfo & {

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { type FullToolInfoV2, PermissionLevel, type ToolHandler, type ToolInfoV2, ToolResponseType } from '../tool'
+import { type FullToolInfoV2, type ToolHandler, type ToolInfoV2, ToolResponseType } from '../tool'
 import type { FilesystemProvider } from './provider'
 
 export const toolInfo = {
@@ -9,7 +9,6 @@ export const toolInfo = {
   parameters: z.object({
     url: z.string().describe('The URL or local path of the file to read.'),
   }),
-  permissionLevel: PermissionLevel.Read,
 } as const satisfies ToolInfoV2
 
 export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (provider, args) => {

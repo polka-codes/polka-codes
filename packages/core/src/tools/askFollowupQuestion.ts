@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { type FullToolInfoV2, PermissionLevel, type ToolHandler, type ToolInfoV2, ToolResponseType } from '../tool'
+import { type FullToolInfoV2, type ToolHandler, type ToolInfoV2, ToolResponseType } from '../tool'
 import type { InteractionProvider } from './provider'
 
 const questionObject = z.object({
@@ -62,7 +62,6 @@ export const toolInfo = {
         },
       ],
     }),
-  permissionLevel: PermissionLevel.None,
 } as const satisfies ToolInfoV2
 
 export const handler: ToolHandler<typeof toolInfo, InteractionProvider> = async (provider, args) => {

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { PermissionLevel, type ToolInfo } from '../tool'
+import type { ToolInfo } from '../tool'
 import { parseAssistantMessage } from './parseAssistantMessage'
 
 describe('parseAssistantMessage', () => {
@@ -11,7 +11,6 @@ describe('parseAssistantMessage', () => {
         { name: 'param1', description: 'First parameter', required: true, usageValue: 'value1' },
         { name: 'param2', description: 'Second parameter', required: false, usageValue: 'value2' },
       ],
-      permissionLevel: PermissionLevel.None,
     },
     {
       name: 'read_file',
@@ -25,7 +24,6 @@ describe('parseAssistantMessage', () => {
           allowMultiple: true,
         },
       ],
-      permissionLevel: PermissionLevel.Read,
     },
     {
       name: 'nested_tool',
@@ -57,7 +55,6 @@ describe('parseAssistantMessage', () => {
           ],
         },
       ],
-      permissionLevel: PermissionLevel.None,
     },
     {
       name: 'combined_tool',
@@ -90,7 +87,6 @@ describe('parseAssistantMessage', () => {
           ],
         },
       ],
-      permissionLevel: PermissionLevel.None,
     },
   ]
   const toolPrefix = 'test_'
@@ -278,7 +274,6 @@ describe('parseAssistantMessage', () => {
         name: 'another_tool',
         description: 'Another test tool',
         parameters: [{ name: 'paramA', description: 'Parameter A', required: true, usageValue: 'valueA' }],
-        permissionLevel: PermissionLevel.None,
       },
     ]
 
@@ -444,7 +439,6 @@ describe('parseAssistantMessage', () => {
     const askFollowupQuestionV1: ToolInfo = {
       name: 'ask_followup_question',
       description: 'ask a question',
-      permissionLevel: PermissionLevel.None,
       parameters: [
         {
           name: 'questions',
@@ -492,7 +486,6 @@ describe('parseAssistantMessage', () => {
     const askFollowupQuestionV1: ToolInfo = {
       name: 'ask_followup_question',
       description: 'ask a question',
-      permissionLevel: PermissionLevel.None,
       parameters: [
         {
           name: 'questions',
@@ -541,7 +534,6 @@ describe('parseAssistantMessage', () => {
           // allowMultiple not set (defaults to false)
         },
       ],
-      permissionLevel: PermissionLevel.None,
     }
 
     const message = `<test_no_array_tool>
@@ -576,7 +568,6 @@ describe('parseAssistantMessage', () => {
           // No children defined
         },
       ],
-      permissionLevel: PermissionLevel.None,
     }
 
     const message = `<test_no_nest_tool>

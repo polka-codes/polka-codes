@@ -1,0 +1,70 @@
+import type { AgentStepSpec } from './agent'
+import type { BaseStepSpec, CustomStepSpec, Json } from './types'
+
+class StepsBuilder<
+  TInput extends Record<string, Json> = Record<string, Json>,
+  TOutput extends Record<string, Json> = Record<string, Json>,
+> {
+  readonly #steps: BaseStepSpec[] = []
+
+  public build() {
+    if (this.#steps.length === 0) {
+      throw new Error('A workflow must have at least one step.')
+    }
+
+    const rootStep =
+      this.#steps.length > 1
+        ? {
+            id: 'root',
+            type: 'sequential',
+            steps: this.#steps,
+          }
+        : this.#steps[0]
+
+    return rootStep
+  }
+
+  public step<TStepOutput extends Record<string, Json>, TStepSpec extends BaseStepSpec<TOutput, TStepOutput>>(
+    step: TStepSpec,
+  ): StepsBuilder<TInput, TStepOutput> {
+    this.#steps.push(step)
+    return this as unknown as StepsBuilder<TInput, TStepOutput>
+  }
+
+  public parallel<TStepOutput extends Record<string, Json>>(
+    id: string,
+    step: BaseStepSpec<TOutput, TStepOutput>,
+  ): StepsBuilder<TInput, TStepOutput> {
+    return this.step({
+      id,
+      type: 'parallel',
+      step,
+    })
+  }
+
+  public custom<TStepOutput extends Record<string, Json>>(
+    id: string,
+    run: CustomStepSpec<TOutput, TStepOutput>['run'],
+  ): StepsBuilder<TInput, TStepOutput> {
+    return this.step({
+      id,
+      type: 'custom',
+      run,
+    })
+  }
+
+  public agent<TStepOutput extends Record<string, Json>>(
+    id: string,
+    spec: Omit<AgentStepSpec<TOutput, TStepOutput>, 'id' | 'type'>,
+  ): StepsBuilder<TInput, TStepOutput> {
+    return this.step({
+      ...spec,
+      id,
+      type: 'agent',
+    })
+  }
+}
+
+export const builder = <TInput extends Record<string, Json>>(): StepsBuilder<TInput, TInput> => {
+  return new StepsBuilder()
+}
