@@ -80,7 +80,14 @@ export const commitCommand = new Command('commit')
         process.exit(1)
       }
     } catch (error) {
-      console.error('Error:', error)
-      process.exit(1)
+      if ((error as Error).constructor.name === 'ExitPromptError') {
+        spinner.stop()
+        console.log('\nCommit cancelled by user.')
+        process.exit(0)
+      } else {
+        spinner.fail('An unexpected error occurred.')
+        console.error('Error:', error)
+        process.exit(1)
+      }
     }
   })
