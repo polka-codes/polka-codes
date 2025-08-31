@@ -151,8 +151,8 @@ export class UsageMeter {
 
   /** Return true once either messages or cost exceed the configured caps. */
   isLimitExceeded() {
-    const messageCount = this.#maxMessages !== undefined && this.#calls >= this.#maxMessages
-    const cost = this.#maxCost !== undefined && this.#totals.cost >= this.#maxCost
+    const messageCount = this.#maxMessages > 0 && this.#calls >= this.#maxMessages
+    const cost = this.#maxCost > 0 && this.#totals.cost >= this.#maxCost
 
     return {
       messageCount,
