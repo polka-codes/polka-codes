@@ -52,8 +52,8 @@ export class Runner {
     this.#options = options
 
     this.usageMeter = new UsageMeter(merge(prices, options.config.prices ?? {}), {
-      maxMessages: options.config.maxMessageCount ?? 0,
-      maxCost: options.config.budget ?? 0,
+      maxMessages: options.maxMessageCount ?? 0,
+      maxCost: options.budget ?? 0,
     })
 
     let rules = options.config.rules
