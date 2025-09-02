@@ -20,7 +20,7 @@
     "@polka-codes/cli-shared": "workspace:*",
     "@polka-codes/core": "workspace:*",
     "commander": "^14.0.0",
-    "dotenv": "^16.4.7",
+    "dotenv": "^17.2.1",
     "ignore": "^7.0.3",
     "lodash": "^4.17.21",
     "ws": "^8.18.1",
