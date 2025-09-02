@@ -8,6 +8,7 @@ import {
   executeCommand,
   type FullToolInfoV2,
   listFiles,
+  readBinaryFile,
   readFile,
   removeFile,
   renameFile,
@@ -63,6 +64,7 @@ export class Runner {
     this.availableTools = {
       [executeCommand.name]: executeCommand,
       [listFiles.name]: listFiles,
+      [readBinaryFile.name]: readBinaryFile,
       [readFile.name]: readFile,
       [removeFile.name]: removeFile,
       [renameFile.name]: renameFile,
