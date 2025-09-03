@@ -217,6 +217,7 @@ export class Runner {
         responses.push({
           index: request.index,
           tool: request.tool,
+          // biome-ignore lint/suspicious/useIterableCallbackReturn: exhaustive switch case
           response: respMsg.map((part) => {
             const toSource = (data: string | Uint8Array | ArrayBuffer | Buffer | URL) => {
               if (typeof data === 'string') {

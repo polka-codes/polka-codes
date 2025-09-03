@@ -20,11 +20,11 @@
     "codegen": "cd packages/github; graphql-codegen"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.1.4",
-    "@microsoft/api-extractor": "^7.52.10",
-    "bun-types": "^1.2.20",
+    "@biomejs/biome": "^2.2.2",
+    "@microsoft/api-extractor": "^7.52.11",
+    "bun-types": "^1.2.21",
     "husky": "^9.1.7",
-    "lint-staged": "^16.1.5",
+    "lint-staged": "^16.1.6",
     "tslib": "^2.8.1",
     "tsup": "^8.5.0",
     "typescript": "^5.9.2"

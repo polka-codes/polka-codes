@@ -79,7 +79,7 @@ export const getInt = <T extends string>(args: Partial<Record<T, ToolParameterVa
   if (typeof ret !== 'string') {
     throw new Error(`Invalid argument type: ${name} ${ret}`)
   }
-  const parsed = Number.parseInt(ret)
+  const parsed = Number.parseInt(ret, 10)
   if (Number.isNaN(parsed)) {
     throw new Error(`Invalid argument value: ${name} ${ret}`)
   }

@@ -34,7 +34,7 @@ describe('renameFile', () => {
 
   it('should handle unavailable provider', async () => {
     const mockProvider = new MockProvider()
-    // @ts-ignore
+    // @ts-expect-error
     mockProvider.renameFile = undefined
 
     expect(renameFile.isAvailable(mockProvider)).toBe(false)
