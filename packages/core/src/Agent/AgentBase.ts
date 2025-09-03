@@ -176,7 +176,6 @@ export type SharedAgentOptions = {
   ai: LanguageModelV2
   os: string
   provider: ToolProvider
-  interactive: boolean
   additionalTools?: FullToolInfoV2[]
   customInstructions?: string[]
   scripts?: Record<string, string | { command: string; description: string }>
@@ -196,7 +195,6 @@ export type AgentBaseConfig = {
   tools: FullToolInfoV2[]
   toolNamePrefix: string
   provider: ToolProvider
-  interactive: boolean
   agents?: Readonly<AgentInfo[]>
   scripts?: Record<string, string | { command: string; description: string }>
   callback?: TaskEventCallback

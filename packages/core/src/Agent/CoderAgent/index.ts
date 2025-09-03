@@ -39,7 +39,6 @@ export class CoderAgent extends AgentBase {
       tools,
       toolNamePrefix,
       provider: options.provider,
-      interactive: options.interactive,
       agents: options.agents,
       scripts: options.scripts,
       callback: options.callback,

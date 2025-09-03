@@ -41,7 +41,6 @@ export class CodeFixerAgent extends AgentBase {
       toolNamePrefix,
       options.customInstructions ?? [],
       options.scripts ?? {},
-      options.interactive,
       options.toolFormat === 'native',
     )
 
@@ -50,7 +49,6 @@ export class CodeFixerAgent extends AgentBase {
       tools,
       toolNamePrefix,
       provider: options.provider,
-      interactive: options.interactive,
       agents: options.agents,
       scripts: options.scripts,
       callback: options.callback,

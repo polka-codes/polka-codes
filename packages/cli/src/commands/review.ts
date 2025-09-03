@@ -59,7 +59,6 @@ export const reviewCommand = new Command('review')
       usageMeter: usage,
       os: process.platform,
       provider: toolProvider,
-      interactive: false,
       policies: [],
       toolFormat: commandConfig.toolFormat,
       callback: parentOptions.verbose > 0 ? onEvent : undefined,

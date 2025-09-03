@@ -148,7 +148,6 @@ export class Runner {
           os: platform,
           customInstructions: rules,
           scripts: options.config.scripts,
-          interactive: options.interactive,
           agents: this.#options.availableAgents ?? allAgents,
           callback,
           policies,
@@ -165,7 +164,6 @@ export class Runner {
           case coderAgentInfo.name:
             return new CoderAgent({
               ...args,
-              interactive: false,
               provider: getProvider(agentName, options.config, toolProviderOptions),
             })
           case architectAgentInfo.name:
@@ -176,7 +174,6 @@ export class Runner {
           case analyzerAgentInfo.name:
             return new AnalyzerAgent({
               ...args,
-              interactive: false,
               provider: getProvider(agentName, options.config, toolProviderOptions),
             })
           case codeFixerAgentInfo.name:

@@ -80,7 +80,6 @@ export const fullSystemPrompt = (
   toolNamePrefix: string,
   instructions: string[],
   scripts: Record<string, string | { command: string; description: string }>,
-  _interactive: boolean,
   useNativeTool: boolean,
 ) => `
 ${basePrompt}
