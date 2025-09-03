@@ -7,7 +7,7 @@ import { resume, run } from './workflow'
 
 describe('workflow', () => {
   const mockContext: WorkflowContext = { provider: {}, parameters: {} }
-  const mockWorkflow: WorkflowSpec<any, any, CustomStepSpec> = {
+  const mockWorkflow: WorkflowSpec<any, any> = {
     name: 'test-workflow',
     description: 'A test workflow',
     step: {
@@ -16,7 +16,7 @@ describe('workflow', () => {
       inputSchema: z.object({}),
       outputSchema: z.object({}),
       run: async () => ({ type: 'success', output: {} }),
-    },
+    } as CustomStepSpec,
   }
 
   describe('run', () => {
@@ -134,7 +134,7 @@ describe('workflow', () => {
     const handler = combineHandlers(sequentialStepSpecHandler, customStepSpecHandler)
 
     test('a step should be able to access the output of a previous step', async () => {
-      const workflow: WorkflowSpec = {
+      const workflow: WorkflowSpec<any, any> = {
         name: 'test-sequential',
         step: {
           id: 'seq',
@@ -148,23 +148,23 @@ describe('workflow', () => {
               inputSchema: z.object({}),
               outputSchema: z.object({ message: z.string() }),
               run: async () => ({ type: 'success', output: { message: 'hello' } }),
-            } as CustomStepSpec,
+            },
             {
               id: 'step2',
               type: 'custom',
               inputSchema: z.object({ message: z.string() }),
               outputSchema: z.object({ final: z.string() }),
-              run: async (input: any) => ({ type: 'success', output: { final: `${input.message} world` } }),
-            } as CustomStepSpec,
+              run: async (input: { message: string }) => ({ type: 'success', output: { final: `${input.message} world` } }),
+            },
           ],
-        } as any,
+        } as SequentialStepSpec<any, any, CustomStepSpec>,
       }
       const result = await run(workflow, mockContext, handler, {})
       expect(result).toEqual({ type: 'success', output: { final: 'hello world' } })
     })
 
     test('a step should be able to access the output of a previous step using $. syntax', async () => {
-      const workflow: WorkflowSpec<any, any, SequentialStepSpec<any, any, CustomStepSpec>> = {
+      const workflow: WorkflowSpec<any, any> = {
         name: 'test-sequential-ref',
         step: {
           id: 'seq',
@@ -182,17 +182,20 @@ describe('workflow', () => {
               id: 'step2_input_builder',
               type: 'custom',
               outputSchema: z.object({ fromStep1: z.string() }),
-              run: async (input) => ({ type: 'success', output: { fromStep1: input.$.step1.message } }),
+              run: async (input: { $: { step1: { message: string } } }) => ({
+                type: 'success',
+                output: { fromStep1: input.$.step1.message },
+              }),
             },
             {
               id: 'step2',
               type: 'custom',
               inputSchema: z.object({ fromStep1: z.string() }),
               outputSchema: z.object({ final: z.string() }),
-              run: async (input) => ({ type: 'success', output: { final: `${input.fromStep1} world` } }),
+              run: async (input: { fromStep1: string }) => ({ type: 'success', output: { final: `${input.fromStep1} world` } }),
             },
           ],
-        },
+        } as SequentialStepSpec<any, any, CustomStepSpec>,
       }
       const result = await run(workflow, mockContext, handler, {})
       expect(result).toEqual({ type: 'success', output: { final: 'hello world' } })

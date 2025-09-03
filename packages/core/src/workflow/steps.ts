@@ -130,3 +130,10 @@ export const customStepSpecHandler: StepSpecHandler = {
     }
   },
 }
+
+export function step<TInput extends Record<string, Json>, TOutput extends Record<string, Json>>(
+  id: string,
+  run: CustomStepSpec<TInput, TOutput>['run'],
+): CustomStepSpec<TInput, TOutput> {
+  return { id, type: 'custom', run: run }
+}

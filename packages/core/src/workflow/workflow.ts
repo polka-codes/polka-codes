@@ -4,7 +4,7 @@ import { runStep } from './runStep'
 import type { Json, StepSpecHandlerFn, WorkflowContext, WorkflowRunResult, WorkflowSpec } from './types'
 
 export const run = async <TInput extends Record<string, Json>, TOutput extends Record<string, Json>>(
-  workflow: WorkflowSpec<TInput, TOutput, any>,
+  workflow: WorkflowSpec<TInput, TOutput>,
   context: WorkflowContext,
   handler: StepSpecHandlerFn<any, any>,
   input: TInput,
@@ -31,7 +31,7 @@ export const run = async <TInput extends Record<string, Json>, TOutput extends R
 }
 
 export const resume = async <TInput extends Record<string, Json>, TOutput extends Record<string, Json>>(
-  workflow: WorkflowSpec<TInput, TOutput, any>,
+  workflow: WorkflowSpec<TInput, TOutput>,
   context: WorkflowContext,
   handler: StepSpecHandlerFn<any, any>,
   state: any,

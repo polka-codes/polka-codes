@@ -91,11 +91,10 @@ export type StepRunResult<T extends Record<string, Json>> = StepRunResultSuccess
 export interface WorkflowSpec<
   TInput extends Record<string, Json> = Record<string, Json>,
   TOutput extends Record<string, Json> = Record<string, Json>,
-  TStepSpec extends BaseStepSpec<TInput, TOutput> = BaseStepSpec<TInput, TOutput>,
 > {
   name: string
   description?: string
-  step: TStepSpec
+  step: BaseStepSpec<TInput, TOutput>
 }
 
 export interface WorkflowSpecRaw {

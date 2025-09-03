@@ -58,3 +58,9 @@ export const commandStepSpecHandler: StepSpecHandler = {
     }
   },
 }
+
+export const command = (id: string, ...command: (string | TemplatedString)[]): CommandStepSpec => ({
+  id,
+  type: 'command',
+  command,
+})

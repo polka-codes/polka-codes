@@ -7,7 +7,7 @@ class StepsBuilder<
 > {
   readonly #steps: BaseStepSpec[] = []
 
-  public build() {
+  public build(): BaseStepSpec<TInput, TOutput> {
     if (this.#steps.length === 0) {
       throw new Error('A workflow must have at least one step.')
     }
@@ -21,7 +21,7 @@ class StepsBuilder<
           }
         : this.#steps[0]
 
-    return rootStep
+    return rootStep as BaseStepSpec<TInput, TOutput>
   }
 
   public step<TStepOutput extends Record<string, Json>, TStepSpec extends BaseStepSpec<TOutput, TStepOutput>>(
@@ -42,15 +42,26 @@ class StepsBuilder<
     })
   }
 
+  public custom<TStepOutput extends Record<string, Json>>(spec: CustomStepSpec<TOutput, TStepOutput>): StepsBuilder<TInput, TStepOutput>
   public custom<TStepOutput extends Record<string, Json>>(
     id: string,
     run: CustomStepSpec<TOutput, TStepOutput>['run'],
+  ): StepsBuilder<TInput, TStepOutput>
+  public custom<TStepOutput extends Record<string, Json>>(
+    idOrSpec: string | CustomStepSpec<TOutput, TStepOutput>,
+    run?: CustomStepSpec<TOutput, TStepOutput>['run'],
   ): StepsBuilder<TInput, TStepOutput> {
-    return this.step({
-      id,
-      type: 'custom',
-      run,
-    })
+    if (typeof idOrSpec === 'string') {
+      if (!run) {
+        throw new Error('Custom step "run" function must be provided.')
+      }
+      return this.step({
+        id: idOrSpec,
+        type: 'custom',
+        run,
+      })
+    }
+    return this.step(idOrSpec)
   }
 
   public agent<TStepOutput extends Record<string, Json>>(
