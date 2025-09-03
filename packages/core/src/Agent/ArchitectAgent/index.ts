@@ -1,22 +1,12 @@
 import { getAvailableTools } from '../../getAvailableTools'
-import {
-  askFollowupQuestion,
-  attemptCompletion,
-  delegate,
-  fetchUrl,
-  handOver,
-  listFiles,
-  readBinaryFile,
-  readFile,
-  searchFiles,
-} from '../../tools'
+import { attemptCompletion, delegate, fetchUrl, handOver, listFiles, readBinaryFile, readFile, searchFiles } from '../../tools'
 import { UsageMeter } from '../../UsageMeter'
 import { AgentBase, type AgentInfo, type SharedAgentOptions } from '../AgentBase'
 import { fullSystemPrompt } from './prompts'
 
 export type ArchitectAgentOptions = SharedAgentOptions
 
-const agentTools = [askFollowupQuestion, attemptCompletion, delegate, fetchUrl, handOver, listFiles, readBinaryFile, readFile, searchFiles]
+const agentTools = [attemptCompletion, delegate, fetchUrl, handOver, listFiles, readBinaryFile, readFile, searchFiles]
 
 export class ArchitectAgent extends AgentBase {
   constructor(options: ArchitectAgentOptions) {

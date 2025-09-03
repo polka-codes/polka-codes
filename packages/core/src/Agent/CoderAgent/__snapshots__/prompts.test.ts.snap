@@ -62,19 +62,6 @@ NEVER surround tool use with triple backticks (\`\`\`).
 
 # Tools
 
-## tool_ask_followup_question
-
-Description: Call this when vital details are missing. Pose each follow-up as one direct, unambiguous question. If it speeds the reply, add up to five short, mutually-exclusive answer options. Group any related questions in the same call to avoid a back-and-forth chain.
-
-Parameters:
-- tool_parameter_questions: (required) (multiple allowed) One or more follow-up questions you need answered before you can continue.
-
-Usage:
-<tool_ask_followup_question>
-<tool_parameter_questions>questions here</tool_parameter_questions>
-<tool_parameter_questions>questions here</tool_parameter_questions>
-</tool_ask_followup_question>
-
 ## tool_attempt_completion
 
 Description: Use this tool when you believe the user’s requested task is complete. Indicate that your work is finished, but acknowledge the user may still provide additional instructions or questions if they want to continue. This tool MUST NOT to be used with any other tool.
@@ -287,51 +274,6 @@ Usage:
 </tool_write_to_file>
 
 # Tool Use Examples
-
-## Example: Single clarifying question (no options)
-
-<tool_ask_followup_question>
-<tool_parameter_questions>
-<tool_parameter_prompt>What is the target deployment environment?</tool_parameter_prompt>
-</tool_parameter_questions>
-</tool_ask_followup_question>
-
-## Example: Single question with multiple-choice options
-
-<tool_ask_followup_question>
-<tool_parameter_questions>
-<tool_parameter_prompt>Which frontend framework are you using?</tool_parameter_prompt>
-<tool_parameter_options>React</tool_parameter_options>
-<tool_parameter_options>Angular</tool_parameter_options>
-<tool_parameter_options>Vue</tool_parameter_options>
-<tool_parameter_options>Svelte</tool_parameter_options>
-</tool_parameter_questions>
-</tool_ask_followup_question>
-
-## Example: Two related questions in one call
-
-<tool_ask_followup_question>
-<tool_parameter_questions>
-<tool_parameter_prompt>What type of application are you building?</tool_parameter_prompt>
-</tool_parameter_questions>
-<tool_parameter_questions>
-<tool_parameter_prompt>Preferred programming language?</tool_parameter_prompt>
-<tool_parameter_options>JavaScript</tool_parameter_options>
-<tool_parameter_options>TypeScript</tool_parameter_options>
-<tool_parameter_options>Python</tool_parameter_options>
-<tool_parameter_options>Java</tool_parameter_options>
-</tool_parameter_questions>
-</tool_ask_followup_question>
-
-## Example: Binary (yes/no) confirmation
-
-<tool_ask_followup_question>
-<tool_parameter_questions>
-<tool_parameter_prompt>Is it acceptable to refactor existing tests to improve performance?</tool_parameter_prompt>
-<tool_parameter_options>Yes</tool_parameter_options>
-<tool_parameter_options>No</tool_parameter_options>
-</tool_parameter_questions>
-</tool_ask_followup_question>
 
 ## Example: Request to present the result of the task
 

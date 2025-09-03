@@ -12,6 +12,7 @@ import {
   allAgents,
   analyzerAgentInfo,
   architectAgentInfo,
+  askFollowupQuestion,
   CodeFixerAgent,
   CoderAgent,
   codeFixerAgentInfo,
@@ -82,7 +83,6 @@ export class Runner {
             },
           },
       excludeFiles: options.config.excludeFiles,
-      interactive: options.interactive,
     }
 
     const platform = os.platform()
@@ -143,6 +143,11 @@ export class Runner {
 
         const providerOptions = config ? getProviderOptions(config.provider, ai.modelId, config.parameters?.thinkingBudgetTokens ?? 0) : {}
 
+        const additionalTools = []
+        if (this.#options.interactive) {
+          additionalTools.push(askFollowupQuestion)
+        }
+
         const args = {
           ai,
           os: platform,
@@ -159,28 +164,18 @@ export class Runner {
             providerOptions,
           },
           usageMeter: this.usageMeter,
+          additionalTools,
+          provider: getProvider(toolProviderOptions),
         }
         switch (agentName) {
           case coderAgentInfo.name:
-            return new CoderAgent({
-              ...args,
-              provider: getProvider(agentName, options.config, toolProviderOptions),
-            })
+            return new CoderAgent(args)
           case architectAgentInfo.name:
-            return new ArchitectAgent({
-              ...args,
-              provider: getProvider(agentName, options.config, toolProviderOptions),
-            })
+            return new ArchitectAgent(args)
           case analyzerAgentInfo.name:
-            return new AnalyzerAgent({
-              ...args,
-              provider: getProvider(agentName, options.config, toolProviderOptions),
-            })
+            return new AnalyzerAgent(args)
           case codeFixerAgentInfo.name:
-            return new CodeFixerAgent({
-              ...args,
-              provider: getProvider(agentName, options.config, toolProviderOptions),
-            })
+            return new CodeFixerAgent(args)
           default:
             throw new Error(`Unknown agent: ${name}`)
         }

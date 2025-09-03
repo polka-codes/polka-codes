@@ -2,10 +2,9 @@ import { spawn } from 'node:child_process'
 import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises'
 import { dirname, normalize, resolve } from 'node:path'
 import { input, select } from '@inquirer/prompts'
-import type { AgentNameType, ToolProvider } from '@polka-codes/core'
+import type { ToolProvider } from '@polka-codes/core'
 import ignore from 'ignore'
 import { lookup } from 'mime-types'
-import type { Config } from './config'
 import { checkRipgrep } from './utils/checkRipgrep'
 import { listFiles } from './utils/listFiles'
 import { searchFiles } from './utils/searchFiles'
@@ -19,10 +18,9 @@ export type ProviderOptions = {
     onError(error: unknown): void
   }
   excludeFiles?: string[]
-  interactive?: boolean
 }
 
-export const getProvider = (_agentName: AgentNameType, _config: Config, options: ProviderOptions = {}): ToolProvider => {
+export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
   const ig = ignore().add(options.excludeFiles ?? [])
   const provider: ToolProvider = {
     readFile: async (path: string, includeIgnored: boolean): Promise<string | undefined> => {
@@ -133,29 +131,23 @@ export const getProvider = (_agentName: AgentNameType, _config: Config, options:
       })
     },
     askFollowupQuestion: async (question: string, answerOptions: string[]): Promise<string> => {
-      if (options.interactive) {
-        if (answerOptions.length === 0) {
-          return await input({ message: question })
-        }
-
-        const otherMessage = 'Other (enter text)'
-        answerOptions.push(otherMessage)
-        const answer = await select({
-          message: question,
-          choices: answerOptions.map((option) => ({ name: option, value: option })),
-        })
-
-        if (answer === otherMessage) {
-          return await input({ message: 'Enter your answer:' })
-        }
-        return answer
+      if (answerOptions.length === 0) {
+        return await input({ message: question })
       }
 
-      return answerOptions[0] ?? '<warning>This is non-interactive mode, no answer can be provided.</warning>'
+      const otherMessage = 'Other (enter text)'
+      answerOptions.push(otherMessage)
+      const answer = await select({
+        message: question,
+        choices: answerOptions.map((option) => ({ name: option, value: option })),
+      })
+
+      if (answer === otherMessage) {
+        return await input({ message: 'Enter your answer:' })
+      }
+      return answer
     },
     attemptCompletion: async (_result: string): Promise<string | undefined> => {
-      // TODO: if interactive, ask user to confirm completion
-
       return undefined
     },
     fetchUrl: async (url: string): Promise<string> => {

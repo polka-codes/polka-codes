@@ -1,6 +1,20 @@
 import { getAvailableTools } from '../../getAvailableTools'
 import { type ToolResponse, ToolResponseType } from '../../tool'
-import { allTools, attemptCompletion } from '../../tools'
+import {
+  attemptCompletion,
+  delegate,
+  executeCommand,
+  fetchUrl,
+  handOver,
+  listFiles,
+  readBinaryFile,
+  readFile,
+  removeFile,
+  renameFile,
+  replaceInFile,
+  searchFiles,
+  writeToFile,
+} from '../../tools'
 import { UsageMeter } from '../../UsageMeter'
 import type { AgentInfo, SharedAgentOptions } from './../AgentBase'
 import { AgentBase } from '../AgentBase'
@@ -9,13 +23,29 @@ import { fullSystemPrompt } from './prompts'
 
 export type CoderAgentOptions = SharedAgentOptions
 
+const agentTools = [
+  attemptCompletion,
+  delegate,
+  executeCommand,
+  fetchUrl,
+  handOver,
+  listFiles,
+  readBinaryFile,
+  readFile,
+  removeFile,
+  renameFile,
+  replaceInFile,
+  searchFiles,
+  writeToFile,
+]
+
 /**
  * Coder agent for writing code.
  * Using Scripts: format, check, test
  */
 export class CoderAgent extends AgentBase {
   constructor(options: CoderAgentOptions) {
-    const combinedTools = [...(options.additionalTools ?? []), ...Object.values(allTools)]
+    const combinedTools = [...(options.additionalTools ?? []), ...agentTools]
     const tools = getAvailableTools({
       provider: options.provider,
       allTools: combinedTools,

@@ -5,7 +5,21 @@
 
 import { getAvailableTools } from '../../getAvailableTools'
 import { type ToolResponse, ToolResponseType } from '../../tool'
-import { allTools, attemptCompletion } from '../../tools'
+import {
+  attemptCompletion,
+  delegate,
+  executeCommand,
+  fetchUrl,
+  handOver,
+  listFiles,
+  readBinaryFile,
+  readFile,
+  removeFile,
+  renameFile,
+  replaceInFile,
+  searchFiles,
+  writeToFile,
+} from '../../tools'
 import { UsageMeter } from '../../UsageMeter'
 import type { AgentInfo, SharedAgentOptions } from '../AgentBase'
 import { AgentBase } from '../AgentBase'
@@ -16,6 +30,22 @@ export type CodeFixerAgentOptions = SharedAgentOptions & {
   maxRetries?: number // Maximum retry attempts per issue
 }
 
+const agentTools = [
+  attemptCompletion,
+  delegate,
+  executeCommand,
+  fetchUrl,
+  handOver,
+  listFiles,
+  readBinaryFile,
+  readFile,
+  removeFile,
+  renameFile,
+  replaceInFile,
+  searchFiles,
+  writeToFile,
+]
+
 /**
  * CodeFixer agent for fixing code issues like type errors and failing tests.
  * Using Scripts: format, check, test
@@ -25,7 +55,7 @@ export class CodeFixerAgent extends AgentBase {
   #retryCount = 0
 
   constructor(options: CodeFixerAgentOptions) {
-    const combinedTools = [...(options.additionalTools ?? []), ...Object.values(allTools)]
+    const combinedTools = [...(options.additionalTools ?? []), ...agentTools]
     const tools = getAvailableTools({
       provider: options.provider,
       allTools: combinedTools,

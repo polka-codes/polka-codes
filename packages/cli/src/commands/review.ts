@@ -51,9 +51,8 @@ export const reviewCommand = new Command('review')
     const ai = getModel(commandConfig)
     const toolProviderOptions: ProviderOptions = {
       excludeFiles: parentOptions.config.excludeFiles,
-      interactive: parentOptions.interactive,
     }
-    const toolProvider = getProvider('analyzer', config, toolProviderOptions)
+    const toolProvider = getProvider(toolProviderOptions)
     const sharedAiOptions = {
       ai,
       usageMeter: usage,

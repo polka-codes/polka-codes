@@ -1,14 +1,44 @@
 import { expect, test } from 'bun:test'
 
-import { allTools } from '../../tools'
+import {
+  attemptCompletion,
+  delegate,
+  executeCommand,
+  fetchUrl,
+  handOver,
+  listFiles,
+  readBinaryFile,
+  readFile,
+  removeFile,
+  renameFile,
+  replaceInFile,
+  searchFiles,
+  writeToFile,
+} from '../../tools'
 import { fullSystemPrompt } from './prompts'
+
+const agentTools = [
+  attemptCompletion,
+  delegate,
+  executeCommand,
+  fetchUrl,
+  handOver,
+  listFiles,
+  readBinaryFile,
+  readFile,
+  removeFile,
+  renameFile,
+  replaceInFile,
+  searchFiles,
+  writeToFile,
+]
 
 test('fullSystemPrompt', () => {
   const prompt = fullSystemPrompt(
     {
       os: 'Linux',
     },
-    Object.values(allTools),
+    agentTools,
     'tool_',
     ['custom instructions', 'more'],
     {

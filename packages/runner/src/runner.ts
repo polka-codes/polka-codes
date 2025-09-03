@@ -38,7 +38,7 @@ export class Runner {
     const config = loadConfig() ?? {}
 
     // Create provider
-    this.provider = getProvider('coder', config || {}, {
+    this.provider = getProvider({
       command: {
         onStarted(command) {
           console.log(`$ >>>> $ ${command}`)
@@ -57,7 +57,6 @@ export class Runner {
         },
       },
       excludeFiles: config.excludeFiles,
-      interactive: false,
     })
 
     // Define available tools
