@@ -44,7 +44,6 @@ describe('getAvailableTools', () => {
       provider: mockProvider,
       allTools: mockTools,
       hasAgent: false,
-      interactive: true,
     })
 
     // Should not include delegate and handOver
@@ -58,7 +57,7 @@ describe('getAvailableTools', () => {
   })
 
   it('should include agent tools when agents are available', () => {
-    const result = getAvailableTools({ provider: mockProvider, allTools: mockTools, hasAgent: true, interactive: true })
+    const result = getAvailableTools({ provider: mockProvider, allTools: mockTools, hasAgent: true })
 
     // Should include delegate and handOver
     expect(result.some((tool) => tool.name === delegate.name)).toBe(true)
@@ -68,7 +67,7 @@ describe('getAvailableTools', () => {
   })
 
   it('should filter based on provider availability', () => {
-    const result = getAvailableTools({ provider: mockProvider, allTools: mockTools, hasAgent: true, interactive: true })
+    const result = getAvailableTools({ provider: mockProvider, allTools: mockTools, hasAgent: true })
 
     // Should include available tools
     expect(result.some((tool) => tool.name === 'tool1')).toBe(true)
@@ -84,7 +83,6 @@ describe('getAvailableTools', () => {
       provider: mockProvider,
       allTools: mockTools,
       hasAgent: false,
-      interactive: true,
     })
 
     // Should exclude agent tools (no agents)

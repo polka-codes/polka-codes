@@ -28,7 +28,6 @@ export class AnalyzerAgent extends AgentBase {
       provider: options.provider,
       allTools: combinedTools,
       hasAgent: (options.agents?.length ?? 0) > 0,
-      interactive: true,
     })
     const toolNamePrefix = options.toolFormat === 'native' ? '' : 'tool_'
     const systemPrompt = fullSystemPrompt(
