@@ -25,24 +25,19 @@ export type AgentStepSpec<
   TOutput extends Record<string, Json> = Record<string, Json>,
 > = BaseStepSpec<TInput, TOutput> & {
   type: 'agent'
-  messages: (UserContent | TemplatedString)[]
-  outputSchema: z.ZodType
+  messages: (UserContent | TemplatedString<TInput>)[]
+  outputSchema?: z.ZodType<TOutput>
+  parseOutput?: (raw: string) => TOutput
   provider?: string
   model?: string
   budget?: number
   maxMessages?: number
   modelParameters?: Record<string, any>
   toolFormat?: ToolFormat
-} & (
-    | {
-        agent: AgentNameType
-        tools?: FullToolInfoV2[]
-      }
-    | {
-        systemPrompt: string | TemplatedString
-        tools: FullToolInfoV2[]
-      }
-  )
+  agent?: AgentNameType
+  tools?: FullToolInfoV2[]
+  systemPrompt?: string | TemplatedString<TInput>
+}
 
 const agentRegistry: Record<string, new (options: SharedAgentOptions) => AgentBase> = {
   analyzer: AnalyzerAgent,
@@ -90,6 +85,9 @@ export const makeAgentStepSpecHandler = (
         context: WorkflowContext,
         resumedState?: ResumeState,
       ): Promise<StepRunResult<Record<string, Json>>> {
+        if (context.verbose && context.verbose >= 1) {
+          console.log(`[agent-step] Running agent step '${step.id}' with input:`, input)
+        }
         try {
           const model = await getModelFn(step, context)
 
@@ -107,11 +105,15 @@ export const makeAgentStepSpecHandler = (
           }
 
           const getAgent = () => {
-            if ('agent' in step) {
+            if (step.agent) {
               const agentName = step.agent
               const AgentClass = agentRegistry[agentName]
               if (!AgentClass) {
                 throw new Error(`Unknown agent: ${agentName}`)
+              }
+
+              if (context.verbose && context.verbose >= 1) {
+                console.log(`[agent-step] Using agent: ${agentName}`)
               }
 
               const agentOptions: SharedAgentOptions = {
@@ -124,14 +126,21 @@ export const makeAgentStepSpecHandler = (
                 usageMeter,
                 parameters: modelParameters,
                 scripts: parameters.scripts,
+                callback: context.agentCallback,
               }
 
               return new AgentClass(agentOptions)
             } else {
+              if (!step.systemPrompt) {
+                throw new Error('No system prompt specified for the agent step.')
+              }
+              if (context.verbose && context.verbose >= 1) {
+                console.log(`[agent-step] Using generic WorkflowAgent`)
+              }
               const systemPrompt = resolveTemplatedString(step.systemPrompt, input)
               return new WorkflowAgent('agent', model, {
                 systemPrompt,
-                tools: step.tools,
+                tools: step.tools ?? [],
                 toolNamePrefix: toolFormat === 'native' ? '' : 'tool_',
                 provider: context.provider,
                 agents: [],
@@ -168,7 +177,15 @@ export const makeAgentStepSpecHandler = (
             }
           }
 
+          if (context.verbose && context.verbose >= 1) {
+            console.log(`[agent-step] Starting agent with content:`, JSON.stringify(combinedContentParts, null, 2))
+          }
+
           const exitReason = await agent.start(combinedContentParts)
+
+          if (context.verbose && context.verbose >= 1) {
+            console.log(`[agent-step] Agent exited with reason:`, exitReason)
+          }
 
           const handleExitReason = (reason: ExitReason): StepRunResult<Record<string, Json>> => {
             switch (reason.type) {
@@ -176,7 +193,46 @@ export const makeAgentStepSpecHandler = (
                 return { type: 'paused', state: { messages: agent.messages } }
               case 'UsageExceeded':
                 return { type: 'error', error: new Error('Usage limit exceeded') }
-              case ToolResponseType.Exit:
+              case ToolResponseType.Exit: {
+                const raw = reason.message
+                if (step.parseOutput) {
+                  try {
+                    const parsed = step.parseOutput(raw)
+                    if (step.outputSchema) {
+                      const validationResult = step.outputSchema.safeParse(parsed)
+                      if (validationResult.success) {
+                        return { type: 'success', output: validationResult.data }
+                      }
+                      return {
+                        type: 'error',
+                        error: new Error(`Output validation failed: ${validationResult.error.toString()}`),
+                      }
+                    }
+                    return { type: 'success', output: parsed as any }
+                  } catch (e) {
+                    const error = e instanceof Error ? e : new Error(String(e))
+                    error.message = `Failed to parse agent output with parseOutput: ${error.message}`
+                    return { type: 'error', error }
+                  }
+                } else if (step.outputSchema) {
+                  try {
+                    const output = JSON.parse(raw)
+                    const validationResult = step.outputSchema.safeParse(output)
+                    if (validationResult.success) {
+                      return { type: 'success', output: validationResult.data }
+                    }
+                    return {
+                      type: 'error',
+                      error: new Error(`Output validation failed: ${validationResult.error.toString()}`),
+                    }
+                  } catch (e) {
+                    const error = e instanceof Error ? e : new Error(String(e))
+                    error.message = `Failed to parse agent output as JSON: ${error.message}`
+                    return { type: 'error', error }
+                  }
+                }
+                return { type: 'success', output: reason }
+              }
               case ToolResponseType.HandOver:
               case ToolResponseType.Delegate:
                 return { type: 'success', output: reason }

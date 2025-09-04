@@ -7,7 +7,6 @@ import createNewProjectDef from './createNewProject'
 import generateGitCommitMessageDef from './generateGitCommitMessage'
 import generateGithubPullRequestDetailsDef from './generateGithubPullRequestDetails'
 import generateProjectConfigDef from './generateProjectConfig'
-import reviewDiffDef from './reviewDiff'
 
 import type { AiToolDefinition, AiToolDefinitionWithAgent, AiToolDefinitionWithMultiAgent, GetInput, GetOutput } from './types'
 
@@ -90,7 +89,6 @@ export const makeAgentTool = <T extends AiToolDefinitionWithAgent<any, any>>(def
 export const generateGitCommitMessage = makeTool(generateGitCommitMessageDef)
 export const generateGithubPullRequestDetails = makeTool(generateGithubPullRequestDetailsDef)
 
-export const reviewDiff = makeAgentTool(reviewDiffDef)
 export const generateProjectConfig = makeMultiAgentTool(generateProjectConfigDef)
 export const createNewProject = makeMultiAgentTool(createNewProjectDef)
 

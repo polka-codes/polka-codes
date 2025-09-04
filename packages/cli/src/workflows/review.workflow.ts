@@ -5,15 +5,15 @@ import { confirm } from '@inquirer/prompts'
 import {
   builder,
   type CustomStepSpec,
-  reviewDiff,
-  type SharedAgentOptions,
+  parseJsonFromMarkdown,
   type StepRunResult,
   type WorkflowContext,
   type WorkflowSpec,
 } from '@polka-codes/core'
 import type { Ora } from 'ora'
+import { z } from 'zod'
+import { gitDiff } from '../tools'
 
-export type ReviewResult = Awaited<ReturnType<typeof reviewDiff>>
 export type HandleResultOutput = {
   shouldRunTask: boolean
   formattedReview?: string
@@ -24,22 +24,24 @@ type FileChange = {
   status: string
 }
 
+type ReviewToolInput = {
+  pullRequestTitle?: string
+  pullRequestDescription?: string
+  commitMessages?: string
+  commitRange?: string
+  staged?: boolean
+  changedFiles?: FileChange[]
+}
+
 type ReviewWorkflowInput = {
   pr?: string
   json: boolean
 }
 
-type ChangeInfo = {
-  reviewArgs: Parameters<typeof reviewDiff>[1]
-  changedFiles: FileChange[]
-}
-
 export interface ReviewWorkflowContext extends WorkflowContext {
   ui: { spinner: Ora }
-  agent: { sharedAiOptions: SharedAgentOptions }
 }
 
-// Helper functions remain the same
 function parseGitStatus(statusOutput: string): FileChange[] {
   const statusLines = statusOutput.split('\n').filter((line) => line)
   const files: FileChange[] = []
@@ -143,7 +145,20 @@ function printChangedFiles(changedFiles: FileChange[], spinner: Ora, isJsonOutpu
   spinner.start()
 }
 
-function formatReviewForConsole(output: { overview: string; specificReviews: { file: string; lines: string; review: string }[] }): string {
+const specificReviewSchema = z.object({
+  file: z.string(),
+  lines: z.string(),
+  review: z.string(),
+})
+
+const reviewOutputSchema = z.object({
+  overview: z.string(),
+  specificReviews: z.array(specificReviewSchema),
+})
+
+type ReviewResult = z.infer<typeof reviewOutputSchema>
+
+function formatReviewForConsole(output: ReviewResult): string {
   let formatted = `### Overview\n\n${output.overview}`
 
   if (output.specificReviews.length > 0) {
@@ -155,19 +170,95 @@ function formatReviewForConsole(output: { overview: string; specificReviews: { f
   return formatted
 }
 
-const getChangeInfo: CustomStepSpec<ReviewWorkflowInput, ReviewWorkflowInput & { changeInfo?: ChangeInfo }> = {
+const CODE_REVIEW_PROMPT = `
+# Code Review Prompt
+
+You are a senior software engineer reviewing code changes.
+
+## Critical Instructions
+- **ONLY review the actual changes shown in the diff.** Do not comment on existing code that wasn't modified.
+- **ONLY run git_diff on files that are reviewable source/config files** per the "File Selection for git_diff" rules below. Do not pass excluded files to git_diff.
+
+## File Selection for git_diff
+Use <file_status> to decide which files to diff. Include only files likely to contain human-authored source or meaningful configuration.
+
+Include (run git_diff):
+- Application/source code
+- UI/templates/assets code
+- Infra/config that affects behavior
+
+Exclude (do NOT run git_diff; do not review):
+- Lockfiles
+- Generated/build artifacts & deps
+- Test artifacts/snapshots
+- Data and fixtures
+- Binary/media/minified/maps
+
+## Viewing Changes
+- For each included file, **use git_diff** to inspect the actual code changes:
+  - **Pull request:** use the provided commit range for the git_diff tool with contextLines: 5 and includeLineNumbers: true, but only surface and review the included files.
+  - **Local changes:** diff staged or unstaged included files using git_diff with contextLines: 5 and includeLineNumbers: true.
+- The diff will include line number annotations: [Line N] for additions and [Line N removed] for deletions.
+- You may receive:
+  - <pr_title>
+  - <pr_description>
+  - <commit_messages>
+- A <review_instructions> tag tells you the focus of the review.
+- Use <file_status> to understand which files were modified, added, deleted, or renamed and to apply the inclusion/exclusion rules above.
+
+## Line Number Reporting
+- Use the line numbers from the annotations in the diff output.
+- For additions: use the number from the [Line N] annotation after the + line.
+- For deletions: use the number from the [Line N removed] annotation after the - line.
+- For modifications: report the line number of the new/current code (from [Line N]).
+- Report single lines as "N" and ranges as "N-M".
+
+## Review Guidelines
+Focus exclusively on the changed lines (+ additions, - deletions, modified lines):
+- **Specific issues:** Point to exact problems in the changed code with accurate line references from the annotations.
+- **Actionable fixes:** Provide concrete solutions, not vague suggestions.
+- **Clear reasoning:** Explain why each issue matters and how to fix it.
+- **Avoid generic advice** unless directly tied to a specific problem visible in the diff.
+
+## What NOT to review
+- Files excluded by the "File Selection for git_diff" rules (do not diff or comment on them).
+- Existing unchanged code.
+- Overall project structure/architecture unless directly impacted by the changes.
+- Missing features or functionality not part of this diff.
+
+## Output Format
+Do not include praise or positive feedback.
+Only include reviews for actual issues found in the changed code.
+
+Return your review as a JSON object in the following format:
+\`\`\`json
+{
+  "overview": "Summary of specific issues found in the diff changes, 'No issues found', or 'No reviewable changes' if all modified files were excluded.",
+  "specificReviews": [
+    {
+      "file": "path/filename.ext",
+      "lines": "N or N-M",
+      "review": "Specific issue with the changed code and exact actionable fix."
+    }
+  ]
+}
+\`\`\`
+`
+
+const getChangeInfo: CustomStepSpec<ReviewWorkflowInput, { json: boolean; changeInfo?: ReviewToolInput }> = {
   id: 'get-change-info',
   type: 'custom' as const,
   run: async (
     input,
     context: WorkflowContext,
     _resumedState?: any,
-  ): Promise<StepRunResult<ReviewWorkflowInput & { changeInfo?: ChangeInfo }>> => {
+  ): Promise<StepRunResult<{ json: boolean; changeInfo?: ReviewToolInput }>> => {
     const { pr, json } = input
+    ;(context as any).json = json
     const {
       ui: { spinner },
     } = context as ReviewWorkflowContext
-    let changeInfo: ChangeInfo
+    let changeInfo: ReviewToolInput
 
     if (pr) {
       const prNumberMatch = pr.match(/\d+$/)
@@ -210,13 +301,10 @@ const getChangeInfo: CustomStepSpec<ReviewWorkflowInput, ReviewWorkflowInput & {
 
       printChangedFiles(changedFiles, spinner, json)
       changeInfo = {
-        reviewArgs: {
-          commitRange: `${prDetails.baseRefOid}...HEAD`,
-          pullRequestTitle: prDetails.title,
-          pullRequestDescription: prDetails.body,
-          commitMessages,
-          changedFiles,
-        },
+        commitRange: `${prDetails.baseRefOid}...HEAD`,
+        pullRequestTitle: prDetails.title,
+        pullRequestDescription: prDetails.body,
+        commitMessages,
         changedFiles,
       }
     } else {
@@ -225,13 +313,11 @@ const getChangeInfo: CustomStepSpec<ReviewWorkflowInput, ReviewWorkflowInput & {
       const hasLocalChanges = statusLines.length > 0
 
       if (hasLocalChanges) {
-        spinner.text = 'Generating review for local changes...'
+        const hasStagedChanges = statusLines.some((line) => line[0] !== ' ' && line[0] !== '?')
         const changedFiles = parseGitStatus(gitStatus)
         printChangedFiles(changedFiles, spinner, json)
         changeInfo = {
-          reviewArgs: {
-            changedFiles,
-          },
+          staged: hasStagedChanges,
           changedFiles,
         }
       } else {
@@ -256,8 +342,7 @@ const getChangeInfo: CustomStepSpec<ReviewWorkflowInput, ReviewWorkflowInput & {
 
         if (currentBranch === defaultBranch) {
           spinner.succeed(`No changes to review. You are on the default branch ('${defaultBranch}').`)
-          const { $: _$, ...rest } = input
-          return { type: 'success', output: { ...rest } }
+          return { type: 'success', output: { json } }
         }
 
         spinner.text = 'Getting file changes...'
@@ -271,52 +356,68 @@ const getChangeInfo: CustomStepSpec<ReviewWorkflowInput, ReviewWorkflowInput & {
 
         printChangedFiles(branchChangedFiles, spinner, json)
 
-        spinner.text = `Generating review for changes between '${defaultBranch}' and '${currentBranch}'...`
         changeInfo = {
-          reviewArgs: {
-            commitRange: `${defaultBranch}...${currentBranch}`,
-            changedFiles: branchChangedFiles,
-          },
+          commitRange: `${defaultBranch}...${currentBranch}`,
           changedFiles: branchChangedFiles,
         }
       }
     }
-    const { $: _$, ...rest } = input
-    return { type: 'success', output: { ...rest, changeInfo } }
-  },
-}
-
-const generateReview: CustomStepSpec<
-  ReviewWorkflowInput & { changeInfo?: ChangeInfo },
-  ReviewWorkflowInput & { changeInfo?: ChangeInfo; reviewResult?: ReviewResult }
-> = {
-  id: 'generate-review',
-  type: 'custom' as const,
-  run: async (
-    input,
-    context: WorkflowContext,
-    _resumedState?: any,
-  ): Promise<StepRunResult<ReviewWorkflowInput & { changeInfo?: ChangeInfo; reviewResult?: ReviewResult }>> => {
-    const { $: _$, ...rest } = input
-    if (!input.changeInfo) {
-      return { type: 'success', output: { ...rest } }
+    if (changeInfo) {
+      spinner.text = 'Generating review...'
     }
-    const {
-      agent: { sharedAiOptions },
-      ui: { spinner },
-    } = context as ReviewWorkflowContext
-    spinner.text = 'Generating review...'
-    const reviewResult = await reviewDiff(sharedAiOptions, input.changeInfo.reviewArgs)
-    spinner.succeed('Review generated successfully')
-    return { type: 'success', output: { ...rest, reviewResult } }
+
+    return { type: 'success', output: { json, changeInfo } }
   },
 }
 
-const handleResult: CustomStepSpec<ReviewWorkflowInput & { changeInfo?: ChangeInfo; reviewResult?: ReviewResult }, HandleResultOutput> = {
+function formatReviewToolInput(params: ReviewToolInput): string {
+  const parts = []
+  if (params.pullRequestTitle) {
+    parts.push(`<pr_title>\n${params.pullRequestTitle}\n</pr_title>`)
+  }
+  if (params.pullRequestDescription) {
+    parts.push(`<pr_description>\n${params.pullRequestDescription}\n</pr_description>`)
+  }
+  if (params.commitMessages) {
+    parts.push(`<commit_messages>\n${params.commitMessages}\n</commit_messages>`)
+  }
+
+  if (params.changedFiles && params.changedFiles.length > 0) {
+    const fileList = params.changedFiles.map((file) => `${file.status}: ${file.path}`).join('\n')
+    parts.push(`<file_status>\n${fileList}\n</file_status>`)
+  }
+
+  let instructions = ''
+  if (params.commitRange) {
+    instructions = `Review the pull request. Use the git_diff tool with commit range '${params.commitRange}', contextLines: 5, and includeLineNumbers: true to inspect the actual code changes. The diff will include line number annotations to help you report accurate line numbers. File status information is already provided above.`
+  } else if (params.staged) {
+    instructions =
+      'Review the staged changes. Use the git_diff tool with staged: true, contextLines: 5, and includeLineNumbers: true to inspect the actual code changes. The diff will include line number annotations to help you report accurate line numbers. File status information is already provided above.'
+  } else {
+    instructions =
+      'Review the unstaged changes. Use the git_diff tool with contextLines: 5, and includeLineNumbers: true to inspect the actual code changes. The diff will include line number annotations to help you report accurate line numbers. File status information is already provided above.'
+  }
+  parts.push(`<review_instructions>\n${instructions}\n</review_instructions>`)
+
+  return parts.join('\n')
+}
+
+const handleResult: CustomStepSpec<ReviewResult, HandleResultOutput> = {
   id: 'handle-result',
   type: 'custom' as const,
-  run: async (input, _context: WorkflowContext, _resumedState?: any): Promise<StepRunResult<HandleResultOutput>> => {
-    const { reviewResult, json } = input
+  run: async (input, context, _resumedState) => {
+    const { overview, specificReviews } = input
+    const json = (context as any).json as boolean
+    const {
+      ui: { spinner },
+    } = context as ReviewWorkflowContext
+
+    const reviewResult = overview && specificReviews ? { overview, specificReviews: specificReviews } : undefined
+
+    if (reviewResult) {
+      spinner.succeed('Review generated successfully')
+    }
+
     if (!reviewResult) {
       return { type: 'success', output: { shouldRunTask: false } }
     }
@@ -354,5 +455,26 @@ const handleResult: CustomStepSpec<ReviewWorkflowInput & { changeInfo?: ChangeIn
 export const reviewWorkflow: WorkflowSpec<ReviewWorkflowInput, HandleResultOutput> = {
   name: 'Code Review',
   description: 'Review code changes in a pull request or local changes using AI.',
-  step: builder<ReviewWorkflowInput>().custom(getChangeInfo).custom(generateReview).custom(handleResult).build(),
+  step: builder<ReviewWorkflowInput>()
+    .custom(getChangeInfo)
+    .agent('generate-review', {
+      agent: 'analyzer',
+      messages: [
+        CODE_REVIEW_PROMPT,
+        {
+          type: 'function',
+          fn: (input) => {
+            if (!input.changeInfo) {
+              return ''
+            }
+            return formatReviewToolInput(input.changeInfo)
+          },
+        },
+      ],
+      tools: [gitDiff],
+      outputSchema: reviewOutputSchema,
+      parseOutput: parseJsonFromMarkdown,
+    })
+    .custom(handleResult)
+    .build(),
 }

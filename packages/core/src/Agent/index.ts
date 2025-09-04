@@ -11,6 +11,7 @@ export * from './CodeFixerAgent'
 export * from './CoderAgent'
 export * from './MultiAgent'
 export * from './parseAssistantMessage'
+export * from './parseJsonFromMarkdown'
 export * from './policies'
 export * from './prompts'
 
