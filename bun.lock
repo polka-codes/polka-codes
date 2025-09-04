@@ -42,7 +42,7 @@
         "ollama-ai-provider-v2": "^1.0.0",
         "ora": "^8.1.1",
         "yaml": "^2.7.0",
-        "zod": "^4.0.8",
+        "zod": "^4.1.5",
       },
       "devDependencies": {
         "@types/lodash": "^4.17.14",
@@ -59,7 +59,7 @@
         "lodash": "^4.17.21",
         "mime-types": "^3.0.1",
         "yaml": "^2.7.0",
-        "zod": "^4.0.8",
+        "zod": "^4.1.5",
       },
       "devDependencies": {
         "@types/mime-types": "^3.0.1",
@@ -74,7 +74,7 @@
         "ai": "^5.0.0",
         "lodash": "^4.17.21",
         "yaml": "^2.7.1",
-        "zod": "^4.0.8",
+        "zod": "^4.1.5",
       },
     },
     "packages/github": {
@@ -105,7 +105,7 @@
         "lodash": "^4.17.21",
         "ws": "^8.18.1",
         "yaml": "^2.7.0",
-        "zod": "^4.0.8",
+        "zod": "^4.1.5",
       },
       "devDependencies": {
         "@types/lodash": "^4.17.14",
@@ -1280,7 +1280,7 @@
 
     "yoctocolors-cjs": ["yoctocolors-cjs@2.1.2", "", {}, "sha512-cYVsTjKl8b+FrnidjibDWskAv7UKOfcwaVZdp/it9n1s9fU3IkgDbhdIRKCW4JDsAlECJY0ytoVPT3sK6kideA=="],
 
-    "zod": ["zod@4.0.17", "", {}, "sha512-1PHjlYRevNxxdy2JZ8JcNAw7rX8V9P1AKkP+x/xZfxB0K5FYfuV+Ug6P/6NVSR2jHQ+FzDDoDHS04nYUsOIyLQ=="],
+    "zod": ["zod@4.1.5", "", {}, "sha512-rcUUZqlLJgBC33IT3PNMgsCq6TzLQEG/Ei/KTCU0PedSWRMAXoOUN+4t/0H+Q8bdnLPdqUYnvboJT0bn/229qg=="],
 
     "zod-to-json-schema": ["zod-to-json-schema@3.24.6", "", { "peerDependencies": { "zod": "^3.24.1" } }, "sha512-h/z3PKvcTcTetyjl1fkj79MHNEjm+HpD6NXheWjzOekY7kV+lwDYnHw+ivHkijnCSMz1yJaWBD9vu/Fcmk+vEg=="],
 
