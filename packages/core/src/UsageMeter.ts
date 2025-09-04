@@ -12,15 +12,14 @@ export type ModelInfo = {
   cacheReadsPrice: number
 }
 
-type Totals = { input: number; output: number; cachedRead: number; cost: number }
+type Totals = { input: number; output: number; cachedRead: number; cost: number; messageCount: number }
 
 /**
  * Tracks token / cost usage across any mix of LLM models.
  * Supports optional caps on total messages and total cost.
  */
 export class UsageMeter {
-  #totals: Totals = { input: 0, output: 0, cachedRead: 0, cost: 0 }
-  #calls = 0
+  #totals: Totals = { input: 0, output: 0, cachedRead: 0, cost: 0, messageCount: 0 }
 
   readonly #modelInfos: Record<string, ModelInfo>
   readonly #maxMessages: number
@@ -126,32 +125,31 @@ export class UsageMeter {
     this.#totals.output += result.output
     this.#totals.cachedRead += result.cachedRead
     this.#totals.cost += result.cost
-    this.#calls++
+    this.#totals.messageCount += 1
   }
 
   /** Override the running totals (e.g., restore from saved state). */
-  setUsage(newUsage: Partial<Totals & { calls: number }>) {
+  setUsage(newUsage: Partial<Totals>) {
     if (newUsage.input != null) this.#totals.input = newUsage.input
     if (newUsage.output != null) this.#totals.output = newUsage.output
     if (newUsage.cachedRead != null) this.#totals.cachedRead = newUsage.cachedRead
     if (newUsage.cost != null) this.#totals.cost = newUsage.cost
-    if (newUsage.calls != null) this.#calls = newUsage.calls
+    if (newUsage.messageCount != null) this.#totals.messageCount = newUsage.messageCount
   }
 
-  /** Manually bump the message count (useful if you record some calls without token info). */
+  /** Manually bump the message count (useful if you record some messages without token info). */
   incrementMessageCount(n = 1) {
-    this.#calls += n
+    this.#totals.messageCount += n
   }
 
   /** Reset the running totals. */
   resetUsage() {
-    this.#totals = { input: 0, output: 0, cachedRead: 0, cost: 0 }
-    this.#calls = 0
+    this.#totals = { input: 0, output: 0, cachedRead: 0, cost: 0, messageCount: 0 }
   }
 
   /** Return true once either messages or cost exceed the configured caps. */
   isLimitExceeded() {
-    const messageCount = this.#maxMessages > 0 && this.#calls >= this.#maxMessages
+    const messageCount = this.#maxMessages > 0 && this.#totals.messageCount >= this.#maxMessages
     const cost = this.#maxCost > 0 && this.#totals.cost >= this.#maxCost
 
     return {
@@ -175,7 +173,7 @@ export class UsageMeter {
 
   /** Getter for the aggregated totals (immutable copy). */
   get usage() {
-    return { ...this.#totals, messageCount: this.#calls }
+    return { ...this.#totals }
   }
 
   /** Print a concise usage summary to console. */
