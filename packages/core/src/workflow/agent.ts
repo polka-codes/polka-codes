@@ -117,7 +117,7 @@ export const makeAgentStepSpecHandler = (
                 logger.log(`[agent-step] Using agent: ${agentName}`)
               }
 
-              const agentOptions: SharedAgentOptions = {
+              return new AgentClass({
                 ai: model,
                 os: parameters.os ?? 'linux',
                 provider: context.provider,
@@ -128,9 +128,8 @@ export const makeAgentStepSpecHandler = (
                 parameters: modelParameters,
                 scripts: parameters.scripts,
                 callback: context.agentCallback,
-              }
-
-              return new AgentClass(agentOptions)
+                requireToolUse: false,
+              })
             } else {
               if (!step.systemPrompt) {
                 throw new Error('No system prompt specified for the agent step.')
@@ -151,7 +150,7 @@ export const makeAgentStepSpecHandler = (
                 toolFormat,
                 parameters: modelParameters,
                 usageMeter,
-                requireToolUse: true,
+                requireToolUse: false,
               })
             }
           }

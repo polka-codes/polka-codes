@@ -27,6 +27,7 @@ import { toToolInfoV1 } from '../tool-v1-compat'
 import type { ToolProvider } from '../tools'
 import type { UsageMeter } from '../UsageMeter'
 import type { AgentPolicy, AgentPolicyInstance } from './AgentPolicy'
+import { computeRateLimitBackoffSeconds } from './backoff'
 import { type AssistantMessageContent, parseAssistantMessage } from './parseAssistantMessage'
 import { agentsPrompt, responsePrompts } from './prompts'
 
@@ -403,6 +404,7 @@ export abstract class AgentBase {
     const requestTimeoutSeconds = this.config.requestTimeoutSeconds ?? 90
 
     let respMessages: (AssistantModelMessage | ToolModelMessage)[] = []
+    let rateLimitErrorCount = 0
 
     for (let i = 0; i < retryCount; i++) {
       // Check for user abort before each retry attempt
@@ -424,7 +426,7 @@ export abstract class AgentBase {
         }
         if (requestTimeoutSeconds > 0 && requestAbortController) {
           timeout = setTimeout(() => {
-            console.debug(
+            console.error(
               `\nRequest timeout after ${requestTimeoutSeconds} seconds. Canceling current request attempt ${i + 1}/${retryCount}.`,
             )
             // Only abort the current request, not the entire agent
@@ -475,13 +477,14 @@ export abstract class AgentBase {
 
         const resp = await stream.response
         respMessages = resp.messages
+        rateLimitErrorCount = 0
 
         // Clear timeout on successful completion
         if (timeout) {
           clearTimeout(timeout)
           timeout = undefined
         }
-      } catch (error) {
+      } catch (error: any) {
         if (error instanceof Error && error.name === 'AbortError') {
           // Check if this was a user abort or just a request timeout
           if (this.#aborted) {
@@ -489,8 +492,25 @@ export abstract class AgentBase {
             break
           }
           // Otherwise, this was just a request timeout - continue to next retry
-          console.debug(`Request attempt ${i + 1} timed out, will retry`)
+          console.error(`Request attempt ${i + 1} timed out, will retry`)
+        } else if (
+          error?.error?.error?.code === 'rate_limit_exceeded' ||
+          error?.error?.code === 'rate_limit_exceeded' ||
+          error?.code === 'rate_limit_exceeded' ||
+          error?.status === 429 ||
+          error?.error?.status === 429
+        ) {
+          rateLimitErrorCount++
+          const waitSeconds = computeRateLimitBackoffSeconds(rateLimitErrorCount)
+          console.error(`Rate limit exceeded. Waiting ${waitSeconds}s before retrying...`)
+          if (timeout) {
+            clearTimeout(timeout)
+            timeout = undefined
+          }
+          await new Promise((resolve) => setTimeout(resolve, waitSeconds * 1000))
+          console.error('Retrying request...')
         } else {
+          rateLimitErrorCount = 0
           console.error('Error in stream:', error)
         }
       } finally {
@@ -525,7 +545,7 @@ export abstract class AgentBase {
       }
 
       if (i < retryCount - 1) {
-        console.debug(`\nRetrying request ${i + 2} of ${retryCount}`)
+        console.error(`\nRetrying request ${i + 2} of ${retryCount}`)
       }
     }
 
