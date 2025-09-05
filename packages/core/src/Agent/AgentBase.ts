@@ -328,17 +328,12 @@ export abstract class AgentBase {
     return await this.#processLoop(prompt)
   }
 
-  async step(prompt: UserContent) {
+  async step(message: (UserModelMessage | ToolModelMessage)[]) {
     if (this.#messages.length === 0) {
       this.#callback({ kind: TaskEventKind.StartTask, agent: this, systemPrompt: this.config.systemPrompt })
     }
 
-    return await this.#request([
-      {
-        role: 'user',
-        content: prompt,
-      },
-    ])
+    return await this.#request(message)
   }
 
   async handleStepResponse(response: AssistantMessageContent[]) {
