@@ -85,8 +85,9 @@ export const makeAgentStepSpecHandler = (
         context: WorkflowContext,
         resumedState?: ResumeState,
       ): Promise<StepRunResult<Record<string, Json>>> {
+        const logger = context.logger ?? console
         if (context.verbose && context.verbose >= 1) {
-          console.log(`[agent-step] Running agent step '${step.id}' with input:`, input)
+          logger.log(`[agent-step] Running agent step '${step.id}' with input:`, input)
         }
         try {
           const model = await getModelFn(step, context)
@@ -113,7 +114,7 @@ export const makeAgentStepSpecHandler = (
               }
 
               if (context.verbose && context.verbose >= 1) {
-                console.log(`[agent-step] Using agent: ${agentName}`)
+                logger.log(`[agent-step] Using agent: ${agentName}`)
               }
 
               const agentOptions: SharedAgentOptions = {
@@ -135,7 +136,7 @@ export const makeAgentStepSpecHandler = (
                 throw new Error('No system prompt specified for the agent step.')
               }
               if (context.verbose && context.verbose >= 1) {
-                console.log(`[agent-step] Using generic WorkflowAgent`)
+                logger.log(`[agent-step] Using generic WorkflowAgent`)
               }
               const systemPrompt = resolveTemplatedString(step.systemPrompt, input)
               return new WorkflowAgent('agent', model, {
@@ -178,13 +179,13 @@ export const makeAgentStepSpecHandler = (
           }
 
           if (context.verbose && context.verbose >= 1) {
-            console.log(`[agent-step] Starting agent with content:`, JSON.stringify(combinedContentParts, null, 2))
+            logger.log(`[agent-step] Starting agent with content:`, JSON.stringify(combinedContentParts, null, 2))
           }
 
           const exitReason = await agent.start(combinedContentParts)
 
           if (context.verbose && context.verbose >= 1) {
-            console.log(`[agent-step] Agent exited with reason:`, exitReason)
+            logger.log(`[agent-step] Agent exited with reason:`, exitReason)
           }
 
           const handleExitReason = (reason: ExitReason): StepRunResult<Record<string, Json>> => {

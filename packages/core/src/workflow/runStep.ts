@@ -8,9 +8,10 @@ export const runStep = async (
   resumedState: any | undefined,
   allOutputs: Record<string, Record<string, Json>>,
 ): Promise<StepRunResult<Record<string, Json>>> => {
+  const logger = context.logger ?? console
   if (context.verbose && context.verbose >= 1) {
-    console.log(`[workflow] running step: ${step.id}`)
-    console.log(`[workflow] input: ${JSON.stringify(input, null, 2)}`)
+    logger.log(`[workflow] running step: ${step.id}`)
+    logger.log(`[workflow] input: ${JSON.stringify(input, null, 2)}`)
   }
   try {
     const validatedInput = step.inputSchema?.parse(input) ?? input
@@ -18,7 +19,7 @@ export const runStep = async (
     const result = await step.run({ ...validatedInput, $: allOutputs }, context, resumedState)
 
     if (context.verbose && context.verbose >= 1) {
-      console.log(`[workflow] step result: ${step.id}`, JSON.stringify(result, null, 2))
+      logger.log(`[workflow] step result: ${step.id}`, JSON.stringify(result, null, 2))
     }
 
     if (result.type === 'success') {
@@ -32,7 +33,7 @@ export const runStep = async (
     return result
   } catch (error) {
     if (context.verbose && context.verbose >= 1) {
-      console.error(`[workflow] step error: ${step.id}`, error)
+      logger.error(`[workflow] step error: ${step.id}`, error)
     }
     return { type: 'error', error }
   }

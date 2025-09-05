@@ -71,6 +71,7 @@ export const reviewCommand = new Command('review')
       parameters: parentOptions,
       verbose,
       agentCallback: onEvent,
+      logger: customConsole,
     }
 
     const input = { json: options.json, ...(options.pr && { pr: options.pr }) }

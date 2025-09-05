@@ -30,6 +30,7 @@ export type WorkflowContext = {
   parameters: Record<string, any>
   verbose?: number
   agentCallback?: TaskEventCallback
+  logger?: Console
 }
 
 type InputType = {
