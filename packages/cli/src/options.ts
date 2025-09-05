@@ -100,7 +100,7 @@ export function parseOptions(
     set(config, ['providers', AiProvider.OpenRouter, 'apiKey'], env.OPENROUTER_API_KEY)
   }
   if (env.OPENAI_API_KEY) {
-    set(config, ['providers', AiProvider.Ollama, 'apiKey'], env.OPENAI_API_KEY)
+    set(config, ['providers', AiProvider.OpenAI, 'apiKey'], env.OPENAI_API_KEY)
   }
 
   const providerConfig = new ApiProviderConfig({
