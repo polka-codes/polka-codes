@@ -19,8 +19,6 @@ export interface CliOptions {
   verbose?: number
   baseDir?: string
   agent?: string
-  retryCount?: number
-  requestTimeoutSeconds?: number
   silent?: boolean
   file?: string[]
 }
@@ -33,8 +31,6 @@ export function addSharedOptions(command: Command) {
     .option('--api-key <key>', 'API key')
     .option('--max-messages <iterations>', 'Maximum number of messages to send.', Number.parseInt)
     .option('--budget <budget>', 'Budget for the AI service.', Number.parseFloat)
-    .option('--retry-count <count>', 'Number of retries for failed requests.', Number.parseInt)
-    .option('--request-timeout-seconds <seconds>', 'Request timeout in seconds.', Number.parseInt)
     .option('-v --verbose', 'Enable verbose output. Use -v for level 1, -vv for level 2', (_value, prev) => prev + 1, 0)
     .option('-d --base-dir <path>', 'Base directory to run commands in')
     .option('--agent <agent>', 'Initial agent to use (default: architect)')
@@ -65,13 +61,6 @@ export function parseOptions(
   }
 
   const config = loadConfig(options.config, cwd, home) ?? {}
-
-  if (options.retryCount !== undefined) {
-    config.retryCount = options.retryCount
-  }
-  if (options.requestTimeoutSeconds !== undefined) {
-    config.requestTimeoutSeconds = options.requestTimeoutSeconds
-  }
 
   const defaultProvider = (options.apiProvider || env.POLKA_API_PROVIDER || config.defaultProvider) as AiProvider | undefined
   const defaultModel = options.model || env.POLKA_MODEL || config.defaultModel
