@@ -1,3 +1,6 @@
+// disable AI SDK Warning: The "temperature" setting is not supported by this model - temperature is not supported for reasoning models
+globalThis.AI_SDK_LOG_WARNINGS = false
+
 import 'dotenv/config'
 import { Command } from 'commander'
 import { version } from '../package.json'
