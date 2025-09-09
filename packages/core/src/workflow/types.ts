@@ -136,3 +136,5 @@ export type WorkflowRunResult<T extends Record<string, Json>> =
   | WorkflowRunResultSuccess<T>
   | WorkflowRunResultError
   | WorkflowRunResultPaused
+
+export type ParseOutputResult<T> = { success: true; data: T } | { success: false; error?: string }

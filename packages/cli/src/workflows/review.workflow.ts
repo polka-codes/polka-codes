@@ -4,6 +4,7 @@ import { execSync } from 'node:child_process'
 import type { Console } from 'node:console'
 import { confirm } from '@inquirer/prompts'
 import {
+  type AgentContextParameters,
   builder,
   type CustomStepSpec,
   parseJsonFromMarkdown,
@@ -40,6 +41,7 @@ type ReviewWorkflowInput = {
 }
 
 export interface ReviewWorkflowContext extends WorkflowContext {
+  parameters: AgentContextParameters
   ui: { spinner: Ora }
 }
 

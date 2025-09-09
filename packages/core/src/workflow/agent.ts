@@ -3,6 +3,7 @@
 import type { LanguageModelV2 } from '@ai-sdk/provider'
 import type { ModelMessage, UserContent } from 'ai'
 import type { z } from 'zod'
+import { toJSONSchema } from 'zod/v4'
 import {
   AgentBase,
   type AgentNameType,
@@ -17,7 +18,7 @@ import {
 import type { ToolFormat } from '../config'
 import { type FullToolInfoV2, type ToolResponse, type ToolResponseInterrupted, ToolResponseType } from '../tool'
 import { UsageMeter } from '../UsageMeter'
-import type { BaseStepSpec, Json, StepRunResult, StepSpecHandler, TemplatedString, WorkflowContext } from './types'
+import type { BaseStepSpec, Json, ParseOutputResult, StepRunResult, StepSpecHandler, TemplatedString, WorkflowContext } from './types'
 import { resolveTemplatedString } from './utils'
 
 export type AgentStepSpec<
@@ -27,11 +28,9 @@ export type AgentStepSpec<
   type: 'agent'
   messages: (UserContent | TemplatedString<TInput>)[]
   outputSchema?: z.ZodType<TOutput>
-  parseOutput?: (raw: string) => TOutput
+  parseOutput?: (raw: string) => ParseOutputResult<TOutput>
   provider?: string
   model?: string
-  budget?: number
-  maxMessages?: number
   modelParameters?: Record<string, any>
   toolFormat?: ToolFormat
   agent?: AgentNameType
@@ -53,13 +52,14 @@ class WorkflowAgent extends AgentBase {
 }
 
 export type AgentContextParameters = {
-  budget?: number
-  maxMessages?: number
   toolFormat?: ToolFormat
   os?: string
   policies?: AgentPolicy[]
   modelParameters?: Record<string, any>
   scripts?: Record<string, string | { command: string; description: string }>
+  retryCount?: number
+  requestTimeoutSeconds?: number
+  usageMeter?: UsageMeter
 }
 
 type ResumeState = {
@@ -94,9 +94,7 @@ export const makeAgentStepSpecHandler = (
 
           const parameters: AgentContextParameters = context.parameters ?? {}
 
-          const budget = step.budget ?? parameters?.budget
-          const maxMessages = step.maxMessages ?? parameters?.maxMessages
-          const usageMeter = new UsageMeter({}, { maxMessages, maxCost: budget })
+          const usageMeter = parameters?.usageMeter ?? new UsageMeter()
           const toolFormat = step.toolFormat ?? parameters.toolFormat ?? 'native'
           const policies = parameters.policies ?? []
           const modelParameters = { ...(parameters.modelParameters ?? {}), ...(step.modelParameters ?? {}) }
@@ -129,6 +127,8 @@ export const makeAgentStepSpecHandler = (
                 scripts: parameters.scripts,
                 callback: context.agentCallback,
                 requireToolUse: false,
+                retryCount: parameters.retryCount,
+                requestTimeoutSeconds: parameters.requestTimeoutSeconds,
               })
             } else {
               if (!step.systemPrompt) {
@@ -151,6 +151,8 @@ export const makeAgentStepSpecHandler = (
                 parameters: modelParameters,
                 usageMeter,
                 requireToolUse: false,
+                retryCount: parameters.retryCount,
+                requestTimeoutSeconds: parameters.requestTimeoutSeconds,
               })
             }
           }
@@ -187,7 +189,7 @@ export const makeAgentStepSpecHandler = (
             logger.log(`[agent-step] Agent exited with reason:`, exitReason)
           }
 
-          const handleExitReason = (reason: ExitReason): StepRunResult<Record<string, Json>> => {
+          const handleExitReason = async (reason: ExitReason): Promise<StepRunResult<Record<string, Json>>> => {
             switch (reason.type) {
               case 'Pause':
                 return { type: 'paused', state: { messages: agent.messages } }
@@ -196,24 +198,28 @@ export const makeAgentStepSpecHandler = (
               case ToolResponseType.Exit: {
                 const raw = reason.message
                 if (step.parseOutput) {
-                  try {
-                    const parsed = step.parseOutput(raw)
+                  const result = step.parseOutput(raw)
+                  if (result.success) {
                     if (step.outputSchema) {
-                      const validationResult = step.outputSchema.safeParse(parsed)
+                      const validationResult = step.outputSchema.safeParse(result.data)
                       if (validationResult.success) {
                         return { type: 'success', output: validationResult.data }
                       }
-                      return {
-                        type: 'error',
-                        error: new Error(`Output validation failed: ${validationResult.error.toString()}`),
+                      let errorMessage = `Output validation failed: ${validationResult.error.toString()}`
+                      if (step.outputSchema) {
+                        errorMessage += `\n\nExpected JSON schema:\n${JSON.stringify(toJSONSchema(step.outputSchema), null, 2)}`
                       }
+                      const newReason = await agent.continueTask(errorMessage)
+                      return handleExitReason(newReason)
                     }
-                    return { type: 'success', output: parsed as any }
-                  } catch (e) {
-                    const error = e instanceof Error ? e : new Error(String(e))
-                    error.message = `Failed to parse agent output with parseOutput: ${error.message}`
-                    return { type: 'error', error }
+                    return { type: 'success', output: result.data as any }
                   }
+                  let errorMessage = result.error ?? 'Invalid format.'
+                  if (step.outputSchema) {
+                    errorMessage += `\n\nExpected JSON schema:\n${JSON.stringify(toJSONSchema(step.outputSchema), null, 2)}`
+                  }
+                  const newReason = await agent.continueTask(errorMessage)
+                  return handleExitReason(newReason)
                 } else if (step.outputSchema) {
                   try {
                     const output = JSON.parse(raw)
@@ -221,14 +227,16 @@ export const makeAgentStepSpecHandler = (
                     if (validationResult.success) {
                       return { type: 'success', output: validationResult.data }
                     }
-                    return {
-                      type: 'error',
-                      error: new Error(`Output validation failed: ${validationResult.error.toString()}`),
-                    }
+                    let errorMessage = `Output validation failed: ${validationResult.error.toString()}`
+                    errorMessage += `\n\nExpected JSON schema:\n${JSON.stringify(toJSONSchema(step.outputSchema), null, 2)}`
+                    const newReason = await agent.continueTask(errorMessage)
+                    return handleExitReason(newReason)
                   } catch (e) {
                     const error = e instanceof Error ? e : new Error(String(e))
-                    error.message = `Failed to parse agent output as JSON: ${error.message}`
-                    return { type: 'error', error }
+                    let errorMessage = `Failed to parse agent output as JSON: ${error.message}`
+                    errorMessage += `\n\nExpected JSON schema:\n${JSON.stringify(toJSONSchema(step.outputSchema), null, 2)}`
+                    const newReason = await agent.continueTask(errorMessage)
+                    return handleExitReason(newReason)
                   }
                 }
                 return { type: 'success', output: reason }
@@ -250,7 +258,7 @@ export const makeAgentStepSpecHandler = (
             }
           }
 
-          return handleExitReason(exitReason)
+          return await handleExitReason(exitReason)
         } catch (e) {
           return { type: 'error', error: e instanceof Error ? e : new Error(String(e)) }
         }

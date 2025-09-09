@@ -5,53 +5,74 @@ import { parseJsonFromMarkdown } from './parseJsonFromMarkdown'
 describe('parseJsonFromMarkdown', () => {
   it('should parse JSON from a markdown code block', () => {
     const markdown = 'Here is the JSON:\n\n```json\n{"key":"value"}\n```'
-    const expected = { key: 'value' }
-    expect(parseJsonFromMarkdown(markdown)).toEqual(expected)
+    expect(parseJsonFromMarkdown(markdown)).toEqual({
+      success: true,
+      data: { key: 'value' },
+    })
   })
 
-  it('should return the original string if no JSON is found', () => {
+  it('should return an error if no JSON object is found', () => {
     const markdown = 'This is just a string.'
-    expect(parseJsonFromMarkdown(markdown)).toBe(markdown)
+    expect(parseJsonFromMarkdown(markdown)).toEqual({
+      success: false,
+      error: 'No JSON object found in the string.',
+    })
   })
 
   it('should handle JSON without markdown fences', () => {
     const json = '{"key":"value"}'
-    const expected = { key: 'value' }
-    expect(parseJsonFromMarkdown(json)).toEqual(expected)
+    expect(parseJsonFromMarkdown(json)).toEqual({
+      success: true,
+      data: { key: 'value' },
+    })
   })
 
-  it('should throw an error for malformed JSON in a code block', () => {
+  it('should return an error for malformed JSON in a code block', () => {
     const markdown = '```json\n{"key":"value",,}\n```'
-    expect(() => parseJsonFromMarkdown(markdown)).toThrow()
+    const result = parseJsonFromMarkdown(markdown)
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error).toMatch(/Failed to parse JSON/)
+    }
   })
 
   it('should parse JSON from a markdown code block without the json identifier', () => {
     const markdown = 'Here is the JSON:\n\n```\n{"key":"value"}\n```'
-    const expected = { key: 'value' }
-    expect(parseJsonFromMarkdown(markdown)).toEqual(expected)
+    expect(parseJsonFromMarkdown(markdown)).toEqual({
+      success: true,
+      data: { key: 'value' },
+    })
   })
 
   it('should parse an escaped JSON string from a markdown code block', () => {
     const markdown = '```json\n"{\\"key\\":\\"value\\"}"\n```'
-    const expected = { key: 'value' }
-    expect(parseJsonFromMarkdown(markdown)).toEqual(expected)
+    expect(parseJsonFromMarkdown(markdown)).toEqual({
+      success: true,
+      data: { key: 'value' },
+    })
   })
 
   it('should parse an escaped JSON string from a markdown code block without the json identifier', () => {
     const markdown = '```\n"{\\"key\\":\\"value\\"}"\n```'
-    const expected = { key: 'value' }
-    expect(parseJsonFromMarkdown(markdown)).toEqual(expected)
+    expect(parseJsonFromMarkdown(markdown)).toEqual({
+      success: true,
+      data: { key: 'value' },
+    })
   })
 
   it('should parse a JSON array from a markdown code block', () => {
     const markdown = '```json\n[{"key":"value"}]\n```'
-    const expected = [{ key: 'value' }]
-    expect(parseJsonFromMarkdown(markdown)).toEqual(expected)
+    expect(parseJsonFromMarkdown(markdown)).toEqual({
+      success: true,
+      data: [{ key: 'value' }],
+    })
   })
 
   it('should parse a JSON array from a markdown code block without the json identifier', () => {
     const markdown = '```\n[{"key":"value"}]\n```'
-    const expected = [{ key: 'value' }]
-    expect(parseJsonFromMarkdown(markdown)).toEqual(expected)
+    expect(parseJsonFromMarkdown(markdown)).toEqual({
+      success: true,
+      data: [{ key: 'value' }],
+    })
   })
 })
