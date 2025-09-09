@@ -60,8 +60,6 @@ const createPullRequest: CustomStepSpec<{ title: string; description: string }, 
     console.log('Title:', title)
     console.log(description)
 
-    await new Promise((resolve) => setTimeout(resolve, 10))
-
     spawnSync('gh', ['pr', 'create', '--title', title, '--body', description], {
       stdio: 'inherit',
     })

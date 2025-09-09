@@ -64,10 +64,8 @@ export function getDefaultBranch(): string | undefined {
   const defaultBranches = ['master', 'main', 'develop']
   for (const branch of defaultBranches) {
     try {
-      const output = execSync(`git branch --list ${branch}`, { encoding: 'utf-8' }).trim()
-      if (output) {
-        return branch
-      }
+      execSync(`git show-ref --verify --quiet refs/heads/${branch}`)
+      return branch
     } catch {
       // branch does not exist
     }
