@@ -4,8 +4,6 @@ import type { MultiAgent, SharedAgentOptions } from '../Agent'
 import { ToolResponseType } from '../tool'
 import type { UsageMeter } from '../UsageMeter'
 import createNewProjectDef from './createNewProject'
-import generateGitCommitMessageDef from './generateGitCommitMessage'
-import generateGithubPullRequestDetailsDef from './generateGithubPullRequestDetails'
 import generateProjectConfigDef from './generateProjectConfig'
 
 import type { AiToolDefinition, AiToolDefinitionWithAgent, AiToolDefinitionWithMultiAgent, GetInput, GetOutput } from './types'
@@ -85,9 +83,6 @@ export const makeAgentTool = <T extends AiToolDefinitionWithAgent<any, any>>(def
     return executeAgentTool(definition, options, params)
   }
 }
-
-export const generateGitCommitMessage = makeTool(generateGitCommitMessageDef)
-export const generateGithubPullRequestDetails = makeTool(generateGithubPullRequestDetailsDef)
 
 export const generateProjectConfig = makeMultiAgentTool(generateProjectConfigDef)
 export const createNewProject = makeMultiAgentTool(createNewProjectDef)

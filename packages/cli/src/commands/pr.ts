@@ -1,18 +1,33 @@
-import { execSync, spawnSync } from 'node:child_process'
-import { generateGithubPullRequestDetails, UsageMeter } from '@polka-codes/core'
+// packages/cli/src/commands/pr.ts
+
+import { spawnSync } from 'node:child_process'
+import os from 'node:os'
+import { getProvider, type ProviderOptions, printEvent } from '@polka-codes/cli-shared'
+import {
+  type AgentStepSpec,
+  combineHandlers,
+  customStepSpecHandler,
+  EnableCachePolicy,
+  makeAgentStepSpecHandler,
+  run,
+  sequentialStepSpecHandler,
+  UsageMeter,
+  type WorkflowContext,
+} from '@polka-codes/core'
 import { Command } from 'commander'
 import { merge } from 'lodash'
 import ora from 'ora'
 import { getModel } from '../getModel'
 import { parseOptions } from '../options'
 import prices from '../prices'
+import { type PrWorkflowContext, prWorkflow } from '../workflows'
 
 export const prCommand = new Command('pr')
   .description('Create a GitHub pull request')
-  .argument('[message]', 'Optional context for the commit message generation')
+  .argument('[message]', 'Optional context for the pull request generation')
   .action(async (message, _options, command: Command) => {
     const options = command.parent?.opts() ?? {}
-    const { providerConfig, config } = parseOptions(options)
+    const { providerConfig, config, verbose } = parseOptions(options)
 
     const commandConfig = providerConfig.getConfigForCommand('pr')
 
@@ -21,88 +36,72 @@ export const prCommand = new Command('pr')
       process.exit(1)
     }
 
-    const spinner = ora('Gathering information...').start()
-
     console.log('Provider:', commandConfig.provider)
     console.log('Model:', commandConfig.model)
 
-    try {
-      // Check if gh CLI is installed
-      execSync('gh --version', { stdio: 'ignore' })
-    } catch {
-      console.error('Error: GitHub CLI (gh) is not installed. Please install it from https://cli.github.com/')
-      process.exit(1)
+    const agentStepHandler = makeAgentStepSpecHandler(async (_step: AgentStepSpec, _context: WorkflowContext) => {
+      const commandConfig = providerConfig.getConfigForCommand('pr')
+      if (!commandConfig || !commandConfig.provider || !commandConfig.model) {
+        throw new Error('No provider specified for the agent step.')
+      }
+      return getModel(commandConfig)
+    })
+
+    const coreStepHandler = combineHandlers(customStepSpecHandler, sequentialStepSpecHandler, agentStepHandler)
+
+    const spinner = ora({ text: 'Starting...', stream: process.stderr }).start()
+
+    const usage = new UsageMeter(merge(prices, config.prices ?? {}), { maxMessages: config.maxMessageCount, maxCost: config.budget })
+    const onEvent = verbose > 0 ? printEvent(verbose, usage, console) : undefined
+    const toolProviderOptions: ProviderOptions = { excludeFiles: config.excludeFiles }
+    const toolProvider = getProvider(toolProviderOptions)
+
+    const agentConfig = providerConfig.getConfigForCommand('pr')
+
+    const contextForWorkflow: PrWorkflowContext = {
+      ui: { spinner },
+      provider: toolProvider,
+      parameters: {
+        toolFormat: config.toolFormat,
+        os: os.platform(),
+        policies: [EnableCachePolicy],
+        modelParameters: agentConfig?.parameters,
+        scripts: config.scripts,
+        retryCount: config.retryCount,
+        requestTimeoutSeconds: config.requestTimeoutSeconds,
+      },
+      verbose,
+      agentCallback: onEvent,
+      logger: console,
     }
 
+    const input = { ...(message && { context: message }) }
+
     try {
-      // get branch name usnig git
-      const branchName = execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf-8' }).trim()
+      const result = await run(prWorkflow, contextForWorkflow, coreStepHandler, input)
+      if (result.type === 'success') {
+        const { title, description } = result.output
 
-      const defaultBranchNames = ['master', 'main', 'develop']
+        spinner.stop()
 
-      let defaultBranch: string | undefined
-
-      for (const branchName of defaultBranchNames) {
-        if (execSync(`git branch --list ${branchName}`, { encoding: 'utf-8' }).includes(branchName)) {
-          defaultBranch = branchName
-          break
+        spawnSync('gh', ['pr', 'create', '--title', title, '--body', description], {
+          stdio: 'inherit',
+        })
+      } else if (result.type === 'error') {
+        spinner.fail(`Error creating pull request: ${result.error?.message ?? 'An unknown error occurred'}`)
+        if (result.error) {
+          console.error(result.error)
         }
-      }
-
-      if (!defaultBranch) {
-        // git remote is slow as it needs to fetch the remote info
-        const originInfo = execSync('git remote show origin', { encoding: 'utf-8' })
-        defaultBranch = originInfo.match(/HEAD branch: (.*)/)?.[1]
-      }
-
-      if (!defaultBranch) {
-        console.error('Error: Could not determine default branch name.')
+        process.exit(1)
+      } else {
+        spinner.fail(`Unexpected error creating pull request: ${JSON.stringify(result)}`)
         process.exit(1)
       }
-
-      const commits = execSync(`git --no-pager log --oneline --no-color --no-merges --no-decorate ${defaultBranch}..HEAD`, {
-        encoding: 'utf-8',
-      })
-
-      const diff = execSync(`git diff --cached -U50 ${defaultBranch}`, { encoding: 'utf-8' })
-
-      const usage = new UsageMeter(merge(prices, config.prices ?? {}))
-
-      const ai = getModel(commandConfig)
-
-      spinner.text = 'Generating pull request details...'
-
-      const resp = await generateGithubPullRequestDetails(
-        ai,
-        {
-          commitDiff: diff,
-          commitMessages: commits,
-          branchName,
-          context: message,
-        },
-        usage,
-      )
-
-      usage.printUsage()
-
-      spinner.succeed('Pull request details generated')
-
-      const title = resp.title.trim()
-      const description = resp.description.trim()
-
-      console.log('Title:', title)
-      console.log(description)
-
-      // wait for 10ms to let the spinner stop
-      await new Promise((resolve) => setTimeout(resolve, 10))
-
-      spawnSync('gh', ['pr', 'create', '--title', title, '--body', description], {
-        stdio: 'inherit',
-      })
-
-      usage.printUsage()
     } catch (error) {
-      console.error('Error creating pull request:', error)
+      spinner.fail(`Error creating pull request: ${error instanceof Error ? error.message : String(error)}`)
+      console.error(error)
       process.exit(1)
+    } finally {
+      usage.printUsage()
     }
   })
