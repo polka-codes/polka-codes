@@ -13,6 +13,7 @@ import {
 import type { Ora } from 'ora'
 import { z } from 'zod'
 import { gitDiff } from '../tools'
+import { parseGitDiffNameStatus, printChangedFiles } from './workflow.utils'
 
 export type CommitWorkflowInput = {
   all?: boolean
@@ -26,50 +27,6 @@ export interface CommitWorkflowContext extends WorkflowContext {
 type FileChange = {
   path: string
   status: string
-}
-
-function parseGitDiffNameStatus(diffOutput: string): FileChange[] {
-  const lines = diffOutput.split('\n').filter((line) => line.trim())
-  return lines.map((line) => {
-    const [status, ...pathParts] = line.split('\t')
-    const path = pathParts.join('\t')
-    let statusDescription: string
-    switch (status[0]) {
-      case 'A':
-        statusDescription = 'Added'
-        break
-      case 'M':
-        statusDescription = 'Modified'
-        break
-      case 'D':
-        statusDescription = 'Deleted'
-        break
-      case 'R':
-        statusDescription = 'Renamed'
-        break
-      case 'C':
-        statusDescription = 'Copied'
-        break
-      case 'T':
-        statusDescription = 'Type changed'
-        break
-      default:
-        statusDescription = 'Unknown'
-    }
-    return { path, status: statusDescription }
-  })
-}
-
-function printChangedFiles(changedFiles: FileChange[], spinner: Ora, logger: Console) {
-  if (changedFiles.length === 0) {
-    return
-  }
-  spinner.stop()
-  logger.log('Staged files:')
-  for (const file of changedFiles) {
-    logger.log(`- ${file.status}: ${file.path}`)
-  }
-  spinner.start()
 }
 
 const ensureStaged: CustomStepSpec<CommitWorkflowInput, { context?: string; changedFiles: FileChange[] }> = {
@@ -116,7 +73,7 @@ const ensureStaged: CustomStepSpec<CommitWorkflowInput, { context?: string; chan
     } catch {
       // Ignore listing failure; continue to message generation
     }
-    printChangedFiles(changedFiles, spinner, logger)
+    printChangedFiles('Staged files:', changedFiles, spinner, logger)
 
     spinner.text = 'Generating commit message...'
     return { type: 'success', output: { context: userContext, changedFiles } }
