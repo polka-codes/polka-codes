@@ -3,6 +3,7 @@
 import { execSync, spawnSync } from 'node:child_process'
 import { builder, type CustomStepSpec, parseJsonFromMarkdown, type WorkflowSpec } from '@polka-codes/core'
 import { z } from 'zod'
+import type { CommandWorkflowContext } from '../runWorkflow'
 import { checkGhInstalled, getDefaultBranch } from './workflow.utils'
 
 const prDetailsSchema = z.object({
@@ -50,8 +51,12 @@ const getGitInfo: CustomStepSpec<{ context?: string }, { diff: string; commits: 
 const createPullRequest: CustomStepSpec<{ title: string; description: string }, { title: string; description: string }> = {
   id: 'create-pull-request',
   type: 'custom' as const,
-  run: async (input) => {
+  run: async (input, context) => {
     const { title, description } = input
+    const { ui } = context as CommandWorkflowContext
+    if (ui.spinner.isSpinning) {
+      ui.spinner.stop()
+    }
     console.log('Title:', title)
     console.log(description)
 
