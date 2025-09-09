@@ -5,6 +5,7 @@ import os from 'node:os'
 import type { LanguageModelV2 } from '@ai-sdk/provider'
 import { getProvider, type ProviderOptions, printEvent } from '@polka-codes/cli-shared'
 import {
+  type AgentContextParameters,
   type AgentStepSpec,
   combineHandlers,
   customStepSpecHandler,
@@ -27,6 +28,7 @@ import prices from './prices'
 
 export interface CommandWorkflowContext extends WorkflowContext {
   ui: { spinner: Ora }
+  parameters: AgentContextParameters
 }
 
 type HandleSuccess<T extends Record<string, Json>> = (result: StepRunResult<T>, command?: Command) => Promise<void>
@@ -86,6 +88,7 @@ export async function runWorkflowCommand<TWorkflowInput extends Record<string, J
       scripts: config.scripts,
       retryCount: config.retryCount,
       requestTimeoutSeconds: config.requestTimeoutSeconds,
+      usageMeter: usage,
     },
     verbose,
     agentCallback: onEvent,
