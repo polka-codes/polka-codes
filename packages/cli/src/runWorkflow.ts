@@ -22,6 +22,7 @@ import {
 import type { Command } from 'commander'
 import { merge } from 'lodash'
 import ora, { type Ora } from 'ora'
+import type { ApiProviderConfig } from './ApiProviderConfig'
 import { getModel } from './getModel'
 import { parseOptions } from './options'
 import prices from './prices'
@@ -29,34 +30,46 @@ import prices from './prices'
 export interface CommandWorkflowContext extends WorkflowContext {
   ui: { spinner: Ora }
   parameters: AgentContextParameters
+  cmdOptions?: any
 }
 
-type HandleSuccess<T extends Record<string, Json>> = (result: StepRunResult<T>, command?: Command) => Promise<void>
+type HandleSuccess<T extends Record<string, Json>> = (result: StepRunResult<T>, command?: Command, usageMeter?: UsageMeter) => Promise<void>
 
 export async function runWorkflowCommand<TWorkflowInput extends Record<string, Json>, TWorkflowOutput extends Record<string, Json>>(
-  commandName: 'review' | 'commit' | 'pr',
+  commandName: 'review' | 'commit' | 'pr' | 'init',
   workflow: WorkflowSpec<TWorkflowInput, TWorkflowOutput>,
   command: Command,
   workflowInput: TWorkflowInput,
   handleSuccess: HandleSuccess<TWorkflowOutput>,
-  options: { json?: boolean } = {},
+  options: { json?: boolean; suppressUsagePrint?: boolean } = {},
 ) {
   const parentOptions = command.parent?.opts() ?? {}
   const { providerConfig, config, verbose } = parseOptions(parentOptions)
-  const commandConfig = providerConfig.getConfigForCommand(commandName)
+  let commandConfig: ReturnType<ApiProviderConfig['getConfigForCommand']>
 
-  if (!commandConfig || !commandConfig.provider || !commandConfig.model) {
-    console.error(`Error: No provider specified for ${commandName}. Please run "polka config" to configure your AI provider.`)
-    process.exit(1)
+  if (commandName !== 'init') {
+    commandConfig = providerConfig.getConfigForCommand(commandName)
+
+    if (!commandConfig || !commandConfig.provider || !commandConfig.model) {
+      console.error(`Error: No provider specified for ${commandName}. Please run "polka config" to configure your AI provider.`)
+      process.exit(1)
+    }
+    const { json = false } = options
+    if (!json) {
+      console.log('Provider:', commandConfig.provider)
+      console.log('Model:', commandConfig.model)
+    }
   }
 
-  const { json = false } = options
-  if (!json) {
-    console.log('Provider:', commandConfig.provider)
-    console.log('Model:', commandConfig.model)
-  }
+  const { json = false, suppressUsagePrint = false } = options
 
   const agentStepHandler = makeAgentStepSpecHandler(async (_step: AgentStepSpec, _context: WorkflowContext): Promise<LanguageModelV2> => {
+    if (commandName === 'init') {
+      throw new Error('Agent steps are not supported in the init workflow via runWorkflowCommand.')
+    }
+    if (!commandConfig) {
+      throw new Error('Internal error: command configuration is missing for a non-init command.')
+    }
     return getModel(commandConfig)
   })
 
@@ -75,10 +88,11 @@ export async function runWorkflowCommand<TWorkflowInput extends Record<string, J
   }
   const toolProvider = getProvider(toolProviderOptions)
 
-  const agentConfig = providerConfig.getConfigForCommand(commandName)
+  const agentConfig = commandName === 'init' ? undefined : providerConfig.getConfigForCommand(commandName)
 
   const context: CommandWorkflowContext = {
     ui: { spinner },
+    cmdOptions: parentOptions,
     provider: toolProvider,
     parameters: {
       toolFormat: config.toolFormat,
@@ -99,7 +113,7 @@ export async function runWorkflowCommand<TWorkflowInput extends Record<string, J
     const result = await run(workflow, context, coreStepHandler, workflowInput)
 
     if (result.type === 'success') {
-      await handleSuccess(result, command)
+      await handleSuccess(result, command, usage)
     } else if (result.type === 'error') {
       if (result.error?.message === 'User cancelled') {
         spinner.stop()
@@ -118,7 +132,7 @@ export async function runWorkflowCommand<TWorkflowInput extends Record<string, J
     console.error(error)
     process.exit(1)
   } finally {
-    if (!json) {
+    if (!json && !suppressUsagePrint) {
       usage.printUsage()
     }
   }

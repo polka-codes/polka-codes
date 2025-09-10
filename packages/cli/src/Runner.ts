@@ -39,6 +39,7 @@ export type RunnerOptions = {
   verbose: number
   availableAgents?: AgentInfo[] // empty to enable all agents
   silent?: boolean
+  externalUsageMeter?: UsageMeter
 }
 
 /** Core orchestrator managing AI agents, service provisioning, and task execution lifecycle */
@@ -52,10 +53,12 @@ export class Runner {
   constructor(options: RunnerOptions) {
     this.#options = options
 
-    this.usageMeter = new UsageMeter(merge(prices, options.config.prices ?? {}), {
-      maxMessages: options.maxMessageCount ?? 0,
-      maxCost: options.budget ?? 0,
-    })
+    this.usageMeter =
+      options.externalUsageMeter ??
+      new UsageMeter(merge(prices, options.config.prices ?? {}), {
+        maxMessages: options.maxMessageCount ?? 0,
+        maxCost: options.budget ?? 0,
+      })
 
     let rules = options.config.rules
     if (typeof rules === 'string') {

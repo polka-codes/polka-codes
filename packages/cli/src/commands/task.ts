@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises'
-import { ToolResponseType } from '@polka-codes/core'
+import { ToolResponseType, type UsageMeter } from '@polka-codes/core'
 import type { FilePart, ImagePart } from 'ai'
 import type { Command } from 'commander'
 import { lookup } from 'mime-types'
@@ -45,7 +45,12 @@ const readStdin = async (timeoutMs = 30000): Promise<string> => {
   })
 }
 
-export async function runTask(taskArg: string | undefined, _options: any, command: Command) {
+export async function runTask(
+  taskArg: string | undefined,
+  _options: any,
+  command: Command,
+  opts: { externalUsageMeter?: UsageMeter; suppressUsagePrint?: boolean } = {},
+) {
   let task = taskArg
   if (!task) {
     try {
@@ -89,11 +94,12 @@ export async function runTask(taskArg: string | undefined, _options: any, comman
     interactive: process.stdin.isTTY,
     verbose,
     silent,
+    externalUsageMeter: opts.externalUsageMeter,
   })
 
   const sigintHandler = () => {
     runner.abort()
-    if (!silent) {
+    if (!silent && !opts.suppressUsagePrint) {
       console.log()
       runner.printUsage()
     }
@@ -140,7 +146,7 @@ export async function runTask(taskArg: string | undefined, _options: any, comman
     if (exitReason.type === ToolResponseType.Exit) {
       console.log(exitReason.message)
     }
-  } else {
+  } else if (!opts.suppressUsagePrint) {
     runner.printUsage()
   }
 }
