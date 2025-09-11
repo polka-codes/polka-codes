@@ -10,9 +10,10 @@ export const reviewCommand = new Command('review')
   .description('Review a GitHub pull request or local changes')
   .option('--pr <pr>', 'The pull request number or URL to review')
   .option('--json', 'Output the review in JSON format', false)
-  .action(async (options: { pr?: string; json: boolean }, command: Command) => {
-    const { json, pr } = options
-    const input = { json, ...(pr && { pr }) }
+  .option('-y, --yes', 'Automatically apply review feedback', false)
+  .action(async (options: { pr?: string; json: boolean; yes: boolean }, command: Command) => {
+    const { json, pr, yes } = options
+    const input = { json, ...(pr && { pr }), yes }
 
     let _willRunTask = false
 

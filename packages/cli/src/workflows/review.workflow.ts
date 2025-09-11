@@ -38,6 +38,7 @@ type ReviewToolInput = {
 type ReviewWorkflowInput = {
   pr?: string
   json: boolean
+  yes: boolean
 }
 
 export interface ReviewWorkflowContext extends WorkflowContext {
@@ -153,9 +154,10 @@ const getChangeInfo: CustomStepSpec<ReviewWorkflowInput, { json: boolean; change
     context: WorkflowContext,
     _resumedState?: any,
   ): Promise<StepRunResult<{ json: boolean; changeInfo?: ReviewToolInput }>> => {
-    const { pr, json } = input
+    const { pr, json, yes } = input
     const logger = context.logger ?? console
     ;(context as any).json = json
+    ;(context as any).yes = yes
     const {
       ui: { spinner },
     } = context as ReviewWorkflowContext
@@ -309,6 +311,7 @@ const handleResult: CustomStepSpec<ReviewResult, HandleResultOutput> = {
   run: async (input, context, _resumedState) => {
     const { overview, specificReviews } = input
     const json = (context as any).json as boolean
+    const yes = (context as any).yes as boolean
     const logger = context.logger ?? console
     const {
       ui: { spinner },
@@ -333,14 +336,18 @@ const handleResult: CustomStepSpec<ReviewResult, HandleResultOutput> = {
 
     let shouldRunTask = false
 
-    if (process.stdin.isTTY && reviewResult.specificReviews.length > 0) {
-      try {
-        shouldRunTask = await confirm({
-          message: 'Do you wish polka-codes to address the review results?',
-          default: false,
-        })
-      } catch {
-        process.exit(130)
+    if (reviewResult.specificReviews.length > 0) {
+      if (yes) {
+        shouldRunTask = true
+      } else if (process.stdin.isTTY) {
+        try {
+          shouldRunTask = await confirm({
+            message: 'Do you wish polka-codes to address the review results?',
+            default: false,
+          })
+        } catch {
+          process.exit(130)
+        }
       }
     }
     const output: HandleResultOutput = { shouldRunTask }
