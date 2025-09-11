@@ -58,6 +58,7 @@ export const configSchema = z
     budget: z.number().positive().optional(),
     retryCount: z.number().int().min(0).optional(),
     requestTimeoutSeconds: z.number().int().positive().optional(),
+    summaryThreshold: z.number().int().positive().optional(),
     scripts: z
       .record(
         z.string(),

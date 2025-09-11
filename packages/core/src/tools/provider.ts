@@ -12,7 +12,10 @@ export type FilesystemProvider = {
 }
 
 export type CommandProvider = {
-  executeCommand?: (command: string, needApprove: boolean) => Promise<{ stdout: string; stderr: string; exitCode: number }>
+  executeCommand?: (
+    command: string,
+    needApprove: boolean,
+  ) => Promise<{ stdout: string; stderr: string; exitCode: number; summary?: string }>
 }
 
 export type InteractionProvider = {
@@ -51,7 +54,10 @@ export class MockProvider implements ToolProvider {
     return ['mock-file.txt']
   }
 
-  async executeCommand(_command: string, _needApprove: boolean): Promise<{ stdout: string; stderr: string; exitCode: number }> {
+  async executeCommand(
+    _command: string,
+    _needApprove: boolean,
+  ): Promise<{ stdout: string; stderr: string; exitCode: number; summary?: string }> {
     return { stdout: 'mock output', stderr: '', exitCode: 0 }
   }
 

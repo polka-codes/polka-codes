@@ -12,7 +12,8 @@ Command output
 </command_stdout>
 <command_stderr>
 stderr
-</command_stderr>"
+</command_stderr>
+"
 ,
   },
   "type": "Reply",
@@ -41,7 +42,8 @@ Command output
 </command_stdout>
 <command_stderr>
 stderr
-</command_stderr>"
+</command_stderr>
+"
 ,
   },
   "type": "Error",

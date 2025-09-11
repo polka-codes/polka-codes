@@ -26,6 +26,7 @@ import {
 import type { FilePart, ImagePart, TextPart } from 'ai'
 import { merge } from 'lodash'
 import type { ApiProviderConfig } from './ApiProviderConfig'
+import { summarizeOutput } from './commandSummarizer'
 import { getModel } from './getModel'
 import { getProviderOptions } from './getProviderOptions'
 import prices from './prices'
@@ -86,6 +87,7 @@ export class Runner {
             },
           },
       excludeFiles: options.config.excludeFiles,
+      summaryThreshold: options.config.summaryThreshold,
     }
 
     const platform = os.platform()
@@ -151,6 +153,13 @@ export class Runner {
           additionalTools.push(askFollowupQuestion)
         }
 
+        const newToolProviderOptions: ProviderOptions = {
+          ...toolProviderOptions,
+          summarizeOutput: async (stdout: string, stderr: string) => {
+            return await summarizeOutput(ai, stdout, stderr)
+          },
+        }
+
         const args = {
           ai,
           os: platform,
@@ -168,7 +177,7 @@ export class Runner {
           },
           usageMeter: this.usageMeter,
           additionalTools,
-          provider: getProvider(toolProviderOptions),
+          provider: getProvider(newToolProviderOptions),
         }
         switch (agentName) {
           case coderAgentInfo.name:

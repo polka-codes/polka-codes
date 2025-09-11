@@ -18,6 +18,8 @@ export type ProviderOptions = {
     onError(error: unknown): void
   }
   excludeFiles?: string[]
+  summarizeOutput?: (stdout: string, stderr: string) => Promise<string | undefined>
+  summaryThreshold?: number
 }
 
 export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
@@ -87,7 +89,10 @@ export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
       }
     },
 
-    executeCommand: (command: string, _needApprove: boolean): Promise<{ stdout: string; stderr: string; exitCode: number }> => {
+    executeCommand: (
+      command: string,
+      _needApprove: boolean,
+    ): Promise<{ stdout: string; stderr: string; exitCode: number; summary?: string }> => {
       // TODO: add timeout
 
       return new Promise((resolve, reject) => {
@@ -115,8 +120,25 @@ export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
           stderrText += dataStr
         })
 
-        child.on('close', (code) => {
+        child.on('close', async (code) => {
           options.command?.onExit(code ?? 0)
+          const totalLength = stdoutText.length + stderrText.length
+          if (totalLength > (options.summaryThreshold ?? 5000) && options.summarizeOutput) {
+            try {
+              const summary = await options.summarizeOutput(stdoutText, stderrText)
+              if (summary) {
+                resolve({
+                  summary,
+                  stdout: stdoutText,
+                  stderr: stderrText,
+                  exitCode: code ?? 0,
+                })
+                return
+              }
+            } catch (_e) {
+              console.error('Summarization failed:', _e)
+            }
+          }
           resolve({
             stdout: stdoutText,
             stderr: stderrText,
