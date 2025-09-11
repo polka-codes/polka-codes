@@ -121,10 +121,10 @@ export class UsageMeter {
     const usage = 'totalUsage' in resp ? resp.totalUsage : resp.usage
     const result = this.#calculageUsage(usage, resp.providerMetadata, modelInfo)
 
-    this.#totals.input += result.input
-    this.#totals.output += result.output
-    this.#totals.cachedRead += result.cachedRead
-    this.#totals.cost += result.cost
+    this.#totals.input += result.input || 0
+    this.#totals.output += result.output || 0
+    this.#totals.cachedRead += result.cachedRead || 0
+    this.#totals.cost += result.cost || 0
     this.#totals.messageCount += 1
   }
 
