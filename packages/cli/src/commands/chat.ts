@@ -89,25 +89,26 @@ export const runChat = async (opts: any, command?: Command) => {
       }
 
       if (runner.hasActiveAgent) {
-        const reason = await runner.continueTask(message, fileParts)
-        exitReason = reason
+        exitReason = await runner.continueTask(message, fileParts)
       } else {
-        const reason = await runner.startTask(message, agent, fileParts)
-        exitReason = reason
+        exitReason = await runner.startTask(message, agent, fileParts)
       }
-      switch (exitReason.type) {
-        case 'UsageExceeded': {
-          const continueChat = await confirm({
-            message: 'Usage limit exceeded. Do you want to continue?',
-            default: true,
-          })
-          if (continueChat) {
-            runner.usageMeter.resetUsage()
-          } else {
-            chat.close()
-          }
-          break
+
+      while (exitReason.type === 'UsageExceeded') {
+        const continueChat = await confirm({
+          message: 'Usage limit exceeded. Do you want to continue?',
+          default: true,
+        })
+        if (continueChat) {
+          runner.usageMeter.resetUsage()
+          exitReason = await runner.continueTask(message, fileParts)
+        } else {
+          chat.close()
+          return
         }
+      }
+
+      switch (exitReason.type) {
         case 'WaitForUserInput':
           break
         case ToolResponseType.Interrupted:
