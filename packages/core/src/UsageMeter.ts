@@ -176,6 +176,16 @@ export class UsageMeter {
     return { ...this.#totals }
   }
 
+  /** Merge another UsageMeter's totals into this one. */
+  merge(other: UsageMeter) {
+    const otherUsage = other.usage
+    this.#totals.input += otherUsage.input
+    this.#totals.output += otherUsage.output
+    this.#totals.cachedRead += otherUsage.cachedRead
+    this.#totals.cost += otherUsage.cost
+    this.#totals.messageCount += otherUsage.messageCount
+  }
+
   /** Print a concise usage summary to console. */
   printUsage(customConsole: Console = console) {
     const u = this.usage
