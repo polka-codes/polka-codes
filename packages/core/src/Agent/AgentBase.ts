@@ -7,7 +7,7 @@ import type {
   UserContent,
   UserModelMessage,
 } from '@ai-sdk/provider-utils'
-import { jsonSchema, streamText, type ToolSet } from 'ai'
+import { jsonSchema, type LanguageModelUsage, streamText, type ToolSet } from 'ai'
 import { camelCase } from 'lodash'
 import { toJSONSchema } from 'zod'
 import type { ToolFormat } from '../config'
@@ -90,6 +90,7 @@ export interface TaskEventEndRequest extends TaskEventBase {
  */
 export interface TaskEventUsage extends TaskEventBase {
   kind: TaskEventKind.Usage
+  usage: LanguageModelUsage
 }
 
 /**
@@ -433,6 +434,8 @@ export abstract class AgentBase {
       try {
         resetTimeout()
 
+        const usageMeterOnFinishHandler = this.config.usageMeter.onFinishHandler(this.ai)
+
         const streamTextOptions: Parameters<typeof streamText>[0] = {
           model: this.ai,
           temperature: 0,
@@ -451,7 +454,10 @@ export abstract class AgentBase {
                 break
             }
           },
-          onFinish: this.config.usageMeter.onFinishHandler(this.ai),
+          onFinish: (evt) => {
+            usageMeterOnFinishHandler(evt)
+            this.#callback({ kind: TaskEventKind.Usage, agent: this, usage: evt.totalUsage })
+          },
           onError: async (error) => {
             console.error('Error in stream:', error)
           },
