@@ -2,3 +2,4 @@
 export { makeAgentStepSpecHandler } from './agent'
 export { commandStepSpecHandler } from './command'
 export { customStepSpecHandler, parallelStepSpecHandler, sequentialStepSpecHandler } from './steps'
+export { dslStepSpecHandler } from './dsl'
