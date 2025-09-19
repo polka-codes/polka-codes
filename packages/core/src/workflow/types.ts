@@ -63,6 +63,19 @@ export interface ParallelStepSpec<
   step: BaseStepSpec<TInput, TOutput>
 }
 
+export interface BranchStepSpec<
+  TInput extends Record<string, Json> = Record<string, Json>,
+  TOutput extends Record<string, Json> = Record<string, Json>,
+> extends BaseStepSpec<TInput, TOutput> {
+  type: 'branch'
+  branches: {
+    id: string
+    when: (input: TInput & { $: Record<string, Record<string, Json>> }, context: WorkflowContext) => boolean | Promise<boolean>
+    step: BaseStepSpec<TInput, TOutput>
+  }[]
+  otherwise?: BaseStepSpec<TInput, TOutput>
+}
+
 export interface CustomStepSpec<
   TInput extends Record<string, Json> = Record<string, Json>,
   TOutput extends Record<string, Json> = Record<string, Json>,

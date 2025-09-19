@@ -2,6 +2,7 @@
 
 import type {
   BaseStepSpec,
+  BranchStepSpec,
   CustomStepSpec,
   Json,
   ParallelStepSpec,
@@ -10,6 +11,7 @@ import type {
   StepRunResultSuccess,
   StepSpecHandler,
   StepSpecHandlerFn,
+  StepSpecRaw,
   WorkflowContext,
 } from './types'
 
@@ -114,6 +116,71 @@ export const parallelStepSpecHandler: StepSpecHandler = {
 
         const outputs = (results as StepRunResultSuccess<Record<string, Json>>[]).map((r) => r.output)
         return { type: 'success', output: { results: outputs } }
+      },
+    }
+  },
+}
+
+export const branchStepSpecHandler: StepSpecHandler = {
+  type: 'branch',
+  handler(step: BranchStepSpec, rootHandler) {
+    const branches = step.branches.map((branch) => ({
+      ...branch,
+      step: rootHandler(branch.step, rootHandler),
+    }))
+    const otherwise = step.otherwise ? rootHandler(step.otherwise, rootHandler) : undefined
+
+    return {
+      ...step,
+      async run(
+        input: Record<string, Json>,
+        context: WorkflowContext,
+        resumedState?: { branchIndex: number; stepState?: any },
+      ): Promise<StepRunResult<Record<string, Json>>> {
+        const allOutputs = (input.$ as Record<string, Record<string, Json>> | undefined) ?? {}
+
+        let branchIndex = resumedState?.branchIndex
+        let stepToRun: StepSpecRaw | undefined
+
+        if (branchIndex === undefined) {
+          for (let i = 0; i < branches.length; i++) {
+            const shouldRun = await branches[i].when(input as Record<string, Json> & { $: Record<string, Record<string, Json>> }, context)
+            if (shouldRun) {
+              branchIndex = i
+              break
+            }
+          }
+
+          if (branchIndex === undefined && otherwise) {
+            branchIndex = branches.length
+          }
+        }
+
+        if (branchIndex !== undefined) {
+          if (branchIndex < branches.length) {
+            stepToRun = branches[branchIndex].step
+          } else if (branchIndex === branches.length && otherwise) {
+            stepToRun = otherwise
+          }
+        }
+
+        if (!stepToRun) {
+          return { type: 'success', output: input }
+        }
+
+        const result = await runStep(
+          stepToRun,
+          input,
+          context,
+          branchIndex === resumedState?.branchIndex ? resumedState?.stepState : undefined,
+          allOutputs,
+        )
+
+        if (result.type === 'paused') {
+          return { type: 'paused', state: { branchIndex, stepState: result.state } }
+        }
+
+        return result
       },
     }
   },
