@@ -50,9 +50,12 @@ describe('workflow agent', () => {
     }
 
     try {
-      const pauseResult = await stepRunner.run({}, pauseContext, undefined)
+      const pauseResult = await stepRunner.run({ $: {} }, pauseContext, undefined)
 
       expect(pauseResult.type).toBe('paused')
+      if (pauseResult.type !== 'paused') {
+        throw new Error('expected paused result')
+      }
       expect(pauseResult.state.usage).toEqual(expectedUsage)
 
       const resumeUsageMeter = new UsageMeter()
@@ -63,9 +66,12 @@ describe('workflow agent', () => {
         parameters: { usageMeter: resumeUsageMeter },
       }
 
-      const resumeResult = await stepRunner.run({}, resumeContext, pauseResult.state)
+      const resumeResult = await stepRunner.run({ $: {} }, resumeContext, pauseResult.state)
 
       expect(resumeResult.type).toBe('paused')
+      if (resumeResult.type !== 'paused') {
+        throw new Error('expected paused result')
+      }
       expect(setUsageSpy).toHaveBeenCalledWith(expectedUsage)
       expect(resumeUsageMeter.usage).toEqual(expectedUsage)
     } finally {
