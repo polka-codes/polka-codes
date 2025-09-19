@@ -1,5 +1,5 @@
 import type { AgentStepSpec } from './agent'
-import type { BaseStepSpec, CustomStepSpec, Json } from './types'
+import type { BaseStepSpec, BranchStepSpec, CustomStepSpec, Json } from './types'
 
 class StepsBuilder<
   TInput extends Record<string, Json> = Record<string, Json>,
@@ -72,6 +72,17 @@ class StepsBuilder<
       ...spec,
       id,
       type: 'agent',
+    })
+  }
+
+  public branch<TStepOutput extends Record<string, Json>>(
+    id: string,
+    config: Omit<BranchStepSpec<TOutput, TStepOutput>, 'id' | 'type'>,
+  ): StepsBuilder<TInput, TStepOutput> {
+    return this.step({
+      ...config,
+      id,
+      type: 'branch',
     })
   }
 }
