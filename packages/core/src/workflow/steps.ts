@@ -5,6 +5,7 @@ import type {
   BranchStepSpec,
   CustomStepSpec,
   Json,
+  LoopStepSpec,
   ParallelStepSpec,
   SequentialStepSpec,
   StepRunResult,
@@ -116,6 +117,140 @@ export const parallelStepSpecHandler: StepSpecHandler = {
 
         const outputs = (results as StepRunResultSuccess<Record<string, Json>>[]).map((r) => r.output)
         return { type: 'success', output: { results: outputs } }
+      },
+    }
+  },
+}
+
+export const loopStepSpecHandler: StepSpecHandler = {
+  type: 'loop',
+  handler(step: LoopStepSpec, rootHandler) {
+    const innerStep = rootHandler(step.step, rootHandler)
+
+    return {
+      ...step,
+      async run(
+        input: Record<string, Json>,
+        context: WorkflowContext,
+        resumedState?: {
+          iteration: number
+          stepState?: any
+          results: Record<string, Json>[]
+          accumulator?: Record<string, Json>
+        },
+      ): Promise<StepRunResult<Record<string, Json>>> {
+        const allOutputs = (input.$ as Record<string, Record<string, Json>> | undefined) ?? {}
+        const initialInput = { ...input }
+        delete (initialInput as any).$
+
+        const results: Record<string, Json>[] = resumedState ? [...resumedState.results] : []
+        let iteration = resumedState?.iteration ?? results.length
+        let accumulator: Record<string, Json> | undefined = resumedState?.accumulator
+
+        if (step.accumulator && accumulator === undefined) {
+          const initialAccumulator = step.accumulator.initial
+          accumulator = typeof initialAccumulator === 'function' ? initialAccumulator() : initialAccumulator
+        }
+
+        const hasPredicates = Boolean(step.while || step.until)
+        const effectiveMaxIterations = step.maxIterations ?? (hasPredicates ? undefined : 1)
+
+        const createState = () => ({
+          iteration,
+          input: initialInput,
+          results,
+          last: results[results.length - 1],
+          accumulator,
+        })
+
+        const completeSuccess = () => {
+          const output: Record<string, Json> = { results }
+          if (results.length > 0) {
+            output.last = results[results.length - 1]
+          }
+          if (accumulator !== undefined && step.accumulator) {
+            output.accumulator = accumulator
+          }
+          return { type: 'success', output } as StepRunResult<Record<string, Json>>
+        }
+
+        const shouldContinue = async () => {
+          const state = createState()
+          if (step.until) {
+            const shouldStop = await step.until(state as any, context)
+            if (shouldStop) {
+              return false
+            }
+          }
+          if (step.while) {
+            return Boolean(await step.while(state as any, context))
+          }
+          return true
+        }
+
+        let pendingResumeState = resumedState
+
+        while (true) {
+          if (!hasPredicates && effectiveMaxIterations !== undefined && iteration >= effectiveMaxIterations) {
+            return completeSuccess()
+          }
+
+          if (hasPredicates) {
+            const canContinue = await shouldContinue()
+            if (!canContinue) {
+              return completeSuccess()
+            }
+            if (step.maxIterations !== undefined && iteration >= step.maxIterations) {
+              return {
+                type: 'error',
+                error: new Error(`Loop exceeded max iterations: ${step.maxIterations}`),
+              }
+            }
+          }
+
+          const stateBeforeRun = createState()
+          const iterationInput = step.mapInput ? await step.mapInput(stateBeforeRun as any, context) : (stateBeforeRun.last ?? initialInput)
+
+          const resumeStateForInner =
+            pendingResumeState && pendingResumeState.iteration === iteration ? pendingResumeState.stepState : undefined
+
+          const result = await runStep(innerStep, iterationInput, context, resumeStateForInner, allOutputs)
+
+          if (result.type === 'paused') {
+            return {
+              type: 'paused',
+              state: {
+                iteration,
+                stepState: result.state,
+                results,
+                accumulator,
+              },
+            }
+          }
+
+          if (result.type === 'error') {
+            return result
+          }
+
+          results[iteration] = result.output
+
+          if (step.accumulator) {
+            const updated = await step.accumulator.update(
+              {
+                ...stateBeforeRun,
+                results,
+                last: result.output,
+                accumulator: accumulator as Record<string, Json>,
+                result: result.output,
+              } as any,
+              context,
+            )
+            accumulator = updated
+          }
+
+          iteration += 1
+          pendingResumeState = undefined
+        }
       },
     }
   },

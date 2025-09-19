@@ -63,6 +63,57 @@ export interface ParallelStepSpec<
   step: BaseStepSpec<TInput, TOutput>
 }
 
+export type LoopStepState<
+  TInput extends Record<string, Json> = Record<string, Json>,
+  TIterationOutput extends Record<string, Json> = Record<string, Json>,
+  TAccumulator extends Record<string, Json> = Record<string, Json>,
+> = {
+  iteration: number
+  input: TInput
+  results: TIterationOutput[]
+  last?: TIterationOutput
+  accumulator?: TAccumulator
+}
+
+export interface LoopAccumulatorSpec<
+  TInput extends Record<string, Json>,
+  TIterationOutput extends Record<string, Json>,
+  TAccumulator extends Record<string, Json>,
+> {
+  initial: TAccumulator | (() => TAccumulator)
+  update: (
+    state: LoopStepState<TInput, TIterationOutput, TAccumulator> & { result: TIterationOutput },
+    context: WorkflowContext,
+  ) => TAccumulator | Promise<TAccumulator>
+}
+
+export type LoopStepOutput<
+  TIterationOutput extends Record<string, Json> = Record<string, Json>,
+  TAccumulator extends Record<string, Json> = Record<string, Json>,
+> = {
+  results: TIterationOutput[]
+  last?: TIterationOutput
+  accumulator?: TAccumulator
+}
+
+export interface LoopStepSpec<
+  TInput extends Record<string, Json> = Record<string, Json>,
+  TIterationInput extends Record<string, Json> = TInput,
+  TIterationOutput extends Record<string, Json> = Record<string, Json>,
+  TAccumulator extends Record<string, Json> = Record<string, Json>,
+> extends BaseStepSpec<TInput, LoopStepOutput<TIterationOutput, TAccumulator>> {
+  type: 'loop'
+  step: BaseStepSpec<TIterationInput, TIterationOutput>
+  while?: (state: LoopStepState<TInput, TIterationOutput, TAccumulator>, context: WorkflowContext) => boolean | Promise<boolean>
+  until?: (state: LoopStepState<TInput, TIterationOutput, TAccumulator>, context: WorkflowContext) => boolean | Promise<boolean>
+  maxIterations?: number
+  mapInput?: (
+    state: LoopStepState<TInput, TIterationOutput, TAccumulator>,
+    context: WorkflowContext,
+  ) => TIterationInput | Promise<TIterationInput>
+  accumulator?: LoopAccumulatorSpec<TInput, TIterationOutput, TAccumulator>
+}
+
 export interface BranchStepSpec<
   TInput extends Record<string, Json> = Record<string, Json>,
   TOutput extends Record<string, Json> = Record<string, Json>,

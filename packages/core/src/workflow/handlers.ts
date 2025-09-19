@@ -4,6 +4,7 @@ export { commandStepSpecHandler } from './command'
 export {
   branchStepSpecHandler,
   customStepSpecHandler,
+  loopStepSpecHandler,
   parallelStepSpecHandler,
   sequentialStepSpecHandler,
 } from './steps'

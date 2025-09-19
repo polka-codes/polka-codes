@@ -1,5 +1,5 @@
 import type { AgentStepSpec } from './agent'
-import type { BaseStepSpec, BranchStepSpec, CustomStepSpec, Json } from './types'
+import type { BaseStepSpec, BranchStepSpec, CustomStepSpec, Json, LoopStepOutput, LoopStepSpec } from './types'
 
 class StepsBuilder<
   TInput extends Record<string, Json> = Record<string, Json>,
@@ -39,6 +39,21 @@ class StepsBuilder<
       id,
       type: 'parallel',
       step,
+    })
+  }
+
+  public loop<
+    TIterationInput extends Record<string, Json> = TOutput,
+    TIterationOutput extends Record<string, Json> = Record<string, Json>,
+    TAccumulator extends Record<string, Json> = Record<string, Json>,
+  >(
+    id: string,
+    config: Omit<LoopStepSpec<TOutput, TIterationInput, TIterationOutput, TAccumulator>, 'id' | 'type'>,
+  ): StepsBuilder<TInput, LoopStepOutput<TIterationOutput, TAccumulator>> {
+    return this.step({
+      ...config,
+      id,
+      type: 'loop',
     })
   }
 
