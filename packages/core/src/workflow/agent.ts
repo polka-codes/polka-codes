@@ -63,13 +63,13 @@ export type AgentContextParameters = {
 }
 
 type ResumeState = {
-  messages: ModelMessage[]
-  usage: {
+  messages?: ModelMessage[]
+  usage?: {
     input: number
     output: number
     cachedRead: number
     cost: number
-    calls: number
+    messageCount: number
   }
 }
 
@@ -192,7 +192,13 @@ export const makeAgentStepSpecHandler = (
           const handleExitReason = async (reason: ExitReason): Promise<StepRunResult<Record<string, Json>>> => {
             switch (reason.type) {
               case 'Pause':
-                return { type: 'paused', state: { messages: agent.messages } }
+                return {
+                  type: 'paused',
+                  state: {
+                    messages: agent.messages,
+                    usage: usageMeter.usage,
+                  },
+                }
               case 'UsageExceeded':
                 return { type: 'error', error: new Error('Usage limit exceeded') }
               case ToolResponseType.Exit: {
