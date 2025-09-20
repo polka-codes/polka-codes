@@ -114,6 +114,28 @@ export interface LoopStepSpec<
   accumulator?: LoopAccumulatorSpec<TInput, TIterationOutput, TAccumulator>
 }
 
+export interface WorkflowStepSpec<
+  TInput extends Record<string, Json> = Record<string, Json>,
+  TWorkflowInput extends Record<string, Json> = TInput,
+  TWorkflowOutput extends Record<string, Json> = Record<string, Json>,
+  TOutput extends Record<string, Json> = TWorkflowOutput,
+> extends BaseStepSpec<TInput, TOutput> {
+  type: 'workflow'
+  workflow: WorkflowSpec<TWorkflowInput, TWorkflowOutput>
+  mapInput?: (
+    input: TInput & { $: Record<string, Record<string, Json>> },
+    context: WorkflowContext,
+  ) => TWorkflowInput | Promise<TWorkflowInput>
+  mapOutput?: (
+    params: {
+      input: TInput & { $: Record<string, Record<string, Json>> }
+      workflowInput: TWorkflowInput
+      workflowOutput: TWorkflowOutput
+    },
+    context: WorkflowContext,
+  ) => TOutput | Promise<TOutput>
+}
+
 export interface BranchStepSpec<
   TInput extends Record<string, Json> = Record<string, Json>,
   TOutput extends Record<string, Json> = Record<string, Json>,

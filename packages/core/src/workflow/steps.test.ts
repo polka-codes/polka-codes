@@ -8,8 +8,18 @@ import {
   loopStepSpecHandler,
   parallelStepSpecHandler,
   sequentialStepSpecHandler,
+  workflowStepSpecHandler,
 } from './steps'
-import type { CustomStepSpec, Json, LoopStepSpec, StepRunResult, StepSpecHandler, WorkflowContext } from './types'
+import type {
+  CustomStepSpec,
+  Json,
+  LoopStepSpec,
+  StepRunResult,
+  StepSpecHandler,
+  WorkflowContext,
+  WorkflowSpec,
+  WorkflowStepSpec,
+} from './types'
 
 describe('steps', () => {
   const mockContext: WorkflowContext = { provider: {}, parameters: {} }
@@ -189,6 +199,101 @@ describe('steps', () => {
       // Resume
       const resumedResult = await handler.run({ $: {} }, mockContext, pausedState)
       expect(resumedResult).toEqual({ type: 'success', output: { value: 'from step1' } })
+    })
+  })
+
+  describe('workflowStepSpecHandler', () => {
+    test('runs nested workflow and maps input/output while preserving context', async () => {
+      const childContexts: WorkflowContext[] = []
+      const childWorkflow: WorkflowSpec<{ childValue: number }, { doubled: number }> = {
+        name: 'child',
+        step: {
+          id: 'child-step',
+          type: 'custom',
+          run: async (input: { childValue: number }, ctx) => {
+            childContexts.push(ctx)
+            return { type: 'success', output: { doubled: input.childValue * 2 } }
+          },
+        } as CustomStepSpec<{ childValue: number }, { doubled: number }>,
+      }
+
+      const combined = combineHandlers(sequentialStepSpecHandler, customStepSpecHandler, workflowStepSpecHandler)
+      const rootHandler = (step: any, rh: any) => combined(step, rh)
+
+      const handler = workflowStepSpecHandler.handler(
+        {
+          id: 'child-runner',
+          type: 'workflow',
+          workflow: childWorkflow,
+          mapInput: (input: { value: number }) => ({ childValue: input.value }),
+          mapOutput: ({ workflowOutput }: { workflowOutput: { doubled: number } }) => ({
+            total: workflowOutput.doubled,
+          }),
+        } as WorkflowStepSpec<{ value: number }, { childValue: number }, { doubled: number }, { total: number }>,
+        rootHandler as any,
+      )
+
+      const context: WorkflowContext = { provider: {}, parameters: { nested: true } }
+      const result = await handler.run({ value: 3, $: {} }, context)
+
+      expect(result).toEqual({ type: 'success', output: { total: 6 } })
+      expect(childContexts).toHaveLength(1)
+      expect(childContexts[0]).toBe(context)
+    })
+
+    test('pauses and resumes nested workflow with new input', async () => {
+      const childContexts: WorkflowContext[] = []
+      let observedWorkflowInput: number | undefined
+      const childWorkflow: WorkflowSpec<{ childValue: number }, { doubled: number }> = {
+        name: 'child',
+        step: {
+          id: 'child-step',
+          type: 'custom',
+          run: async (input: { childValue: number }, ctx, resumedState?: any) => {
+            childContexts.push(ctx)
+            if (!resumedState) {
+              return { type: 'paused' as const, state: { attempt: input.childValue } }
+            }
+            return { type: 'success' as const, output: { doubled: input.childValue * 2 } }
+          },
+        } as CustomStepSpec<{ childValue: number }, { doubled: number }>,
+      }
+
+      const combined = combineHandlers(sequentialStepSpecHandler, customStepSpecHandler, workflowStepSpecHandler)
+      const rootHandler = (step: any, rh: any) => combined(step, rh)
+
+      const handler = workflowStepSpecHandler.handler(
+        {
+          id: 'child-runner',
+          type: 'workflow',
+          workflow: childWorkflow,
+          mapInput: (input: { value: number }) => ({ childValue: input.value }),
+          mapOutput: ({
+            workflowInput,
+            workflowOutput,
+          }: {
+            workflowInput: { childValue: number }
+            workflowOutput: { doubled: number }
+          }) => {
+            observedWorkflowInput = workflowInput.childValue
+            return { total: workflowOutput.doubled }
+          },
+        } as WorkflowStepSpec<{ value: number }, { childValue: number }, { doubled: number }, { total: number }>,
+        rootHandler as any,
+      )
+
+      const context: WorkflowContext = { provider: {}, parameters: { nested: true } }
+      const paused = await handler.run({ value: 2, $: {} }, context)
+      expect(paused.type).toBe('paused')
+      const pausedState = (paused as any).state
+      expect(pausedState.workflowState).toEqual({ attempt: 2 })
+
+      const resumed = await handler.run({ value: 5, $: {} }, context, pausedState)
+      expect(resumed).toEqual({ type: 'success', output: { total: 10 } })
+      expect(observedWorkflowInput).toBe(5)
+      expect(childContexts).toHaveLength(2)
+      expect(childContexts[0]).toBe(context)
+      expect(childContexts[1]).toBe(context)
     })
   })
 

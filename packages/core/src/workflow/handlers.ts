@@ -7,4 +7,5 @@ export {
   loopStepSpecHandler,
   parallelStepSpecHandler,
   sequentialStepSpecHandler,
+  workflowStepSpecHandler,
 } from './steps'
