@@ -269,6 +269,7 @@ export const workflowStepSpecHandler: StepSpecHandler = {
         resumedState?: { workflowState?: any; workflowInput?: Record<string, Json> },
       ): Promise<StepRunResult<Record<string, Json>>> {
         const { $, ...rest } = input as Record<string, Json> & { $?: Record<string, Record<string, Json>> }
+        void $
         const defaultWorkflowInput = rest as Record<string, Json>
         const workflowInput = (step.mapInput ? await step.mapInput(input as any, context) : defaultWorkflowInput) as Record<string, Json>
 

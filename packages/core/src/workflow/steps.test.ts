@@ -10,7 +10,16 @@ import {
   sequentialStepSpecHandler,
   workflowStepSpecHandler,
 } from './steps'
-import type { CustomStepSpec, Json, LoopStepSpec, StepRunResult, StepSpecHandler, WorkflowContext, WorkflowSpec } from './types'
+import type {
+  CustomStepSpec,
+  Json,
+  LoopStepSpec,
+  StepRunResult,
+  StepSpecHandler,
+  WorkflowContext,
+  WorkflowSpec,
+  WorkflowStepSpec,
+} from './types'
 
 describe('steps', () => {
   const mockContext: WorkflowContext = { provider: {}, parameters: {} }
@@ -217,8 +226,10 @@ describe('steps', () => {
           type: 'workflow',
           workflow: childWorkflow,
           mapInput: (input: { value: number }) => ({ childValue: input.value }),
-          mapOutput: ({ workflowOutput }) => ({ total: workflowOutput.doubled }),
-        },
+          mapOutput: ({ workflowOutput }: { workflowOutput: { doubled: number } }) => ({
+            total: workflowOutput.doubled,
+          }),
+        } as WorkflowStepSpec<{ value: number }, { childValue: number }, { doubled: number }, { total: number }>,
         rootHandler as any,
       )
 
@@ -257,11 +268,17 @@ describe('steps', () => {
           type: 'workflow',
           workflow: childWorkflow,
           mapInput: (input: { value: number }) => ({ childValue: input.value }),
-          mapOutput: ({ workflowInput, workflowOutput }) => {
+          mapOutput: ({
+            workflowInput,
+            workflowOutput,
+          }: {
+            workflowInput: { childValue: number }
+            workflowOutput: { doubled: number }
+          }) => {
             observedWorkflowInput = workflowInput.childValue
             return { total: workflowOutput.doubled }
           },
-        },
+        } as WorkflowStepSpec<{ value: number }, { childValue: number }, { doubled: number }, { total: number }>,
         rootHandler as any,
       )
 

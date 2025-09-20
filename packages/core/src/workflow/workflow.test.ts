@@ -2,7 +2,7 @@
 import { describe, expect, spyOn, test } from 'bun:test'
 import { z } from 'zod'
 import { combineHandlers, customStepSpecHandler, sequentialStepSpecHandler, workflowStepSpecHandler } from './steps'
-import type { CustomStepSpec, SequentialStepSpec, StepSpecHandlerFn, WorkflowContext, WorkflowSpec } from './types'
+import type { CustomStepSpec, SequentialStepSpec, StepSpecHandlerFn, WorkflowContext, WorkflowSpec, WorkflowStepSpec } from './types'
 import { resume, run } from './workflow'
 
 describe('workflow', () => {
@@ -226,11 +226,17 @@ describe('workflow', () => {
           type: 'workflow',
           workflow: childWorkflow,
           mapInput: (input: { value: number }) => ({ childValue: input.value }),
-          mapOutput: ({ workflowInput, workflowOutput }) => {
+          mapOutput: ({
+            workflowInput,
+            workflowOutput,
+          }: {
+            workflowInput: { childValue: number }
+            workflowOutput: { doubled: number }
+          }) => {
             observedWorkflowInput = workflowInput.childValue
             return { total: workflowOutput.doubled }
           },
-        },
+        } as WorkflowStepSpec<{ value: number }, { childValue: number }, { doubled: number }, { total: number }>,
       }
 
       const context: WorkflowContext = { provider: {}, parameters: { nested: true } }
@@ -265,11 +271,17 @@ describe('workflow', () => {
           type: 'workflow',
           workflow: childWorkflow,
           mapInput: (input: { value: number }) => ({ childValue: input.value }),
-          mapOutput: ({ workflowInput, workflowOutput }) => {
+          mapOutput: ({
+            workflowInput,
+            workflowOutput,
+          }: {
+            workflowInput: { childValue: number }
+            workflowOutput: { doubled: number }
+          }) => {
             observedWorkflowInput = workflowInput.childValue
             return { total: workflowOutput.doubled }
           },
-        },
+        } as WorkflowStepSpec<{ value: number }, { childValue: number }, { doubled: number }, { total: number }>,
       }
 
       const context: WorkflowContext = { provider: {}, parameters: { nested: true } }
