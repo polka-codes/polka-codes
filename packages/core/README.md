@@ -53,6 +53,51 @@ class MyTool extends ToolBase {
 }
 ```
 
+### Nested workflows
+
+You can reuse existing workflows inside other workflows with the `workflow` step. This is helpful when you want to repeat a
+common CLI pattern such as `custom → agent → custom`.
+
+```typescript
+import {
+  builder,
+  combineHandlers,
+  customStepSpecHandler,
+  makeAgentStepSpecHandler,
+  sequentialStepSpecHandler,
+  workflowStepSpecHandler,
+} from '@polka-codes/core/workflow';
+
+const reviewWorkflow = builder<{ code: string }>()
+  .custom('prepare', async ({ code }) => ({ prompt: `Review this snippet:\n${code}` }))
+  .agent('agent', {
+    messages: [{ type: 'function', fn: (input) => input.prompt }],
+    systemPrompt: 'You are a careful reviewer.',
+    parseOutput: (raw) => ({ success: true, data: { review: raw } }),
+  })
+  .custom('summarize', async (input) => ({ summary: input.review }))
+  .build();
+
+const mainWorkflow = builder<{ code: string; notify: boolean }>()
+  .workflow('review', {
+    workflow: reviewWorkflow,
+    mapInput: (input) => ({ code: input.code }),
+    mapOutput: ({ workflowOutput, input }) => ({ summary: workflowOutput.summary, notify: input.notify }),
+  })
+  .custom('finalize', async ({ summary, notify }) => ({ summary, notified: notify }))
+  .build();
+
+const handlers = combineHandlers(
+  sequentialStepSpecHandler,
+  customStepSpecHandler,
+  workflowStepSpecHandler,
+  makeAgentStepSpecHandler(async () => /* return a LanguageModelV2 */ throw new Error('model not configured')),
+);
+```
+
+The optional `mapInput` and `mapOutput` helpers let you shape data for the child workflow and massage the result before the
+next parent step runs.
+
 ## Development
 
 ### Building

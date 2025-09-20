@@ -14,6 +14,7 @@ import type {
   StepSpecHandlerFn,
   StepSpecRaw,
   WorkflowContext,
+  WorkflowStepSpec,
 } from './types'
 
 export const combineHandlers = <THandlers extends StepSpecHandler[]>(...handlers: THandlers) => {
@@ -35,6 +36,7 @@ export const combineHandlers = <THandlers extends StepSpecHandler[]>(...handlers
 }
 
 import { runStep } from './runStep'
+import { resume as resumeWorkflow, run as runWorkflow } from './workflow'
 
 export const sequentialStepSpecHandler: StepSpecHandler = {
   type: 'sequential',
@@ -251,6 +253,51 @@ export const loopStepSpecHandler: StepSpecHandler = {
           iteration += 1
           pendingResumeState = undefined
         }
+      },
+    }
+  },
+}
+
+export const workflowStepSpecHandler: StepSpecHandler = {
+  type: 'workflow',
+  handler(step: WorkflowStepSpec, rootHandler) {
+    return {
+      ...step,
+      async run(
+        input: Record<string, Json>,
+        context: WorkflowContext,
+        resumedState?: { workflowState?: any; workflowInput?: Record<string, Json> },
+      ): Promise<StepRunResult<Record<string, Json>>> {
+        const { $, ...rest } = input as Record<string, Json> & { $?: Record<string, Record<string, Json>> }
+        const defaultWorkflowInput = rest as Record<string, Json>
+        const workflowInput = (step.mapInput ? await step.mapInput(input as any, context) : defaultWorkflowInput) as Record<string, Json>
+
+        const workflowState = resumedState && 'workflowState' in resumedState ? resumedState.workflowState : resumedState
+
+        const result = workflowState
+          ? await resumeWorkflow(step.workflow, context, rootHandler, workflowState, workflowInput)
+          : await runWorkflow(step.workflow, context, rootHandler, workflowInput)
+
+        if (result.type === 'paused') {
+          return { type: 'paused', state: { workflowState: result.state, workflowInput } }
+        }
+
+        if (result.type === 'error') {
+          return { type: 'error', error: result.error }
+        }
+
+        const finalOutput = step.mapOutput
+          ? await step.mapOutput(
+              {
+                input: input as any,
+                workflowInput: workflowInput as any,
+                workflowOutput: result.output as any,
+              },
+              context,
+            )
+          : (result.output as Record<string, Json>)
+
+        return { type: 'success', output: finalOutput as Record<string, Json> }
       },
     }
   },

@@ -1,5 +1,5 @@
 import type { AgentStepSpec } from './agent'
-import type { BaseStepSpec, BranchStepSpec, CustomStepSpec, Json, LoopStepOutput, LoopStepSpec } from './types'
+import type { BaseStepSpec, BranchStepSpec, CustomStepSpec, Json, LoopStepOutput, LoopStepSpec, WorkflowStepSpec } from './types'
 
 class StepsBuilder<
   TInput extends Record<string, Json> = Record<string, Json>,
@@ -77,6 +77,21 @@ class StepsBuilder<
       })
     }
     return this.step(idOrSpec)
+  }
+
+  public workflow<
+    TWorkflowInput extends Record<string, Json> = TOutput,
+    TWorkflowOutput extends Record<string, Json> = Record<string, Json>,
+    TStepOutput extends Record<string, Json> = TWorkflowOutput,
+  >(
+    id: string,
+    config: Omit<WorkflowStepSpec<TOutput, TWorkflowInput, TWorkflowOutput, TStepOutput>, 'id' | 'type'>,
+  ): StepsBuilder<TInput, TStepOutput> {
+    return this.step({
+      ...config,
+      id,
+      type: 'workflow',
+    })
   }
 
   public agent<TStepOutput extends Record<string, Json>>(
