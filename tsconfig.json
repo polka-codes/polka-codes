@@ -16,6 +16,7 @@
     "forceConsistentCasingInFileNames": true,
     "useDefineForClassFields": true,
     "paths": {
+      "@polka-codes/workflow": ["./packages/workflow/src"],
       "@polka-codes/core": ["./packages/core/src"],
       "@polka-codes/cli": ["./packages/cli/src"],
       "@polka-codes/action": ["./packages/action/src"],

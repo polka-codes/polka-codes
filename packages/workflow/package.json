@@ -1,0 +1,22 @@
+{
+  "name": "@polka-codes/workflow",
+  "version": "0.9.39",
+  "license": "AGPL-3.0",
+  "author": "github@polka.codes",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "bun build src/index.ts --outdir dist --target node"
+  },
+  "dependencies": {
+    "@polka-codes/core": "workspace:*"
+  }
+}
