@@ -1,0 +1,97 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`should run a simple workflow 1`] = `
+{
+  "output": "hello world",
+  "status": "completed",
+}
+`;
+
+exports[`should run a workflow with one tool 1`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "tool": {
+    "input": {
+      "a": 3,
+      "b": 2,
+    },
+    "tool": "add",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should run a workflow with one tool 2`] = `
+{
+  "output": 5,
+  "status": "completed",
+}
+`;
+
+exports[`should run a workflow with multiple tools 1`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "tool": {
+    "input": {
+      "a": "hello",
+      "b": " ",
+    },
+    "tool": "concat",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should run a workflow with multiple tools 2`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function: AsyncFunction],
+  "tool": {
+    "input": {
+      "a": "hello ",
+      "b": "world",
+    },
+    "tool": "concat",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should run a workflow with multiple tools 3`] = `
+{
+  "output": "hello world",
+  "status": "completed",
+}
+`;
+
+exports[`should handle a failing workflow 1`] = `
+{
+  "error": "test error",
+  "status": "failed",
+}
+`;
+
+exports[`should handle failing after a tool call 1`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "tool": {
+    "input": {
+      "a": 3,
+      "b": 2,
+    },
+    "tool": "add",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should handle failing after a tool call 2`] = `
+{
+  "error": "failed after tool",
+  "status": "failed",
+}
+`;
