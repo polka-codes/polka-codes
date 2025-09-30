@@ -23,20 +23,13 @@ export type ToolsExecutor<TTools extends ToolRegistry> = {
   [K in keyof TTools]: (input: TTools[K]['input']) => Promise<TTools[K]['output']>
 }
 
-export function* useTool<TTools extends ToolRegistry, TName extends keyof TTools>(
-  tool: TName,
-  input: TTools[TName]['input'],
-): Generator<ToolCall<TTools>, TTools[TName]['output'], TTools[TName]['output']> {
-  return yield {
-    type: 'tool',
-    tool,
-    input,
-  }
-}
-
 export type WorkflowFn<TInput extends PlainJson, TOutput extends PlainJson, TTools extends ToolRegistry> = (
   input: TInput,
   step: StepFn,
+  useTool: <TName extends keyof TTools>(
+    tool: TName,
+    input: TTools[TName]['input'],
+  ) => Generator<ToolCall<TTools>, TTools[TName]['output'], TTools[TName]['output']>,
 ) => AsyncGenerator<ToolCall<TTools>, TOutput, TTools[keyof TTools]['output']>
 
 export type Workflow<TInput extends PlainJson, TOutput extends PlainJson, TTools extends ToolRegistry> = {
@@ -85,7 +78,13 @@ export async function run<TInput extends PlainJson, TOutput extends PlainJson, T
     }
   }
 
-  const gen = workflow.fn(input, stepFn)
+  const gen = workflow.fn(input, stepFn, function* useTool(tool, input) {
+    return yield {
+      type: 'tool',
+      tool,
+      input,
+    }
+  })
 
   let status: WorkflowStatus<TTools, TOutput>
   try {
