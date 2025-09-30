@@ -19,7 +19,7 @@
     },
     "packages/cli": {
       "name": "@polka-codes/cli",
-      "version": "0.9.27",
+      "version": "0.9.39",
       "bin": {
         "polka": "cli.mjs",
       },
@@ -34,6 +34,7 @@
         "@openrouter/ai-sdk-provider": "^1.0.0",
         "@polka-codes/cli-shared": "workspace:*",
         "@polka-codes/core": "workspace:*",
+        "@polka-codes/workflow": "workspace:*",
         "ai": "^5.0.32",
         "commander": "^14.0.0",
         "dotenv": "^17.2.1",
@@ -51,7 +52,7 @@
     },
     "packages/cli-shared": {
       "name": "@polka-codes/cli-shared",
-      "version": "0.9.27",
+      "version": "0.9.39",
       "dependencies": {
         "@ai-sdk/provider-utils": "^3.0.0",
         "@polka-codes/core": "workspace:*",
@@ -67,7 +68,7 @@
     },
     "packages/core": {
       "name": "@polka-codes/core",
-      "version": "0.9.27",
+      "version": "0.9.39",
       "dependencies": {
         "@ai-sdk/provider": "^2.0.0",
         "@ai-sdk/provider-utils": "^3.0.0",
@@ -79,7 +80,7 @@
     },
     "packages/github": {
       "name": "@polka-codes/github",
-      "version": "0.9.27",
+      "version": "0.9.39",
       "dependencies": {
         "@octokit/core": "^6.1.4",
         "mdast": "^3.0.0",
@@ -92,7 +93,7 @@
     },
     "packages/runner": {
       "name": "@polka-codes/runner",
-      "version": "0.9.27",
+      "version": "0.9.39",
       "bin": {
         "polka-runner": "cli.mjs",
       },
@@ -110,6 +111,13 @@
       "devDependencies": {
         "@types/lodash": "^4.17.14",
         "@types/ws": "^8.18.1",
+      },
+    },
+    "packages/workflow": {
+      "name": "@polka-codes/workflow",
+      "version": "0.9.39",
+      "dependencies": {
+        "@polka-codes/core": "workspace:*",
       },
     },
   },
@@ -417,6 +425,8 @@
     "@polka-codes/github": ["@polka-codes/github@workspace:packages/github"],
 
     "@polka-codes/runner": ["@polka-codes/runner@workspace:packages/runner"],
+
+    "@polka-codes/workflow": ["@polka-codes/workflow@workspace:packages/workflow"],
 
     "@repeaterjs/repeater": ["@repeaterjs/repeater@3.0.6", "", {}, "sha512-Javneu5lsuhwNCryN+pXH93VPQ8g0dBX7wItHFgYiwQmzE1sVdg5tWHiOgHywzL2W21XQopa7IwIEnNbmeUJYA=="],
 

@@ -7,5 +7,5 @@
     "declarationMap": true
   },
   "include": ["src"],
-  "references": [{ "path": "../core" }, { "path": "../cli-shared" }]
+  "references": [{ "path": "../core" }, { "path": "../cli-shared" }, { "path": "../workflow" }]
 }
