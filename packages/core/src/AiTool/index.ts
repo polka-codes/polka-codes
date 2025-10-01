@@ -4,7 +4,6 @@ import type { MultiAgent, SharedAgentOptions } from '../Agent'
 import { ToolResponseType } from '../tool'
 import type { UsageMeter } from '../UsageMeter'
 import createNewProjectDef from './createNewProject'
-import generateProjectConfigDef from './generateProjectConfig'
 
 import type { AiToolDefinition, AiToolDefinitionWithAgent, AiToolDefinitionWithMultiAgent, GetInput, GetOutput } from './types'
 
@@ -84,7 +83,5 @@ export const makeAgentTool = <T extends AiToolDefinitionWithAgent<any, any>>(def
   }
 }
 
-export const generateProjectConfig = makeMultiAgentTool(generateProjectConfigDef)
 export const createNewProject = makeMultiAgentTool(createNewProjectDef)
-
 export type { AiToolDefinition, GetInput, GetOutput }

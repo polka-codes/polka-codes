@@ -114,21 +114,24 @@ async function handleToolCall(
 }
 
 export async function runWorkflowV2<TInput extends PlainJson, TOutput extends PlainJson>(
-  commandName: 'pr',
+  commandName: string,
   workflow: Workflow<TInput, TOutput, Tools>,
   command: Command,
   workflowInput: TInput,
+  requiresProvider: boolean = true,
 ) {
-  const parentOptions = command.parent?.opts() ?? {}
-  const { providerConfig, config, verbose } = parseOptions(parentOptions)
-  const commandConfig = providerConfig.getConfigForCommand(commandName)
-  if (!commandConfig || !commandConfig.provider || !commandConfig.model) {
-    console.error(`Error: No provider specified for ${commandName}. Please run "polka config" to configure your AI provider.`)
-    process.exit(1)
-  }
+  const { providerConfig, config, verbose } = parseOptions(command.parent?.opts() ?? {})
 
-  console.log('Provider:', commandConfig.provider)
-  console.log('Model:', commandConfig.model)
+  if (requiresProvider) {
+    const commandConfig = providerConfig.getConfigForCommand(commandName)
+    if (!commandConfig || !commandConfig.provider || !commandConfig.model) {
+      console.error(`Error: No provider specified for ${commandName}. Please run "polka config" to configure your AI provider.`)
+      process.exit(1)
+    }
+
+    console.log('Provider:', commandConfig.provider)
+    console.log('Model:', commandConfig.model)
+  }
 
   const spinner = ora('Running workflow...').start()
 

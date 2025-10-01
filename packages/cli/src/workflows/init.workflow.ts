@@ -3,56 +3,90 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { confirm, select } from '@inquirer/prompts'
 import { type Config, getGlobalConfigPath, loadConfigAtPath, localConfigFileName } from '@polka-codes/cli-shared'
-import { analyzerAgentInfo, builder, type CustomStepSpec, generateProjectConfig, type WorkflowSpec } from '@polka-codes/core'
+import type { InvokeAgentTool, ToolSignature, Workflow } from '@polka-codes/workflow'
 import { set } from 'lodash'
 import { parse, stringify } from 'yaml'
-import { ZodError } from 'zod'
-
-import { ApiProviderConfig } from '../ApiProviderConfig'
-import { configPrompt, type ProviderConfig } from '../configPrompt'
+import { ZodError, z } from 'zod'
+import type { ProviderConfig } from '../configPrompt'
+import { configPrompt } from '../configPrompt'
 import type { AiProvider } from '../getModel'
 import { parseOptions } from '../options'
-import { Runner } from '../Runner'
-import type { CommandWorkflowContext } from '../runWorkflow'
 
 type InitWorkflowInput = {
   global?: boolean
+  parentOptions?: Record<string, any>
 }
 
 type InitWorkflowOutput = {
   configPath: string
 }
 
-type Step1Output = {
-  global: boolean
-  configPath: string
-  existingConfig: Config
-  cmdOptions: any
+type InitWorkflowTools = {
+  invokeAgent: InvokeAgentTool
+  createPullRequest: ToolSignature<{ title: string; description: string }, { title: string; description: string }>
 }
 
-const setupStep: CustomStepSpec<InitWorkflowInput, Step1Output> = {
-  id: 'setup',
-  type: 'custom',
-  run: async (input, context) => {
-    const { cmdOptions } = context as CommandWorkflowContext
-    parseOptions(cmdOptions) // process --base-dir
-    cmdOptions.baseDir = undefined // so it won't be processed again later
+const analyzePrompt = `
+Role: Analyzer agent
+Goal: Produce a valid polkacodes YAML configuration for the project.
 
-    const globalConfigPath = getGlobalConfigPath()
+Workflow
+1. Scan project files with tool_read_file and identify:
+   - Package/build tool (npm, bun, pnpm, etc.)
+   - Test framework and patterns (snapshot tests, coverage, etc.)
+   - Formatter / linter and their rules
+   - Folder structure and naming conventions
+   - CI / development workflows
 
-    let global = input.global ?? false
-    let configPath = global ? globalConfigPath : localConfigFileName
+2. Build a YAML config with three root keys:
 
-    if (existsSync(configPath)) {
-      const proceed = await confirm({
-        message: `Found existing config at ${configPath}. Do you want to proceed? This will overwrite the existing config.`,
-        default: false,
-      })
-      if (!proceed) {
-        throw new Error('User cancelled')
-      }
-    } else {
-      if (!input.global) {
+\`\`\`yaml
+scripts:          # derive from package.json and CI
+  format:        # code formatter
+    command: "<formatter cmd>"
+    description: "Format code"
+  check:         # linter / type checker
+    command: "<linter cmd>"
+    description: "Static checks"
+  test:          # test runner
+    command: "<test cmd>"
+    description: "Run tests"
+  # add any other meaningful project scripts
+
+rules:            # bullet list of key conventions/tools
+
+excludeFiles:     # only files likely to hold secrets
+  - ".env"
+  - ".env.*"
+  - ".npmrc"
+  # do NOT list build artifacts, lockfiles, or paths already in .gitignore
+\`\`\`
+
+3. Return the YAML exactly once, wrapped like:
+
+\`\`\`yaml
+# YAML (2-space indents, double-quoted commands)
+\`\`\`
+`
+
+export const initWorkflow: Workflow<InitWorkflowInput, InitWorkflowOutput, InitWorkflowTools> = {
+  name: 'Initialize polkacodes',
+  description: 'Initialize polkacodes configuration.',
+  async *fn(input, step, tools) {
+    const { global, configPath, existingConfig } = await step('setup', async () => {
+      const globalConfigPath = getGlobalConfigPath()
+      let global = input.global ?? false
+      let configPath = global ? globalConfigPath : localConfigFileName
+
+      if (existsSync(configPath)) {
+        const proceed = await confirm({
+          message: `Found existing config at ${configPath}. Do you want to proceed? This will overwrite the existing config.`,
+          default: false,
+        })
+        if (!proceed) {
+          throw new Error('User cancelled')
+        }
+      } else if (!input.global) {
         const isGlobal = await select({
           message: 'No config file found. Do you want to create one?',
           choices: [
@@ -65,183 +99,122 @@ const setupStep: CustomStepSpec<InitWorkflowInput, Step1Output> = {
           configPath = globalConfigPath
         }
       }
-    }
 
-    console.log(`Config file path: ${configPath}`)
+      console.log(`Config file path: ${configPath}`)
 
-    let existingConfig: Config = {}
-    try {
-      existingConfig = loadConfigAtPath(configPath) ?? {}
-    } catch (error) {
-      if (error instanceof ZodError) {
-        console.error(`Unable to parse config file: ${configPath}`, error)
-        process.exit(1)
-      }
-    }
-
-    return { type: 'success', output: { global, configPath, existingConfig, cmdOptions } }
-  },
-}
-
-type Step2Output = Step1Output & {
-  newConfig?: ProviderConfig
-  provider: AiProvider
-  model?: string
-  apiKey?: string
-}
-
-const getProviderStep: CustomStepSpec<Step1Output, Step2Output> = {
-  id: 'get-provider',
-  type: 'custom',
-  run: async (input) => {
-    const { cmdOptions } = input
-    const { providerConfig } = parseOptions(cmdOptions)
-    let { provider: maybeProvider, model, apiKey } = providerConfig.getConfigForCommand('init') ?? {}
-
-    let newConfig: ProviderConfig | undefined
-    if (!maybeProvider) {
-      newConfig = await configPrompt({})
-      maybeProvider = newConfig.provider
-      model = newConfig.model
-      apiKey = newConfig.apiKey
-    }
-    const provider = maybeProvider as AiProvider
-
-    return { type: 'success', output: { ...input, newConfig, provider, model, apiKey } }
-  },
-}
-
-type Step3Output = Step2Output
-
-const handleApiKeyStep: CustomStepSpec<Step2Output, Step3Output> = {
-  id: 'handle-api-key',
-  type: 'custom',
-  run: async (input) => {
-    const { newConfig, global, provider } = input
-    if (newConfig?.apiKey && !global) {
-      const option = await select({
-        message: 'It is not recommended to store API keys in the local config file. How would you like to proceed?',
-        choices: [
-          { name: 'Save API key in the local config file', value: 1 },
-          { name: 'Save API key in the global config file', value: 2 },
-          { name: 'Save API key to .env file', value: 3 },
-        ],
-      })
-
-      switch (option) {
-        case 1:
-          break
-        case 2: {
-          const globalConfigPath = getGlobalConfigPath()
-          const globalConfig = loadConfigAtPath(globalConfigPath) ?? {}
-          set(globalConfig, ['providers', provider, 'apiKey'], newConfig.apiKey)
-          mkdirSync(dirname(globalConfigPath), { recursive: true })
-          writeFileSync(globalConfigPath, stringify(globalConfig))
-          console.log(`API key saved to global config file: ${globalConfigPath}`)
-          newConfig.apiKey = undefined
-          break
+      let existingConfig: Config = {}
+      try {
+        existingConfig = loadConfigAtPath(configPath) ?? {}
+      } catch (error) {
+        if (error instanceof ZodError) {
+          console.error(`Unable to parse config file: ${configPath}`, error)
+          process.exit(1)
         }
-        case 3: {
-          let envFileContent: string
-          if (existsSync('.env')) {
-            envFileContent = readFileSync('.env', 'utf8')
-            envFileContent += `\n${provider.toUpperCase()}_API_KEY=${newConfig.apiKey}`
-          } else {
-            envFileContent = `${provider.toUpperCase()}_API_KEY=${newConfig.apiKey}`
+      }
+      return { global, configPath, existingConfig }
+    })
+
+    const { providerConfig, provider } = await step('get-provider', async () => {
+      const { providerConfig: optionsProviderConfig } = parseOptions(input.parentOptions ?? {})
+      const commandConfig = optionsProviderConfig.getConfigForCommand('init')
+      let maybeProvider: AiProvider | undefined = commandConfig?.provider
+      let model: string | undefined = commandConfig?.model
+      let apiKey: string | undefined = commandConfig?.apiKey
+      let newConfig: ProviderConfig | undefined
+
+      if (!maybeProvider) {
+        newConfig = await configPrompt({})
+        maybeProvider = newConfig.provider
+        model = newConfig.model
+        apiKey = newConfig.apiKey
+      }
+      const provider = maybeProvider as AiProvider
+      return { providerConfig: newConfig, provider, model, apiKey }
+    })
+
+    await step('handle-api-key', async () => {
+      if (providerConfig?.apiKey && !global) {
+        const option = await select({
+          message: 'It is not recommended to store API keys in the local config file. How would you like to proceed?',
+          choices: [
+            { name: 'Save API key in the local config file', value: 1 },
+            { name: 'Save API key in the global config file', value: 2 },
+            { name: 'Save API key to .env file', value: 3 },
+          ],
+        })
+
+        switch (option) {
+          case 1:
+            break
+          case 2: {
+            const globalConfigPath = getGlobalConfigPath()
+            const globalConfig = loadConfigAtPath(globalConfigPath) ?? {}
+            set(globalConfig, ['providers', provider, 'apiKey'], providerConfig.apiKey)
+            mkdirSync(dirname(globalConfigPath), { recursive: true })
+            writeFileSync(globalConfigPath, stringify(globalConfig))
+            console.log(`API key saved to global config file: ${globalConfigPath}`)
+            providerConfig.apiKey = undefined
+            break
           }
-          writeFileSync('.env', envFileContent)
-          console.log('API key saved to .env file')
-          newConfig.apiKey = undefined
-          break
+          case 3: {
+            let envFileContent: string
+            if (existsSync('.env')) {
+              envFileContent = readFileSync('.env', 'utf8')
+              envFileContent += `\n${provider.toUpperCase()}_API_KEY=${providerConfig.apiKey}`
+            } else {
+              envFileContent = `${provider.toUpperCase()}_API_KEY=${providerConfig.apiKey}`
+            }
+            writeFileSync('.env', envFileContent)
+            console.log('API key saved to .env file')
+            providerConfig.apiKey = undefined
+            break
+          }
         }
       }
-    }
-    return { type: 'success', output: input }
-  },
-}
+      return {}
+    })
 
-type Step4Output = Step3Output & {
-  generatedConfig: any
-}
+    const { shouldAnalyze } = await step('confirm-analyze', async () => {
+      const shouldAnalyze =
+        !global &&
+        (await confirm({
+          message: 'Would you like to analyze the project to generate recommended configuration?',
+          default: true,
+        }))
+      return { shouldAnalyze }
+    })
 
-const analyzeProjectStep: CustomStepSpec<Step3Output, Step4Output> = {
-  id: 'analyze-project',
-  type: 'custom',
-  run: async (input) => {
-    const { global, cmdOptions, provider, model, apiKey } = input
     let generatedConfig = {}
-
-    const shouldAnalyze =
-      !global &&
-      (await confirm({
-        message: 'Would you like to analyze the project to generate recommended configuration?',
-        default: true,
-      }))
-
     if (shouldAnalyze) {
-      const { providerConfig, config, verbose, maxMessageCount, budget } = parseOptions(cmdOptions)
-      const { parameters } = providerConfig.getConfigForCommand('init') ?? {}
-
-      const runner = new Runner({
-        providerConfig: new ApiProviderConfig({
-          defaultProvider: provider,
-          defaultModel: model,
-          defaultParameters: parameters,
-          providers: { [provider]: { apiKey } },
-        }),
-        config,
-        maxMessageCount,
-        budget,
-        interactive: true,
-        verbose,
-        availableAgents: [analyzerAgentInfo],
-      })
-
       console.log('Analyzing project files...')
-
-      const response = await generateProjectConfig(runner.multiAgent, undefined)
-      generatedConfig = response ? parse(response) : {}
+      const response = yield* tools.invokeAgent({
+        agent: 'analyzer',
+        messages: [analyzePrompt],
+        outputSchema: z.object({ yaml: z.string() }),
+      })
+      generatedConfig = response ? parse((response as { yaml: string }).yaml) : {}
     }
 
-    return { type: 'success', output: { ...input, generatedConfig } }
-  },
-}
-
-const saveConfigStep: CustomStepSpec<Step4Output, InitWorkflowOutput> = {
-  id: 'save-config',
-  type: 'custom',
-  run: async (input) => {
-    const { existingConfig, generatedConfig, newConfig, configPath } = input
-
-    const finalConfig: Config = {
-      ...(existingConfig ?? {}),
-      ...generatedConfig,
-    }
-
-    if (newConfig) {
-      finalConfig.defaultProvider = newConfig.provider
-      finalConfig.defaultModel = newConfig.model
-      if (newConfig.apiKey) {
-        set(finalConfig, ['providers', newConfig.provider, 'apiKey'], newConfig.apiKey)
+    await step('save-config', async () => {
+      const finalConfig: Config = {
+        ...(existingConfig ?? {}),
+        ...generatedConfig,
       }
-    }
 
-    mkdirSync(dirname(configPath), { recursive: true })
-    writeFileSync(configPath, stringify(finalConfig))
-    console.log(`Configuration saved to ${configPath}`)
+      if (providerConfig) {
+        finalConfig.defaultProvider = providerConfig.provider
+        finalConfig.defaultModel = providerConfig.model
+        if (providerConfig.apiKey) {
+          set(finalConfig, ['providers', providerConfig.provider, 'apiKey'], providerConfig.apiKey)
+        }
+      }
 
-    return { type: 'success', output: { configPath } }
+      mkdirSync(dirname(configPath), { recursive: true })
+      writeFileSync(configPath, stringify(finalConfig))
+      console.log(`Configuration saved to ${configPath}`)
+      return {}
+    })
+
+    return { configPath }
   },
-}
-
-export const initWorkflow: WorkflowSpec<InitWorkflowInput, InitWorkflowOutput> = {
-  name: 'Initialize polkacodes',
-  description: 'Initialize polkacodes configuration.',
-  step: builder<InitWorkflowInput>()
-    .custom(setupStep)
-    .custom(getProviderStep)
-    .custom(handleApiKeyStep)
-    .custom(analyzeProjectStep)
-    .custom(saveConfigStep)
-    .build(),
 }

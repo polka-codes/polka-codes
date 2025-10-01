@@ -3,7 +3,7 @@ import type { z } from 'zod'
 import type { TaskEventCallback } from '../Agent'
 import type { ToolProvider } from '../tools'
 
-export type Json = boolean | number | string | Json[] | { [k: string]: Json }
+export type Json = boolean | number | string | null | Json[] | { [k: string]: Json }
 
 export type TemplatedString<T = { [k: string]: Json }> =
   | {
