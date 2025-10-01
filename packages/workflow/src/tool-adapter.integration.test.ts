@@ -25,8 +25,8 @@ describe('tool-adapter integration', () => {
     const testWorkflow: Workflow<{ path: string[] }, string, TestTools> = {
       name: 'test',
       description: 'test workflow',
-      async *fn(input, _step, useTool) {
-        const fileContent = yield* useTool('readFile', { path: input.path, includeIgnored: undefined })
+      async *fn(input, _step, tools) {
+        const fileContent = yield* tools.readFile({ path: input.path, includeIgnored: undefined })
         if (fileContent.type !== ToolResponseType.Reply) {
           throw new Error('unexpected tool response')
         }
