@@ -20,8 +20,8 @@ const simpleWorkflow: Workflow<string, string, Tools> = {
 const singleToolWorkflow: Workflow<number, number, Tools> = {
   name: 'singleTool',
   description: 'A workflow with a single tool',
-  async *fn(input, _step, useTool) {
-    const result = yield* useTool('add', { a: input, b: 2 })
+  async *fn(input, _step, tools) {
+    const result = yield* tools.add({ a: input, b: 2 })
     return result
   },
 }
@@ -29,9 +29,9 @@ const singleToolWorkflow: Workflow<number, number, Tools> = {
 const multiToolWorkflow: Workflow<string, string, Tools> = {
   name: 'multiTool',
   description: 'A workflow with multiple tools',
-  async *fn(input, _step, useTool) {
-    const r1 = yield* useTool('concat', { a: 'hello', b: ' ' })
-    const r2 = yield* useTool('concat', { a: r1, b: input })
+  async *fn(input, _step, tools) {
+    const r1 = yield* tools.concat({ a: 'hello', b: ' ' })
+    const r2 = yield* tools.concat({ a: r1, b: input })
     return r2
   },
 }
@@ -48,8 +48,8 @@ const failingWorkflow: Workflow<null, null, Tools> = {
 const failingAfterToolWorkflow: Workflow<number, number, Tools> = {
   name: 'failingAfterTool',
   description: 'A workflow that fails after a tool call',
-  async *fn(input, _step, useTool) {
-    yield* useTool('add', { a: input, b: 2 })
+  async *fn(input, _step, tools) {
+    yield* tools.add({ a: input, b: 2 })
     throw new Error('failed after tool')
   },
 }

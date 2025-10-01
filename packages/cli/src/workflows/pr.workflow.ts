@@ -32,7 +32,7 @@ Example format:
 export const prWorkflow: Workflow<{ context?: string }, { title: string; description: string }, PRWorkflowTools> = {
   name: 'Create Pull Request',
   description: 'Generate a pull request title and description and create the pull request.',
-  async *fn(input, step, useTool) {
+  async *fn(input, step, tools) {
     const { diff, commits, branchName } = await step('get-git-info', async () => {
       checkGhInstalled()
       const branchName = execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf-8' }).trim()
@@ -56,7 +56,7 @@ export const prWorkflow: Workflow<{ context?: string }, { title: string; descrip
       messageParts.push(`<user_context>${input.context}</user_context>`)
     }
 
-    const prDetails = yield* useTool('invokeAgent', {
+    const prDetails = yield* tools.invokeAgent({
       agent: 'analyzer',
       messages: [
         GET_PR_DETAILS_PROMPT,
@@ -68,7 +68,7 @@ export const prWorkflow: Workflow<{ context?: string }, { title: string; descrip
       outputSchema: prDetailsSchema,
     })
 
-    const result = yield* useTool('createPullRequest', prDetails as { title: string; description: string })
+    const result = yield* tools.createPullRequest(prDetails as { title: string; description: string })
 
     return result
   },

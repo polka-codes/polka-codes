@@ -23,13 +23,14 @@ export type ToolsExecutor<TTools extends ToolRegistry> = {
   [K in keyof TTools]: (input: TTools[K]['input']) => Promise<TTools[K]['output']>
 }
 
+export type WorkflowTools<TTools extends ToolRegistry> = {
+  [K in keyof TTools]: (input: TTools[K]['input']) => Generator<ToolCall<TTools>, TTools[K]['output'], TTools[K]['output']>
+}
+
 export type WorkflowFn<TInput extends PlainJson, TOutput extends PlainJson, TTools extends ToolRegistry> = (
   input: TInput,
   step: StepFn,
-  useTool: <TName extends keyof TTools>(
-    tool: TName,
-    input: TTools[TName]['input'],
-  ) => Generator<ToolCall<TTools>, TTools[TName]['output'], TTools[TName]['output']>,
+  tools: WorkflowTools<TTools>,
 ) => AsyncGenerator<ToolCall<TTools>, TOutput, TTools[keyof TTools]['output']>
 
 export type Workflow<TInput extends PlainJson, TOutput extends PlainJson, TTools extends ToolRegistry> = {
@@ -78,13 +79,19 @@ export async function run<TInput extends PlainJson, TOutput extends PlainJson, T
     }
   }
 
-  const gen = workflow.fn(input, stepFn, function* useTool(tool, input) {
-    return yield {
-      type: 'tool',
-      tool,
-      input,
-    }
+  const tools = new Proxy({} as WorkflowTools<TTools>, {
+    get: (_target, tool: string) => {
+      return function* (input: any): Generator<ToolCall<TTools>, any, any> {
+        return yield {
+          type: 'tool',
+          tool,
+          input,
+        } as any
+      }
+    },
   })
+
+  const gen = workflow.fn(input, stepFn, tools)
 
   let status: WorkflowStatus<TTools, TOutput>
   try {
