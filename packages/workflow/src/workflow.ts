@@ -4,12 +4,12 @@ export type PlainJson = JsonPrimitive | readonly PlainJson[] | { readonly [K in 
 
 export type StepFn = <T extends PlainJson>(name: string, fn: () => Promise<T>) => Promise<T>
 
-export type ToolSignature<I extends PlainJson, O extends PlainJson> = {
+export type ToolSignature<I, O extends PlainJson> = {
   input: I
   output: O
 }
 
-export type ToolRegistry = Record<string, ToolSignature<PlainJson, PlainJson>>
+export type ToolRegistry = Record<string, ToolSignature<any, PlainJson>>
 
 export type ToolCall<TTools extends ToolRegistry> = {
   [K in keyof TTools]: {

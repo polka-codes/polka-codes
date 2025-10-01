@@ -1,5 +1,5 @@
 import { Command } from 'commander'
-import { runWorkflowCommand } from '../runWorkflow'
+import { runWorkflowV2 } from '../runWorkflowV2'
 import { prWorkflow } from '../workflows'
 
 export const prCommand = new Command('pr')
@@ -8,9 +8,5 @@ export const prCommand = new Command('pr')
   .action(async (message, _options, command: Command) => {
     const input = { ...(message && { context: message }) }
 
-    await runWorkflowCommand('pr', prWorkflow, command, input, async (result, _command) => {
-      if (result.type === 'success') {
-        console.log('\nPull request created successfully.')
-      }
-    })
+    await runWorkflowV2('pr', prWorkflow, command, input)
   })

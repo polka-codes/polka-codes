@@ -15,8 +15,6 @@ export function createCoreToolsExecutor<T extends Record<string, FullToolInfoV2>
   return executor
 }
 
-export type CoreToolsToWorkflowTools<
-  T extends Record<string, { parameters: z.ZodType<any, any, any> }>,,
-> = {
+export type CoreToolsToWorkflowTools<T extends Record<string, { parameters: z.ZodType<any, any, any> }>> = {
   [K in keyof T]: ToolSignature<z.input<T[K]['parameters']> & PlainJson, ToolResponse>
 } & ToolRegistry
