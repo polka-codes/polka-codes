@@ -68,7 +68,7 @@ export const prWorkflow: Workflow<{ context?: string }, { title: string; descrip
       outputSchema: prDetailsSchema,
     })
 
-    const result = yield* useTool('createPullRequest', prDetails)
+    const result = yield* useTool('createPullRequest', prDetails as { title: string; description: string })
 
     return result
   },

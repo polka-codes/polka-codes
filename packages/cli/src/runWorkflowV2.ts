@@ -17,12 +17,11 @@ import {
   ToolResponseType,
   UsageMeter,
 } from '@polka-codes/core'
-import type { AgentName } from '@polka-codes/workflow'
-import { type PlainJson, run, type ToolCall, type ToolRegistry, type Workflow } from '@polka-codes/workflow'
+import type { AgentName, ToolSignature } from '@polka-codes/workflow'
+import { type InvokeAgentTool, type PlainJson, run, type ToolCall, type Workflow } from '@polka-codes/workflow'
 import type { Command } from 'commander'
 import { merge } from 'lodash'
 import ora from 'ora'
-import type { z } from 'zod'
 import type { ApiProviderConfig } from './ApiProviderConfig'
 import { getModel } from './getModel'
 import { parseOptions } from './options'
@@ -41,8 +40,13 @@ class WorkflowAgent extends CoderAgent {
   }
 }
 
-async function handleToolCall<TTools extends ToolRegistry>(
-  toolCall: ToolCall<TTools>,
+type Tools = {
+  invokeAgent: InvokeAgentTool
+  createPullRequest: ToolSignature<{ title: string; description: string }, { title: string; description: string }>
+}
+
+async function handleToolCall(
+  toolCall: ToolCall<Tools>,
   context: {
     providerConfig: ApiProviderConfig
     parameters: AgentContextParameters
@@ -53,7 +57,7 @@ async function handleToolCall<TTools extends ToolRegistry>(
 ) {
   switch (toolCall.tool) {
     case 'invokeAgent': {
-      const input = toolCall.input as { agent: AgentName; messages: any[]; outputSchema: z.ZodSchema<any> }
+      const input = toolCall.input
       const model = await context.getModel(input.agent)
 
       const AgentClass = agentRegistry[input.agent] ?? WorkflowAgent
@@ -73,9 +77,12 @@ async function handleToolCall<TTools extends ToolRegistry>(
         requestTimeoutSeconds: context.parameters.requestTimeoutSeconds,
       })
 
-      const userMessages = input.messages.filter((m) => m.type !== 'system')
+      const userPrompt = input.messages
+        .filter((m) => typeof m === 'string' || m.type !== 'system')
+        .map((m) => (typeof m === 'string' ? m : m.content))
+        .join('\n\n')
 
-      const exitReason = await agent.start(userMessages)
+      const exitReason = await agent.start(userPrompt)
 
       if (exitReason.type !== ToolResponseType.Exit) {
         throw new Error(`Agent exited for an unhandled reason: ${JSON.stringify(exitReason)}`)
@@ -106,13 +113,13 @@ async function handleToolCall<TTools extends ToolRegistry>(
       })
     }
     default:
-      throw new Error(`Unknown tool: ${String(toolCall.tool)}`)
+      throw new Error(`Unknown tool: ${String((toolCall as any).tool)}`)
   }
 }
 
-export async function runWorkflowV2<TInput extends PlainJson, TOutput extends PlainJson, TTools extends ToolRegistry>(
+export async function runWorkflowV2<TInput extends PlainJson, TOutput extends PlainJson>(
   commandName: 'pr',
-  workflow: Workflow<TInput, TOutput, TTools>,
+  workflow: Workflow<TInput, TOutput, Tools>,
   command: Command,
   workflowInput: TInput,
 ) {
