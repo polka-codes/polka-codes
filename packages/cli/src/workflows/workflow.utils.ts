@@ -40,16 +40,16 @@ export function parseGitDiffNameStatus(diffOutput: string): FileChange[] {
   })
 }
 
-export function printChangedFiles(title: string, changedFiles: FileChange[], spinner: Ora, logger: Console) {
+export function printChangedFiles(title: string, changedFiles: FileChange[], spinner: Ora | undefined, logger: Console) {
   if (changedFiles.length === 0) {
     return
   }
-  spinner.stop()
+  spinner?.stop()
   logger.log(title)
   for (const file of changedFiles) {
     logger.log(`- ${file.status}: ${file.path}`)
   }
-  spinner.start()
+  spinner?.start()
 }
 
 export function checkGhInstalled() {

@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { confirm, select } from '@inquirer/prompts'
 import { type Config, getGlobalConfigPath, loadConfigAtPath, localConfigFileName } from '@polka-codes/cli-shared'
-import type { InvokeAgentTool, ToolSignature, Workflow } from '@polka-codes/workflow'
+import type { InvokeAgentTool, Workflow } from '@polka-codes/workflow'
 import { set } from 'lodash'
 import { parse, stringify } from 'yaml'
 import { ZodError, z } from 'zod'
@@ -23,7 +23,6 @@ type InitWorkflowOutput = {
 
 type InitWorkflowTools = {
   invokeAgent: InvokeAgentTool
-  createPullRequest: ToolSignature<{ title: string; description: string }, { title: string; description: string }>
 }
 
 const analyzePrompt = `

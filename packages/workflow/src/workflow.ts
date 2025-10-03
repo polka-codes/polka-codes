@@ -2,7 +2,8 @@ export type JsonPrimitive = string | number | boolean | null
 
 export type PlainJson = JsonPrimitive | readonly PlainJson[] | { readonly [K in string]?: PlainJson }
 
-export type StepFn = <T extends PlainJson>(name: string, fn: () => Promise<T>) => Promise<T>
+// biome-ignore lint/suspicious/noConfusingVoidType: void means no return
+export type StepFn = <T extends PlainJson | void>(name: string, fn: () => Promise<T>) => Promise<T>
 
 export type ToolSignature<I, O extends PlainJson> = {
   input: I
@@ -67,7 +68,8 @@ export async function run<TInput extends PlainJson, TOutput extends PlainJson, T
   if (!stepFn) {
     const results: Record<string, unknown> = {}
     const counts: Record<string, number> = {}
-    stepFn = async <T extends PlainJson>(name: string, fn: () => Promise<T>) => {
+    // biome-ignore lint/suspicious/noConfusingVoidType: void means no return
+    stepFn = async <T extends PlainJson | void>(name: string, fn: () => Promise<T>) => {
       counts[name] = (counts[name] || 0) + 1
       const key = `${name}#${counts[name]}`
       if (key in results) {

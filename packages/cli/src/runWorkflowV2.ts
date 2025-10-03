@@ -3,6 +3,7 @@
 import { spawnSync } from 'node:child_process'
 import os from 'node:os'
 import type { LanguageModelV2 } from '@ai-sdk/provider'
+import { confirm as inquirerConfirm } from '@inquirer/prompts'
 import { getProvider, printEvent } from '@polka-codes/cli-shared'
 import {
   type AgentBase,
@@ -19,15 +20,17 @@ import {
   ToolResponseType,
   UsageMeter,
 } from '@polka-codes/core'
-import type { ToolSignature } from '@polka-codes/workflow'
-import { type InvokeAgentTool, type PlainJson, run, type ToolCall, type Workflow } from '@polka-codes/workflow'
+import { type PlainJson, run, type ToolCall, type ToolSignature, type Workflow } from '@polka-codes/workflow'
 import type { Command } from 'commander'
 import { merge } from 'lodash'
 import ora, { type Ora } from 'ora'
 import type { ApiProviderConfig } from './ApiProviderConfig'
+import { UserCancelledError } from './errors'
 import { getModel } from './getModel'
 import { parseOptions } from './options'
 import prices from './prices'
+import type { WorkflowTools } from './workflow-tools'
+import { getLocalChanges } from './workflows/workflow.utils'
 
 const agentRegistry: Record<string, new (options: SharedAgentOptions) => AgentBase> = {
   analyzer: AnalyzerAgent,
@@ -42,13 +45,8 @@ class WorkflowAgent extends CoderAgent {
   }
 }
 
-type Tools = {
-  invokeAgent: InvokeAgentTool
-  createPullRequest: ToolSignature<{ title: string; description: string }, { title: string; description: string }>
-}
-
 async function handleToolCall(
-  toolCall: ToolCall<Tools>,
+  toolCall: ToolCall<WorkflowTools>,
   context: {
     providerConfig: ApiProviderConfig
     parameters: AgentContextParameters
@@ -108,14 +106,63 @@ async function handleToolCall(
       context.spinner.start()
       return { title, description }
     }
+    case 'createCommit': {
+      const { message } = toolCall.input
+      context.spinner.stop()
+      const result = spawnSync('git', ['commit', '-m', message], { stdio: 'inherit' })
+      if (result.status !== 0) {
+        throw new Error('Commit failed')
+      }
+      context.spinner.start()
+      return { message }
+    }
+    case 'printChangeFile': {
+      context.spinner.stop()
+      const { stagedFiles, unstagedFiles } = getLocalChanges()
+      if (stagedFiles.length === 0 && unstagedFiles.length === 0) {
+        console.log('No changes to commit.')
+      } else {
+        if (stagedFiles.length > 0) {
+          console.log('Staged files:')
+          for (const file of stagedFiles) {
+            console.log(`- ${file.status}: ${file.path}`)
+          }
+        }
+        if (unstagedFiles.length > 0) {
+          console.log('\nUnstaged files:')
+          for (const file of unstagedFiles) {
+            console.log(`- ${file.status}: ${file.path}`)
+          }
+        }
+      }
+      context.spinner.start()
+      return { stagedFiles, unstagedFiles }
+    }
+    case 'confirm': {
+      const { message } = toolCall.input
+      context.spinner.stop()
+      // to allow ora to fully stop the spinner so inquirer can takeover the cli window
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      try {
+        const result = await inquirerConfirm({ message })
+        context.spinner.start()
+        return result
+      } catch (_e) {
+        throw new UserCancelledError()
+      }
+    }
     default:
       throw new Error(`Unknown tool: ${String((toolCall as any).tool)}`)
   }
 }
 
-export async function runWorkflowV2<TInput extends PlainJson, TOutput extends PlainJson>(
+export async function runWorkflowV2<
+  TInput extends PlainJson,
+  TOutput extends PlainJson,
+  TTools extends Record<string, ToolSignature<any, any>>,
+>(
   commandName: string,
-  workflow: Workflow<TInput, TOutput, Tools>,
+  workflow: Workflow<TInput, TOutput, TTools>,
   command: Command,
   workflowInput: TInput,
   requiresProvider: boolean = true,
@@ -157,7 +204,7 @@ export async function runWorkflowV2<TInput extends PlainJson, TOutput extends Pl
   while (result.status === 'pending') {
     spinner.text = `Running tool: ${String(result.tool.tool)}`
     try {
-      const toolResult = await handleToolCall(result.tool, {
+      const toolResult = await handleToolCall(result.tool as ToolCall<WorkflowTools>, {
         providerConfig,
         parameters,
         spinner,
@@ -183,8 +230,12 @@ export async function runWorkflowV2<TInput extends PlainJson, TOutput extends Pl
     console.log('Workflow completed successfully.')
     console.log('Output:', result.output)
   } else if (result.status === 'failed') {
-    console.error('Workflow failed:', result.error)
-    process.exit(1)
+    const error = result.error as any
+    if (error instanceof UserCancelledError) {
+      console.log('\nWorkflow cancelled by user.')
+    } else {
+      console.error('Workflow failed:', result.error)
+    }
   }
 
   usage.printUsage()

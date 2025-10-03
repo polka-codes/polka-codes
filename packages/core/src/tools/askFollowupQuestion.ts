@@ -27,16 +27,18 @@ export const toolInfo = {
         {
           description: 'Single clarifying question (no options)',
           input: {
-            questions: { prompt: 'What is the target deployment environment?' },
+            questions: [{ prompt: 'What is the target deployment environment?' }],
           },
         },
         {
           description: 'Single question with multiple-choice options',
           input: {
-            questions: {
-              prompt: 'Which frontend framework are you using?',
-              options: ['React', 'Angular', 'Vue', 'Svelte'],
-            },
+            questions: [
+              {
+                prompt: 'Which frontend framework are you using?',
+                options: ['React', 'Angular', 'Vue', 'Svelte'],
+              },
+            ],
           },
         },
         {
@@ -54,10 +56,12 @@ export const toolInfo = {
         {
           description: 'Binary (yes/no) confirmation',
           input: {
-            questions: {
-              prompt: 'Is it acceptable to refactor existing tests to improve performance?',
-              options: ['Yes', 'No'],
-            },
+            questions: [
+              {
+                prompt: 'Is it acceptable to refactor existing tests to improve performance?',
+                options: ['Yes', 'No'],
+              },
+            ],
           },
         },
       ],
