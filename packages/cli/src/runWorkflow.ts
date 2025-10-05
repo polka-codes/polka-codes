@@ -7,8 +7,8 @@ import { confirm as inquirerConfirm } from '@inquirer/prompts'
 import { getProvider, printEvent } from '@polka-codes/cli-shared'
 import {
   type AgentBase,
-  type AgentContextParameters,
   type AgentNameType,
+  type AgentPolicy,
   AnalyzerAgent,
   ArchitectAgent,
   CodeFixerAgent,
@@ -16,6 +16,7 @@ import {
   EnableCachePolicy,
   parseJsonFromMarkdown,
   type SharedAgentOptions,
+  type ToolFormat,
   type ToolResponse,
   ToolResponseType,
   UsageMeter,
@@ -31,6 +32,17 @@ import { parseOptions } from './options'
 import prices from './prices'
 import type { WorkflowTools } from './workflow-tools'
 import { getLocalChanges } from './workflows/workflow.utils'
+
+type AgentContextParameters = {
+  toolFormat?: ToolFormat
+  os?: string
+  policies?: AgentPolicy[]
+  modelParameters?: Record<string, any>
+  scripts?: Record<string, string | { command: string; description: string }>
+  retryCount?: number
+  requestTimeoutSeconds?: number
+  usageMeter?: UsageMeter
+}
 
 const agentRegistry: Record<string, new (options: SharedAgentOptions) => AgentBase> = {
   analyzer: AnalyzerAgent,
