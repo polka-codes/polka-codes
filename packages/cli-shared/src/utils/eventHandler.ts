@@ -67,23 +67,19 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter, customConsol
         break
       case TaskEventKind.Usage:
         break
-      case TaskEventKind.Text:
-        if (customConsole !== console) {
-          break
-        }
+      case TaskEventKind.Text: {
         if (hadReasoning) {
-          process.stdout.write('\n\n')
+          customConsole.write('\n\n')
           hadReasoning = false
         }
-        process.stdout.write(event.newText)
+        customConsole.write(event.newText)
         break
-      case TaskEventKind.Reasoning:
-        if (customConsole !== console) {
-          break
-        }
-        process.stdout.write(chalk.dim(event.newText))
+      }
+      case TaskEventKind.Reasoning: {
+        customConsole.write(chalk.dim(event.newText))
         hadReasoning = true
         break
+      }
       case TaskEventKind.ToolUse: {
         customConsole.log(chalk.yellow('\n\nTool use:', event.tool), event.params)
         const stats = toolCallStats.get(event.tool) ?? { calls: 0, success: 0, errors: 0 }

@@ -88,7 +88,7 @@ export async function run<TInput extends PlainJson, TOutput extends PlainJson, T
           type: 'tool',
           tool,
           input,
-        } as any
+        }
       }
     },
   })

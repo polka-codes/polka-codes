@@ -58,6 +58,8 @@ async function handleToolCall(
 ) {
   switch (toolCall.tool) {
     case 'invokeAgent': {
+      context.spinner.stop()
+      console.log()
       const input = toolCall.input
       const model = await context.getModel(input.agent)
 
@@ -76,6 +78,7 @@ async function handleToolCall(
         requireToolUse: false,
         retryCount: context.parameters.retryCount,
         requestTimeoutSeconds: context.parameters.requestTimeoutSeconds,
+        additionalTools: input.tools,
       })
 
       const userPrompt = input.messages
@@ -85,6 +88,7 @@ async function handleToolCall(
 
       const exitReason = await agent.start(userPrompt)
 
+      context.spinner.start()
       if (exitReason.type !== ToolResponseType.Exit) {
         throw new Error(`Agent exited for an unhandled reason: ${JSON.stringify(exitReason)}`)
       }
@@ -93,11 +97,14 @@ async function handleToolCall(
       if (!parsed.success) {
         throw new Error(parsed.error)
       }
-      const validated = input.outputSchema.safeParse(parsed.data)
-      if (!validated.success) {
-        throw new Error(validated.error.message)
+      if (input.outputSchema) {
+        const validated = input.outputSchema.safeParse(parsed.data)
+        if (!validated.success) {
+          throw new Error(validated.error.message)
+        }
+        return validated.data
       }
-      return validated.data
+      return parsed.data
     }
     case 'createPullRequest': {
       const { title, description } = toolCall.input as { title: string; description: string }
@@ -109,6 +116,7 @@ async function handleToolCall(
     case 'createCommit': {
       const { message } = toolCall.input
       context.spinner.stop()
+      console.log()
       const result = spawnSync('git', ['commit', '-m', message], { stdio: 'inherit' })
       if (result.status !== 0) {
         throw new Error('Commit failed')
@@ -118,6 +126,7 @@ async function handleToolCall(
     }
     case 'printChangeFile': {
       context.spinner.stop()
+      console.log()
       const { stagedFiles, unstagedFiles } = getLocalChanges()
       if (stagedFiles.length === 0 && unstagedFiles.length === 0) {
         console.log('No changes to commit.')
@@ -141,6 +150,7 @@ async function handleToolCall(
     case 'confirm': {
       const { message } = toolCall.input
       context.spinner.stop()
+      console.log()
       // to allow ora to fully stop the spinner so inquirer can takeover the cli window
       await new Promise((resolve) => setTimeout(resolve, 50))
       try {
@@ -166,24 +176,26 @@ export async function runWorkflowV2<
   command: Command,
   workflowInput: TInput,
   requiresProvider: boolean = true,
-) {
+): Promise<TOutput | undefined> {
+  const { json } = command.opts()
+  const logger = json ? new console.Console(process.stderr) : console
   const { providerConfig, config, verbose } = parseOptions(command.parent?.opts() ?? {})
 
   if (requiresProvider) {
     const commandConfig = providerConfig.getConfigForCommand(commandName)
     if (!commandConfig || !commandConfig.provider || !commandConfig.model) {
-      console.error(`Error: No provider specified for ${commandName}. Please run "polka config" to configure your AI provider.`)
+      logger.error(`Error: No provider specified for ${commandName}. Please run "polka config" to configure your AI provider.`)
       process.exit(1)
     }
 
-    console.log('Provider:', commandConfig.provider)
-    console.log('Model:', commandConfig.model)
+    logger.log('Provider:', commandConfig.provider)
+    logger.log('Model:', commandConfig.model)
   }
 
-  const spinner = ora('Running workflow...').start()
+  const spinner = ora({ text: 'Running workflow...', ...(json && { stream: process.stderr }) }).start()
 
   const usage = new UsageMeter(merge(prices, config.prices ?? {}), { maxMessages: config.maxMessageCount, maxCost: config.budget })
-  const onEvent = verbose > 0 ? printEvent(verbose, usage, console) : undefined
+  const onEvent = verbose > 0 ? printEvent(verbose, usage, logger) : undefined
   const toolProvider = getProvider({ excludeFiles: config.excludeFiles })
 
   const agentConfig = providerConfig.getConfigForCommand(commandName)
@@ -199,7 +211,17 @@ export async function runWorkflowV2<
     usageMeter: usage,
   }
 
-  let result = await run(workflow, workflowInput)
+  const originalConsole = { log: console.log, error: console.error, warn: console.warn }
+  if (json) {
+    console.log = logger.log
+    console.error = logger.error
+    console.warn = logger.warn
+  }
+
+  let result = await run(workflow, workflowInput, async (name, fn) => {
+    spinner.text = name
+    return await fn()
+  })
 
   while (result.status === 'pending') {
     spinner.text = `Running tool: ${String(result.tool.tool)}`
@@ -224,19 +246,31 @@ export async function runWorkflowV2<
     }
   }
 
-  spinner.stop()
+  if (json) {
+    console.log = originalConsole.log
+    console.error = originalConsole.error
+    console.warn = originalConsole.warn
+  }
 
   if (result.status === 'completed') {
-    console.log('Workflow completed successfully.')
-    console.log('Output:', result.output)
-  } else if (result.status === 'failed') {
+    spinner.succeed('Workflow completed successfully.')
+    usage.printUsage(logger)
+    return result.output
+  }
+
+  if (result.status === 'failed') {
     const error = result.error as any
     if (error instanceof UserCancelledError) {
-      console.log('\nWorkflow cancelled by user.')
+      spinner.warn('Workflow cancelled by user.')
     } else {
-      console.error('Workflow failed:', result.error)
+      spinner.fail(`Workflow failed: ${error.message}`)
+      if (verbose > 1) {
+        logger.error(error)
+      }
     }
   }
 
-  usage.printUsage()
+  spinner.stop()
+  usage.printUsage(logger)
+  return undefined
 }

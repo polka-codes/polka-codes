@@ -8,5 +8,5 @@ export type WorkflowTools = {
   createPullRequest: ToolSignature<{ title: string; description: string }, { title: string; description: string }>
   createCommit: ToolSignature<{ message: string }, { message: string }>
   printChangeFile: ToolSignature<Record<string, never>, { stagedFiles: FileChange[]; unstagedFiles: FileChange[] }>
-  confirm: ToolSignature<{ message: string }, boolean>
+  confirm: ToolSignature<{ message: string; default: false }, boolean>
 }

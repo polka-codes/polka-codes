@@ -52,7 +52,7 @@ export const commitWorkflow: Workflow<CommitWorkflowInput, { commitMessage: stri
         })
         hasStaged = true
       } else if (hasUnstaged) {
-        const confirmed = yield* tools.confirm({ message: 'No staged files found. Stage all files?' })
+        const confirmed = yield* tools.confirm({ message: 'No staged files found. Stage all files?', default: false })
         if (confirmed) {
           await step('stage-all', async () => {
             execSync('git add .', { stdio: 'ignore' })
