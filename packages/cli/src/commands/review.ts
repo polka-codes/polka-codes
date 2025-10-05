@@ -2,7 +2,7 @@
 
 import { confirm } from '@inquirer/prompts'
 import { Command, InvalidOptionArgumentError } from 'commander'
-import { runWorkflowV2 } from '../runWorkflowV2'
+import { runWorkflow } from '../runWorkflow'
 import type { WorkflowTools } from '../workflow-tools'
 import { type ReviewWorkflowInput, reviewWorkflow } from '../workflows'
 import { formatReviewForConsole, type ReviewResult } from '../workflows/workflow.utils'
@@ -45,7 +45,7 @@ Re-running review (iteration ${i + 1} of ${maxIterations})...`,
           )
       }
 
-      const reviewResult = await runWorkflowV2<ReviewWorkflowInput, ReviewResult, WorkflowTools>('review', reviewWorkflow, command, input)
+      const reviewResult = await runWorkflow<ReviewWorkflowInput, ReviewResult, WorkflowTools>('review', reviewWorkflow, command, input)
 
       if (reviewResult) {
         const formattedReview = formatReviewForConsole(reviewResult)

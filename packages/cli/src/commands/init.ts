@@ -4,14 +4,14 @@
  */
 
 import { Command } from 'commander'
-import { runWorkflowV2 } from '../runWorkflowV2'
+import { runWorkflow } from '../runWorkflow'
 import { initWorkflow } from '../workflows/init.workflow'
 
 export const initCommand = new Command('init')
   .description('Initialize polkacodes configuration')
   .option('-g, --global', 'Use global config')
   .action(async (options, command: Command) => {
-    await runWorkflowV2(
+    await runWorkflow(
       'init',
       initWorkflow,
       command,

@@ -1,5 +1,5 @@
 import { Command } from 'commander'
-import { runWorkflowV2 } from '../runWorkflowV2'
+import { runWorkflow } from '../runWorkflow'
 import { commitWorkflow } from '../workflows'
 
 export const commitCommand = new Command('commit')
@@ -9,5 +9,5 @@ export const commitCommand = new Command('commit')
   .action(async (message, localOptions, command: Command) => {
     const input = { ...(localOptions.all && { all: true }), ...(message && { context: message }) }
 
-    await runWorkflowV2('commit', commitWorkflow, command, input)
+    await runWorkflow('commit', commitWorkflow, command, input)
   })
