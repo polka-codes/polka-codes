@@ -60,25 +60,15 @@ export type WorkflowStatus<TTools extends ToolRegistry, TOutput extends PlainJso
   | WorkflowStatusCompleted<TOutput>
   | WorkflowStatusFailed
 
+import { makeStepFn } from './helpers'
+
 export async function run<TInput extends PlainJson, TOutput extends PlainJson, TTools extends ToolRegistry>(
   workflow: Workflow<TInput, TOutput, TTools>,
   input: TInput,
   stepFn?: StepFn,
 ) {
   if (!stepFn) {
-    const results: Record<string, unknown> = {}
-    const counts: Record<string, number> = {}
-    // biome-ignore lint/suspicious/noConfusingVoidType: void means no return
-    stepFn = async <T extends PlainJson | void>(name: string, fn: () => Promise<T>) => {
-      counts[name] = (counts[name] || 0) + 1
-      const key = `${name}#${counts[name]}`
-      if (key in results) {
-        return results[key] as T
-      }
-      const result = await fn()
-      results[key] = result
-      return result
-    }
+    stepFn = makeStepFn()
   }
 
   const tools = new Proxy({} as WorkflowTools<TTools>, {
