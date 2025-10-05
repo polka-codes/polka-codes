@@ -59,6 +59,7 @@ git commit -m "chore: release $VERSION"
 bun run clean
 bun run build
 bun publish --cwd packages/core --access public || exit 1
+bun publish --cwd packages/workflow --access public || exit 1
 bun publish --cwd packages/github --access public || exit 1
 bun publish --cwd packages/cli-shared --access public || exit 1
 bun publish --cwd packages/cli --access public || exit 1
