@@ -18,10 +18,10 @@
   },
   "dependencies": {
     "@ai-sdk/provider": "^2.0.0",
-    "@ai-sdk/provider-utils": "^3.0.0",
-    "ai": "^5.0.32",
+    "@ai-sdk/provider-utils": "^3.0.10",
+    "ai": "^5.0.60",
     "lodash": "^4.17.21",
-    "yaml": "^2.7.1",
-    "zod": "^4.1.5"
+    "yaml": "^2.8.1",
+    "zod": "^4.1.12"
   }
 }

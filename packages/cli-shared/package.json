@@ -17,13 +17,13 @@
     "build": "bun build src/index.ts --outdir dist --target node"
   },
   "dependencies": {
-    "@ai-sdk/provider-utils": "^3.0.0",
+    "@ai-sdk/provider-utils": "^3.0.10",
     "@polka-codes/core": "workspace:*",
-    "ignore": "^7.0.3",
+    "ignore": "^7.0.5",
     "lodash": "^4.17.21",
     "mime-types": "^3.0.1",
-    "yaml": "^2.7.0",
-    "zod": "^4.1.5"
+    "yaml": "^2.8.1",
+    "zod": "^4.1.12"
   },
   "devDependencies": {
     "@types/mime-types": "^3.0.1"

@@ -17,33 +17,33 @@
     "build": "bun build src/index.ts --outdir dist --target node"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^2.0.9",
-    "@ai-sdk/deepseek": "^1.0.14",
-    "@ai-sdk/google-vertex": "^3.0.16",
+    "@ai-sdk/anthropic": "^2.0.23",
+    "@ai-sdk/deepseek": "^1.0.20",
+    "@ai-sdk/google-vertex": "^3.0.34",
     "@ai-sdk/openai": "^2.0.42",
     "@ai-sdk/provider": "^2.0.0",
-    "@ai-sdk/provider-utils": "^3.0.0",
+    "@ai-sdk/provider-utils": "^3.0.10",
     "@inquirer/prompts": "^7.8.6",
-    "@openrouter/ai-sdk-provider": "^1.0.0",
+    "@openrouter/ai-sdk-provider": "^1.2.0",
     "@polka-codes/cli-shared": "workspace:*",
     "@polka-codes/core": "workspace:*",
     "@polka-codes/workflow": "workspace:*",
-    "ai": "^5.0.32",
-    "commander": "^14.0.0",
+    "ai": "^5.0.60",
+    "commander": "^14.0.1",
     "dotenv": "^17.2.3",
     "lodash": "^4.17.21",
     "mime-types": "^3.0.1",
     "ollama-ai-provider-v2": "^1.4.1",
     "ora": "^9.0.0",
-    "yaml": "^2.7.0",
-    "zod": "^4.1.5"
+    "yaml": "^2.8.1",
+    "zod": "^4.1.12"
   },
   "files": [
     "dist",
     "cli.mjs"
   ],
   "devDependencies": {
-    "@types/lodash": "^4.17.14",
+    "@types/lodash": "^4.17.20",
     "@types/mime-types": "^3.0.1"
   }
 }

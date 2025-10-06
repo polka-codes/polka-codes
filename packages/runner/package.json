@@ -19,20 +19,20 @@
   "dependencies": {
     "@polka-codes/cli-shared": "workspace:*",
     "@polka-codes/core": "workspace:*",
-    "commander": "^14.0.0",
+    "commander": "^14.0.1",
     "dotenv": "^17.2.3",
-    "ignore": "^7.0.3",
+    "ignore": "^7.0.5",
     "lodash": "^4.17.21",
-    "ws": "^8.18.1",
-    "yaml": "^2.7.0",
-    "zod": "^4.1.5"
+    "ws": "^8.18.3",
+    "yaml": "^2.8.1",
+    "zod": "^4.1.12"
   },
   "files": [
     "dist",
     "cli.mjs"
   ],
   "devDependencies": {
-    "@types/lodash": "^4.17.14",
+    "@types/lodash": "^4.17.20",
     "@types/ws": "^8.18.1"
   }
 }
