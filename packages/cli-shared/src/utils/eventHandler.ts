@@ -1,11 +1,15 @@
+import { Console } from 'node:console'
+import type { Writable } from 'node:stream'
 import { type TaskEvent, TaskEventKind, ToolResponseType, type UsageMeter } from '@polka-codes/core'
 import chalk from 'chalk'
 
 type ToolStat = { calls: number; success: number; errors: number }
 const toolCallStats = new Map<string, ToolStat>()
 
-export const printEvent = (verbose: number, usageMeter: UsageMeter, customConsole: Console = console) => {
+export const printEvent = (verbose: number, usageMeter: UsageMeter, stream: Writable = process.stdout) => {
+  const customConsole = new Console(stream, stream)
   let hadReasoning = false
+  const write = stream.write.bind(stream)
   return (event: TaskEvent) => {
     switch (event.kind) {
       case TaskEventKind.StartTask:
@@ -69,14 +73,14 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter, customConsol
         break
       case TaskEventKind.Text: {
         if (hadReasoning) {
-          customConsole.write('\n\n')
+          write('\n\n')
           hadReasoning = false
         }
-        customConsole.write(event.newText)
+        write(event.newText)
         break
       }
       case TaskEventKind.Reasoning: {
-        customConsole.write(chalk.dim(event.newText))
+        write(chalk.dim(event.newText))
         hadReasoning = true
         break
       }

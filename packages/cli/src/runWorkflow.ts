@@ -249,7 +249,7 @@ export async function runWorkflow<
   const spinner = ora({ text: 'Running workflow...', ...(json && { stream: process.stderr }) }).start()
 
   const usage = new UsageMeter(merge(prices, config.prices ?? {}), { maxMessages: config.maxMessageCount, maxCost: config.budget })
-  const onEvent = verbose > 0 ? printEvent(verbose, usage, logger) : undefined
+  const onEvent = verbose > 0 ? printEvent(verbose, usage, process.stderr) : undefined
   const toolProvider = getProvider({ excludeFiles: config.excludeFiles })
 
   const agentConfig = providerConfig.getConfigForCommand(commandName)
