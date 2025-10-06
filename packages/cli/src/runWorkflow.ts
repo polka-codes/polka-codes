@@ -71,7 +71,6 @@ async function handleToolCall(
   switch (toolCall.tool) {
     case 'invokeAgent': {
       context.spinner.stop()
-      console.log()
       const input = toolCall.input
       const model = await context.getModel(input.agent)
 
@@ -128,7 +127,7 @@ async function handleToolCall(
     case 'createCommit': {
       const { message } = toolCall.input
       context.spinner.stop()
-      console.log()
+
       const result = spawnSync('git', ['commit', '-m', message], { stdio: 'inherit' })
       if (result.status !== 0) {
         throw new Error('Commit failed')
@@ -138,7 +137,7 @@ async function handleToolCall(
     }
     case 'printChangeFile': {
       context.spinner.stop()
-      console.log()
+
       const { stagedFiles, unstagedFiles } = getLocalChanges()
       if (stagedFiles.length === 0 && unstagedFiles.length === 0) {
         console.log('No changes to commit.')
@@ -162,7 +161,7 @@ async function handleToolCall(
     case 'confirm': {
       const { message } = toolCall.input
       context.spinner.stop()
-      console.log()
+
       // to allow ora to fully stop the spinner so inquirer can takeover the cli window
       await new Promise((resolve) => setTimeout(resolve, 50))
       try {
