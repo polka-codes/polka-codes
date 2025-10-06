@@ -4,12 +4,14 @@ export type ModelInfo = {
   inputPrice: number // USD per 1 M prompt tokens
   outputPrice: number // USD per 1 M completion tokens
   cacheWritesPrice: number // prompt-caching write cost (where offered)
-  cacheReadsPrice: number // prompt-caching read/“cached input” cost
+  cacheReadsPrice: number // prompt-caching read/"cached input" cost
   supportsThinking?: boolean
 }
 
 export default {
   [AiProvider.Anthropic]: {
+    'claude-sonnet-4-5-20250929': { inputPrice: 3, outputPrice: 15, cacheWritesPrice: 3.75, cacheReadsPrice: 0.3, supportsThinking: true },
+
     'claude-opus-4-20250514': { inputPrice: 15, outputPrice: 75, cacheWritesPrice: 18.75, cacheReadsPrice: 1.5, supportsThinking: true },
     'claude-opus-4-1-20250805': { inputPrice: 15, outputPrice: 75, cacheWritesPrice: 18.75, cacheReadsPrice: 1.5, supportsThinking: true },
     'claude-sonnet-4-20250514': { inputPrice: 3, outputPrice: 15, cacheWritesPrice: 3.75, cacheReadsPrice: 0.3, supportsThinking: true },
@@ -21,8 +23,9 @@ export default {
   [AiProvider.Ollama]: {},
 
   [AiProvider.DeepSeek]: {
-    'deepseek-chat': { inputPrice: 0.27, outputPrice: 1.1, cacheWritesPrice: 0, cacheReadsPrice: 0.07 },
-    'deepseek-reasoner': { inputPrice: 0.55, outputPrice: 2.19, cacheWritesPrice: 0, cacheReadsPrice: 0.14 },
+    // Prices reflect V3.2-Exp; same endpoints
+    'deepseek-chat': { inputPrice: 0.28, outputPrice: 0.42, cacheWritesPrice: 0, cacheReadsPrice: 0.028 },
+    'deepseek-reasoner': { inputPrice: 0.28, outputPrice: 0.42, cacheWritesPrice: 0, cacheReadsPrice: 0.028, supportsThinking: true },
   },
 
   [AiProvider.OpenRouter]: {
@@ -36,8 +39,17 @@ export default {
   },
 
   [AiProvider.GoogleVertex]: {
-    'gemini-2.5-pro': { inputPrice: 2.5, outputPrice: 10, cacheWritesPrice: 0, cacheReadsPrice: 0, supportsThinking: true }, // long-context rate
-    'gemini-2.5-flash': { inputPrice: 0.3, outputPrice: 2.5, cacheWritesPrice: 0, cacheReadsPrice: 0, supportsThinking: false },
-    'gemini-2.5-flash-lite': { inputPrice: 0.1, outputPrice: 0.4, cacheWritesPrice: 0, cacheReadsPrice: 0, supportsThinking: false },
+    // Adjusted Pro rates; Standard (<=200k) pricing shown; Batch pricing is lower
+    'gemini-2.5-pro': { inputPrice: 1.25, outputPrice: 10, cacheWritesPrice: 0, cacheReadsPrice: 0.31, supportsThinking: true },
+    'gemini-2.5-flash': { inputPrice: 0.3, outputPrice: 2.5, cacheWritesPrice: 0, cacheReadsPrice: 0.075, supportsThinking: true },
+    'gemini-2.5-flash-lite': { inputPrice: 0.1, outputPrice: 0.4, cacheWritesPrice: 0, cacheReadsPrice: 0.025, supportsThinking: false },
+    // NEW (preview snapshot)
+    'gemini-2.5-flash-preview-09-2025': {
+      inputPrice: 0.3,
+      outputPrice: 2.5,
+      cacheWritesPrice: 0,
+      cacheReadsPrice: 0.075,
+      supportsThinking: true,
+    },
   },
 } as const satisfies Record<AiProvider, Record<string, ModelInfo>>
