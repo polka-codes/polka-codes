@@ -8,6 +8,7 @@ import { runChat } from './commands/chat'
 import { commitCommand } from './commands/commit'
 import { createCommand } from './commands/create'
 import { initCommand } from './commands/init'
+import { planCommand } from './commands/plan'
 import { prCommand } from './commands/pr'
 import { reviewCommand } from './commands/review'
 import { runTask } from './commands/task'
@@ -37,6 +38,9 @@ program.addCommand(reviewCommand)
 
 // Create command
 program.addCommand(createCommand)
+
+// Plan command
+program.addCommand(planCommand)
 
 addSharedOptions(program)
 

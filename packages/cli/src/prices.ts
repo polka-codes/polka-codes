@@ -11,7 +11,6 @@ export type ModelInfo = {
 export default {
   [AiProvider.Anthropic]: {
     'claude-sonnet-4-5-20250929': { inputPrice: 3, outputPrice: 15, cacheWritesPrice: 3.75, cacheReadsPrice: 0.3, supportsThinking: true },
-
     'claude-opus-4-20250514': { inputPrice: 15, outputPrice: 75, cacheWritesPrice: 18.75, cacheReadsPrice: 1.5, supportsThinking: true },
     'claude-opus-4-1-20250805': { inputPrice: 15, outputPrice: 75, cacheWritesPrice: 18.75, cacheReadsPrice: 1.5, supportsThinking: true },
     'claude-sonnet-4-20250514': { inputPrice: 3, outputPrice: 15, cacheWritesPrice: 3.75, cacheReadsPrice: 0.3, supportsThinking: true },
@@ -23,7 +22,6 @@ export default {
   [AiProvider.Ollama]: {},
 
   [AiProvider.DeepSeek]: {
-    // Prices reflect V3.2-Exp; same endpoints
     'deepseek-chat': { inputPrice: 0.28, outputPrice: 0.42, cacheWritesPrice: 0, cacheReadsPrice: 0.028 },
     'deepseek-reasoner': { inputPrice: 0.28, outputPrice: 0.42, cacheWritesPrice: 0, cacheReadsPrice: 0.028, supportsThinking: true },
   },
