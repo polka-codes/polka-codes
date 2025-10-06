@@ -9,4 +9,6 @@ export type WorkflowTools = {
   createCommit: ToolSignature<{ message: string }, { message: string }>
   printChangeFile: ToolSignature<Record<string, never>, { stagedFiles: FileChange[]; unstagedFiles: FileChange[] }>
   confirm: ToolSignature<{ message: string; default: false }, boolean>
+  input: ToolSignature<{ message: string; default?: string }, string>
+  writeToFile: ToolSignature<{ path: string; content: string }, Record<string, never>>
 }
