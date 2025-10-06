@@ -161,8 +161,13 @@ test('should resume workflow from a step', async () => {
   const results: Record<string, PlainJson | undefined> = {}
   let counts: Record<string, number> = {}
 
-  const getStepResult = async (key: string) => results[key]
-  const setStepResult = async (key: string, value: PlainJson) => {
+  const getStepResult = async (key: string): Promise<{ found: true; value: PlainJson | undefined } | { found: false }> => {
+    if (Object.hasOwn(results, key)) {
+      return { found: true, value: results[key] }
+    }
+    return { found: false }
+  }
+  const setStepResult = async (key: string, value: PlainJson | undefined) => {
     results[key] = value
   }
   const getAndIncrementCounts = async (key: string) => {

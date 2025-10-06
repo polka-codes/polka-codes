@@ -2,35 +2,42 @@
 import type { PlainJson, StepFn } from './workflow'
 
 export const makeStepFn = (fns?: {
-  getStepResult: (key: string) => Promise<PlainJson | undefined>
-  setStepResult: (key: string, value: PlainJson) => Promise<void>
+  getStepResult: (key: string) => Promise<{ found: true; value: PlainJson | undefined } | { found: false }>
+  setStepResult: (key: string, value: PlainJson | undefined) => Promise<void>
   getAndIncrementCounts: (key: string) => Promise<number>
 }): StepFn => {
-  if (!fns) {
-    const results: Record<string, PlainJson | undefined> = {}
-    const counts: Record<string, number> = {}
-    fns = {
-      getStepResult: async (key: string) => results[key],
-      setStepResult: async (key: string, value: PlainJson | undefined) => {
-        results[key] = value
-      },
-      getAndIncrementCounts: async (key: string) => {
-        counts[key] = (counts[key] || 0) + 1
-        return counts[key]
-      },
-    }
-  }
+  const resolvedFns =
+    fns ??
+    (() => {
+      const results: Record<string, PlainJson | undefined> = {}
+      const counts: Record<string, number> = {}
+      return {
+        getStepResult: async (key: string) => {
+          if (Object.hasOwn(results, key)) {
+            return { found: true, value: results[key] }
+          }
+          return { found: false }
+        },
+        setStepResult: async (key: string, value: PlainJson | undefined) => {
+          results[key] = value
+        },
+        getAndIncrementCounts: async (key: string) => {
+          counts[key] = (counts[key] || 0) + 1
+          return counts[key]
+        },
+      }
+    })()
 
   return async (name, fn) => {
-    const currentCounts = await fns.getAndIncrementCounts(name)
+    const currentCounts = await resolvedFns.getAndIncrementCounts(name)
 
     const key = `${name}#${currentCounts}`
-    const existingResult = await fns.getStepResult(key)
-    if (existingResult !== undefined) {
-      return existingResult as any
+    const existingResult = await resolvedFns.getStepResult(key)
+    if (existingResult.found) {
+      return existingResult.value as any
     }
     const result = await fn()
-    await fns.setStepResult(key, result ?? null)
+    await resolvedFns.setStepResult(key, result ?? undefined)
     return result
   }
 }
