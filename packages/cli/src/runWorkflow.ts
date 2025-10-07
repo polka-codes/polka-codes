@@ -69,6 +69,7 @@ async function handleToolCall(
     agentCallback?: (event: any) => void
     toolProvider: any // ToolProvider
     spinner: Ora
+    command: Command
   },
 ) {
   switch (toolCall.tool) {
@@ -249,6 +250,33 @@ async function handleToolCall(
       const result = spawnSync(command, { shell: true, stdio: 'pipe', encoding: 'utf-8' })
       return { exitCode: result.status ?? -1, stdout: result.stdout, stderr: result.stderr }
     }
+    case 'runTask': {
+      const { task } = toolCall.input as { task: string }
+      context.spinner.stop()
+
+      const { config, providerConfig, verbose, maxMessageCount, budget, agent, silent } = parseOptions(context.command.parent?.opts() ?? {})
+      const { Runner } = await import('./Runner') // Lazy import to avoid circular dependency
+
+      const runner = new Runner({
+        providerConfig,
+        config,
+        maxMessageCount,
+        budget,
+        interactive: false,
+        verbose,
+        silent,
+        externalUsageMeter: context.parameters.usageMeter,
+      })
+
+      await runner.startTask(task, agent)
+
+      if (!silent) {
+        runner.printUsage()
+      }
+
+      context.spinner.start()
+      return {}
+    }
     default:
       throw new Error(`Unknown tool: ${String((toolCall as any).tool)}`)
   }
@@ -327,6 +355,7 @@ export async function runWorkflow<
         },
         agentCallback: onEvent,
         toolProvider,
+        command,
       })
       result = await result.next(toolResult)
     } catch (e) {

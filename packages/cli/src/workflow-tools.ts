@@ -34,4 +34,5 @@ export type WorkflowTools = {
   select: ToolSignature<{ message: string; choices: { name: string; value: string }[] }, string>
   writeToFile: ToolSignature<{ path: string; content: string }, Record<string, never>>
   executeCommand: ToolSignature<{ command: string }, { exitCode: number; stdout: string; stderr: string; summary?: string }>
+  runTask: ToolSignature<{ task: string }, Record<string, never>>
 }

@@ -58,18 +58,21 @@ export const planWorkflow: Workflow<PlanWorkflowInput, PlainJson, WorkflowTools>
           console.log('\nGenerated Plan:\n')
           console.log(plan)
 
+          const choices = [
+            { name: 'Accept and Save', value: 'save' },
+            { name: 'Accept and Execute', value: 'execute' },
+            { name: 'Provide Feedback', value: 'feedback' },
+            { name: 'Regenerate Plan', value: 'regenerate' },
+            { name: 'Exit', value: 'exit' },
+          ]
+
           const choice = yield* tools.select({
             message: 'What do you want to do?',
-            choices: [
-              { name: 'Accept and Save', value: '1' },
-              { name: 'Provide Feedback', value: '2' },
-              { name: 'Regenerate Plan', value: '3' },
-              { name: 'Exit', value: '4' },
-            ],
+            choices,
           })
 
           switch (choice) {
-            case '1': {
+            case 'save': {
               // Accept and Save
               const defaultPath = `.plans/plan-${new Date().toISOString().replace(/:/g, '-')}.md`
               const savePath = filePath || (yield* tools.input({ message: 'Where do you want to save the plan?', default: defaultPath }))
@@ -78,7 +81,7 @@ export const planWorkflow: Workflow<PlanWorkflowInput, PlainJson, WorkflowTools>
               state = 'Done'
               break
             }
-            case '2': {
+            case 'feedback': {
               // Provide Feedback
               try {
                 userFeedback = yield* tools.input({
@@ -91,15 +94,21 @@ export const planWorkflow: Workflow<PlanWorkflowInput, PlainJson, WorkflowTools>
               }
               break
             }
-            case '3': {
+            case 'regenerate': {
               // Regenerate Plan
               plan = ''
               userFeedback = ''
               state = 'Generating'
               break
             }
-            case '4': {
+            case 'exit': {
               // Exit
+              state = 'Done'
+              break
+            }
+            case 'execute': {
+              // Accept and Execute
+              yield* tools.runTask({ task: plan })
               state = 'Done'
               break
             }
