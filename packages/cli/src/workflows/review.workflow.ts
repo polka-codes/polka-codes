@@ -261,7 +261,7 @@ export const reviewWorkflow: Workflow<ReviewWorkflowInput, ReviewResult, Workflo
       return { overview: 'No changes to review.', specificReviews: [] }
     }
 
-    const reviewResult: ReviewResult = yield* tools.invokeAgent({
+    const { output: reviewResult } = yield* tools.invokeAgent({
       agent: 'analyzer',
       messages: [CODE_REVIEW_PROMPT, formatReviewToolInput(changeInfo)],
       outputSchema: reviewOutputSchema,

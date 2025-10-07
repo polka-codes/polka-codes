@@ -199,7 +199,7 @@ export const specificReviewSchema = z.object({
 
 export const reviewOutputSchema = z.object({
   overview: z.string(),
-  specificReviews: z.array(specificReviewSchema),
+  specificReviews: z.array(specificReviewSchema).optional(),
 })
 
 export type ReviewResult = z.infer<typeof reviewOutputSchema>
@@ -207,7 +207,7 @@ export type ReviewResult = z.infer<typeof reviewOutputSchema>
 export function formatReviewForConsole(output: ReviewResult): string {
   let formatted = `### Overview\n\n${output.overview}`
 
-  if (output.specificReviews.length > 0) {
+  if (output.specificReviews && output.specificReviews.length > 0) {
     formatted += `\n\n### File-specific feedback\n`
     for (const item of output.specificReviews) {
       formatted += `\n- ${item.file}#${item.lines}\n\n${item.review}\n`

@@ -195,7 +195,7 @@ export const initWorkflow: Workflow<InitWorkflowInput, InitWorkflowOutput, InitW
         messages: [analyzePrompt],
         outputSchema: z.object({ yaml: z.string() }),
       })
-      generatedConfig = response ? parse((response as { yaml: string }).yaml) : {}
+      generatedConfig = response ? parse((response.output as { yaml: string }).yaml) : {}
     }
 
     await step('save-config', async () => {

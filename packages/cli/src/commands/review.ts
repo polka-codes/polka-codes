@@ -56,7 +56,7 @@ Re-running review (iteration ${i + 1} of ${maxIterations})...`,
         }
 
         let shouldRunTask = false
-        if (reviewResult.specificReviews.length > 0) {
+        if (reviewResult.specificReviews && reviewResult.specificReviews.length > 0) {
           if (yes) {
             shouldRunTask = true
           } else if (process.stdin.isTTY) {

@@ -17,4 +17,9 @@ export type InvokeAgentInput<T> = {
   tools?: FullToolInfoV2[]
 }
 
-export type InvokeAgentTool = ToolSignature<InvokeAgentInput<any>, PlainJson>
+export type InvokeAgentOutput = {
+  output: PlainJson
+  messages: PlainJson
+}
+
+export type InvokeAgentTool = ToolSignature<InvokeAgentInput<any>, InvokeAgentOutput>

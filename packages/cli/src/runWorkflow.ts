@@ -95,10 +95,21 @@ async function handleToolCall(
         additionalTools: input.tools,
       })
 
-      const userPrompt = input.messages
-        .filter((m) => typeof m === 'string' || m.type !== 'system')
-        .map((m) => (typeof m === 'string' ? m : m.content))
-        .join('\n\n')
+      const messages: any[] = input.messages.map((m) =>
+        typeof m === 'string' ? { role: 'user', content: m } : { role: m.type, content: m.content },
+      )
+
+      const lastMessage = messages.at(-1)
+      if (!lastMessage || lastMessage.role !== 'user') {
+        throw new Error('The last message must be a user message.')
+      }
+      const history = messages.slice(0, -1)
+      const userPrompt = lastMessage.content
+
+      // If there is history, set it. Otherwise, the agent will use its default system prompt.
+      if (history.length > 0) {
+        agent.setMessages(history)
+      }
 
       let exitReason = await agent.start(userPrompt)
 
@@ -135,9 +146,9 @@ async function handleToolCall(
               throw new Error(z.prettifyError(validated.error))
             }
           }
-          return validated.data
+          return { output: validated.data, messages: agent.messages as PlainJson }
         }
-        return parsed.data
+        return { output: parsed.data, messages: agent.messages as PlainJson }
       }
 
       throw new Error('Agent failed to produce valid output after 5 retries.')

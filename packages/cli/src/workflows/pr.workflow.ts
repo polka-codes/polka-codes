@@ -56,7 +56,7 @@ export const prWorkflow: Workflow<{ context?: string }, { title: string; descrip
       messageParts.push(`<user_context>${input.context}</user_context>`)
     }
 
-    const prDetails = yield* tools.invokeAgent({
+    const { output: prDetails } = yield* tools.invokeAgent({
       agent: 'analyzer',
       messages: [
         GET_PR_DETAILS_PROMPT,
