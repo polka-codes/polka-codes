@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { confirm, select } from '@inquirer/prompts'
 import { type Config, getGlobalConfigPath, loadConfigAtPath, localConfigFileName } from '@polka-codes/cli-shared'
-import type { InvokeAgentTool, Workflow } from '@polka-codes/workflow'
+import type { Workflow } from '@polka-codes/workflow'
 import { set } from 'lodash'
 import { parse, stringify } from 'yaml'
 import { ZodError, z } from 'zod'
@@ -11,6 +11,7 @@ import type { ProviderConfig } from '../configPrompt'
 import { configPrompt } from '../configPrompt'
 import type { AiProvider } from '../getModel'
 import { parseOptions } from '../options'
+import type { InvokeAgentTool } from '../workflow-tools'
 
 type InitWorkflowInput = {
   global?: boolean

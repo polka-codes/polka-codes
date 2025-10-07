@@ -32,15 +32,13 @@ export const planWorkflow: Workflow<PlanWorkflowInput, PlainJson, WorkflowTools>
         case 'Generating': {
           const currentTask = userFeedback ? `${task}\n\nUser feedback: ${userFeedback}` : task
           const prompt = PLAN_PROMPT.replace('{task}', currentTask).replace('{fileContent}', plan)
-          const {
-            plan: newPlan,
-            ready,
-            question,
-          } = yield* tools.invokeAgent({
+          const { output } = yield* tools.invokeAgent({
             agent: 'architect',
             messages: [{ type: 'user', content: prompt }],
             outputSchema: PlanSchema,
           })
+
+          const { plan: newPlan, ready, question } = output as z.infer<typeof PlanSchema>
 
           if (newPlan !== undefined) {
             plan = newPlan

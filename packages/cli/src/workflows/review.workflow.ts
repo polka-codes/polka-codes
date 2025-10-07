@@ -272,6 +272,6 @@ export const reviewWorkflow: Workflow<ReviewWorkflowInput, ReviewResult, Workflo
       return { overview: 'AI agent failed to produce a review.', specificReviews: [] }
     }
 
-    return reviewResult
+    return reviewResult as ReviewResult
   },
 }

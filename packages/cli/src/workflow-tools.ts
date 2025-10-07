@@ -1,10 +1,31 @@
-import type { ToolSignature } from '@polka-codes/workflow'
-import type { InvokeAgentInput } from '@polka-codes/workflow/src/tools/invokeAgent'
+import type { AgentNameType, FullToolInfoV2 } from '@polka-codes/core'
+import type { PlainJson, ToolSignature } from '@polka-codes/workflow'
+import type z from 'zod'
+
+type InvokeAgentInput<T> = {
+  agent: AgentNameType
+  messages: (
+    | string
+    | {
+        type: 'system' | 'user' | 'assistant'
+        content: string
+      }
+  )[]
+  outputSchema?: z.ZodSchema<T>
+  tools?: FullToolInfoV2[]
+}
+
+type InvokeAgentOutput<T extends PlainJson> = {
+  output: T
+  messages: PlainJson[]
+}
+
+export type InvokeAgentTool = ToolSignature<InvokeAgentInput<any>, InvokeAgentOutput<any>>
 
 type FileChange = { path: string; status: string }
 
 export type WorkflowTools = {
-  invokeAgent: ToolSignature<InvokeAgentInput<any>, any>
+  invokeAgent: InvokeAgentTool
   createPullRequest: ToolSignature<{ title: string; description: string }, { title: string; description: string }>
   createCommit: ToolSignature<{ message: string }, { message: string }>
   printChangeFile: ToolSignature<Record<string, never>, { stagedFiles: FileChange[]; unstagedFiles: FileChange[] }>

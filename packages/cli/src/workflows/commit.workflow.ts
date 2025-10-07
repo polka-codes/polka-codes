@@ -86,7 +86,7 @@ export const commitWorkflow: Workflow<CommitWorkflowInput, { commitMessage: stri
     const diffPrompt = `<diff>\n${diff}\n</diff>`
     const contextPrompt = input.context ? `\n<tool_input_context>\n${input.context}\n</tool_input_context>` : ''
 
-    const { commitMessage } = yield* tools.invokeAgent({
+    const { output } = yield* tools.invokeAgent({
       agent: 'analyzer',
       messages: [
         COMMIT_MESSAGE_PROMPT,
@@ -97,6 +97,7 @@ export const commitWorkflow: Workflow<CommitWorkflowInput, { commitMessage: stri
       ],
       outputSchema: commitMessageSchema,
     })
+    const { commitMessage } = output as z.infer<typeof commitMessageSchema>
 
     console.log(`\nCommit message:\n${commitMessage}`)
 
