@@ -10,5 +10,6 @@ export type WorkflowTools = {
   printChangeFile: ToolSignature<Record<string, never>, { stagedFiles: FileChange[]; unstagedFiles: FileChange[] }>
   confirm: ToolSignature<{ message: string; default: false }, boolean>
   input: ToolSignature<{ message: string; default?: string }, string>
+  select: ToolSignature<{ message: string; choices: { name: string; value: string }[] }, string>
   writeToFile: ToolSignature<{ path: string; content: string }, Record<string, never>>
 }

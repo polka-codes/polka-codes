@@ -5,7 +5,7 @@ import fs, { mkdir } from 'node:fs/promises'
 import os from 'node:os'
 import { dirname } from 'node:path'
 import type { LanguageModelV2 } from '@ai-sdk/provider'
-import { confirm as inquirerConfirm, input as inquirerInput } from '@inquirer/prompts'
+import { confirm as inquirerConfirm, input as inquirerInput, select as inquirerSelect } from '@inquirer/prompts'
 import { getProvider, printEvent } from '@polka-codes/cli-shared'
 import {
   type AgentBase,
@@ -205,6 +205,20 @@ async function handleToolCall(
       await new Promise((resolve) => setTimeout(resolve, 50))
       try {
         const result = await inquirerInput({ message, default: defaultValue })
+        context.spinner.start()
+        return result
+      } catch (_e) {
+        throw new UserCancelledError()
+      }
+    }
+    case 'select': {
+      const { message, choices } = toolCall.input as { message: string; choices: { name: string; value: string }[] }
+      context.spinner.stop()
+
+      // to allow ora to fully stop the spinner so inquirer can takeover the cli window
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      try {
+        const result = await inquirerSelect({ message, choices })
         context.spinner.start()
         return result
       } catch (_e) {
