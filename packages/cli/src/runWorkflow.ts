@@ -232,6 +232,12 @@ async function handleToolCall(
       await fs.writeFile(path, content)
       return {}
     }
+    case 'executeCommand': {
+      const { command } = toolCall.input
+      // The tool provider is not available in the workflow context, so we need to spawn the command here
+      const result = spawnSync(command, { shell: true, stdio: 'pipe', encoding: 'utf-8' })
+      return { exitCode: result.status ?? -1, stdout: result.stdout, stderr: result.stderr }
+    }
     default:
       throw new Error(`Unknown tool: ${String((toolCall as any).tool)}`)
   }

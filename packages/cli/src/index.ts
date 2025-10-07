@@ -7,6 +7,7 @@ import { version } from '../package.json'
 import { runChat } from './commands/chat'
 import { commitCommand } from './commands/commit'
 import { createCommand } from './commands/create'
+import { fixCommand } from './commands/fix'
 import { initCommand } from './commands/init'
 import { planCommand } from './commands/plan'
 import { prCommand } from './commands/pr'
@@ -41,6 +42,9 @@ program.addCommand(createCommand)
 
 // Plan command
 program.addCommand(planCommand)
+
+// Fix command
+program.addCommand(fixCommand)
 
 addSharedOptions(program)
 
