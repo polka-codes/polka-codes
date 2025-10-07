@@ -32,20 +32,35 @@ export const fixWorkflow: Workflow<FixWorkflowInput, any, WorkflowTools> = {
         testCommand = test.command
       }
 
+      let defaultCommand: string | undefined
       if (checkCommand && testCommand) {
-        command = `${checkCommand} && ${testCommand}`
+        defaultCommand = `${checkCommand} && ${testCommand}`
       } else if (checkCommand) {
-        command = checkCommand
+        defaultCommand = checkCommand
       } else if (testCommand) {
-        command = testCommand
-      } else {
-        command = yield* tools.input({ message: 'Please enter the command to run:' })
+        defaultCommand = testCommand
+      }
+
+      command = yield* tools.input({
+        message: 'Please enter the command to run to identify issues:',
+        default: defaultCommand,
+      })
+
+      if (!command) {
+        throw new Error('No command provided. Aborting.')
       }
     }
 
     for (let i = 0; i < 10; i++) {
       console.log(`Running command: ${command}`)
       const { exitCode, stdout, stderr } = yield* tools.executeCommand({ command })
+
+      if (stdout) {
+        console.log('Command stdout:\n', stdout)
+      }
+      if (stderr) {
+        console.error('Command stderr:\n', stderr)
+      }
 
       if (exitCode === 0) {
         console.log('Command succeeded!')
