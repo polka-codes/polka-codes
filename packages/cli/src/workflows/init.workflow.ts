@@ -191,7 +191,7 @@ export const initWorkflow: Workflow<InitWorkflowInput, InitWorkflowOutput, InitW
     let generatedConfig = {}
     if (shouldAnalyze) {
       console.log('Analyzing project files...')
-      const response = yield* tools.invokeAgent({
+      const { output: response } = yield* tools.invokeAgent({
         agent: 'analyzer',
         messages: [analyzePrompt],
         outputSchema: z.object({ yaml: z.string() }),
