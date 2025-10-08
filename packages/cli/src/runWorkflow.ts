@@ -245,9 +245,9 @@ async function handleToolCall(
       return {}
     }
     case 'executeCommand': {
-      const { command } = toolCall.input
+      const { command, shell } = toolCall.input
       // The tool provider is not available in the workflow context, so we need to spawn the command here
-      const result = spawnSync(command, { shell: true, stdio: 'pipe', encoding: 'utf-8' })
+      const result = spawnSync(command, { shell, stdio: 'pipe', encoding: 'utf-8' })
       return { exitCode: result.status ?? -1, stdout: result.stdout, stderr: result.stderr }
     }
     case 'runTask': {
@@ -334,10 +334,14 @@ export async function runWorkflow<
     console.warn = logger.warn
   }
 
-  let result = await run(workflow, workflowInput, async (name, fn) => {
+  let result = await run(workflow, workflowInput, async function* (name: string, fn: any) {
     spinner.text = name
-    return await fn()
-  })
+    const resultOrGenerator = fn()
+    if (resultOrGenerator && typeof (resultOrGenerator as any).next === 'function') {
+      return yield* resultOrGenerator as any
+    }
+    return await resultOrGenerator
+  } as any)
 
   while (result.status === 'pending') {
     spinner.text = `Running tool: ${String(result.tool.tool)}`

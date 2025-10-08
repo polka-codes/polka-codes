@@ -31,5 +31,6 @@ rules: |
   When writing unit tests, use `.toMatchSnapshot()` if suitable.
   In tests, ensure no redundant assertions. i.e. if `.toMatchSnapshot()` is used, then there is no need to have other assertions.
   NEVER mock modules
+  Avoid unnecessary comments. Doc comments are not required when the code is self-explanatory.
 policies:
   - TruncateContext
