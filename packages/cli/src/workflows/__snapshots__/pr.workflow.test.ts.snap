@@ -131,6 +131,7 @@ exports[`should create PR with user context 7`] = `
   "tool": {
     "input": {
       "agent": "analyzer",
+      "defaultContext": true,
       "messages": [
         
 "
@@ -439,6 +440,7 @@ exports[`should create PR without context 7`] = `
   "tool": {
     "input": {
       "agent": "analyzer",
+      "defaultContext": true,
       "messages": [
         
 "
@@ -636,6 +638,7 @@ exports[`should handle branch with special characters 2`] = `
   "tool": {
     "input": {
       "agent": "analyzer",
+      "defaultContext": true,
       "messages": [
         
 "
@@ -809,6 +812,7 @@ exports[`should handle no commits between branches 2`] = `
   "tool": {
     "input": {
       "agent": "analyzer",
+      "defaultContext": true,
       "messages": [
         
 "
@@ -961,6 +965,7 @@ exports[`should handle empty diff 1`] = `
   "tool": {
     "input": {
       "agent": "analyzer",
+      "defaultContext": true,
       "messages": [
         
 "
@@ -1129,6 +1134,7 @@ exports[`should handle multiple commits with various messages 2`] = `
   "tool": {
     "input": {
       "agent": "analyzer",
+      "defaultContext": true,
       "messages": [
         
 "

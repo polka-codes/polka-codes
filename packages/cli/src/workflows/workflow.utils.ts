@@ -2,7 +2,7 @@
 
 import { execSync } from 'node:child_process'
 import { z } from 'zod'
-import type { WorkflowTools } from '../workflow-tools'
+import type { CliToolRegistry } from '../workflow-tools'
 
 type FileChange = {
   path: string
@@ -51,7 +51,9 @@ export function printChangedFiles(title: string, changedFiles: FileChange[]) {
   }
 }
 
-type ExecuteCommandFn = (input: WorkflowTools['executeCommand']['input']) => Generator<any, WorkflowTools['executeCommand']['output'], any>
+type ExecuteCommandFn = (
+  input: CliToolRegistry['executeCommand']['input'],
+) => Generator<any, CliToolRegistry['executeCommand']['output'], any>
 
 export function* checkGhInstalled(tools: { executeCommand: ExecuteCommandFn }) {
   const result = yield* tools.executeCommand({ command: 'gh', args: ['--version'] })
@@ -211,7 +213,7 @@ export function formatReviewForConsole(output: ReviewResult): string {
   let formatted = `### Overview\n\n${output.overview}`
 
   if (output.specificReviews && output.specificReviews.length > 0) {
-    formatted += `\n\n### File-specific feedback\n`
+    formatted += '\n\n### File-specific feedback\n'
     for (const item of output.specificReviews) {
       formatted += `\n- ${item.file}#${item.lines}\n\n${item.review}\n`
     }

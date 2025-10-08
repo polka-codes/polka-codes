@@ -2,7 +2,7 @@
 
 import type { Workflow } from '@polka-codes/workflow'
 import { z } from 'zod'
-import type { WorkflowTools } from '../workflow-tools'
+import type { CliToolRegistry } from '../workflow-tools'
 import { checkGhInstalled, getDefaultBranch } from './workflow.utils'
 
 const prDetailsSchema = z.object({
@@ -24,7 +24,7 @@ Example format:
 \`\`\`
 `
 
-export const prWorkflow: Workflow<{ context?: string }, { title: string; description: string }, WorkflowTools> = {
+export const prWorkflow: Workflow<{ context?: string }, { title: string; description: string }, CliToolRegistry> = {
   name: 'Create Pull Request',
   description: 'Generate a pull request title and description and create the pull request.',
   async *fn(input, step, tools) {

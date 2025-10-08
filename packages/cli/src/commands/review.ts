@@ -3,7 +3,7 @@
 import { confirm } from '@inquirer/prompts'
 import { Command, InvalidOptionArgumentError } from 'commander'
 import { runWorkflow } from '../runWorkflow'
-import type { WorkflowTools } from '../workflow-tools'
+import type { CliToolRegistry } from '../workflow-tools'
 import { type ReviewWorkflowInput, reviewWorkflow } from '../workflows'
 import { formatReviewForConsole, type ReviewResult } from '../workflows/workflow.utils'
 import { runTask } from './task'
@@ -45,7 +45,7 @@ Re-running review (iteration ${i + 1} of ${maxIterations})...`,
           )
       }
 
-      const reviewResult = await runWorkflow<ReviewWorkflowInput, ReviewResult, WorkflowTools>('review', reviewWorkflow, command, input)
+      const reviewResult = await runWorkflow<ReviewWorkflowInput, ReviewResult, CliToolRegistry>('review', reviewWorkflow, command, input)
 
       if (reviewResult) {
         const formattedReview = formatReviewForConsole(reviewResult)
@@ -84,11 +84,7 @@ Re-running review (iteration ${i + 1} of ${maxIterations})...`,
       }
 
       if (maxIterations > 1 && !changesAppliedInThisIteration) {
-        command.opts().silent ||
-          (json ? console.error : console.log)(
-            `
-No more review feedback to apply. Exiting loop.`,
-          )
+        command.opts().silent || (json ? console.error : console.log)('\nNo more review feedback to apply. Exiting loop.')
         break
       }
     }

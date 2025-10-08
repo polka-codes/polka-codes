@@ -33,7 +33,7 @@ import { UserCancelledError } from './errors'
 import { getModel } from './getModel'
 import { parseOptions } from './options'
 import prices from './prices'
-import type { WorkflowTools } from './workflow-tools'
+import type { CliToolRegistry } from './workflow-tools'
 import { getLocalChanges } from './workflows/workflow.utils'
 
 type AgentContextParameters = {
@@ -61,7 +61,7 @@ class WorkflowAgent extends CoderAgent {
 }
 
 async function handleToolCall(
-  toolCall: ToolCall<WorkflowTools>,
+  toolCall: ToolCall<CliToolRegistry>,
   context: {
     providerConfig: ApiProviderConfig
     parameters: AgentContextParameters
@@ -96,7 +96,7 @@ async function handleToolCall(
         additionalTools: input.tools,
       })
 
-      const messages: any[] = input.messages.map((m) =>
+      const messages: any[] = input.messages.map((m: any) =>
         typeof m === 'string' ? { role: 'user', content: m } : { role: m.type, content: m.content },
       )
 
@@ -369,7 +369,7 @@ export async function runWorkflow<
   while (result.status === 'pending') {
     spinner.text = `Running tool: ${String(result.tool.tool)}`
     try {
-      const toolResult = await handleToolCall(result.tool as ToolCall<WorkflowTools>, {
+      const toolResult = await handleToolCall(result.tool as ToolCall<CliToolRegistry>, {
         providerConfig,
         parameters,
         spinner,

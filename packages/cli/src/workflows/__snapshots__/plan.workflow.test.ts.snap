@@ -7,6 +7,7 @@ exports[`should generate new plan without questions and save with default path 1
   "tool": {
     "input": {
       "agent": "architect",
+      "defaultContext": true,
       "messages": [
         {
           "content": 
@@ -286,6 +287,7 @@ exports[`should generate plan with clarifying question 1`] = `
   "tool": {
     "input": {
       "agent": "architect",
+      "defaultContext": true,
       "messages": [
         {
           "content": 
@@ -515,6 +517,7 @@ exports[`should generate plan with clarifying question 3`] = `
   "tool": {
     "input": {
       "agent": "architect",
+      "defaultContext": true,
       "messages": [
         {
           "content": 
@@ -775,6 +778,7 @@ exports[`should update existing plan 1`] = `
   "tool": {
     "input": {
       "agent": "architect",
+      "defaultContext": true,
       "messages": [
         {
           "content": 
@@ -1054,6 +1058,7 @@ exports[`should handle user feedback and regenerate 2`] = `
   "tool": {
     "input": {
       "agent": "architect",
+      "defaultContext": true,
       "messages": [
         {
           "content": 
@@ -1284,6 +1289,7 @@ exports[`should regenerate plan from scratch 1`] = `
   "tool": {
     "input": {
       "agent": "architect",
+      "defaultContext": true,
       "messages": [
         {
           "content": 
@@ -1604,6 +1610,7 @@ exports[`should handle empty task input 1`] = `
   "tool": {
     "input": {
       "agent": "architect",
+      "defaultContext": true,
       "messages": [
         {
           "content": 

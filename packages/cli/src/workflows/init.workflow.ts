@@ -9,7 +9,7 @@ import type { ProviderConfig } from '../configPrompt'
 import { configPrompt } from '../configPrompt'
 import type { AiProvider } from '../getModel'
 import { parseOptions } from '../options'
-import type { WorkflowTools } from '../workflow-tools'
+import type { CliToolRegistry } from '../workflow-tools'
 
 type InitWorkflowInput = {
   global?: boolean
@@ -67,7 +67,7 @@ excludeFiles:     # A list of glob patterns for files that should not be read. O
 \`\`\`
 `
 
-export const initWorkflow: Workflow<InitWorkflowInput, InitWorkflowOutput, WorkflowTools> = {
+export const initWorkflow: Workflow<InitWorkflowInput, InitWorkflowOutput, CliToolRegistry> = {
   name: 'Initialize polkacodes',
   description: 'Initialize polkacodes configuration.',
   async *fn(input, step, tools) {
@@ -194,7 +194,7 @@ export const initWorkflow: Workflow<InitWorkflowInput, InitWorkflowOutput, Workf
         outputSchema: z.object({ yaml: z.string() }),
         defaultContext: true,
       })
-      generatedConfig = response ? parse((response.output as { yaml: string }).yaml) : {}
+      generatedConfig = response ? parse((response as { yaml: string }).yaml) : {}
     }
 
     yield* step('save-config', async function* () {

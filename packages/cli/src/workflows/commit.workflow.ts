@@ -3,7 +3,7 @@
 import type { Workflow } from '@polka-codes/workflow'
 import { z } from 'zod'
 import { UserCancelledError } from '../errors'
-import type { WorkflowTools } from '../workflow-tools'
+import type { CliToolRegistry } from '../workflow-tools'
 import { parseGitDiffNameStatus } from './workflow.utils'
 
 export type CommitWorkflowInput = {
@@ -35,7 +35,7 @@ Example format:
 \`\`\`
 `
 
-export const commitWorkflow: Workflow<CommitWorkflowInput, { commitMessage: string }, WorkflowTools> = {
+export const commitWorkflow: Workflow<CommitWorkflowInput, { commitMessage: string }, CliToolRegistry> = {
   name: 'Generate Commit Message',
   description: 'Generate a Git commit message based on staged changes',
   async *fn(input, step, tools) {

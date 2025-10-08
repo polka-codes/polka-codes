@@ -2,7 +2,7 @@
 
 import type { Workflow } from '@polka-codes/workflow'
 import { gitDiff } from '../tools'
-import type { WorkflowTools } from '../workflow-tools'
+import type { CliToolRegistry } from '../workflow-tools'
 import { parseGitDiffNameStatus, parseGitStatus, printChangedFiles, type ReviewResult, reviewOutputSchema } from './workflow.utils'
 
 type FileChange = {
@@ -131,7 +131,7 @@ function formatReviewToolInput(params: ReviewToolInput): string {
   return parts.join('\n')
 }
 
-export const reviewWorkflow: Workflow<ReviewWorkflowInput, ReviewResult, WorkflowTools> = {
+export const reviewWorkflow: Workflow<ReviewWorkflowInput, ReviewResult, CliToolRegistry> = {
   name: 'Code Review',
   description: 'Review code changes in a pull request or local changes using AI.',
   async *fn(input, step, tools) {
@@ -194,11 +194,11 @@ export const reviewWorkflow: Workflow<ReviewWorkflowInput, ReviewResult, Workflo
     } else {
       const statusResult = yield* tools.executeCommand({ command: 'git', args: ['status', '--porcelain=v1'] })
       const gitStatus = statusResult.stdout
-      const statusLines = gitStatus.split('\n').filter((line) => line)
+      const statusLines = gitStatus.split('\n').filter((line: string) => line)
       const hasLocalChanges = statusLines.length > 0
 
       if (hasLocalChanges) {
-        const hasStagedChanges = statusLines.some((line) => line[0] !== ' ' && line[0] !== '?')
+        const hasStagedChanges = statusLines.some((line: string) => line[0] !== ' ' && line[0] !== '?')
         const changedFiles = parseGitStatus(gitStatus)
         if (!json) {
           printChangedFiles('Changed files:', changedFiles)

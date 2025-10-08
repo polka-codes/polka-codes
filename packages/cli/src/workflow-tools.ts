@@ -26,7 +26,7 @@ export type InvokeAgentTool = ToolSignature<InvokeAgentInput<any>, InvokeAgentOu
 
 type FileChange = { path: string; status: string }
 
-export type WorkflowTools = {
+export type CliToolRegistry = {
   invokeAgent: InvokeAgentTool
   createPullRequest: ToolSignature<{ title: string; description: string }, { title: string; description: string }>
   createCommit: ToolSignature<{ message: string }, { message: string }>

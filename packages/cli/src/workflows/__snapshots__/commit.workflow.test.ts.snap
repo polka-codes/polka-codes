@@ -60,6 +60,7 @@ exports[`should generate commit message with staged files 4`] = `
   "tool": {
     "input": {
       "agent": "analyzer",
+      "defaultContext": true,
       "messages": [
         
 "
@@ -296,6 +297,7 @@ exports[`should auto-stage all files when all=true 4`] = `
   "tool": {
     "input": {
       "agent": "analyzer",
+      "defaultContext": true,
       "messages": [
         
 "
@@ -538,6 +540,7 @@ exports[`should prompt user and stage when confirmed 5`] = `
   "tool": {
     "input": {
       "agent": "analyzer",
+      "defaultContext": true,
       "messages": [
         
 "
@@ -719,6 +722,7 @@ exports[`should include user context in agent prompt 1`] = `
   "tool": {
     "input": {
       "agent": "analyzer",
+      "defaultContext": true,
       "messages": [
         
 "
@@ -874,6 +878,7 @@ exports[`should handle various file statuses 1`] = `
   "tool": {
     "input": {
       "agent": "analyzer",
+      "defaultContext": true,
       "messages": [
         
 "
@@ -1030,6 +1035,7 @@ exports[`should handle empty diff name status result 1`] = `
   "tool": {
     "input": {
       "agent": "analyzer",
+      "defaultContext": true,
       "messages": [
         
 "

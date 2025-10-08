@@ -287,6 +287,7 @@ exports[`should retry and invoke coder agent when command fails 2`] = `
   "tool": {
     "input": {
       "agent": "coder",
+      "defaultContext": true,
       "messages": [
         {
           "content": 
@@ -352,6 +353,7 @@ exports[`should handle command with stdout and stderr 1`] = `
   "tool": {
     "input": {
       "agent": "coder",
+      "defaultContext": true,
       "messages": [
         {
           "content": 
@@ -408,6 +410,7 @@ exports[`should handle command with only stdout 1`] = `
   "tool": {
     "input": {
       "agent": "coder",
+      "defaultContext": true,
       "messages": [
         {
           "content": 
@@ -448,6 +451,7 @@ exports[`should handle command with only stderr 1`] = `
   "tool": {
     "input": {
       "agent": "coder",
+      "defaultContext": true,
       "messages": [
         {
           "content": 
