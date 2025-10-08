@@ -172,7 +172,7 @@ export const reviewWorkflow: Workflow<ReviewWorkflowInput, ReviewResult, Workflo
       const changedFiles: FileChange[] = yield* step('Getting file changes...', async function* () {
         const diffResult = yield* tools.executeCommand({
           command: 'git',
-          args: ['diff', '--name-status', '--no-color', `${prDetails.baseRefOid}...HEAD`],
+          args: ['--no-pager', 'diff', '--name-status', '--no-color', `${prDetails.baseRefOid}...HEAD`],
         })
         if (diffResult.exitCode !== 0) {
           console.warn('Warning: Could not retrieve file changes list')
