@@ -246,8 +246,14 @@ async function handleToolCall(
     }
     case 'executeCommand': {
       const { command, shell } = toolCall.input
-      // The tool provider is not available in the workflow context, so we need to spawn the command here
-      const result = spawnSync(command, { shell, stdio: 'pipe', encoding: 'utf-8' })
+      let result: ReturnType<typeof spawnSync>
+      if (shell) {
+        // When shell is true, pass command as-is to the shell
+        result = spawnSync(command, { shell: true, stdio: 'pipe', encoding: 'utf-8' })
+      } else {
+        // When shell is false/undefined, parse command and args separately
+        result = spawnSync(command, toolCall.input.args, { shell: false, stdio: 'pipe', encoding: 'utf-8' })
+      }
       return { exitCode: result.status ?? -1, stdout: result.stdout, stderr: result.stderr }
     }
     case 'runTask': {

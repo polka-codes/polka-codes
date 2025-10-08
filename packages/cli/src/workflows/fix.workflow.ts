@@ -53,7 +53,7 @@ export const fixWorkflow: Workflow<FixWorkflowInput, any, WorkflowTools> = {
 
     for (let i = 0; i < 10; i++) {
       console.log(`Running command: ${command}`)
-      const { exitCode, stdout, stderr } = yield* tools.executeCommand({ command })
+      const { exitCode, stdout, stderr } = yield* tools.executeCommand({ command, shell: true })
 
       if (stdout) {
         console.log('Command stdout:\n', stdout)
