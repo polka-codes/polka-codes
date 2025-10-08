@@ -12,7 +12,6 @@ export type PlanWorkflowInput = {
 
 const PlanSchema = z.object({
   plan: z.string().optional(),
-  ready: z.boolean(),
   question: z.string().optional(),
 })
 
@@ -31,20 +30,21 @@ export const planWorkflow: Workflow<PlanWorkflowInput, PlainJson, WorkflowTools>
       switch (state) {
         case 'Generating': {
           const currentTask = userFeedback ? `${task}\n\nUser feedback: ${userFeedback}` : task
-          const prompt = PLAN_PROMPT.replace('{task}', currentTask).replace('{fileContent}', plan)
+          const planContent = plan ? `The content of an existing plan file:\n<plan_file>\n${plan}\n</plan_file>` : ''
+          const prompt = PLAN_PROMPT.replace('{task}', currentTask).replace('{planContent}', planContent)
           const { output } = yield* tools.invokeAgent({
             agent: 'architect',
             messages: [{ type: 'user', content: prompt }],
             outputSchema: PlanSchema,
           })
 
-          const { plan: newPlan, ready, question } = output as z.infer<typeof PlanSchema>
+          const { plan: newPlan, question } = output as z.infer<typeof PlanSchema>
 
           if (newPlan !== undefined) {
             plan = newPlan
           }
 
-          if (!ready && question) {
+          if (question) {
             const answer = yield* tools.input({ message: question })
             userFeedback = `Question: ${question}\nAnswer: ${answer}`
             state = 'Generating'
