@@ -5,6 +5,7 @@ import 'dotenv/config'
 import { Command } from 'commander'
 import { version } from '../package.json'
 import { runChat } from './commands/chat'
+import { codeCommand } from './commands/code'
 import { commitCommand } from './commands/commit'
 import { createCommand } from './commands/create'
 import { fixCommand } from './commands/fix'
@@ -42,6 +43,9 @@ program.addCommand(createCommand)
 
 // Plan command
 program.addCommand(planCommand)
+
+// Code command
+program.addCommand(codeCommand)
 
 // Fix command
 program.addCommand(fixCommand)

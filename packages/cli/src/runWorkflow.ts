@@ -6,7 +6,7 @@ import os from 'node:os'
 import { dirname } from 'node:path'
 import type { LanguageModelV2 } from '@ai-sdk/provider'
 import { confirm as inquirerConfirm, input as inquirerInput, select as inquirerSelect } from '@inquirer/prompts'
-import { getProvider, printEvent } from '@polka-codes/cli-shared'
+import { getProvider, listFiles, printEvent } from '@polka-codes/cli-shared'
 import {
   type AgentBase,
   type AgentNameType,
@@ -112,7 +112,8 @@ async function handleToolCall(
         agent.setMessages(history)
       }
 
-      let exitReason = await agent.start(userPrompt)
+      const finalPrompt = input.context ? `<context>${input.context}</context>\n\n${userPrompt}` : userPrompt
+      let exitReason = await agent.start(finalPrompt)
 
       context.spinner.start()
 
@@ -282,6 +283,20 @@ async function handleToolCall(
 
       context.spinner.start()
       return {}
+    }
+    case 'getDefaultContext': {
+      const { agent } = toolCall.input as { agent: AgentNameType }
+      const { config } = parseOptions(context.command.parent?.opts() ?? {})
+
+      const cwd = process.cwd()
+      const agentConfig = config.agents?.[agent] ?? config.agents?.default ?? {}
+      const maxFileCount = agentConfig.initialContext?.maxFileCount ?? 200
+      const excludes = agentConfig.initialContext?.excludes ?? []
+      const finalExcludes = excludes.concat(config.excludeFiles ?? [])
+      const [fileList] = await listFiles(cwd, true, maxFileCount, cwd, finalExcludes)
+      const fileContext = `<files>\n${fileList.join('\n')}\n</files>`
+
+      return `<now_date>${new Date().toISOString().slice(0, 10)}</now_date>${fileContext}`
     }
     default:
       throw new Error(`Unknown tool: ${String((toolCall as any).tool)}`)

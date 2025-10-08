@@ -26,6 +26,8 @@ export const planWorkflow: Workflow<PlanWorkflowInput, PlainJson, WorkflowTools>
     let userFeedback = ''
     let state: State = 'Generating'
 
+    const context = yield* tools.getDefaultContext({ agent: 'architect' })
+
     while (state !== 'Done') {
       switch (state) {
         case 'Generating': {
@@ -36,6 +38,7 @@ export const planWorkflow: Workflow<PlanWorkflowInput, PlainJson, WorkflowTools>
             agent: 'architect',
             messages: [{ type: 'user', content: prompt }],
             outputSchema: PlanSchema,
+            context,
           })
 
           const { plan: newPlan, question } = output as z.infer<typeof PlanSchema>

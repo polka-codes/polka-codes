@@ -13,6 +13,7 @@ type InvokeAgentInput<T> = {
   )[]
   outputSchema?: z.ZodSchema<T>
   tools?: FullToolInfoV2[]
+  context?: string
 }
 
 type InvokeAgentOutput<T extends PlainJson> = {
@@ -37,5 +38,6 @@ export type WorkflowTools = {
     { command: string } & ({ args: string[]; shell?: false } | { shell: true }),
     { exitCode: number; stdout: string; stderr: string }
   >
+  getDefaultContext: ToolSignature<{ agent: AgentNameType }, string>
   runTask: ToolSignature<{ task: string }, Record<string, never>>
 }
