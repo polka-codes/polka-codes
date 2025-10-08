@@ -2,6 +2,7 @@
 
 import { execSync } from 'node:child_process'
 import { z } from 'zod'
+import type { WorkflowTools } from '../workflow-tools'
 
 type FileChange = {
   path: string
@@ -50,45 +51,47 @@ export function printChangedFiles(title: string, changedFiles: FileChange[]) {
   }
 }
 
-export function checkGhInstalled() {
-  try {
-    execSync('gh --version', { stdio: 'ignore' })
-  } catch {
+type ExecuteCommandFn = (input: WorkflowTools['executeCommand']['input']) => Generator<any, WorkflowTools['executeCommand']['output'], any>
+
+export function* checkGhInstalled(tools: { executeCommand: ExecuteCommandFn }) {
+  const result = yield* tools.executeCommand({ command: 'gh', args: ['--version'] })
+  if (result.exitCode !== 0) {
     throw new Error('GitHub CLI (gh) is not installed. Please install it from https://cli.github.com/')
   }
 }
 
-export function getDefaultBranch(): string | undefined {
+export function* getDefaultBranch(tools: { executeCommand: ExecuteCommandFn }): Generator<any, string | undefined, any> {
   const defaultBranches = ['master', 'main', 'develop']
   for (const branch of defaultBranches) {
-    try {
-      execSync(`git show-ref --verify --quiet refs/heads/${branch}`)
+    const result = yield* tools.executeCommand({
+      command: 'git',
+      args: ['show-ref', '--verify', '--quiet', `refs/heads/${branch}`],
+    })
+    if (result.exitCode === 0) {
       return branch
-    } catch {
-      // branch does not exist
     }
   }
 
-  try {
-    checkGhInstalled()
-    const branch = execSync('gh repo view --json defaultBranchRef --jq .defaultBranchRef.name', {
-      encoding: 'utf-8',
-    }).trim()
-    if (branch) {
-      return branch
+  const ghCheckResult = yield* tools.executeCommand({ command: 'gh', args: ['--version'] })
+  if (ghCheckResult.exitCode === 0) {
+    const branchResult = yield* tools.executeCommand({
+      command: 'gh',
+      args: ['repo', 'view', '--json', 'defaultBranchRef', '--jq', '.defaultBranchRef.name'],
+    })
+    if (branchResult.exitCode === 0) {
+      const branch = branchResult.stdout.trim()
+      if (branch) {
+        return branch
+      }
     }
-  } catch {
-    // gh cli not installed or command failed
   }
 
-  try {
-    const output = execSync('git remote show origin', { encoding: 'utf-8' })
-    const match = output.match(/HEAD branch: (.*)/)
+  const remoteResult = yield* tools.executeCommand({ command: 'git', args: ['remote', 'show', 'origin'] })
+  if (remoteResult.exitCode === 0) {
+    const match = remoteResult.stdout.match(/HEAD branch: (.*)/)
     if (match?.[1]) {
       return match[1]
     }
-  } catch {
-    // git remote show origin failed
   }
 
   return undefined
