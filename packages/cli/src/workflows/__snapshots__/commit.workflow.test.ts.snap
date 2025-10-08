@@ -1,0 +1,1188 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`should generate commit message with staged files 1`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "tool": {
+    "input": {},
+    "tool": "printChangeFile",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should generate commit message with staged files 2`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "args": [
+        "diff",
+        "--name-status",
+        "--no-color",
+        "--staged",
+      ],
+      "command": "git",
+    },
+    "tool": "executeCommand",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should generate commit message with staged files 3`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "args": [
+        "diff",
+        "--staged",
+      ],
+      "command": "git",
+    },
+    "tool": "executeCommand",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should generate commit message with staged files 4`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "agent": "analyzer",
+      "messages": [
+        
+"
+You are an expert at writing git commit messages.
+Based on the provided list of staged files in <file_status>, the diff in <diff> and optional user context in <tool_input_context>, generate a concise and descriptive commit message.
+
+Follow the conventional commit format.
+
+Respond with a JSON object containing the commit message.
+Example format:
+\`\`\`json
+{
+  "commitMessage": "feat: add new feature\\n\\ndescribe the new feature in more detail"
+}
+\`\`\`
+"
+,
+        {
+          "content": 
+"<file_status>
+Modified: src/file.ts
+Added: src/newfile.ts
+</file_status><diff>
+--- a/src/file.ts
++++ b/src/file.ts
+@@ -1,3 +1,4 @@
++export const newFunc = () => {}
+
+</diff>"
+,
+          "type": "user",
+        },
+      ],
+      "outputSchema": _ {
+        "_def": {
+          "shape": [native code],
+          "type": "object",
+        },
+        "_zod": {
+          "bag": {},
+          "constr": [Function: _],
+          "def": {
+            "shape": [native code],
+            "type": "object",
+          },
+          "deferred": [
+            [Function],
+            [Function],
+          ],
+          "parse": [Function],
+          "propValues": [native code],
+          "run": [Function],
+          "traits":           
+Set {
+            "ZodObject",
+            "$ZodObjectJIT",
+            "$ZodObject",
+            "$ZodType",
+            "ZodType",
+          }
+,
+          "version": {
+            "major": 4,
+            "minor": 1,
+            "patch": 12,
+          },
+        },
+        "and": [Function],
+        "array": [Function],
+        "brand": [Function],
+        "catch": [Function],
+        "catchall": [Function],
+        "check": [Function],
+        "clone": [Function],
+        "decode": [Function],
+        "decodeAsync": [Function: AsyncFunction],
+        "def": {
+          "shape": [native code],
+          "type": "object",
+        },
+        "default": [Function],
+        "describe": [Function],
+        "description": [native code],
+        "encode": [Function],
+        "encodeAsync": [Function: AsyncFunction],
+        "extend": [Function],
+        "isNullable": [Function],
+        "isOptional": [Function],
+        "keyof": [Function],
+        "loose": [Function],
+        "merge": [Function],
+        "meta": [Function],
+        "nonoptional": [Function],
+        "nullable": [Function],
+        "nullish": [Function],
+        "omit": [Function],
+        "optional": [Function],
+        "or": [Function],
+        "overwrite": [Function],
+        "parse": [Function],
+        "parseAsync": [Function: AsyncFunction],
+        "partial": [Function],
+        "passthrough": [Function],
+        "pick": [Function],
+        "pipe": [Function],
+        "prefault": [Function],
+        "readonly": [Function],
+        "refine": [Function],
+        "register": [Function],
+        "required": [Function],
+        "safeDecode": [Function],
+        "safeDecodeAsync": [Function: AsyncFunction],
+        "safeEncode": [Function],
+        "safeEncodeAsync": [Function: AsyncFunction],
+        "safeExtend": [Function],
+        "safeParse": [Function],
+        "safeParseAsync": [Function: AsyncFunction],
+        "shape": [native code],
+        "spa": [Function: AsyncFunction],
+        "strict": [Function],
+        "strip": [Function],
+        "superRefine": [Function],
+        "transform": [Function],
+        "type": "object",
+        "~standard": {
+          "validate": [Function],
+          "vendor": "zod",
+          "version": 1,
+        },
+      },
+    },
+    "tool": "invokeAgent",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should generate commit message with staged files 5`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "message": 
+"feat: add new feature
+
+Added newFunc to file.ts"
+,
+    },
+    "tool": "createCommit",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should generate commit message with staged files 6`] = `
+{
+  "output": {
+    "commitMessage": 
+"feat: add new feature
+
+Added newFunc to file.ts"
+,
+  },
+  "status": "completed",
+}
+`;
+
+exports[`should auto-stage all files when all=true 1`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "args": [
+        "add",
+        ".",
+      ],
+      "command": "git",
+    },
+    "tool": "executeCommand",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should auto-stage all files when all=true 2`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "args": [
+        "diff",
+        "--name-status",
+        "--no-color",
+        "--staged",
+      ],
+      "command": "git",
+    },
+    "tool": "executeCommand",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should auto-stage all files when all=true 3`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "args": [
+        "diff",
+        "--staged",
+      ],
+      "command": "git",
+    },
+    "tool": "executeCommand",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should auto-stage all files when all=true 4`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "agent": "analyzer",
+      "messages": [
+        
+"
+You are an expert at writing git commit messages.
+Based on the provided list of staged files in <file_status>, the diff in <diff> and optional user context in <tool_input_context>, generate a concise and descriptive commit message.
+
+Follow the conventional commit format.
+
+Respond with a JSON object containing the commit message.
+Example format:
+\`\`\`json
+{
+  "commitMessage": "feat: add new feature\\n\\ndescribe the new feature in more detail"
+}
+\`\`\`
+"
+,
+        {
+          "content": 
+"<file_status>
+Modified: src/file.ts
+</file_status><diff>
+--- a/src/file.ts
++++ b/src/file.ts
+@@ -1 +1,2 @@
++// new code
+</diff>"
+,
+          "type": "user",
+        },
+      ],
+      "outputSchema": _ {
+        "_def": {
+          "shape": [native code],
+          "type": "object",
+        },
+        "_zod": {
+          "bag": {},
+          "constr": [Function: _],
+          "def": {
+            "shape": [native code],
+            "type": "object",
+          },
+          "deferred": [
+            [Function],
+            [Function],
+          ],
+          "parse": [Function],
+          "propValues": [native code],
+          "run": [Function],
+          "traits":           
+Set {
+            "ZodObject",
+            "$ZodObjectJIT",
+            "$ZodObject",
+            "$ZodType",
+            "ZodType",
+          }
+,
+          "version": {
+            "major": 4,
+            "minor": 1,
+            "patch": 12,
+          },
+        },
+        "and": [Function],
+        "array": [Function],
+        "brand": [Function],
+        "catch": [Function],
+        "catchall": [Function],
+        "check": [Function],
+        "clone": [Function],
+        "decode": [Function],
+        "decodeAsync": [Function: AsyncFunction],
+        "def": {
+          "shape": [native code],
+          "type": "object",
+        },
+        "default": [Function],
+        "describe": [Function],
+        "description": [native code],
+        "encode": [Function],
+        "encodeAsync": [Function: AsyncFunction],
+        "extend": [Function],
+        "isNullable": [Function],
+        "isOptional": [Function],
+        "keyof": [Function],
+        "loose": [Function],
+        "merge": [Function],
+        "meta": [Function],
+        "nonoptional": [Function],
+        "nullable": [Function],
+        "nullish": [Function],
+        "omit": [Function],
+        "optional": [Function],
+        "or": [Function],
+        "overwrite": [Function],
+        "parse": [Function],
+        "parseAsync": [Function: AsyncFunction],
+        "partial": [Function],
+        "passthrough": [Function],
+        "pick": [Function],
+        "pipe": [Function],
+        "prefault": [Function],
+        "readonly": [Function],
+        "refine": [Function],
+        "register": [Function],
+        "required": [Function],
+        "safeDecode": [Function],
+        "safeDecodeAsync": [Function: AsyncFunction],
+        "safeEncode": [Function],
+        "safeEncodeAsync": [Function: AsyncFunction],
+        "safeExtend": [Function],
+        "safeParse": [Function],
+        "safeParseAsync": [Function: AsyncFunction],
+        "shape": [native code],
+        "spa": [Function: AsyncFunction],
+        "strict": [Function],
+        "strip": [Function],
+        "superRefine": [Function],
+        "transform": [Function],
+        "type": "object",
+        "~standard": {
+          "validate": [Function],
+          "vendor": "zod",
+          "version": 1,
+        },
+      },
+    },
+    "tool": "invokeAgent",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should auto-stage all files when all=true 5`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "message": "chore: update file",
+    },
+    "tool": "createCommit",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should auto-stage all files when all=true 6`] = `
+{
+  "output": {
+    "commitMessage": "chore: update file",
+  },
+  "status": "completed",
+}
+`;
+
+exports[`should prompt user and stage when confirmed 1`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "default": false,
+      "message": "No staged files found. Stage all files?",
+    },
+    "tool": "confirm",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should prompt user and stage when confirmed 2`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "args": [
+        "add",
+        ".",
+      ],
+      "command": "git",
+    },
+    "tool": "executeCommand",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should prompt user and stage when confirmed 3`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "args": [
+        "diff",
+        "--name-status",
+        "--no-color",
+        "--staged",
+      ],
+      "command": "git",
+    },
+    "tool": "executeCommand",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should prompt user and stage when confirmed 4`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "args": [
+        "diff",
+        "--staged",
+      ],
+      "command": "git",
+    },
+    "tool": "executeCommand",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should prompt user and stage when confirmed 5`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "agent": "analyzer",
+      "messages": [
+        
+"
+You are an expert at writing git commit messages.
+Based on the provided list of staged files in <file_status>, the diff in <diff> and optional user context in <tool_input_context>, generate a concise and descriptive commit message.
+
+Follow the conventional commit format.
+
+Respond with a JSON object containing the commit message.
+Example format:
+\`\`\`json
+{
+  "commitMessage": "feat: add new feature\\n\\ndescribe the new feature in more detail"
+}
+\`\`\`
+"
+,
+        {
+          "content": 
+"<file_status>
+Modified: src/file.ts
+</file_status><diff>
+--- a/src/file.ts
++++ b/src/file.ts
+@@ -1 +1,2 @@
++// updated
+</diff>"
+,
+          "type": "user",
+        },
+      ],
+      "outputSchema": _ {
+        "_def": {
+          "shape": [native code],
+          "type": "object",
+        },
+        "_zod": {
+          "bag": {},
+          "constr": [Function: _],
+          "def": {
+            "shape": [native code],
+            "type": "object",
+          },
+          "deferred": [
+            [Function],
+            [Function],
+          ],
+          "parse": [Function],
+          "propValues": [native code],
+          "run": [Function],
+          "traits":           
+Set {
+            "ZodObject",
+            "$ZodObjectJIT",
+            "$ZodObject",
+            "$ZodType",
+            "ZodType",
+          }
+,
+          "version": {
+            "major": 4,
+            "minor": 1,
+            "patch": 12,
+          },
+        },
+        "and": [Function],
+        "array": [Function],
+        "brand": [Function],
+        "catch": [Function],
+        "catchall": [Function],
+        "check": [Function],
+        "clone": [Function],
+        "decode": [Function],
+        "decodeAsync": [Function: AsyncFunction],
+        "def": {
+          "shape": [native code],
+          "type": "object",
+        },
+        "default": [Function],
+        "describe": [Function],
+        "description": [native code],
+        "encode": [Function],
+        "encodeAsync": [Function: AsyncFunction],
+        "extend": [Function],
+        "isNullable": [Function],
+        "isOptional": [Function],
+        "keyof": [Function],
+        "loose": [Function],
+        "merge": [Function],
+        "meta": [Function],
+        "nonoptional": [Function],
+        "nullable": [Function],
+        "nullish": [Function],
+        "omit": [Function],
+        "optional": [Function],
+        "or": [Function],
+        "overwrite": [Function],
+        "parse": [Function],
+        "parseAsync": [Function: AsyncFunction],
+        "partial": [Function],
+        "passthrough": [Function],
+        "pick": [Function],
+        "pipe": [Function],
+        "prefault": [Function],
+        "readonly": [Function],
+        "refine": [Function],
+        "register": [Function],
+        "required": [Function],
+        "safeDecode": [Function],
+        "safeDecodeAsync": [Function: AsyncFunction],
+        "safeEncode": [Function],
+        "safeEncodeAsync": [Function: AsyncFunction],
+        "safeExtend": [Function],
+        "safeParse": [Function],
+        "safeParseAsync": [Function: AsyncFunction],
+        "shape": [native code],
+        "spa": [Function: AsyncFunction],
+        "strict": [Function],
+        "strip": [Function],
+        "superRefine": [Function],
+        "transform": [Function],
+        "type": "object",
+        "~standard": {
+          "validate": [Function],
+          "vendor": "zod",
+          "version": 1,
+        },
+      },
+    },
+    "tool": "invokeAgent",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should prompt user and stage when confirmed 6`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "message": "fix: update logic",
+    },
+    "tool": "createCommit",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should prompt user and stage when confirmed 7`] = `
+{
+  "output": {
+    "commitMessage": "fix: update logic",
+  },
+  "status": "completed",
+}
+`;
+
+exports[`should throw UserCancelledError when user declines staging 1`] = `
+{
+  "errorName": "UserCancelledError",
+  "status": "failed",
+}
+`;
+
+exports[`should throw error when no files to commit 1`] = `
+{
+  "error": "No files to commit. Aborting.",
+  "status": "failed",
+}
+`;
+
+exports[`should include user context in agent prompt 1`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "agent": "analyzer",
+      "messages": [
+        
+"
+You are an expert at writing git commit messages.
+Based on the provided list of staged files in <file_status>, the diff in <diff> and optional user context in <tool_input_context>, generate a concise and descriptive commit message.
+
+Follow the conventional commit format.
+
+Respond with a JSON object containing the commit message.
+Example format:
+\`\`\`json
+{
+  "commitMessage": "feat: add new feature\\n\\ndescribe the new feature in more detail"
+}
+\`\`\`
+"
+,
+        {
+          "content": 
+"<file_status>
+Added: src/feature.ts
+</file_status><diff>
+--- /dev/null
++++ b/src/feature.ts
+@@ -0,0 +1 @@
++export const feature = () => {}
+</diff>
+<tool_input_context>
+Implementing feature X for ticket #123
+</tool_input_context>"
+,
+          "type": "user",
+        },
+      ],
+      "outputSchema": _ {
+        "_def": {
+          "shape": [native code],
+          "type": "object",
+        },
+        "_zod": {
+          "bag": {},
+          "constr": [Function: _],
+          "def": {
+            "shape": [native code],
+            "type": "object",
+          },
+          "deferred": [
+            [Function],
+            [Function],
+          ],
+          "parse": [Function],
+          "propValues": [native code],
+          "run": [Function],
+          "traits":           
+Set {
+            "ZodObject",
+            "$ZodObjectJIT",
+            "$ZodObject",
+            "$ZodType",
+            "ZodType",
+          }
+,
+          "version": {
+            "major": 4,
+            "minor": 1,
+            "patch": 12,
+          },
+        },
+        "and": [Function],
+        "array": [Function],
+        "brand": [Function],
+        "catch": [Function],
+        "catchall": [Function],
+        "check": [Function],
+        "clone": [Function],
+        "decode": [Function],
+        "decodeAsync": [Function: AsyncFunction],
+        "def": {
+          "shape": [native code],
+          "type": "object",
+        },
+        "default": [Function],
+        "describe": [Function],
+        "description": [native code],
+        "encode": [Function],
+        "encodeAsync": [Function: AsyncFunction],
+        "extend": [Function],
+        "isNullable": [Function],
+        "isOptional": [Function],
+        "keyof": [Function],
+        "loose": [Function],
+        "merge": [Function],
+        "meta": [Function],
+        "nonoptional": [Function],
+        "nullable": [Function],
+        "nullish": [Function],
+        "omit": [Function],
+        "optional": [Function],
+        "or": [Function],
+        "overwrite": [Function],
+        "parse": [Function],
+        "parseAsync": [Function: AsyncFunction],
+        "partial": [Function],
+        "passthrough": [Function],
+        "pick": [Function],
+        "pipe": [Function],
+        "prefault": [Function],
+        "readonly": [Function],
+        "refine": [Function],
+        "register": [Function],
+        "required": [Function],
+        "safeDecode": [Function],
+        "safeDecodeAsync": [Function: AsyncFunction],
+        "safeEncode": [Function],
+        "safeEncodeAsync": [Function: AsyncFunction],
+        "safeExtend": [Function],
+        "safeParse": [Function],
+        "safeParseAsync": [Function: AsyncFunction],
+        "shape": [native code],
+        "spa": [Function: AsyncFunction],
+        "strict": [Function],
+        "strip": [Function],
+        "superRefine": [Function],
+        "transform": [Function],
+        "type": "object",
+        "~standard": {
+          "validate": [Function],
+          "vendor": "zod",
+          "version": 1,
+        },
+      },
+    },
+    "tool": "invokeAgent",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should include user context in agent prompt 2`] = `
+{
+  "output": {
+    "commitMessage": "feat: implement feature X (#123)",
+  },
+  "status": "completed",
+}
+`;
+
+exports[`should handle various file statuses 1`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "agent": "analyzer",
+      "messages": [
+        
+"
+You are an expert at writing git commit messages.
+Based on the provided list of staged files in <file_status>, the diff in <diff> and optional user context in <tool_input_context>, generate a concise and descriptive commit message.
+
+Follow the conventional commit format.
+
+Respond with a JSON object containing the commit message.
+Example format:
+\`\`\`json
+{
+  "commitMessage": "feat: add new feature\\n\\ndescribe the new feature in more detail"
+}
+\`\`\`
+"
+,
+        {
+          "content": 
+"<file_status>
+Modified: src/modified.ts
+Added: src/added.ts
+Deleted: src/deleted.ts
+Renamed: src/old.ts	src/renamed.ts
+</file_status><diff>
+--- a/src/modified.ts
++++ b/src/modified.ts
+@@ -1 +1,2 @@
++// changes
+
+</diff>"
+,
+          "type": "user",
+        },
+      ],
+      "outputSchema": _ {
+        "_def": {
+          "shape": [native code],
+          "type": "object",
+        },
+        "_zod": {
+          "bag": {},
+          "constr": [Function: _],
+          "def": {
+            "shape": [native code],
+            "type": "object",
+          },
+          "deferred": [
+            [Function],
+            [Function],
+          ],
+          "parse": [Function],
+          "propValues": [native code],
+          "run": [Function],
+          "traits":           
+Set {
+            "ZodObject",
+            "$ZodObjectJIT",
+            "$ZodObject",
+            "$ZodType",
+            "ZodType",
+          }
+,
+          "version": {
+            "major": 4,
+            "minor": 1,
+            "patch": 12,
+          },
+        },
+        "and": [Function],
+        "array": [Function],
+        "brand": [Function],
+        "catch": [Function],
+        "catchall": [Function],
+        "check": [Function],
+        "clone": [Function],
+        "decode": [Function],
+        "decodeAsync": [Function: AsyncFunction],
+        "def": {
+          "shape": [native code],
+          "type": "object",
+        },
+        "default": [Function],
+        "describe": [Function],
+        "description": [native code],
+        "encode": [Function],
+        "encodeAsync": [Function: AsyncFunction],
+        "extend": [Function],
+        "isNullable": [Function],
+        "isOptional": [Function],
+        "keyof": [Function],
+        "loose": [Function],
+        "merge": [Function],
+        "meta": [Function],
+        "nonoptional": [Function],
+        "nullable": [Function],
+        "nullish": [Function],
+        "omit": [Function],
+        "optional": [Function],
+        "or": [Function],
+        "overwrite": [Function],
+        "parse": [Function],
+        "parseAsync": [Function: AsyncFunction],
+        "partial": [Function],
+        "passthrough": [Function],
+        "pick": [Function],
+        "pipe": [Function],
+        "prefault": [Function],
+        "readonly": [Function],
+        "refine": [Function],
+        "register": [Function],
+        "required": [Function],
+        "safeDecode": [Function],
+        "safeDecodeAsync": [Function: AsyncFunction],
+        "safeEncode": [Function],
+        "safeEncodeAsync": [Function: AsyncFunction],
+        "safeExtend": [Function],
+        "safeParse": [Function],
+        "safeParseAsync": [Function: AsyncFunction],
+        "shape": [native code],
+        "spa": [Function: AsyncFunction],
+        "strict": [Function],
+        "strip": [Function],
+        "superRefine": [Function],
+        "transform": [Function],
+        "type": "object",
+        "~standard": {
+          "validate": [Function],
+          "vendor": "zod",
+          "version": 1,
+        },
+      },
+    },
+    "tool": "invokeAgent",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should handle various file statuses 2`] = `
+{
+  "output": {
+    "commitMessage": "refactor: restructure files",
+  },
+  "status": "completed",
+}
+`;
+
+exports[`should handle empty diff name status result 1`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "agent": "analyzer",
+      "messages": [
+        
+"
+You are an expert at writing git commit messages.
+Based on the provided list of staged files in <file_status>, the diff in <diff> and optional user context in <tool_input_context>, generate a concise and descriptive commit message.
+
+Follow the conventional commit format.
+
+Respond with a JSON object containing the commit message.
+Example format:
+\`\`\`json
+{
+  "commitMessage": "feat: add new feature\\n\\ndescribe the new feature in more detail"
+}
+\`\`\`
+"
+,
+        {
+          "content": 
+"<file_status>
+
+</file_status><diff>
+--- a/src/file.ts
++++ b/src/file.ts
+@@ -1 +1,2 @@
++// code
+</diff>"
+,
+          "type": "user",
+        },
+      ],
+      "outputSchema": _ {
+        "_def": {
+          "shape": [native code],
+          "type": "object",
+        },
+        "_zod": {
+          "bag": {},
+          "constr": [Function: _],
+          "def": {
+            "shape": [native code],
+            "type": "object",
+          },
+          "deferred": [
+            [Function],
+            [Function],
+          ],
+          "parse": [Function],
+          "propValues": [native code],
+          "run": [Function],
+          "traits":           
+Set {
+            "ZodObject",
+            "$ZodObjectJIT",
+            "$ZodObject",
+            "$ZodType",
+            "ZodType",
+          }
+,
+          "version": {
+            "major": 4,
+            "minor": 1,
+            "patch": 12,
+          },
+        },
+        "and": [Function],
+        "array": [Function],
+        "brand": [Function],
+        "catch": [Function],
+        "catchall": [Function],
+        "check": [Function],
+        "clone": [Function],
+        "decode": [Function],
+        "decodeAsync": [Function: AsyncFunction],
+        "def": {
+          "shape": [native code],
+          "type": "object",
+        },
+        "default": [Function],
+        "describe": [Function],
+        "description": [native code],
+        "encode": [Function],
+        "encodeAsync": [Function: AsyncFunction],
+        "extend": [Function],
+        "isNullable": [Function],
+        "isOptional": [Function],
+        "keyof": [Function],
+        "loose": [Function],
+        "merge": [Function],
+        "meta": [Function],
+        "nonoptional": [Function],
+        "nullable": [Function],
+        "nullish": [Function],
+        "omit": [Function],
+        "optional": [Function],
+        "or": [Function],
+        "overwrite": [Function],
+        "parse": [Function],
+        "parseAsync": [Function: AsyncFunction],
+        "partial": [Function],
+        "passthrough": [Function],
+        "pick": [Function],
+        "pipe": [Function],
+        "prefault": [Function],
+        "readonly": [Function],
+        "refine": [Function],
+        "register": [Function],
+        "required": [Function],
+        "safeDecode": [Function],
+        "safeDecodeAsync": [Function: AsyncFunction],
+        "safeEncode": [Function],
+        "safeEncodeAsync": [Function: AsyncFunction],
+        "safeExtend": [Function],
+        "safeParse": [Function],
+        "safeParseAsync": [Function: AsyncFunction],
+        "shape": [native code],
+        "spa": [Function: AsyncFunction],
+        "strict": [Function],
+        "strip": [Function],
+        "superRefine": [Function],
+        "transform": [Function],
+        "type": "object",
+        "~standard": {
+          "validate": [Function],
+          "vendor": "zod",
+          "version": 1,
+        },
+      },
+    },
+    "tool": "invokeAgent",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should handle empty diff name status result 2`] = `
+{
+  "output": {
+    "commitMessage": "docs: update comments",
+  },
+  "status": "completed",
+}
+`;
+
+exports[`should handle workflow with all stages 1`] = `
+{
+  "output": {
+    "commitMessage": 
+"fix: correct validation logic
+
+Fixed bug in validation that returned false instead of true"
+,
+  },
+  "status": "completed",
+}
+`;
