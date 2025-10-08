@@ -1,0 +1,561 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`should succeed when command passes on first attempt 1`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "tool": {
+    "input": {
+      "command": "bun test",
+      "shell": true,
+    },
+    "tool": "executeCommand",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should succeed when command passes on first attempt 2`] = `
+{
+  "output": {
+    "success": true,
+  },
+  "status": "completed",
+}
+`;
+
+exports[`should prompt for command when not provided 1`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "tool": {
+    "input": {
+      "default": "bun typecheck && bun test -u",
+      "message": "Please enter the command to run to identify issues:",
+    },
+    "tool": "input",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should prompt for command when not provided 2`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "command": "bun typecheck && bun test",
+      "shell": true,
+    },
+    "tool": "executeCommand",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should prompt for command when not provided 3`] = `
+{
+  "output": {
+    "success": true,
+  },
+  "status": "completed",
+}
+`;
+
+exports[`should use check command as default when only check available 1`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "tool": {
+    "input": {
+      "default": "bun typecheck && bun test -u",
+      "message": "Please enter the command to run to identify issues:",
+    },
+    "tool": "input",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should use check command as default when only check available 2`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "command": "bun typecheck",
+      "shell": true,
+    },
+    "tool": "executeCommand",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should use check command as default when only check available 3`] = `
+{
+  "output": {
+    "success": true,
+  },
+  "status": "completed",
+}
+`;
+
+exports[`should use test command as default when only test available 1`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "tool": {
+    "input": {
+      "default": "bun typecheck && bun test -u",
+      "message": "Please enter the command to run to identify issues:",
+    },
+    "tool": "input",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should use test command as default when only test available 2`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "command": "bun test",
+      "shell": true,
+    },
+    "tool": "executeCommand",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should use test command as default when only test available 3`] = `
+{
+  "output": {
+    "success": true,
+  },
+  "status": "completed",
+}
+`;
+
+exports[`should combine check and test commands when both available 1`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "tool": {
+    "input": {
+      "default": "bun typecheck && bun test -u",
+      "message": "Please enter the command to run to identify issues:",
+    },
+    "tool": "input",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should combine check and test commands when both available 2`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "command": "eslint . && jest",
+      "shell": true,
+    },
+    "tool": "executeCommand",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should combine check and test commands when both available 3`] = `
+{
+  "output": {
+    "success": true,
+  },
+  "status": "completed",
+}
+`;
+
+exports[`should handle object-style script config 1`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "tool": {
+    "input": {
+      "default": "bun typecheck && bun test -u",
+      "message": "Please enter the command to run to identify issues:",
+    },
+    "tool": "input",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should handle object-style script config 2`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "command": "tsc --noEmit && vitest",
+      "shell": true,
+    },
+    "tool": "executeCommand",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should handle object-style script config 3`] = `
+{
+  "output": {
+    "success": true,
+  },
+  "status": "completed",
+}
+`;
+
+exports[`should handle no default command 1`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "tool": {
+    "input": {
+      "default": "bun typecheck && bun test -u",
+      "message": "Please enter the command to run to identify issues:",
+    },
+    "tool": "input",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should handle no default command 2`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "command": "npm run build",
+      "shell": true,
+    },
+    "tool": "executeCommand",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should handle no default command 3`] = `
+{
+  "output": {
+    "success": true,
+  },
+  "status": "completed",
+}
+`;
+
+exports[`should retry and invoke coder agent when command fails 1`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "tool": {
+    "input": {
+      "command": "bun test",
+      "shell": true,
+    },
+    "tool": "executeCommand",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should retry and invoke coder agent when command fails 2`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "agent": "coder",
+      "messages": [
+        {
+          "content": 
+"The command "bun test" failed with exit code 1.
+Please fix the code.
+
+stdout:
+FAIL src/test.ts
+
+stderr:
+TypeError: undefined is not a function
+"
+,
+          "type": "user",
+        },
+      ],
+    },
+    "tool": "invokeAgent",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should retry and invoke coder agent when command fails 3`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "command": "bun test",
+      "shell": true,
+    },
+    "tool": "executeCommand",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should retry and invoke coder agent when command fails 4`] = `
+{
+  "output": {
+    "success": true,
+  },
+  "status": "completed",
+}
+`;
+
+exports[`should retry multiple times before succeeding 1`] = `
+{
+  "output": {
+    "success": true,
+  },
+  "status": "completed",
+}
+`;
+
+exports[`should handle command with stdout and stderr 1`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "agent": "coder",
+      "messages": [
+        {
+          "content": 
+"The command "make build" failed with exit code 2.
+Please fix the code.
+
+stdout:
+Building...
+Compiling source files
+
+stderr:
+Warning: deprecated API
+Error: compilation failed
+"
+,
+          "type": "user",
+        },
+      ],
+    },
+    "tool": "invokeAgent",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should handle command with stdout and stderr 2`] = `
+{
+  "output": {
+    "success": true,
+  },
+  "status": "completed",
+}
+`;
+
+exports[`should throw error after 10 failed attempts 1`] = `
+{
+  "error": "Failed to fix the issue after 10 attempts.",
+  "status": "failed",
+}
+`;
+
+exports[`should throw error when no command provided and user provides empty input 1`] = `
+{
+  "error": "No command provided. Aborting.",
+  "status": "failed",
+}
+`;
+
+exports[`should handle command with only stdout 1`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "agent": "coder",
+      "messages": [
+        {
+          "content": 
+"The command "echo test" failed with exit code 1.
+Please fix the code.
+
+stdout:
+Some output
+
+stderr:
+
+"
+,
+          "type": "user",
+        },
+      ],
+    },
+    "tool": "invokeAgent",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should handle command with only stdout 2`] = `
+{
+  "output": {
+    "success": true,
+  },
+  "status": "completed",
+}
+`;
+
+exports[`should handle command with only stderr 1`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "agent": "coder",
+      "messages": [
+        {
+          "content": 
+"The command "test-cmd" failed with exit code 1.
+Please fix the code.
+
+stdout:
+
+
+stderr:
+Error occurred
+"
+,
+          "type": "user",
+        },
+      ],
+    },
+    "tool": "invokeAgent",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should handle command with only stderr 2`] = `
+{
+  "output": {
+    "success": true,
+  },
+  "status": "completed",
+}
+`;
+
+exports[`should handle config with undefined scripts 1`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "tool": {
+    "input": {
+      "default": "bun typecheck && bun test -u",
+      "message": "Please enter the command to run to identify issues:",
+    },
+    "tool": "input",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should handle config with undefined scripts 2`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "command": "custom-command",
+      "shell": true,
+    },
+    "tool": "executeCommand",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should handle config with undefined scripts 3`] = `
+{
+  "output": {
+    "success": true,
+  },
+  "status": "completed",
+}
+`;
+
+exports[`should handle mixed script formats 1`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "tool": {
+    "input": {
+      "default": "bun typecheck && bun test -u",
+      "message": "Please enter the command to run to identify issues:",
+    },
+    "tool": "input",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should handle mixed script formats 2`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "command": "eslint . && jest --coverage",
+      "shell": true,
+    },
+    "tool": "executeCommand",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should handle mixed script formats 3`] = `
+{
+  "output": {
+    "success": true,
+  },
+  "status": "completed",
+}
+`;
