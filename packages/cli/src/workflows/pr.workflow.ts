@@ -68,6 +68,7 @@ export const prWorkflow: Workflow<{ context?: string }, { title: string; descrip
         },
       ],
       outputSchema: prDetailsSchema,
+      defaultContext: true,
     })
 
     const result = yield* tools.createPullRequest(prDetails as { title: string; description: string })

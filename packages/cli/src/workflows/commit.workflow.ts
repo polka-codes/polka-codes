@@ -97,6 +97,7 @@ export const commitWorkflow: Workflow<CommitWorkflowInput, { commitMessage: stri
         },
       ],
       outputSchema: commitMessageSchema,
+      defaultContext: true,
     })
     const { commitMessage } = output as z.infer<typeof commitMessageSchema>
 

@@ -82,6 +82,7 @@ ${stderr}
       yield* tools.invokeAgent({
         agent: 'coder',
         messages: [{ type: 'user', content: prompt }],
+        defaultContext: true,
       })
     }
 

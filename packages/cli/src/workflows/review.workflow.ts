@@ -267,6 +267,7 @@ export const reviewWorkflow: Workflow<ReviewWorkflowInput, ReviewResult, Workflo
       messages: [CODE_REVIEW_PROMPT, formatReviewToolInput(changeInfo)],
       outputSchema: reviewOutputSchema,
       tools: [gitDiff],
+      defaultContext: true,
     })
 
     if (!reviewResult) {

@@ -192,6 +192,7 @@ export const initWorkflow: Workflow<InitWorkflowInput, InitWorkflowOutput, Workf
         agent: 'analyzer',
         messages: [analyzePrompt],
         outputSchema: z.object({ yaml: z.string() }),
+        defaultContext: true,
       })
       generatedConfig = response ? parse((response.output as { yaml: string }).yaml) : {}
     }

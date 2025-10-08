@@ -49,6 +49,7 @@ Please provide a comprehensive plan that a developer can follow to implement thi
             agent: 'architect',
             messages: [{ type: 'user', content: planPrompt }],
             outputSchema: PlanSchema,
+            defaultContext: true,
           })
 
           plan = (output as z.infer<typeof PlanSchema>).plan
@@ -86,6 +87,7 @@ Please implement all the necessary code changes according to this plan.`
           yield* tools.invokeAgent({
             agent: 'coder',
             messages: [{ type: 'user', content: implementPrompt }],
+            defaultContext: true,
           })
 
           implementationComplete = true
@@ -191,6 +193,7 @@ ${stderr}
             yield* tools.invokeAgent({
               agent: 'codefixer',
               messages: [{ type: 'user', content: fixPrompt }],
+              defaultContext: true,
             })
           }
 
