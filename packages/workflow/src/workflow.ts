@@ -2,8 +2,15 @@ export type JsonPrimitive = string | number | boolean | null
 
 export type PlainJson = JsonPrimitive | readonly PlainJson[] | { readonly [K in string]?: PlainJson }
 
-// biome-ignore lint/suspicious/noConfusingVoidType: void means no return
-export type StepFn = <T extends PlainJson | void>(name: string, fn: () => Promise<T>) => Promise<T>
+export type StepFn<TTools extends ToolRegistry = any> = {
+  // biome-ignore lint/suspicious/noConfusingVoidType: void means no return
+  <T extends PlainJson | void>(name: string, fn: () => Promise<T>): Promise<T>
+  // biome-ignore lint/suspicious/noConfusingVoidType: void means no return
+  <T extends PlainJson | void>(
+    name: string,
+    fn: () => AsyncGenerator<ToolCall<TTools>, T, TTools[keyof TTools]['output']>,
+  ): AsyncGenerator<ToolCall<TTools>, T, TTools[keyof TTools]['output']>
+}
 
 export type ToolSignature<I, O extends PlainJson> = {
   input: I
@@ -30,7 +37,7 @@ export type WorkflowTools<TTools extends ToolRegistry> = {
 
 export type WorkflowFn<TInput extends PlainJson, TOutput extends PlainJson, TTools extends ToolRegistry> = (
   input: TInput,
-  step: StepFn,
+  step: StepFn<TTools>,
   tools: WorkflowTools<TTools>,
 ) => AsyncGenerator<ToolCall<TTools>, TOutput, TTools[keyof TTools]['output']>
 
@@ -65,10 +72,10 @@ import { makeStepFn } from './helpers'
 export async function run<TInput extends PlainJson, TOutput extends PlainJson, TTools extends ToolRegistry>(
   workflow: Workflow<TInput, TOutput, TTools>,
   input: TInput,
-  stepFn?: StepFn,
+  stepFn?: StepFn<TTools>,
 ) {
   if (!stepFn) {
-    stepFn = makeStepFn()
+    stepFn = makeStepFn<TTools>()
   }
 
   const tools = new Proxy({} as WorkflowTools<TTools>, {

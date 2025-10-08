@@ -48,7 +48,7 @@ exports[`should run a workflow with multiple tools 2`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function: AsyncFunction],
+  "stepFn": [Function],
   "tool": {
     "input": {
       "a": "hello ",
@@ -92,6 +92,95 @@ exports[`should handle failing after a tool call 1`] = `
 exports[`should handle failing after a tool call 2`] = `
 {
   "error": "failed after tool",
+  "status": "failed",
+}
+`;
+
+exports[`should support tool calls in step functions 1`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "tool": {
+    "input": {
+      "a": 5,
+      "b": 10,
+    },
+    "tool": "add",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should support tool calls in step functions 2`] = `
+{
+  "output": 15,
+  "status": "completed",
+}
+`;
+
+exports[`should support multiple tool calls in step functions 1`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "tool": {
+    "input": {
+      "a": 3,
+      "b": 5,
+    },
+    "tool": "add",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should support multiple tool calls in step functions 2`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "a": 8,
+      "b": 10,
+    },
+    "tool": "add",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should support multiple tool calls in step functions 3`] = `
+{
+  "output": 18,
+  "status": "completed",
+}
+`;
+
+exports[`should support mixing regular and generator steps 1`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "tool": {
+    "input": {
+      "a": 5,
+      "b": 100,
+    },
+    "tool": "add",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should support mixing regular and generator steps 2`] = `
+{
+  "output": 210,
+  "status": "completed",
+}
+`;
+
+exports[`should handle errors in generator steps 1`] = `
+{
+  "error": "error in generator step",
   "status": "failed",
 }
 `;

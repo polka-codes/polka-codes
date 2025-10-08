@@ -217,3 +217,207 @@ test('should resume workflow from a step', async () => {
   }
   expect(innerFnSpy).toHaveBeenCalledTimes(0)
 })
+
+test('should support tool calls in step functions', async () => {
+  const stepWithToolsWorkflow: Workflow<number, number, Tools> = {
+    name: 'stepWithTools',
+    description: 'Step containing tool calls',
+    async *fn(input, step, tools) {
+      const result = yield* step('toolStep', async function* () {
+        const sum = yield* tools.add({ a: input, b: 10 })
+        return sum
+      })
+      return result
+    },
+  }
+
+  const result1 = await run(stepWithToolsWorkflow, 5)
+  expect(result1).toMatchSnapshot()
+  if (result1.status !== 'pending') return
+
+  const result2 = await result1.next(15)
+  expect(result2).toMatchSnapshot()
+})
+
+test('should support multiple tool calls in step functions', async () => {
+  const stepWithMultipleToolsWorkflow: Workflow<number, number, Tools> = {
+    name: 'stepWithMultipleTools',
+    description: 'Step containing multiple tool calls',
+    async *fn(input, step, tools) {
+      const result = yield* step('multiToolStep', async function* () {
+        const sum1 = yield* tools.add({ a: input, b: 5 })
+        const sum2 = yield* tools.add({ a: sum1, b: 10 })
+        return sum2
+      })
+      return result
+    },
+  }
+
+  const result1 = await run(stepWithMultipleToolsWorkflow, 3)
+  expect(result1).toMatchSnapshot()
+  if (result1.status !== 'pending') return
+
+  const result2 = await result1.next(8)
+  expect(result2).toMatchSnapshot()
+  if (result2.status !== 'pending') return
+
+  const result3 = await result2.next(18)
+  expect(result3).toMatchSnapshot()
+})
+
+test('should cache results from generator steps', async () => {
+  const results: Record<string, PlainJson | undefined> = {}
+  let counts: Record<string, number> = {}
+
+  const getStepResult = async (key: string): Promise<{ found: true; value: PlainJson | undefined } | { found: false }> => {
+    if (Object.hasOwn(results, key)) {
+      return { found: true, value: results[key] }
+    }
+    return { found: false }
+  }
+  const setStepResult = async (key: string, value: PlainJson | undefined) => {
+    results[key] = value
+  }
+  const getAndIncrementCounts = async (key: string) => {
+    counts[key] = (counts[key] || 0) + 1
+    return counts[key]
+  }
+
+  const mock = {
+    toolCalled: false,
+  }
+
+  const stepWithToolsWorkflow: Workflow<number, number, Tools> = {
+    name: 'stepWithTools',
+    description: 'Step containing tool calls',
+    async *fn(input, step, tools) {
+      const result = yield* step('toolStep', async function* () {
+        mock.toolCalled = true
+        const sum = yield* tools.add({ a: input, b: 10 })
+        return sum
+      })
+      return result
+    },
+  }
+
+  const stepFn = makeStepFn<Tools>({
+    getStepResult,
+    setStepResult,
+    getAndIncrementCounts,
+  })
+
+  counts = {}
+  const result1 = await run(stepWithToolsWorkflow, 5, stepFn)
+  expect(result1.status).toBe('pending')
+  if (result1.status !== 'pending') return
+
+  const result2 = await result1.next(15)
+  expect(result2.status).toBe('completed')
+  if (result2.status !== 'completed') return
+  expect(result2.output).toBe(15)
+  expect(mock.toolCalled).toBe(true)
+
+  mock.toolCalled = false
+  counts = {}
+
+  const result3 = await run(stepWithToolsWorkflow, 5, stepFn)
+  expect(result3.status).toBe('completed')
+  if (result3.status !== 'completed') return
+  expect(result3.output).toBe(15)
+  expect(mock.toolCalled).toBe(false)
+})
+
+test('should support mixing regular and generator steps', async () => {
+  const mock = {
+    regularStep: async () => 100,
+  }
+  const regularStepSpy = spyOn(mock, 'regularStep')
+
+  const mixedStepsWorkflow: Workflow<number, number, Tools> = {
+    name: 'mixedSteps',
+    description: 'Workflow with both regular and generator steps',
+    async *fn(input, step, tools) {
+      const regular = await step('regular', mock.regularStep)
+
+      const withTool = yield* step('withTool', async function* () {
+        const sum = yield* tools.add({ a: input, b: regular })
+        return sum
+      })
+
+      const anotherRegular = await step('anotherRegular', async () => withTool * 2)
+
+      return anotherRegular
+    },
+  }
+
+  const result1 = await run(mixedStepsWorkflow, 5)
+  expect(result1).toMatchSnapshot()
+  if (result1.status !== 'pending') return
+
+  const result2 = await result1.next(105)
+  expect(result2).toMatchSnapshot()
+
+  expect(regularStepSpy).toHaveBeenCalledTimes(1)
+})
+
+test('should handle errors in generator steps', async () => {
+  const failingGeneratorStepWorkflow: Workflow<number, number, Tools> = {
+    name: 'failingGeneratorStep',
+    description: 'Step that fails inside a generator',
+    async *fn(input, step, tools) {
+      const result = yield* step('failingStep', async function* () {
+        yield* tools.add({ a: input, b: 10 })
+        throw new Error('error in generator step')
+      })
+      return result
+    },
+  }
+
+  const result1 = await run(failingGeneratorStepWorkflow, 5)
+  expect(result1.status).toBe('pending')
+  if (result1.status !== 'pending') return
+
+  const result2 = await result1.next(15)
+  if (result2.status === 'failed') {
+    expect({ status: result2.status, error: (result2.error as Error)?.message }).toMatchSnapshot()
+  } else {
+    throw new Error('Workflow should have failed')
+  }
+})
+
+test('should support generator steps in a loop', async () => {
+  const loopWithGeneratorStepsWorkflow: Workflow<number, number, Tools> = {
+    name: 'loopWithGeneratorSteps',
+    description: 'Loop with generator steps',
+    async *fn(input, step, tools) {
+      let sum = input
+      for (let i = 0; i < 3; i++) {
+        sum = yield* step('loopStep', async function* () {
+          const result = yield* tools.add({ a: sum, b: i })
+          return result
+        })
+      }
+      return sum
+    },
+  }
+
+  let result: any = await run(loopWithGeneratorStepsWorkflow, 10)
+
+  const expectedCalls = [
+    { a: 10, b: 0 },
+    { a: 10, b: 1 },
+    { a: 11, b: 2 },
+  ]
+
+  for (let i = 0; i < expectedCalls.length; i++) {
+    expect(result.status).toBe('pending')
+    if (result.status !== 'pending') return
+
+    expect(result.tool.input).toEqual(expectedCalls[i])
+    result = await result.next(expectedCalls[i].a + expectedCalls[i].b)
+  }
+
+  expect(result.status).toBe('completed')
+  if (result.status !== 'completed') return
+  expect(result.output).toBe(13)
+})
