@@ -1,0 +1,1403 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`should create PR with user context 1`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "tool": {
+    "input": {
+      "args": [
+        "--version",
+      ],
+      "command": "gh",
+    },
+    "tool": "executeCommand",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should create PR with user context 2`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "args": [
+        "rev-parse",
+        "--abbrev-ref",
+        "HEAD",
+      ],
+      "command": "git",
+    },
+    "tool": "executeCommand",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should create PR with user context 3`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "args": [
+        "show-ref",
+        "--verify",
+        "--quiet",
+        "refs/heads/master",
+      ],
+      "command": "git",
+    },
+    "tool": "executeCommand",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should create PR with user context 4`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "args": [
+        "show-ref",
+        "--verify",
+        "--quiet",
+        "refs/heads/main",
+      ],
+      "command": "git",
+    },
+    "tool": "executeCommand",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should create PR with user context 5`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "args": [
+        "--no-pager",
+        "log",
+        "--oneline",
+        "--no-color",
+        "--no-merges",
+        "--no-decorate",
+        "main..HEAD",
+      ],
+      "command": "git",
+    },
+    "tool": "executeCommand",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should create PR with user context 6`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "args": [
+        "--no-pager",
+        "diff",
+        "main..HEAD",
+      ],
+      "command": "git",
+    },
+    "tool": "executeCommand",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should create PR with user context 7`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "agent": "analyzer",
+      "messages": [
+        
+"
+You are an expert at creating pull requests.
+Based on the provided branch name, commit messages, and diff, generate a title and description for the pull request.
+
+Respond with a JSON object containing the title and description.
+Example format:
+\`\`\`json
+{
+  "title": "feat: add new feature",
+  "description": "This pull request adds a new feature that does...\\n\\n### Changes\\n- ..."
+}
+\`\`\`
+"
+,
+        {
+          "content": 
+"<branch_name>feature/add-auth</branch_name>
+<commit_messages>abc1234 feat: add authentication module
+def5678 fix: resolve login bug
+</commit_messages>
+<diff>--- a/src/auth.ts
++++ b/src/auth.ts
+@@ -1,3 +1,5 @@
++export function authenticate() {
++  return true;
++}
+ export function login() {}
+</diff>
+<user_context>Implementing new authentication feature</user_context>"
+,
+          "type": "user",
+        },
+      ],
+      "outputSchema": _ {
+        "_def": {
+          "shape": [native code],
+          "type": "object",
+        },
+        "_zod": {
+          "bag": {},
+          "constr": [Function: _],
+          "def": {
+            "shape": [native code],
+            "type": "object",
+          },
+          "deferred": [
+            [Function],
+            [Function],
+          ],
+          "parse": [Function],
+          "propValues": [native code],
+          "run": [Function],
+          "traits":           
+Set {
+            "ZodObject",
+            "$ZodObjectJIT",
+            "$ZodObject",
+            "$ZodType",
+            "ZodType",
+          }
+,
+          "version": {
+            "major": 4,
+            "minor": 1,
+            "patch": 12,
+          },
+        },
+        "and": [Function],
+        "array": [Function],
+        "brand": [Function],
+        "catch": [Function],
+        "catchall": [Function],
+        "check": [Function],
+        "clone": [Function],
+        "decode": [Function],
+        "decodeAsync": [Function: AsyncFunction],
+        "def": {
+          "shape": [native code],
+          "type": "object",
+        },
+        "default": [Function],
+        "describe": [Function],
+        "description": [native code],
+        "encode": [Function],
+        "encodeAsync": [Function: AsyncFunction],
+        "extend": [Function],
+        "isNullable": [Function],
+        "isOptional": [Function],
+        "keyof": [Function],
+        "loose": [Function],
+        "merge": [Function],
+        "meta": [Function],
+        "nonoptional": [Function],
+        "nullable": [Function],
+        "nullish": [Function],
+        "omit": [Function],
+        "optional": [Function],
+        "or": [Function],
+        "overwrite": [Function],
+        "parse": [Function],
+        "parseAsync": [Function: AsyncFunction],
+        "partial": [Function],
+        "passthrough": [Function],
+        "pick": [Function],
+        "pipe": [Function],
+        "prefault": [Function],
+        "readonly": [Function],
+        "refine": [Function],
+        "register": [Function],
+        "required": [Function],
+        "safeDecode": [Function],
+        "safeDecodeAsync": [Function: AsyncFunction],
+        "safeEncode": [Function],
+        "safeEncodeAsync": [Function: AsyncFunction],
+        "safeExtend": [Function],
+        "safeParse": [Function],
+        "safeParseAsync": [Function: AsyncFunction],
+        "shape": [native code],
+        "spa": [Function: AsyncFunction],
+        "strict": [Function],
+        "strip": [Function],
+        "superRefine": [Function],
+        "transform": [Function],
+        "type": "object",
+        "~standard": {
+          "validate": [Function],
+          "vendor": "zod",
+          "version": 1,
+        },
+      },
+    },
+    "tool": "invokeAgent",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should create PR with user context 8`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "description": 
+"This PR implements the authentication feature for the application.
+
+### Changes
+- Added authenticate function
+- Fixed login bug"
+,
+      "title": "feat: add authentication feature",
+    },
+    "tool": "createPullRequest",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should create PR with user context 9`] = `
+{
+  "output": {
+    "description": 
+"This PR implements the authentication feature for the application.
+
+### Changes
+- Added authenticate function
+- Fixed login bug"
+,
+    "title": "feat: add authentication feature",
+  },
+  "status": "completed",
+}
+`;
+
+exports[`should create PR without context 1`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "tool": {
+    "input": {
+      "args": [
+        "--version",
+      ],
+      "command": "gh",
+    },
+    "tool": "executeCommand",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should create PR without context 2`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "args": [
+        "rev-parse",
+        "--abbrev-ref",
+        "HEAD",
+      ],
+      "command": "git",
+    },
+    "tool": "executeCommand",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should create PR without context 3`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "args": [
+        "show-ref",
+        "--verify",
+        "--quiet",
+        "refs/heads/master",
+      ],
+      "command": "git",
+    },
+    "tool": "executeCommand",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should create PR without context 4`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "args": [
+        "show-ref",
+        "--verify",
+        "--quiet",
+        "refs/heads/main",
+      ],
+      "command": "git",
+    },
+    "tool": "executeCommand",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should create PR without context 5`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "args": [
+        "--no-pager",
+        "log",
+        "--oneline",
+        "--no-color",
+        "--no-merges",
+        "--no-decorate",
+        "main..HEAD",
+      ],
+      "command": "git",
+    },
+    "tool": "executeCommand",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should create PR without context 6`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "args": [
+        "--no-pager",
+        "diff",
+        "main..HEAD",
+      ],
+      "command": "git",
+    },
+    "tool": "executeCommand",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should create PR without context 7`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "agent": "analyzer",
+      "messages": [
+        
+"
+You are an expert at creating pull requests.
+Based on the provided branch name, commit messages, and diff, generate a title and description for the pull request.
+
+Respond with a JSON object containing the title and description.
+Example format:
+\`\`\`json
+{
+  "title": "feat: add new feature",
+  "description": "This pull request adds a new feature that does...\\n\\n### Changes\\n- ..."
+}
+\`\`\`
+"
+,
+        {
+          "content": 
+"<branch_name>feature/new-feature</branch_name>
+<commit_messages>xyz9876 chore: update dependencies
+</commit_messages>
+<diff>--- a/package.json
++++ b/package.json
+@@ -10,7 +10,7 @@
+-    "lodash": "^4.17.20"
++    "lodash": "^4.17.21"
+</diff>"
+,
+          "type": "user",
+        },
+      ],
+      "outputSchema": _ {
+        "_def": {
+          "shape": [native code],
+          "type": "object",
+        },
+        "_zod": {
+          "bag": {},
+          "constr": [Function: _],
+          "def": {
+            "shape": [native code],
+            "type": "object",
+          },
+          "deferred": [
+            [Function],
+            [Function],
+          ],
+          "parse": [Function],
+          "propValues": [native code],
+          "run": [Function],
+          "traits":           
+Set {
+            "ZodObject",
+            "$ZodObjectJIT",
+            "$ZodObject",
+            "$ZodType",
+            "ZodType",
+          }
+,
+          "version": {
+            "major": 4,
+            "minor": 1,
+            "patch": 12,
+          },
+        },
+        "and": [Function],
+        "array": [Function],
+        "brand": [Function],
+        "catch": [Function],
+        "catchall": [Function],
+        "check": [Function],
+        "clone": [Function],
+        "decode": [Function],
+        "decodeAsync": [Function: AsyncFunction],
+        "def": {
+          "shape": [native code],
+          "type": "object",
+        },
+        "default": [Function],
+        "describe": [Function],
+        "description": [native code],
+        "encode": [Function],
+        "encodeAsync": [Function: AsyncFunction],
+        "extend": [Function],
+        "isNullable": [Function],
+        "isOptional": [Function],
+        "keyof": [Function],
+        "loose": [Function],
+        "merge": [Function],
+        "meta": [Function],
+        "nonoptional": [Function],
+        "nullable": [Function],
+        "nullish": [Function],
+        "omit": [Function],
+        "optional": [Function],
+        "or": [Function],
+        "overwrite": [Function],
+        "parse": [Function],
+        "parseAsync": [Function: AsyncFunction],
+        "partial": [Function],
+        "passthrough": [Function],
+        "pick": [Function],
+        "pipe": [Function],
+        "prefault": [Function],
+        "readonly": [Function],
+        "refine": [Function],
+        "register": [Function],
+        "required": [Function],
+        "safeDecode": [Function],
+        "safeDecodeAsync": [Function: AsyncFunction],
+        "safeEncode": [Function],
+        "safeEncodeAsync": [Function: AsyncFunction],
+        "safeExtend": [Function],
+        "safeParse": [Function],
+        "safeParseAsync": [Function: AsyncFunction],
+        "shape": [native code],
+        "spa": [Function: AsyncFunction],
+        "strict": [Function],
+        "strip": [Function],
+        "superRefine": [Function],
+        "transform": [Function],
+        "type": "object",
+        "~standard": {
+          "validate": [Function],
+          "vendor": "zod",
+          "version": 1,
+        },
+      },
+    },
+    "tool": "invokeAgent",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should create PR without context 8`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "description": "Updated lodash to latest version",
+      "title": "chore: update dependencies",
+    },
+    "tool": "createPullRequest",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should create PR without context 9`] = `
+{
+  "output": {
+    "description": "Updated lodash to latest version",
+    "title": "chore: update dependencies",
+  },
+  "status": "completed",
+}
+`;
+
+exports[`should fail when GitHub CLI is not installed 1`] = `
+{
+  "error": "GitHub CLI (gh) is not installed. Please install it from https://cli.github.com/",
+  "status": "failed",
+}
+`;
+
+exports[`should handle branch with special characters 1`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "args": [
+        "show-ref",
+        "--verify",
+        "--quiet",
+        "refs/heads/master",
+      ],
+      "command": "git",
+    },
+    "tool": "executeCommand",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should handle branch with special characters 2`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "agent": "analyzer",
+      "messages": [
+        
+"
+You are an expert at creating pull requests.
+Based on the provided branch name, commit messages, and diff, generate a title and description for the pull request.
+
+Respond with a JSON object containing the title and description.
+Example format:
+\`\`\`json
+{
+  "title": "feat: add new feature",
+  "description": "This pull request adds a new feature that does...\\n\\n### Changes\\n- ..."
+}
+\`\`\`
+"
+,
+        {
+          "content": 
+"<branch_name>feature/fix-bug-#123</branch_name>
+<commit_messages>aaa1111 fix: resolve issue #123
+</commit_messages>
+<diff>--- a/src/bugfix.ts
++++ b/src/bugfix.ts
+@@ -5,7 +5,7 @@
+-  return false;
++  return true;
+</diff>"
+,
+          "type": "user",
+        },
+      ],
+      "outputSchema": _ {
+        "_def": {
+          "shape": [native code],
+          "type": "object",
+        },
+        "_zod": {
+          "bag": {},
+          "constr": [Function: _],
+          "def": {
+            "shape": [native code],
+            "type": "object",
+          },
+          "deferred": [
+            [Function],
+            [Function],
+          ],
+          "parse": [Function],
+          "propValues": [native code],
+          "run": [Function],
+          "traits":           
+Set {
+            "ZodObject",
+            "$ZodObjectJIT",
+            "$ZodObject",
+            "$ZodType",
+            "ZodType",
+          }
+,
+          "version": {
+            "major": 4,
+            "minor": 1,
+            "patch": 12,
+          },
+        },
+        "and": [Function],
+        "array": [Function],
+        "brand": [Function],
+        "catch": [Function],
+        "catchall": [Function],
+        "check": [Function],
+        "clone": [Function],
+        "decode": [Function],
+        "decodeAsync": [Function: AsyncFunction],
+        "def": {
+          "shape": [native code],
+          "type": "object",
+        },
+        "default": [Function],
+        "describe": [Function],
+        "description": [native code],
+        "encode": [Function],
+        "encodeAsync": [Function: AsyncFunction],
+        "extend": [Function],
+        "isNullable": [Function],
+        "isOptional": [Function],
+        "keyof": [Function],
+        "loose": [Function],
+        "merge": [Function],
+        "meta": [Function],
+        "nonoptional": [Function],
+        "nullable": [Function],
+        "nullish": [Function],
+        "omit": [Function],
+        "optional": [Function],
+        "or": [Function],
+        "overwrite": [Function],
+        "parse": [Function],
+        "parseAsync": [Function: AsyncFunction],
+        "partial": [Function],
+        "passthrough": [Function],
+        "pick": [Function],
+        "pipe": [Function],
+        "prefault": [Function],
+        "readonly": [Function],
+        "refine": [Function],
+        "register": [Function],
+        "required": [Function],
+        "safeDecode": [Function],
+        "safeDecodeAsync": [Function: AsyncFunction],
+        "safeEncode": [Function],
+        "safeEncodeAsync": [Function: AsyncFunction],
+        "safeExtend": [Function],
+        "safeParse": [Function],
+        "safeParseAsync": [Function: AsyncFunction],
+        "shape": [native code],
+        "spa": [Function: AsyncFunction],
+        "strict": [Function],
+        "strip": [Function],
+        "superRefine": [Function],
+        "transform": [Function],
+        "type": "object",
+        "~standard": {
+          "validate": [Function],
+          "vendor": "zod",
+          "version": 1,
+        },
+      },
+    },
+    "tool": "invokeAgent",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should handle branch with special characters 3`] = `
+{
+  "output": {
+    "description": "Fixed the bug by correcting return value",
+    "title": "fix: resolve issue #123",
+  },
+  "status": "completed",
+}
+`;
+
+exports[`should handle no commits between branches 1`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "args": [
+        "--no-pager",
+        "diff",
+        "master..HEAD",
+      ],
+      "command": "git",
+    },
+    "tool": "executeCommand",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should handle no commits between branches 2`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "agent": "analyzer",
+      "messages": [
+        
+"
+You are an expert at creating pull requests.
+Based on the provided branch name, commit messages, and diff, generate a title and description for the pull request.
+
+Respond with a JSON object containing the title and description.
+Example format:
+\`\`\`json
+{
+  "title": "feat: add new feature",
+  "description": "This pull request adds a new feature that does...\\n\\n### Changes\\n- ..."
+}
+\`\`\`
+"
+,
+        {
+          "content": 
+"<branch_name>feature/empty-branch</branch_name>
+<commit_messages></commit_messages>
+<diff>--- a/README.md
++++ b/README.md
+@@ -1 +1,2 @@
+ # Project
++Updated readme
+</diff>"
+,
+          "type": "user",
+        },
+      ],
+      "outputSchema": _ {
+        "_def": {
+          "shape": [native code],
+          "type": "object",
+        },
+        "_zod": {
+          "bag": {},
+          "constr": [Function: _],
+          "def": {
+            "shape": [native code],
+            "type": "object",
+          },
+          "deferred": [
+            [Function],
+            [Function],
+          ],
+          "parse": [Function],
+          "propValues": [native code],
+          "run": [Function],
+          "traits":           
+Set {
+            "ZodObject",
+            "$ZodObjectJIT",
+            "$ZodObject",
+            "$ZodType",
+            "ZodType",
+          }
+,
+          "version": {
+            "major": 4,
+            "minor": 1,
+            "patch": 12,
+          },
+        },
+        "and": [Function],
+        "array": [Function],
+        "brand": [Function],
+        "catch": [Function],
+        "catchall": [Function],
+        "check": [Function],
+        "clone": [Function],
+        "decode": [Function],
+        "decodeAsync": [Function: AsyncFunction],
+        "def": {
+          "shape": [native code],
+          "type": "object",
+        },
+        "default": [Function],
+        "describe": [Function],
+        "description": [native code],
+        "encode": [Function],
+        "encodeAsync": [Function: AsyncFunction],
+        "extend": [Function],
+        "isNullable": [Function],
+        "isOptional": [Function],
+        "keyof": [Function],
+        "loose": [Function],
+        "merge": [Function],
+        "meta": [Function],
+        "nonoptional": [Function],
+        "nullable": [Function],
+        "nullish": [Function],
+        "omit": [Function],
+        "optional": [Function],
+        "or": [Function],
+        "overwrite": [Function],
+        "parse": [Function],
+        "parseAsync": [Function: AsyncFunction],
+        "partial": [Function],
+        "passthrough": [Function],
+        "pick": [Function],
+        "pipe": [Function],
+        "prefault": [Function],
+        "readonly": [Function],
+        "refine": [Function],
+        "register": [Function],
+        "required": [Function],
+        "safeDecode": [Function],
+        "safeDecodeAsync": [Function: AsyncFunction],
+        "safeEncode": [Function],
+        "safeEncodeAsync": [Function: AsyncFunction],
+        "safeExtend": [Function],
+        "safeParse": [Function],
+        "safeParseAsync": [Function: AsyncFunction],
+        "shape": [native code],
+        "spa": [Function: AsyncFunction],
+        "strict": [Function],
+        "strip": [Function],
+        "superRefine": [Function],
+        "transform": [Function],
+        "type": "object",
+        "~standard": {
+          "validate": [Function],
+          "vendor": "zod",
+          "version": 1,
+        },
+      },
+    },
+    "tool": "invokeAgent",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should handle no commits between branches 3`] = `
+{
+  "output": {
+    "description": "Updated project readme",
+    "title": "docs: update README",
+  },
+  "status": "completed",
+}
+`;
+
+exports[`should handle empty diff 1`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "agent": "analyzer",
+      "messages": [
+        
+"
+You are an expert at creating pull requests.
+Based on the provided branch name, commit messages, and diff, generate a title and description for the pull request.
+
+Respond with a JSON object containing the title and description.
+Example format:
+\`\`\`json
+{
+  "title": "feat: add new feature",
+  "description": "This pull request adds a new feature that does...\\n\\n### Changes\\n- ..."
+}
+\`\`\`
+"
+,
+        {
+          "content": 
+"<branch_name>feature/empty-diff</branch_name>
+<commit_messages>bbb2222 chore: trigger CI
+</commit_messages>
+<diff></diff>"
+,
+          "type": "user",
+        },
+      ],
+      "outputSchema": _ {
+        "_def": {
+          "shape": [native code],
+          "type": "object",
+        },
+        "_zod": {
+          "bag": {},
+          "constr": [Function: _],
+          "def": {
+            "shape": [native code],
+            "type": "object",
+          },
+          "deferred": [
+            [Function],
+            [Function],
+          ],
+          "parse": [Function],
+          "propValues": [native code],
+          "run": [Function],
+          "traits":           
+Set {
+            "ZodObject",
+            "$ZodObjectJIT",
+            "$ZodObject",
+            "$ZodType",
+            "ZodType",
+          }
+,
+          "version": {
+            "major": 4,
+            "minor": 1,
+            "patch": 12,
+          },
+        },
+        "and": [Function],
+        "array": [Function],
+        "brand": [Function],
+        "catch": [Function],
+        "catchall": [Function],
+        "check": [Function],
+        "clone": [Function],
+        "decode": [Function],
+        "decodeAsync": [Function: AsyncFunction],
+        "def": {
+          "shape": [native code],
+          "type": "object",
+        },
+        "default": [Function],
+        "describe": [Function],
+        "description": [native code],
+        "encode": [Function],
+        "encodeAsync": [Function: AsyncFunction],
+        "extend": [Function],
+        "isNullable": [Function],
+        "isOptional": [Function],
+        "keyof": [Function],
+        "loose": [Function],
+        "merge": [Function],
+        "meta": [Function],
+        "nonoptional": [Function],
+        "nullable": [Function],
+        "nullish": [Function],
+        "omit": [Function],
+        "optional": [Function],
+        "or": [Function],
+        "overwrite": [Function],
+        "parse": [Function],
+        "parseAsync": [Function: AsyncFunction],
+        "partial": [Function],
+        "passthrough": [Function],
+        "pick": [Function],
+        "pipe": [Function],
+        "prefault": [Function],
+        "readonly": [Function],
+        "refine": [Function],
+        "register": [Function],
+        "required": [Function],
+        "safeDecode": [Function],
+        "safeDecodeAsync": [Function: AsyncFunction],
+        "safeEncode": [Function],
+        "safeEncodeAsync": [Function: AsyncFunction],
+        "safeExtend": [Function],
+        "safeParse": [Function],
+        "safeParseAsync": [Function: AsyncFunction],
+        "shape": [native code],
+        "spa": [Function: AsyncFunction],
+        "strict": [Function],
+        "strip": [Function],
+        "superRefine": [Function],
+        "transform": [Function],
+        "type": "object",
+        "~standard": {
+          "validate": [Function],
+          "vendor": "zod",
+          "version": 1,
+        },
+      },
+    },
+    "tool": "invokeAgent",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should handle empty diff 2`] = `
+{
+  "output": {
+    "description": "Empty commit to trigger CI pipeline",
+    "title": "chore: trigger CI",
+  },
+  "status": "completed",
+}
+`;
+
+exports[`should handle multiple commits with various messages 1`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "args": [
+        "--no-pager",
+        "diff",
+        "main..HEAD",
+      ],
+      "command": "git",
+    },
+    "tool": "executeCommand",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should handle multiple commits with various messages 2`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "agent": "analyzer",
+      "messages": [
+        
+"
+You are an expert at creating pull requests.
+Based on the provided branch name, commit messages, and diff, generate a title and description for the pull request.
+
+Respond with a JSON object containing the title and description.
+Example format:
+\`\`\`json
+{
+  "title": "feat: add new feature",
+  "description": "This pull request adds a new feature that does...\\n\\n### Changes\\n- ..."
+}
+\`\`\`
+"
+,
+        {
+          "content": 
+"<branch_name>feature/multi-commit</branch_name>
+<commit_messages>abc1234 feat: add user profile page
+def5678 fix: resolve navigation issue
+ghi9012 test: add unit tests
+jkl3456 docs: update API documentation
+mno7890 refactor: clean up code
+</commit_messages>
+<diff>--- a/src/profile.ts
++++ b/src/profile.ts
+@@ -0,0 +1,10 @@
++export function getUserProfile() {
++  return { name: 'User' };
++}
+--- a/src/nav.ts
++++ b/src/nav.ts
+@@ -5,7 +5,7 @@
+-  router.push('/wrong');
++  router.push('/correct');
+--- a/docs/API.md
++++ b/docs/API.md
+@@ -1 +1,5 @@
+ # API
++
++## Endpoints
++- GET /profile
+</diff>"
+,
+          "type": "user",
+        },
+      ],
+      "outputSchema": _ {
+        "_def": {
+          "shape": [native code],
+          "type": "object",
+        },
+        "_zod": {
+          "bag": {},
+          "constr": [Function: _],
+          "def": {
+            "shape": [native code],
+            "type": "object",
+          },
+          "deferred": [
+            [Function],
+            [Function],
+          ],
+          "parse": [Function],
+          "propValues": [native code],
+          "run": [Function],
+          "traits":           
+Set {
+            "ZodObject",
+            "$ZodObjectJIT",
+            "$ZodObject",
+            "$ZodType",
+            "ZodType",
+          }
+,
+          "version": {
+            "major": 4,
+            "minor": 1,
+            "patch": 12,
+          },
+        },
+        "and": [Function],
+        "array": [Function],
+        "brand": [Function],
+        "catch": [Function],
+        "catchall": [Function],
+        "check": [Function],
+        "clone": [Function],
+        "decode": [Function],
+        "decodeAsync": [Function: AsyncFunction],
+        "def": {
+          "shape": [native code],
+          "type": "object",
+        },
+        "default": [Function],
+        "describe": [Function],
+        "description": [native code],
+        "encode": [Function],
+        "encodeAsync": [Function: AsyncFunction],
+        "extend": [Function],
+        "isNullable": [Function],
+        "isOptional": [Function],
+        "keyof": [Function],
+        "loose": [Function],
+        "merge": [Function],
+        "meta": [Function],
+        "nonoptional": [Function],
+        "nullable": [Function],
+        "nullish": [Function],
+        "omit": [Function],
+        "optional": [Function],
+        "or": [Function],
+        "overwrite": [Function],
+        "parse": [Function],
+        "parseAsync": [Function: AsyncFunction],
+        "partial": [Function],
+        "passthrough": [Function],
+        "pick": [Function],
+        "pipe": [Function],
+        "prefault": [Function],
+        "readonly": [Function],
+        "refine": [Function],
+        "register": [Function],
+        "required": [Function],
+        "safeDecode": [Function],
+        "safeDecodeAsync": [Function: AsyncFunction],
+        "safeEncode": [Function],
+        "safeEncodeAsync": [Function: AsyncFunction],
+        "safeExtend": [Function],
+        "safeParse": [Function],
+        "safeParseAsync": [Function: AsyncFunction],
+        "shape": [native code],
+        "spa": [Function: AsyncFunction],
+        "strict": [Function],
+        "strip": [Function],
+        "superRefine": [Function],
+        "transform": [Function],
+        "type": "object",
+        "~standard": {
+          "validate": [Function],
+          "vendor": "zod",
+          "version": 1,
+        },
+      },
+    },
+    "tool": "invokeAgent",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should handle multiple commits with various messages 3`] = `
+{
+  "output": {
+    "description": 
+"This PR adds a new user profile page and related improvements.
+
+### Changes
+- Added user profile page
+- Fixed navigation routing issue
+- Added comprehensive unit tests
+- Updated API documentation
+- Code refactoring and cleanup"
+,
+    "title": "feat: add user profile page",
+  },
+  "status": "completed",
+}
+`;
+
+exports[`should use develop as default branch 1`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "args": [
+        "--no-pager",
+        "log",
+        "--oneline",
+        "--no-color",
+        "--no-merges",
+        "--no-decorate",
+        "develop..HEAD",
+      ],
+      "command": "git",
+    },
+    "tool": "executeCommand",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should use develop as default branch 2`] = `
+{
+  "output": {
+    "description": "Implemented new feature",
+    "title": "feat: implement feature",
+  },
+  "status": "completed",
+}
+`;
+
+exports[`should use gh repo view to determine default branch 1`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "args": [
+        "--no-pager",
+        "log",
+        "--oneline",
+        "--no-color",
+        "--no-merges",
+        "--no-decorate",
+        "trunk..HEAD",
+      ],
+      "command": "git",
+    },
+    "tool": "executeCommand",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should use gh repo view to determine default branch 2`] = `
+{
+  "output": {
+    "description": "Cleaned up old code",
+    "title": "refactor: code cleanup",
+  },
+  "status": "completed",
+}
+`;
+
+exports[`should use git remote show origin to determine default branch 1`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "stepFn": [Function],
+  "tool": {
+    "input": {
+      "args": [
+        "--no-pager",
+        "log",
+        "--oneline",
+        "--no-color",
+        "--no-merges",
+        "--no-decorate",
+        "production..HEAD",
+      ],
+      "command": "git",
+    },
+    "tool": "executeCommand",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should use git remote show origin to determine default branch 2`] = `
+{
+  "output": {
+    "description": "Updated configuration for production",
+    "title": "build: update config",
+  },
+  "status": "completed",
+}
+`;
