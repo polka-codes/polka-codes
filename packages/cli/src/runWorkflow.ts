@@ -128,7 +128,7 @@ async function handleToolCall(
         combinedContext = defaultContext + (combinedContext ? `\n\n${combinedContext}` : '')
       }
 
-      const finalPrompt = combinedContext ? `<context>${combinedContext}</context>\n\n${userPrompt}` : userPrompt
+      const finalPrompt = combinedContext ? `${userPrompt}\n\n<context>${combinedContext}</context>` : userPrompt
       let exitReason = await agent.start(finalPrompt)
 
       context.spinner.start()

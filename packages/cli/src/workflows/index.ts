@@ -2,6 +2,7 @@
 
 export * from './code.workflow'
 export * from './commit.workflow'
+export * from './fix.workflow'
 export * from './init.workflow'
 export * from './plan.workflow'
 export * from './pr.workflow'
