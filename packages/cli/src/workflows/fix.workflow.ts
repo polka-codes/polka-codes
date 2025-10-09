@@ -5,6 +5,7 @@ import type { CliToolRegistry } from '../workflow-tools'
 
 export type FixWorkflowInput = {
   command?: string
+  interactive?: boolean
 }
 
 export const fixWorkflow: Workflow<FixWorkflowInput, PlainJson, CliToolRegistry> = {
@@ -12,6 +13,7 @@ export const fixWorkflow: Workflow<FixWorkflowInput, PlainJson, CliToolRegistry>
   description: 'Fix an issue by running a command repeatedly.',
   async *fn(input, _step, tools) {
     let command = input.command
+    const interactive = input.interactive ?? true
 
     if (!command) {
       const config = loadConfig()
@@ -41,13 +43,20 @@ export const fixWorkflow: Workflow<FixWorkflowInput, PlainJson, CliToolRegistry>
         defaultCommand = testCommand
       }
 
-      command = yield* tools.input({
-        message: 'Please enter the command to run to identify issues:',
-        default: defaultCommand,
-      })
+      if (interactive) {
+        command = yield* tools.input({
+          message: 'Please enter the command to run to identify issues:',
+          default: defaultCommand,
+        })
+
+        if (!command) {
+          console.log('No command provided. Aborting.')
+          return {}
+        }
+      }
 
       if (!command) {
-        throw new Error('No command provided. Aborting.')
+        return {}
       }
     }
 

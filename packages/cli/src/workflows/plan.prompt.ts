@@ -77,6 +77,10 @@ When generating your plan, follow these formatting guidelines:
       - [ ] Implement feature B
       - [ ] Write tests
 
+6. Only include relevant details for AI Agents:
+    a. Avoid unnecessary technical jargon or implementation details
+    b. Avoid steps requires human intervention or cannot be done by an AI agent
+
 # Your Tasks
 
 1. Analyze the task and the existing plan (if any).

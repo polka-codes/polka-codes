@@ -5,7 +5,7 @@ import 'dotenv/config'
 import { Command } from 'commander'
 import { version } from '../package.json'
 import { runChat } from './commands/chat'
-import { codeCommand } from './commands/code'
+import { codeCommand, runCode } from './commands/code'
 import { commitCommand } from './commands/commit'
 import { createCommand } from './commands/create'
 import { fixCommand } from './commands/fix'
@@ -13,7 +13,6 @@ import { initCommand } from './commands/init'
 import { planCommand } from './commands/plan'
 import { prCommand } from './commands/pr'
 import { reviewCommand } from './commands/review'
-import { runTask } from './commands/task'
 import { addSharedOptions } from './options'
 
 const program = new Command()
@@ -21,7 +20,7 @@ const program = new Command()
 program.name('polka').description('Polka Codes CLI').version(version)
 
 // Main command for executing tasks
-program.argument('[task]', 'The task to execute').action(runTask)
+program.argument('[task]', 'The task to execute').action(runCode)
 
 // Chat command
 program.command('chat').description('Start an interactive chat session').action(runChat)
