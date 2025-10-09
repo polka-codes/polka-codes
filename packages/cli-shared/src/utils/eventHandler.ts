@@ -7,6 +7,9 @@ type ToolStat = { calls: number; success: number; errors: number }
 const toolCallStats = new Map<string, ToolStat>()
 
 export const printEvent = (verbose: number, usageMeter: UsageMeter, stream: Writable = process.stdout) => {
+  if (verbose < 0) {
+    return () => {}
+  }
   const customConsole = new Console(stream, stream)
   let hadReasoning = false
   const write = stream.write.bind(stream)

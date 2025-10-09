@@ -370,7 +370,7 @@ export async function runWorkflow<
   const globalOpts = (command.parent ?? command).opts()
   const { json } = globalOpts
   const logger = json ? new console.Console(process.stderr) : console
-  const { providerConfig, config, verbose } = parseOptions(globalOpts)
+  const { providerConfig, config, verbose } = parseOptions(globalOpts, { commandName })
 
   if (requiresProvider) {
     const commandConfig = providerConfig.getConfigForCommand(commandName)

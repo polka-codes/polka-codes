@@ -117,7 +117,7 @@ providers:
       ])
       .opts()
 
-    const result = parseOptions(options, testDir, testDir, {})
+    const result = parseOptions(options, { cwdArg: testDir }, testDir, {})
     expect(result.verbose).toBe(1)
     expect(result.providerConfig.getConfigForCommand('chat')).toMatchSnapshot()
   })
@@ -149,7 +149,7 @@ rules:
     addSharedOptions(command)
     const options = command.parse(['node', 'test', '--config', configPath1, '--config', configPath2]).opts()
 
-    const result = parseOptions(options, testDir, testDir, {})
+    const result = parseOptions(options, { cwdArg: testDir }, testDir, {})
     expect(result.config).toMatchSnapshot()
   })
 
@@ -163,7 +163,7 @@ rules:
     addSharedOptions(command)
     const options = command.parse(['node', 'test']).opts()
 
-    const result = parseOptions(options, testDir, testDir, env)
+    const result = parseOptions(options, { cwdArg: testDir }, testDir, env)
     expect(result.providerConfig.getConfigForCommand('chat')).toMatchSnapshot()
   })
 
@@ -172,7 +172,7 @@ rules:
     addSharedOptions(command)
     const options = command.parse(['node', 'test', '--api-key', 'invalid-key']).opts()
 
-    expect(() => parseOptions(options, testDir, testDir, {})).toThrow('Must specify a provider')
+    expect(() => parseOptions(options, { cwdArg: testDir }, testDir, {})).toThrow('Must specify a provider')
   })
 
   test('handles provider-specific environment variables', () => {
@@ -185,7 +185,7 @@ rules:
     addSharedOptions(command)
     const options = command.parse(['node', 'test']).opts()
 
-    const result = parseOptions(options, testDir, testDir, env)
+    const result = parseOptions(options, { cwdArg: testDir }, testDir, env)
     expect(result.providerConfig.providers.anthropic?.apiKey).toBe('provider-env-key')
     expect(result.providerConfig.providers.deepseek?.apiKey).toBe('deepseek-key')
     expect(result.providerConfig.providers.openrouter?.apiKey).toBe('openrouter-key')
@@ -199,7 +199,7 @@ rules:
     addSharedOptions(command)
     const options = command.parse(['node', 'test']).opts()
 
-    const result = parseOptions(options, testDir, testDir, env)
+    const result = parseOptions(options, { cwdArg: testDir }, testDir, env)
     expect(result.budget).toBe(500)
   })
 })

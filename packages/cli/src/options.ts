@@ -32,7 +32,11 @@ export function addSharedOptions(command: Command) {
     .option('--api-key <key>', 'API key')
     .option('--max-messages <iterations>', 'Maximum number of messages to send.', Number.parseInt)
     .option('--budget <budget>', 'Budget for the AI service.', Number.parseFloat)
-    .option('-v --verbose', 'Enable verbose output. Use -v for level 1, -vv for level 2', (_value, prev) => prev + 1, 0)
+    .option(
+      '-v --verbose',
+      'Enable verbose output. Use -v for level 1, -vv for level 2',
+      (_value, prev: number | undefined) => (prev ?? 0) + 1,
+    )
     .option('-d --base-dir <path>', 'Base directory to run commands in')
     .option('--agent <agent>', 'Initial agent to use (default: architect)')
     .option('--file <path...>', 'File to include in the task')
@@ -42,7 +46,7 @@ export function addSharedOptions(command: Command) {
 
 export function parseOptions(
   options: CliOptions,
-  cwdArg?: string,
+  { commandName, cwdArg }: { commandName?: string; cwdArg?: string } = {},
   home: string = os.homedir(),
   env: Partial<Env> = getEnv(),
 ): {
@@ -99,10 +103,13 @@ export function parseOptions(
     ...config,
   })
 
+  const defaultVerbose = commandName === 'meta' || commandName === 'code' ? 0 : -1
+  const verbose = options.verbose ?? defaultVerbose
+
   return {
     maxMessageCount: options.maxMessageCount ?? config.maxMessageCount ?? 100,
     budget: options.budget ?? (env.POLKA_BUDGET ? Number.parseFloat(env.POLKA_BUDGET) : undefined) ?? config.budget ?? 10,
-    verbose: options.verbose ?? 0,
+    verbose,
     config,
     providerConfig,
     agent: options.agent ?? config.agent ?? 'architect',
