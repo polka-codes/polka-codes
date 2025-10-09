@@ -138,6 +138,10 @@ async function handleToolCall(
           throw new Error(`Agent exited for an unhandled reason: ${JSON.stringify(exitReason)}`)
         }
 
+        if (!input.outputSchema) {
+          return { output: exitReason.message, messages: agent.messages as PlainJson }
+        }
+
         const parsed = parseJsonFromMarkdown(exitReason.message)
         if (!parsed.success) {
           const errorMessage = `Failed to parse JSON from markdown. Error: ${parsed.error}. Please correct the output.`
@@ -151,22 +155,19 @@ async function handleToolCall(
           }
         }
 
-        if (input.outputSchema) {
-          const validated = input.outputSchema.safeParse(parsed.data)
-          if (!validated.success) {
-            const errorMessage = `Output validation failed. Error: ${z.prettifyError(validated.error)}. Please correct the output.`
-            if (i < 4) {
-              context.spinner.stop()
-              exitReason = await agent.continueTask(errorMessage)
-              context.spinner.start()
-              continue
-            } else {
-              throw new Error(z.prettifyError(validated.error))
-            }
+        const validated = input.outputSchema.safeParse(parsed.data)
+        if (!validated.success) {
+          const errorMessage = `Output validation failed. Error: ${z.prettifyError(validated.error)}. Please correct the output.`
+          if (i < 4) {
+            context.spinner.stop()
+            exitReason = await agent.continueTask(errorMessage)
+            context.spinner.start()
+            continue
+          } else {
+            throw new Error(z.prettifyError(validated.error))
           }
-          return { output: validated.data, messages: agent.messages as PlainJson }
         }
-        return { output: parsed.data, messages: agent.messages as PlainJson }
+        return { output: validated.data, messages: agent.messages as PlainJson }
       }
 
       throw new Error('Agent failed to produce valid output after 5 retries.')
