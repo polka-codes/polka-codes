@@ -83,7 +83,9 @@ export async function runCode(task: string | undefined, options: { check?: strin
 
   if (!taskInput && fileContents.length === 0) {
     try {
-      taskInput = await input({ message: 'What feature or task do you want to implement?' })
+      taskInput = await input({
+        message: 'What feature or task do you want to implement?',
+      })
     } catch (error) {
       if (error instanceof Error && error.name === 'ExitPromptError') {
         return
