@@ -4,12 +4,12 @@ import type { AgentNameType } from '@polka-codes/core'
 import type { Workflow } from '@polka-codes/workflow'
 import type { CliToolRegistry } from '../workflow-tools'
 
-export type AgentWorkflowInput = {
+export type TaskWorkflowInput = {
   task: string
   agent: string
 }
 
-export const agentWorkflow: Workflow<AgentWorkflowInput, { success: boolean }, CliToolRegistry> = {
+export const taskWorkflow: Workflow<TaskWorkflowInput, { success: boolean }, CliToolRegistry> = {
   name: 'Agent Task',
   description: 'Run a specific agent with a given task.',
   async *fn(input, _step, tools) {

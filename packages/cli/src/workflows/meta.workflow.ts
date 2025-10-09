@@ -3,10 +3,10 @@
 import type { Workflow } from '@polka-codes/workflow'
 import { z } from 'zod'
 import type { CliToolRegistry } from '../workflow-tools'
-import { agentWorkflow } from './agent.workflow'
 import { codeWorkflow } from './code.workflow'
 import { getMetaPrompt } from './prompts'
 import { runSubWorkflow } from './runSubWorkflow'
+import { taskWorkflow } from './task.workflow'
 
 export type MetaWorkflowInput = {
   task: string
@@ -44,7 +44,7 @@ export const metaWorkflow: Workflow<MetaWorkflowInput, any, CliToolRegistry> = {
     if (decision.workflow === 'code') {
       return yield* runSubWorkflow(tools, codeWorkflow, { task })
     } else if (decision.workflow === 'agent' && decision.agent) {
-      return yield* runSubWorkflow(tools, agentWorkflow, {
+      return yield* runSubWorkflow(tools, taskWorkflow, {
         task,
         agent: decision.agent,
       })
