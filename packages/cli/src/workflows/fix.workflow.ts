@@ -50,13 +50,13 @@ export const fixWorkflow: Workflow<FixWorkflowInput, PlainJson, CliToolRegistry>
         })
 
         if (!command) {
-          console.log('No command provided. Aborting.')
-          return {}
+          throw new Error('No command provided. Aborting.')
         }
       }
 
       if (!command) {
-        return {}
+        // This can happen if interactive is false and no command is found
+        return { success: true, message: 'No command to run.' }
       }
     }
 
