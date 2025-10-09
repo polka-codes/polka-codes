@@ -2,6 +2,7 @@
 import { loadConfig } from '@polka-codes/cli-shared'
 import type { PlainJson, Workflow } from '@polka-codes/workflow'
 import type { CliToolRegistry } from '../workflow-tools'
+import { getFixWorkflowPrompt } from './prompts'
 
 export type FixWorkflowInput = {
   command?: string
@@ -71,15 +72,7 @@ export const fixWorkflow: Workflow<FixWorkflowInput, PlainJson, CliToolRegistry>
 
       console.log(`Command failed with exit code ${exitCode}. Asking agent to fix it...`)
 
-      const prompt = `The command "${command}" failed with exit code ${exitCode}.
-Please fix the code.
-
-stdout:
-${stdout}
-
-stderr:
-${stderr}
-`
+      const prompt = getFixWorkflowPrompt(command, exitCode, stdout, stderr)
 
       yield* tools.invokeAgent({
         agent: 'coder',

@@ -3,26 +3,13 @@
 import type { Workflow } from '@polka-codes/workflow'
 import { z } from 'zod'
 import type { CliToolRegistry } from '../workflow-tools'
+import { GET_PR_DETAILS_PROMPT } from './prompts'
 import { checkGhInstalled, getDefaultBranch } from './workflow.utils'
 
 const prDetailsSchema = z.object({
   title: z.string(),
   description: z.string(),
 })
-
-const GET_PR_DETAILS_PROMPT = `
-You are an expert at creating pull requests.
-Based on the provided branch name, commit messages, and diff, generate a title and description for the pull request.
-
-Respond with a JSON object containing the title and description.
-Example format:
-\`\`\`json
-{
-  "title": "feat: add new feature",
-  "description": "This pull request adds a new feature that does...\\n\\n### Changes\\n- ..."
-}
-\`\`\`
-`
 
 export const prWorkflow: Workflow<{ context?: string }, { title: string; description: string }, CliToolRegistry> = {
   name: 'Create Pull Request',

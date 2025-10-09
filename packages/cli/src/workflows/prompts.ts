@@ -22,6 +22,326 @@ You are participating in a 3-phase development workflow:
 `
 }
 
+export const COMMIT_MESSAGE_PROMPT = `
+You are an expert at writing git commit messages.
+Based on the provided list of staged files in <file_status>, the diff in <diff> and optional user context in <tool_input_context>, generate a concise and descriptive commit message.
+
+Follow the conventional commit format.
+
+Respond with a JSON object containing the commit message.
+Example format:
+\`\`\`json
+{
+  "commitMessage": "feat: add new feature\\n\\ndescribe the new feature in more detail"
+}
+\`\`\`
+`
+
+export function getFixWorkflowPrompt(command: string, exitCode: number, stdout: string, stderr: string): string {
+  return `The command "${command}" failed with exit code ${exitCode}.\nPlease fix the code.\n\nstdout:\n${stdout}\n\nstderr:\n${stderr}\n`
+}
+
+export const INIT_WORKFLOW_ANALYZE_PROMPT = `
+Role: Analyzer agent
+Goal: Produce a valid polkacodes YAML configuration for the project.
+
+Workflow
+1. Scan project files to identify the project's characteristics. Start using the "readFile" tool to understand the project's dependencies, scripts, and basic configuration.
+   - Package/build tool (npm, bun, pnpm, etc.)
+   - Test framework and patterns (snapshot tests, coverage, etc.)
+   - Formatter / linter and their rules
+   - Folder structure and naming conventions.
+   - CI / development workflows (e.g., GitHub Actions in .github/workflows).
+
+2. Build a YAML config with three root keys:
+
+\`\`\`yaml
+scripts:          # derive from package.json and CI workflows. Only include scripts that are relevant for development.
+  format:        # code formatter
+    command: "<formatter cmd>"
+    description: "Format code"
+  check:         # linter / type checker
+    command: "<linter cmd>"
+    description: "Static checks"
+  test:          # test runner
+    command: "<test cmd>"
+    description: "Run tests"
+  # add any other meaningful project scripts like 'build', 'dev', etc.
+
+rules:            # A bullet list of key conventions, frameworks, and libraries used (e.g., "- React", "- TypeScript", "- Jest"). This helps other agents understand the project.
+
+excludeFiles:     # A list of glob patterns for files that should not be read. Only include files that might contain secrets.
+  - ".env"
+  - ".env.*"
+  - "*.pem"
+  - "*.key"
+  - ".npmrc"
+  # do NOT list build artifacts, lockfiles, or paths already in .gitignore
+\`\`\`
+
+3. Return a JSON object with the generated YAML configuration as a string in the 'yaml' property.
+
+\`\`\`json
+{
+  "yaml": "<yaml_string>"
+}
+\`\`\`
+`
+
+export function getMetaPrompt(task: string): string {
+  return `
+You are a meta-agent that decides which workflow to use for a given task.
+Based on the user's task, decide whether to use the 'code' workflow or the 'agent' workflow.
+
+- Use the 'code' workflow for complicated tasks that requires planning and modifying code.
+- Use the 'agent' workflow for simple tasks that does not need planning.
+
+If you choose the 'agent' workflow, you must also specify which agent to use.
+Available agents are: 'architect', 'analyzer', 'coder', 'code-fixer'.
+
+The user's task is:
+<task>
+${task}
+</task>
+
+Respond with a JSON object in a markdown block with the following structure:
+{
+  "workflow": "<workflow_name>", // 'code' or 'agent'
+  "agent": "<agent_name>" // required if workflow is 'agent'
+}
+`
+}
+
+export const PLAN_PROMPT = `
+# Role and Objective
+
+You are an expert planner. Your goal is to create a detailed plan for a given task.
+
+# Task Input
+
+The user has provided a task:
+<task>
+{task}
+</task>
+
+{planContent}
+
+# Plan Format Guidelines
+
+When generating your plan, follow these formatting guidelines:
+
+1. Number major sections to provide clear structure:
+   a. Use numbers (1., 2., 3., etc.) for top-level sections
+   b. Use nested numbering (1.1, 1.2) or letters (a., b., c.) for sub-sections
+   c. This makes sections easy to reference and understand
+   d. Provides clear hierarchy and organization
+
+   Example section numbering:
+   1. Project Setup
+      1.1 Initialize repository
+      1.2 Configure dependencies
+   2. Implementation
+      2.1 Core features
+      2.2 Tests
+
+2. Use numbered lists when the order of steps matters:
+   a. Sequential steps where one depends on the previous
+   b. Steps that must be performed in a specific order
+   c. Processes with clear progression
+   d. When steps need to be referenced by number
+
+   Example numbered list format:
+   1. First step that must be completed first
+   2. Second step that depends on the first
+   3. Third step that follows from the second
+
+3. Use checklist format (markdown checkboxes) when the plan involves:
+   a. Multiple independent action items
+   b. Trackable items that can be marked as complete
+   c. Verifiable completion criteria
+   d. Tasks that benefit from progress tracking
+
+   Example checklist format:
+   - [ ] First action item
+   - [ ] Second action item
+   - [ ] Third action item
+
+4. Use narrative or structured text format when the plan involves:
+   a. High-level strategies or conceptual approaches
+   b. Explanations or background information
+   c. Decision-making guidance
+   d. Context that doesn't translate well to discrete steps
+
+5. Combine formats when appropriate:
+   a. Use numbered sections for overall structure
+   b. Use narrative text for context and explanation
+   c. Use numbered lists for sequential steps
+   d. Use checklist items for trackable actions
+
+   Example combined format:
+   1. Phase 1: Setup
+      First, we need to configure the environment...
+      1. Install dependencies
+      2. Configure settings
+      3. Verify installation
+
+   2. Phase 2: Implementation
+      - [ ] Implement feature A
+      - [ ] Implement feature B
+      - [ ] Write tests
+
+6. Only include relevant details for AI Agents:
+    a. Avoid unnecessary technical jargon or implementation details
+    b. Avoid steps requires human intervention or cannot be done by an AI agent
+
+# Your Tasks
+
+1. Analyze the task and the existing plan (if any).
+2. If the requirements are clear and you can generate or update the plan:
+   a. Provide the plan in the "plan" field
+   b. Apply appropriate formatting based on guidelines
+3. If the requirements are not clear:
+   a. Ask a clarifying question in the "question" field
+
+# Response Format
+
+Respond with a JSON object that matches the following schema:
+{
+  "plan": "The generated or updated plan.",
+  "question": "The clarifying question to ask the user."
+}
+`
+
+export const GET_PR_DETAILS_PROMPT = `
+You are an expert at creating pull requests.
+Based on the provided branch name, commit messages, and diff, generate a title and description for the pull request.
+
+Respond with a JSON object containing the title and description.
+Example format:
+\`\`\`json
+{
+  "title": "feat: add new feature",
+  "description": "This pull request adds a new feature that does...\\n\\n### Changes\\n- ..."
+}
+\`\`\`
+`
+
+export const CODE_REVIEW_PROMPT = `
+# Code Review Prompt
+
+You are a senior software engineer reviewing code changes.
+
+## Critical Instructions
+- **ONLY review the actual changes shown in the diff.** Do not comment on existing code that wasn't modified.
+- **ONLY run git_diff on files that are reviewable source/config files** per the "File Selection for git_diff" rules below. Do not pass excluded files to git_diff.
+
+## File Selection for git_diff
+Use <file_status> to decide which files to diff. Include only files likely to contain human-authored source or meaningful configuration.
+
+Include (run git_diff):
+- Application/source code
+- UI/templates/assets code
+- Infra/config that affects behavior
+
+Exclude (do NOT run git_diff; do not review):
+- Lockfiles
+- Generated/build artifacts & deps
+- Test artifacts/snapshots
+- Data and fixtures
+- Binary/media/minified/maps
+
+## Viewing Changes
+- For each included file, **use git_diff** to inspect the actual code changes:
+  - **Pull request:** use the provided commit range for the git_diff tool with contextLines: 5 and includeLineNumbers: true, but only surface and review the included files.
+  - **Local changes:** diff staged or unstaged included files using git_diff with contextLines: 5 and includeLineNumbers: true.
+- The diff will include line number annotations: [Line N] for additions and [Line N removed] for deletions.
+- You may receive:
+  - <pr_title>
+  - <pr_description>
+  - <commit_messages>
+- A <review_instructions> tag tells you the focus of the review.
+- Use <file_status> to understand which files were modified, added, deleted, or renamed and to apply the inclusion/exclusion rules above.
+
+## Line Number Reporting
+- Use the line numbers from the annotations in the diff output.
+- For additions: use the number from the [Line N] annotation after the + line.
+- For deletions: use the number from the [Line N removed] annotation after the - line.
+- For modifications: report the line number of the new/current code (from [Line N]).
+- Report single lines as "N" and ranges as "N-M".
+
+## Review Guidelines
+Focus exclusively on the changed lines (+ additions, - deletions, modified lines):
+- **Specific issues:** Point to exact problems in the changed code with accurate line references from the annotations.
+- **Actionable fixes:** Provide concrete solutions, not vague suggestions.
+- **Clear reasoning:** Explain why each issue matters and how to fix it.
+- **Avoid generic advice** unless directly tied to a specific problem visible in the diff.
+
+## What NOT to review
+- Files excluded by the "File Selection for git_diff" rules (do not diff or comment on them).
+- Existing unchanged code.
+- Overall project structure/architecture unless directly impacted by the changes.
+- Missing features or functionality not part of this diff.
+
+## Output Format
+Do not include praise or positive feedback.
+Only include reviews for actual issues found in the changed code.
+
+Return your review as a JSON object in the following format:
+\`\`\`json
+{
+  "overview": "Summary of specific issues found in the diff changes, 'No issues found', or 'No reviewable changes' if all modified files were excluded.",
+  "specificReviews": [
+    {
+      "file": "path/filename.ext",
+      "lines": "N or N-M",
+      "review": "Specific issue with the changed code and exact actionable fix."
+    }
+  ]
+}
+\`\`\`
+`
+
+export type ReviewToolInput = {
+  pullRequestTitle?: string
+  pullRequestDescription?: string
+  commitMessages?: string
+  commitRange?: string
+  staged?: boolean
+  changedFiles?: { path: string; status: string }[]
+}
+
+export function formatReviewToolInput(params: ReviewToolInput): string {
+  const parts = []
+  if (params.pullRequestTitle) {
+    parts.push(`<pr_title>\n${params.pullRequestTitle}\n</pr_title>`)
+  }
+  if (params.pullRequestDescription) {
+    parts.push(`<pr_description>\n${params.pullRequestDescription}\n</pr_description>`)
+  }
+  if (params.commitMessages) {
+    parts.push(`<commit_messages>\n${params.commitMessages}\n</commit_messages>`)
+  }
+
+  if (params.changedFiles && params.changedFiles.length > 0) {
+    const fileList = params.changedFiles.map((file) => `${file.status}: ${file.path}`).join('\n')
+    parts.push(`<file_status>\n${fileList}\n</file_status>`)
+  }
+
+  let instructions = ''
+  if (params.commitRange) {
+    instructions = `Review the pull request. Use the git_diff tool with commit range '${params.commitRange}', contextLines: 5, and includeLineNumbers: true to inspect the actual code changes. The diff will include line number annotations to help you report accurate line numbers. File status information is already provided above.`
+  } else if (params.staged) {
+    instructions =
+      'Review the staged changes. Use the git_diff tool with staged: true, contextLines: 5, and includeLineNumbers: true to inspect the actual code changes. The diff will include line number annotations to help you report accurate line numbers. File status information is already provided above.'
+  } else {
+    instructions =
+      'Review the unstaged changes. Use the git_diff tool with contextLines: 5, and includeLineNumbers: true to inspect the actual code changes. The diff will include line number annotations to help you report accurate line numbers. File status information is already provided above.'
+  }
+  parts.push(`<review_instructions>\n${instructions}\n</review_instructions>`)
+
+  return parts.join('\n')
+}
+
 export function getImplementPrompt(plan: string): string {
   return `${getWorkflowContextPrompt()}**YOU ARE IN PHASE 2: IMPLEMENTATION**
 

@@ -4,7 +4,7 @@ import type { WorkflowTools } from '@polka-codes/workflow'
 import { z } from 'zod'
 import type { CliToolRegistry } from '../../workflow-tools'
 import type { JsonFilePart, JsonImagePart } from '../code.workflow'
-import { PLAN_PROMPT } from '../plan.prompt'
+import { PLAN_PROMPT } from '../prompts'
 
 const PlanSchema = z.object({
   plan: z.string().optional(),

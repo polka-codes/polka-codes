@@ -4,6 +4,7 @@ import type { Workflow } from '@polka-codes/workflow'
 import { z } from 'zod'
 import { UserCancelledError } from '../errors'
 import type { CliToolRegistry } from '../workflow-tools'
+import { COMMIT_MESSAGE_PROMPT } from './prompts'
 import { parseGitDiffNameStatus } from './workflow.utils'
 
 export type CommitWorkflowInput = {
@@ -19,21 +20,6 @@ type FileChange = {
 const commitMessageSchema = z.object({
   commitMessage: z.string(),
 })
-
-const COMMIT_MESSAGE_PROMPT = `
-You are an expert at writing git commit messages.
-Based on the provided list of staged files in <file_status>, the diff in <diff> and optional user context in <tool_input_context>, generate a concise and descriptive commit message.
-
-Follow the conventional commit format.
-
-Respond with a JSON object containing the commit message.
-Example format:
-\`\`\`json
-{
-  "commitMessage": "feat: add new feature\\n\\ndescribe the new feature in more detail"
-}
-\`\`\`
-`
 
 export const commitWorkflow: Workflow<CommitWorkflowInput, { commitMessage: string }, CliToolRegistry> = {
   name: 'Generate Commit Message',
