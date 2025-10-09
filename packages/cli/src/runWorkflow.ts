@@ -114,7 +114,7 @@ async function handleToolCall(
 
       let combinedContext = input.context ?? ''
       if (input.defaultContext) {
-        const { config } = parseOptions(context.command.parent?.opts() ?? {})
+        const { config } = parseOptions((context.command.parent ?? context.command).opts())
 
         const cwd = process.cwd()
         const agentConfig = config.agents?.[input.agent] ?? config.agents?.default ?? {}
@@ -326,7 +326,9 @@ async function handleToolCall(
       const { task } = toolCall.input as { task: string }
       context.spinner.stop()
 
-      const { config, providerConfig, verbose, maxMessageCount, budget, agent, silent } = parseOptions(context.command.parent?.opts() ?? {})
+      const { config, providerConfig, verbose, maxMessageCount, budget, agent, silent } = parseOptions(
+        (context.command.parent ?? context.command).opts(),
+      )
       const { Runner } = await import('./Runner') // Lazy import to avoid circular dependency
 
       const runner = new Runner({
@@ -365,9 +367,10 @@ export async function runWorkflow<
   workflowInput: TInput,
   requiresProvider: boolean = true,
 ): Promise<TOutput | undefined> {
-  const { json } = command.opts()
+  const globalOpts = (command.parent ?? command).opts()
+  const { json } = globalOpts
   const logger = json ? new console.Console(process.stderr) : console
-  const { providerConfig, config, verbose } = parseOptions(command.parent?.opts() ?? {})
+  const { providerConfig, config, verbose } = parseOptions(globalOpts)
 
   if (requiresProvider) {
     const commandConfig = providerConfig.getConfigForCommand(commandName)
@@ -383,7 +386,7 @@ export async function runWorkflow<
   const spinner = ora({ text: 'Running workflow...', ...(json && { stream: process.stderr }) }).start()
 
   const usage = new UsageMeter(merge(prices, config.prices ?? {}), { maxMessages: config.maxMessageCount, maxCost: config.budget })
-  const onEvent = verbose > 0 ? printEvent(verbose, usage, process.stderr) : undefined
+  const onEvent = printEvent(verbose, usage, process.stderr)
   const toolProvider = getProvider({ excludeFiles: config.excludeFiles })
 
   const agentConfig = providerConfig.getConfigForCommand(commandName)

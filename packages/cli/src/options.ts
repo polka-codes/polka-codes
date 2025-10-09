@@ -21,6 +21,7 @@ export interface CliOptions {
   agent?: string
   silent?: boolean
   file?: string[]
+  json?: boolean
 }
 
 export function addSharedOptions(command: Command) {
@@ -35,6 +36,7 @@ export function addSharedOptions(command: Command) {
     .option('-d --base-dir <path>', 'Base directory to run commands in')
     .option('--agent <agent>', 'Initial agent to use (default: architect)')
     .option('--file <path...>', 'File to include in the task')
+    .option('--json', 'Output workflow events as JSON')
     .option('--silent', 'Enable silent mode')
 }
 

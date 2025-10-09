@@ -15,14 +15,16 @@ const META_PROMPT = `
 You are a meta-agent that decides which workflow to use for a given task.
 Based on the user's task, decide whether to use the 'code' workflow or the 'agent' workflow.
 
-- Use the 'code' workflow for tasks that involve writing or modifying code, creating pull requests, fixing errors, etc.
-- Use the 'agent' workflow for tasks that can be handled by a specialized agent (e.g., 'architect', 'analyzer').
+- Use the 'code' workflow for complicated tasks that requires planning and modifying code.
+- Use the 'agent' workflow for simple tasks that does not need planning.
 
 If you choose the 'agent' workflow, you must also specify which agent to use.
 Available agents are: 'architect', 'analyzer', 'coder', 'code-fixer'.
 
 The user's task is:
+<task>
 {task}
+</task>
 
 Respond with a JSON object in a markdown block with the following structure:
 {

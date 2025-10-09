@@ -21,7 +21,7 @@ const program = new Command()
 program.name('polka').description('Polka Codes CLI').version(version)
 
 // Main command for executing tasks
-program.argument('[task]', 'The task to execute').action(runMeta)
+program.argument('[task]', 'The task to execute').action((task, _options, command) => runMeta(task, command))
 
 // Chat command
 program.command('chat').description('Start an interactive chat session').action(runChat)
