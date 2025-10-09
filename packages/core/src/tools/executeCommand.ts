@@ -53,7 +53,6 @@ export const handler: ToolHandler<typeof toolInfo, CommandProvider> = async (pro
 
   const { command, requiresApproval } = toolInfo.parameters.parse(args)
   try {
-    console.log('Executing command:', command, 'Requires approval:', requiresApproval)
     const result = await provider.executeCommand(command, requiresApproval)
     let message = `<command>${command}</command>
 <command_exit_code>${result.exitCode}</command_exit_code>

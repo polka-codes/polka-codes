@@ -7,6 +7,7 @@ exports[`should succeed when command passes on first attempt 1`] = `
   "tool": {
     "input": {
       "command": "bun test",
+      "pipe": true,
       "shell": true,
     },
     "tool": "executeCommand",
@@ -47,6 +48,7 @@ exports[`should prompt for command when not provided 2`] = `
   "tool": {
     "input": {
       "command": "bun typecheck && bun test",
+      "pipe": true,
       "shell": true,
     },
     "tool": "executeCommand",
@@ -87,6 +89,7 @@ exports[`should use check command as default when only check available 2`] = `
   "tool": {
     "input": {
       "command": "bun typecheck",
+      "pipe": true,
       "shell": true,
     },
     "tool": "executeCommand",
@@ -127,6 +130,7 @@ exports[`should use test command as default when only test available 2`] = `
   "tool": {
     "input": {
       "command": "bun test",
+      "pipe": true,
       "shell": true,
     },
     "tool": "executeCommand",
@@ -167,6 +171,7 @@ exports[`should combine check and test commands when both available 2`] = `
   "tool": {
     "input": {
       "command": "eslint . && jest",
+      "pipe": true,
       "shell": true,
     },
     "tool": "executeCommand",
@@ -207,6 +212,7 @@ exports[`should handle object-style script config 2`] = `
   "tool": {
     "input": {
       "command": "tsc --noEmit && vitest",
+      "pipe": true,
       "shell": true,
     },
     "tool": "executeCommand",
@@ -247,6 +253,7 @@ exports[`should handle no default command 2`] = `
   "tool": {
     "input": {
       "command": "npm run build",
+      "pipe": true,
       "shell": true,
     },
     "tool": "executeCommand",
@@ -271,6 +278,7 @@ exports[`should retry and invoke coder agent when command fails 1`] = `
   "tool": {
     "input": {
       "command": "bun test",
+      "pipe": true,
       "shell": true,
     },
     "tool": "executeCommand",
@@ -319,6 +327,7 @@ exports[`should retry and invoke coder agent when command fails 3`] = `
   "tool": {
     "input": {
       "command": "bun test",
+      "pipe": true,
       "shell": true,
     },
     "tool": "executeCommand",
@@ -507,6 +516,7 @@ exports[`should handle config with undefined scripts 2`] = `
   "tool": {
     "input": {
       "command": "custom-command",
+      "pipe": true,
       "shell": true,
     },
     "tool": "executeCommand",
@@ -547,6 +557,7 @@ exports[`should handle mixed script formats 2`] = `
   "tool": {
     "input": {
       "command": "eslint . && jest --coverage",
+      "pipe": true,
       "shell": true,
     },
     "tool": "executeCommand",

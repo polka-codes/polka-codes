@@ -108,18 +108,6 @@ export const codeWorkflow: Workflow<CodeWorkflowInput, PlainJson, CliToolRegistr
     if (checkCommandInput) {
       // Run fix workflow with the provided command
       yield* runSubWorkflow(tools, fixWorkflow, { command: checkCommandInput })
-    } else {
-      // Ask user if they want to run fix workflow
-      const shouldFix = yield* tools.confirm({
-        message: 'Do you want to run checks and fix any issues?',
-        default: false,
-      })
-
-      if (shouldFix) {
-        yield* runSubWorkflow(tools, fixWorkflow, {})
-      } else {
-        console.log('⚠️  Skipping error checking phase.\n')
-      }
     }
 
     return {

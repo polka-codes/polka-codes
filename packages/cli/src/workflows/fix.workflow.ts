@@ -53,14 +53,7 @@ export const fixWorkflow: Workflow<FixWorkflowInput, PlainJson, CliToolRegistry>
 
     for (let i = 0; i < 10; i++) {
       console.log(`Running command: ${command}`)
-      const { exitCode, stdout, stderr } = yield* tools.executeCommand({ command, shell: true })
-
-      if (stdout) {
-        console.log('Command stdout:\n', stdout)
-      }
-      if (stderr) {
-        console.error('Command stderr:\n', stderr)
-      }
+      const { exitCode, stdout, stderr } = yield* tools.executeCommand({ command, shell: true, pipe: true })
 
       if (exitCode === 0) {
         console.log('Command succeeded!')
