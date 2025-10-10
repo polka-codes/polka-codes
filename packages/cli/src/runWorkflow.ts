@@ -6,7 +6,7 @@ import os from 'node:os'
 import { dirname } from 'node:path'
 import type { LanguageModelV2 } from '@ai-sdk/provider'
 import { confirm as inquirerConfirm, input as inquirerInput, select as inquirerSelect } from '@inquirer/prompts'
-import { getProvider, listFiles, printEvent } from '@polka-codes/cli-shared'
+import { getProvider, listFiles, printEvent, readMultiline } from '@polka-codes/cli-shared'
 import {
   type AgentBase,
   type AgentNameType,
@@ -24,6 +24,7 @@ import {
   UsageMeter,
 } from '@polka-codes/core'
 import { type PlainJson, run, type ToolCall, type ToolSignature, type Workflow } from '@polka-codes/workflow'
+import chalk from 'chalk'
 import type { Command } from 'commander'
 import { merge } from 'lodash'
 import ora, { type Ora } from 'ora'
@@ -234,7 +235,10 @@ async function handleToolCall(
       // to allow ora to fully stop the spinner so inquirer can takeover the cli window
       await new Promise((resolve) => setTimeout(resolve, 50))
       try {
-        const result = await inquirerInput({ message, default: defaultValue })
+        let result = await inquirerInput({ message: `${message}${chalk.gray(' (type .m for multiline)')}`, default: defaultValue })
+        if (result === '.m') {
+          result = await readMultiline('Enter multiline text (Ctrl+D to finish):')
+        }
         context.spinner.start()
         return result
       } catch (_e) {
