@@ -23,7 +23,7 @@ export const metaWorkflow: Workflow<MetaWorkflowInput, any, CliToolRegistry> = {
   async *fn(input, _step, tools) {
     const { task } = input
 
-    console.log(`\n🤔 Deciding which workflow to use for task: "${task}"...\n`)
+    console.log(`\n🤔 Deciding which workflow to use for task...\n`)
 
     const { output: decision } = yield* tools.invokeAgent({
       agent: 'architect',
