@@ -96,8 +96,8 @@ async function handleToolCall(
         additionalTools: input.tools,
       })
 
-      const messages: any[] = input.messages.map((m: any) =>
-        typeof m === 'string' ? { role: 'user', content: m } : { role: m.type, content: m.content },
+      const messages = input.messages.map((m) =>
+        typeof m === 'string' ? { role: 'user' as const, content: m } : { role: m.type, content: m.content },
       )
 
       const lastMessage = messages.at(-1)
