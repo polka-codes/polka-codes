@@ -9,7 +9,13 @@ import { PLAN_PROMPT } from '../prompts'
 const PlanSchema = z.object({
   plan: z.string().optional(),
   question: z.string().optional(),
+  reason: z.string().optional(),
 })
+
+export type CreatePlanOutput = {
+  plan?: string
+  reason?: string
+}
 
 type CreatePlanInput = {
   tools: WorkflowTools<CliToolRegistry>
@@ -19,7 +25,7 @@ type CreatePlanInput = {
   files?: (JsonFilePart | JsonImagePart)[]
 }
 
-export async function* createPlan(input: CreatePlanInput): AsyncGenerator<any, string, any> {
+export async function* createPlan(input: CreatePlanInput): AsyncGenerator<any, CreatePlanOutput, any> {
   const { tools, task, files } = input
   let plan = input.plan || ''
   let userFeedback = input.userFeedback || ''
@@ -48,7 +54,11 @@ export async function* createPlan(input: CreatePlanInput): AsyncGenerator<any, s
       defaultContext: true,
     })
 
-    const { plan: newPlan, question } = output as z.infer<typeof PlanSchema>
+    const { plan: newPlan, question, reason } = output as z.infer<typeof PlanSchema>
+
+    if (reason) {
+      return { reason }
+    }
 
     if (newPlan !== undefined) {
       plan = newPlan
@@ -58,7 +68,7 @@ export async function* createPlan(input: CreatePlanInput): AsyncGenerator<any, s
       const answer = yield* tools.input({ message: question })
       userFeedback = `Question: ${question}\nAnswer: ${answer}`
     } else {
-      return plan
+      return { plan }
     }
   }
 }

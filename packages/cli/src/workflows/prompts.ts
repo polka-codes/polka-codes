@@ -202,13 +202,17 @@ When generating your plan, follow these formatting guidelines:
    b. Apply appropriate formatting based on guidelines
 3. If the requirements are not clear:
    a. Ask a clarifying question in the "question" field
+4. If the task is already implemented or no action is needed:
+   a. Do not generate a plan.
+   b. Provide a concise reason in the "reason" field.
 
 # Response Format
 
 Respond with a JSON object that matches the following schema:
 {
   "plan": "The generated or updated plan.",
-  "question": "The clarifying question to ask the user."
+  "question": "The clarifying question to ask the user.",
+  "reason": "If no plan is needed, provide a reason here."
 }
 `
 

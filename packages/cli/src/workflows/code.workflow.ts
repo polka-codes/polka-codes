@@ -5,7 +5,7 @@ import type { CliToolRegistry } from '../workflow-tools'
 import { fixWorkflow } from './fix.workflow'
 import { getImplementPrompt } from './prompts'
 import { runSubWorkflow } from './runSubWorkflow'
-import { createPlan } from './utils/createPlan'
+import { type CreatePlanOutput, createPlan } from './utils/createPlan'
 
 export type JsonImagePart = {
   type: 'image'
@@ -38,12 +38,20 @@ export const codeWorkflow: Workflow<CodeWorkflowInput, PlainJson, CliToolRegistr
     // Planning phase
     while (true) {
       console.log('\n📋 Phase 1: Creating implementation plan...\n')
-      plan = yield* createPlan({
+      const planResult: CreatePlanOutput = yield* createPlan({
         tools,
         task,
         userFeedback,
         files,
       })
+
+      if (planResult.reason) {
+        console.log('No plan generated. Reason:', planResult.reason)
+        return {
+          success: true,
+        }
+      }
+      plan = planResult.plan || ''
 
       console.log('\n📋 Generated Implementation Plan:\n')
       console.log(plan)
