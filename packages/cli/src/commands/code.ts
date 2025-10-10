@@ -41,7 +41,7 @@ const readStdin = async (timeoutMs = 1000): Promise<string> => {
   })
 }
 
-export async function runCode(task: string | undefined, options: { check?: string }, command: Command) {
+export async function runCode(task: string | undefined, _options: any, command: Command) {
   let taskInput = task
   const stdin = await readStdin()
 
@@ -106,7 +106,6 @@ export async function runCode(task: string | undefined, options: { check?: strin
 
   const workflowInput: CodeWorkflowInput = {
     task: taskInput,
-    checkCommand: options.check,
     files: fileContents,
   }
 
@@ -116,5 +115,4 @@ export async function runCode(task: string | undefined, options: { check?: strin
 export const codeCommand = new Command('code')
   .description('Plan and implement a feature or task using architect and coder agents.')
   .argument('[task]', 'The task to plan and implement.')
-  .option('-c, --check <command>', 'The command to run for checking/testing after implementation.')
   .action(runCode)

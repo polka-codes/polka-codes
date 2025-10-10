@@ -22,7 +22,6 @@ export type JsonFilePart = {
 
 export type CodeWorkflowInput = {
   task: string
-  checkCommand?: string
   files?: (JsonFilePart | JsonImagePart)[]
 }
 
@@ -30,7 +29,7 @@ export const codeWorkflow: Workflow<CodeWorkflowInput, PlainJson, CliToolRegistr
   name: 'Code Task',
   description: 'Plan and implement a feature or task using architect and coder agents.',
   async *fn(input, _step, tools) {
-    const { task, files, checkCommand } = input
+    const { task, files } = input
     let plan = ''
     let userFeedback = ''
     let implementationComplete = false
@@ -99,12 +98,8 @@ export const codeWorkflow: Workflow<CodeWorkflowInput, PlainJson, CliToolRegistr
     console.log('\n✅ Implementation complete!\n')
 
     // Fixing phase
-    if (checkCommand) {
-      console.log('\n🔧 Phase 3: Checking for errors...\n')
-      yield* runSubWorkflow(tools, fixWorkflow, { command: checkCommand, interactive: false })
-    } else {
-      console.log('\n✅ Skipping checks.')
-    }
+    console.log('\n🔧 Phase 3: Checking for errors...\n')
+    yield* runSubWorkflow(tools, fixWorkflow, { interactive: false })
 
     return {
       success: implementationComplete,

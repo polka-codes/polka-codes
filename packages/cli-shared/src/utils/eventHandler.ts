@@ -17,7 +17,7 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter, stream: Writ
     switch (event.kind) {
       case TaskEventKind.StartTask:
         toolCallStats.clear()
-        if (verbose > 1) {
+        if (verbose > 2) {
           customConsole.log(`\n====== System Prompt ======\n${event.systemPrompt}`)
           customConsole.log('\n\n================\n')
         }
@@ -25,7 +25,7 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter, stream: Writ
       case TaskEventKind.StartRequest:
         customConsole.log('\n\n======== New Request ========\n')
 
-        if (verbose) {
+        if (verbose > 1) {
           for (const message of event.userMessage) {
             const userMessage = message.content
             if (typeof userMessage === 'string') {
@@ -51,7 +51,7 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter, stream: Writ
                     break
                   case 'tool-result':
                     customConsole.log(chalk.yellow(`[Tool result: ${content.toolName}]`))
-                    if (verbose > 0) {
+                    if (verbose > 1) {
                       customConsole.log(content.output)
                     }
                     break
@@ -67,7 +67,7 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter, stream: Writ
       case TaskEventKind.EndRequest:
         customConsole.log('\n\n======== Request Ended ========\n')
 
-        if (verbose) {
+        if (verbose > 1) {
           usageMeter.printUsage(customConsole)
         }
 
