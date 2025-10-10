@@ -19,10 +19,6 @@ export const planCommand = new Command('plan')
       }
     }
 
-    if (fileContent && !taskInput) {
-      taskInput = 'Improve the existing plan.'
-    }
-
     if (!taskInput) {
       try {
         taskInput = await input({ message: 'What is the task you want to plan?' })
@@ -34,5 +30,9 @@ export const planCommand = new Command('plan')
       }
     }
 
-    await runWorkflow('plan', planWorkflow, command, { task: taskInput, fileContent, filePath: options.file })
+    await runWorkflow('plan', planWorkflow, command, {
+      task: taskInput,
+      fileContent,
+      filePath: options.file,
+    })
   })

@@ -69,11 +69,19 @@ export type WorkflowStatus<TTools extends ToolRegistry, TOutput extends PlainJso
 
 import { makeStepFn } from './helpers'
 
+export type WorkflowResult<TInput extends PlainJson, TOutput extends PlainJson, TTools extends ToolRegistry> =
+  | (WorkflowStatusPending<TTools> & {
+      next: (toolResult: TTools[keyof TTools]['output']) => Promise<WorkflowResult<TInput, TOutput, TTools>>
+      throw: (error: Error) => Promise<WorkflowResult<TInput, TOutput, TTools>>
+    })
+  | WorkflowStatusCompleted<TOutput>
+  | WorkflowStatusFailed
+
 export async function run<TInput extends PlainJson, TOutput extends PlainJson, TTools extends ToolRegistry>(
   workflow: Workflow<TInput, TOutput, TTools>,
   input: TInput,
   stepFn?: StepFn<TTools>,
-) {
+): Promise<WorkflowResult<TInput, TOutput, TTools>> {
   if (!stepFn) {
     stepFn = makeStepFn<TTools>()
   }
@@ -105,7 +113,9 @@ export async function run<TInput extends PlainJson, TOutput extends PlainJson, T
     return status
   }
 
-  const next = async (toolResult: TTools[keyof TTools]['output']) => {
+  const next: (toolResult: TTools[keyof TTools]['output']) => Promise<WorkflowResult<TInput, TOutput, TTools>> = async (
+    toolResult: TTools[keyof TTools]['output'],
+  ) => {
     switch (status.status) {
       case 'pending': {
         try {
@@ -119,7 +129,7 @@ export async function run<TInput extends PlainJson, TOutput extends PlainJson, T
           status = { status: 'failed', error: e }
           return status
         }
-        return { ...status, next, stepFn }
+        return { ...status, next, throw: throwError }
       }
       case 'completed':
       case 'failed':
@@ -127,8 +137,34 @@ export async function run<TInput extends PlainJson, TOutput extends PlainJson, T
     }
   }
 
-  return {
-    ...status,
-    next,
+  const throwError: (error: Error) => Promise<WorkflowResult<TInput, TOutput, TTools>> = async (error: Error) => {
+    switch (status.status) {
+      case 'pending': {
+        try {
+          const { value, done } = await gen.throw(error)
+          if (done) {
+            status = { status: 'completed', output: value }
+            return status
+          }
+          status = { status: 'pending', tool: value }
+        } catch (e) {
+          status = { status: 'failed', error: e }
+          return status
+        }
+        return { ...status, next, throw: throwError }
+      }
+      case 'completed':
+      case 'failed':
+        return status
+    }
   }
+
+  if (status.status === 'pending') {
+    return {
+      ...status,
+      next,
+      throw: throwError,
+    }
+  }
+  return status
 }

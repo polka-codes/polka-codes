@@ -4,6 +4,7 @@ exports[`should generate commit message with staged files 1`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {},
     "tool": "printChangeFile",
@@ -16,7 +17,7 @@ exports[`should generate commit message with staged files 2`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "args": [
@@ -37,7 +38,7 @@ exports[`should generate commit message with staged files 3`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "args": [
@@ -56,7 +57,7 @@ exports[`should generate commit message with staged files 4`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "agent": "analyzer",
@@ -202,7 +203,7 @@ exports[`should generate commit message with staged files 5`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "message": 
@@ -234,7 +235,7 @@ exports[`should auto-stage all files when all=true 1`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "args": [
@@ -253,7 +254,7 @@ exports[`should auto-stage all files when all=true 2`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "args": [
@@ -274,7 +275,7 @@ exports[`should auto-stage all files when all=true 3`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "args": [
@@ -293,7 +294,7 @@ exports[`should auto-stage all files when all=true 4`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "agent": "analyzer",
@@ -437,7 +438,7 @@ exports[`should auto-stage all files when all=true 5`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "message": "chore: update file",
@@ -461,7 +462,7 @@ exports[`should prompt user and stage when confirmed 1`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "default": false,
@@ -477,7 +478,7 @@ exports[`should prompt user and stage when confirmed 2`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "args": [
@@ -496,7 +497,7 @@ exports[`should prompt user and stage when confirmed 3`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "args": [
@@ -517,7 +518,7 @@ exports[`should prompt user and stage when confirmed 4`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "args": [
@@ -536,7 +537,7 @@ exports[`should prompt user and stage when confirmed 5`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "agent": "analyzer",
@@ -680,7 +681,7 @@ exports[`should prompt user and stage when confirmed 6`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "message": "fix: update logic",
@@ -718,7 +719,7 @@ exports[`should include user context in agent prompt 1`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "agent": "analyzer",
@@ -874,7 +875,7 @@ exports[`should handle various file statuses 1`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "agent": "analyzer",
@@ -1031,7 +1032,7 @@ exports[`should handle empty diff name status result 1`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "agent": "analyzer",

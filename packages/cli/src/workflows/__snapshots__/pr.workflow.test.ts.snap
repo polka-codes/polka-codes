@@ -4,6 +4,7 @@ exports[`should create PR with user context 1`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "args": [
@@ -21,7 +22,7 @@ exports[`should create PR with user context 2`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "args": [
@@ -41,7 +42,7 @@ exports[`should create PR with user context 3`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "args": [
@@ -62,7 +63,7 @@ exports[`should create PR with user context 4`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "args": [
@@ -83,7 +84,7 @@ exports[`should create PR with user context 5`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "args": [
@@ -107,7 +108,7 @@ exports[`should create PR with user context 6`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "args": [
@@ -127,7 +128,7 @@ exports[`should create PR with user context 7`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "agent": "analyzer",
@@ -275,7 +276,7 @@ exports[`should create PR with user context 8`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "description": 
@@ -313,6 +314,7 @@ exports[`should create PR without context 1`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "args": [
@@ -330,7 +332,7 @@ exports[`should create PR without context 2`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "args": [
@@ -350,7 +352,7 @@ exports[`should create PR without context 3`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "args": [
@@ -371,7 +373,7 @@ exports[`should create PR without context 4`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "args": [
@@ -392,7 +394,7 @@ exports[`should create PR without context 5`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "args": [
@@ -416,7 +418,7 @@ exports[`should create PR without context 6`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "args": [
@@ -436,7 +438,7 @@ exports[`should create PR without context 7`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "agent": "analyzer",
@@ -580,7 +582,7 @@ exports[`should create PR without context 8`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "description": "Updated lodash to latest version",
@@ -609,11 +611,18 @@ exports[`should fail when GitHub CLI is not installed 1`] = `
 }
 `;
 
+exports[`should fail when unable to determine default branch 1`] = `
+{
+  "error": "Could not determine default branch name.",
+  "status": "failed",
+}
+`;
+
 exports[`should handle branch with special characters 1`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "args": [
@@ -634,7 +643,7 @@ exports[`should handle branch with special characters 2`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "agent": "analyzer",
@@ -788,7 +797,7 @@ exports[`should handle no commits between branches 1`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "args": [
@@ -808,7 +817,7 @@ exports[`should handle no commits between branches 2`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "agent": "analyzer",
@@ -961,7 +970,7 @@ exports[`should handle empty diff 1`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "agent": "analyzer",
@@ -1110,7 +1119,7 @@ exports[`should handle multiple commits with various messages 1`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "args": [
@@ -1130,7 +1139,7 @@ exports[`should handle multiple commits with various messages 2`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "agent": "analyzer",
@@ -1310,7 +1319,7 @@ exports[`should use develop as default branch 1`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "args": [
@@ -1344,7 +1353,7 @@ exports[`should use gh repo view to determine default branch 1`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "args": [
@@ -1378,7 +1387,7 @@ exports[`should use git remote show origin to determine default branch 1`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "args": [

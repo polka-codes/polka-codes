@@ -4,6 +4,7 @@ exports[`should succeed when command passes on first attempt 1`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "command": "bun test",
@@ -29,6 +30,7 @@ exports[`should prompt for command when not provided 1`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "default": "bun typecheck && bun test -u",
@@ -44,7 +46,7 @@ exports[`should prompt for command when not provided 2`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "command": "bun typecheck && bun test",
@@ -70,6 +72,7 @@ exports[`should use check command as default when only check available 1`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "default": "bun typecheck && bun test -u",
@@ -85,7 +88,7 @@ exports[`should use check command as default when only check available 2`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "command": "bun typecheck",
@@ -111,6 +114,7 @@ exports[`should use test command as default when only test available 1`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "default": "bun typecheck && bun test -u",
@@ -126,7 +130,7 @@ exports[`should use test command as default when only test available 2`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "command": "bun test",
@@ -152,6 +156,7 @@ exports[`should combine check and test commands when both available 1`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "default": "bun typecheck && bun test -u",
@@ -167,7 +172,7 @@ exports[`should combine check and test commands when both available 2`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "command": "eslint . && jest",
@@ -193,6 +198,7 @@ exports[`should handle object-style script config 1`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "default": "bun typecheck && bun test -u",
@@ -208,7 +214,7 @@ exports[`should handle object-style script config 2`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "command": "tsc --noEmit && vitest",
@@ -234,6 +240,7 @@ exports[`should handle no default command 1`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "default": "bun typecheck && bun test -u",
@@ -249,7 +256,7 @@ exports[`should handle no default command 2`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "command": "npm run build",
@@ -275,6 +282,7 @@ exports[`should retry and invoke coder agent when command fails 1`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "command": "bun test",
@@ -291,7 +299,7 @@ exports[`should retry and invoke coder agent when command fails 2`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "agent": "coder",
@@ -323,7 +331,7 @@ exports[`should retry and invoke coder agent when command fails 3`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "command": "bun test",
@@ -358,7 +366,7 @@ exports[`should handle command with stdout and stderr 1`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "agent": "coder",
@@ -415,7 +423,7 @@ exports[`should handle command with only stdout 1`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "agent": "coder",
@@ -456,7 +464,7 @@ exports[`should handle command with only stderr 1`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "agent": "coder",
@@ -497,6 +505,7 @@ exports[`should handle config with undefined scripts 1`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "default": "bun typecheck && bun test -u",
@@ -512,7 +521,7 @@ exports[`should handle config with undefined scripts 2`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "command": "custom-command",
@@ -538,6 +547,7 @@ exports[`should handle mixed script formats 1`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "default": "bun typecheck && bun test -u",
@@ -553,7 +563,7 @@ exports[`should handle mixed script formats 2`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "command": "eslint . && jest --coverage",

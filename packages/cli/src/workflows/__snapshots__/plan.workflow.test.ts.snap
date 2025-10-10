@@ -4,6 +4,7 @@ exports[`should generate new plan without questions and save with default path 1
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "agent": "architect",
@@ -222,7 +223,7 @@ exports[`should generate new plan without questions and save with default path 2
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "choices": [
@@ -259,7 +260,7 @@ exports[`should generate new plan without questions and save with default path 3
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "content": 
@@ -288,6 +289,7 @@ exports[`should generate plan with clarifying question 1`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "agent": "architect",
@@ -506,7 +508,7 @@ exports[`should generate plan with clarifying question 2`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "message": "What framework do you want to use?",
@@ -521,7 +523,7 @@ exports[`should generate plan with clarifying question 3`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "agent": "architect",
@@ -743,7 +745,7 @@ exports[`should generate plan with clarifying question 4`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "choices": [
@@ -787,6 +789,7 @@ exports[`should update existing plan 1`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "agent": "architect",
@@ -1011,7 +1014,7 @@ exports[`should update existing plan 2`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "choices": [
@@ -1055,7 +1058,7 @@ exports[`should handle user feedback and regenerate 1`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "message": "What changes do you want to make?",
@@ -1070,7 +1073,7 @@ exports[`should handle user feedback and regenerate 2`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "agent": "architect",
@@ -1305,7 +1308,7 @@ exports[`should regenerate plan from scratch 1`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "agent": "architect",
@@ -1531,7 +1534,7 @@ exports[`should execute plan 1`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "task": 
@@ -1580,7 +1583,7 @@ exports[`should save plan with custom path 1`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "content": 
@@ -1609,7 +1612,7 @@ exports[`should handle plan with both plan and question returned 1`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "message": "Which CI platform do you prefer: GitHub Actions, GitLab CI, or Jenkins?",
@@ -1631,6 +1634,67 @@ exports[`should handle empty task input 1`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
+  "throw": [Function: AsyncFunction],
+  "tool": {
+    "input": {
+      "default": undefined,
+      "message": "What is the task you want to plan?",
+    },
+    "tool": "input",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should handle empty task input 2`] = `
+{
+  "output": {},
+  "status": "completed",
+}
+`;
+
+exports[`should handle plan with checklist format 1`] = `
+{
+  "output": {},
+  "status": "completed",
+}
+`;
+
+exports[`should handle complex plan with mixed formats 1`] = `
+{
+  "output": {},
+  "status": "completed",
+}
+`;
+
+exports[`should handle workflow with question, feedback, and save cycle 1`] = `
+{
+  "output": {},
+  "status": "completed",
+}
+`;
+
+exports[`should prompt for task when none is provided 1`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "throw": [Function: AsyncFunction],
+  "tool": {
+    "input": {
+      "default": undefined,
+      "message": "What is the task you want to plan?",
+    },
+    "tool": "input",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should prompt for task when none is provided 2`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "agent": "architect",
@@ -1647,7 +1711,7 @@ You are an expert planner. Your goal is to create a detailed plan for a given ta
 
 The user has provided a task:
 <task>
-
+Create a new feature
 </task>
 
 
@@ -1845,31 +1909,324 @@ Set {
 }
 `;
 
-exports[`should handle empty task input 2`] = `
+exports[`should prompt for improvement when only a plan is provided 1`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "throw": [Function: AsyncFunction],
+  "tool": {
+    "input": {
+      "default": "Review and improve the plan",
+      "message": "How would you like to improve the plan?",
+    },
+    "tool": "input",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should prompt for improvement when only a plan is provided 2`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "throw": [Function: AsyncFunction],
+  "tool": {
+    "input": {
+      "agent": "architect",
+      "defaultContext": true,
+      "messages": [
+        {
+          "content": 
+"
+# Role and Objective
+
+You are an expert planner. Your goal is to create a detailed plan for a given task.
+
+# Task Input
+
+The user has provided a task:
+<task>
+Add more details
+</task>
+
+The content of an existing plan file:
+<plan_file>
+Some existing plan
+</plan_file>
+
+# Plan Format Guidelines
+
+When generating your plan, follow these formatting guidelines:
+
+1. Number major sections to provide clear structure:
+   a. Use numbers (1., 2., 3., etc.) for top-level sections
+   b. Use nested numbering (1.1, 1.2) or letters (a., b., c.) for sub-sections
+   c. This makes sections easy to reference and understand
+   d. Provides clear hierarchy and organization
+
+   Example section numbering:
+   1. Project Setup
+      1.1 Initialize repository
+      1.2 Configure dependencies
+   2. Implementation
+      2.1 Core features
+      2.2 Tests
+
+2. Use numbered lists when the order of steps matters:
+   a. Sequential steps where one depends on the previous
+   b. Steps that must be performed in a specific order
+   c. Processes with clear progression
+   d. When steps need to be referenced by number
+
+   Example numbered list format:
+   1. First step that must be completed first
+   2. Second step that depends on the first
+   3. Third step that follows from the second
+
+3. Use checklist format (markdown checkboxes) when the plan involves:
+   a. Multiple independent action items
+   b. Trackable items that can be marked as complete
+   c. Verifiable completion criteria
+   d. Tasks that benefit from progress tracking
+
+   Example checklist format:
+   - [ ] First action item
+   - [ ] Second action item
+   - [ ] Third action item
+
+4. Use narrative or structured text format when the plan involves:
+   a. High-level strategies or conceptual approaches
+   b. Explanations or background information
+   c. Decision-making guidance
+   d. Context that doesn't translate well to discrete steps
+
+5. Combine formats when appropriate:
+   a. Use numbered sections for overall structure
+   b. Use narrative text for context and explanation
+   c. Use numbered lists for sequential steps
+   d. Use checklist items for trackable actions
+
+   Example combined format:
+   1. Phase 1: Setup
+      First, we need to configure the environment...
+      1. Install dependencies
+      2. Configure settings
+      3. Verify installation
+
+   2. Phase 2: Implementation
+      - [ ] Implement feature A
+      - [ ] Implement feature B
+      - [ ] Write tests
+
+6. Only include relevant details for AI Agents:
+    a. Avoid unnecessary technical jargon or implementation details
+    b. Avoid steps requires human intervention or cannot be done by an AI agent
+
+# Your Tasks
+
+1. Analyze the task and the existing plan (if any).
+2. If the requirements are clear and you can generate or update the plan:
+   a. Provide the plan in the "plan" field
+   b. Apply appropriate formatting based on guidelines
+3. If the requirements are not clear:
+   a. Ask a clarifying question in the "question" field
+
+# Response Format
+
+Respond with a JSON object that matches the following schema:
+{
+  "plan": "The generated or updated plan.",
+  "question": "The clarifying question to ask the user."
+}
+"
+,
+          "type": "user",
+        },
+      ],
+      "outputSchema": _ {
+        "_def": {
+          "shape": [native code],
+          "type": "object",
+        },
+        "_zod": {
+          "bag": {},
+          "constr": [Function: _],
+          "def": {
+            "shape": [native code],
+            "type": "object",
+          },
+          "deferred": [
+            [Function],
+            [Function],
+          ],
+          "parse": [Function],
+          "propValues": [native code],
+          "run": [Function],
+          "traits":           
+Set {
+            "ZodObject",
+            "$ZodObjectJIT",
+            "$ZodObject",
+            "$ZodType",
+            "ZodType",
+          }
+,
+          "version": {
+            "major": 4,
+            "minor": 1,
+            "patch": 12,
+          },
+        },
+        "and": [Function],
+        "array": [Function],
+        "brand": [Function],
+        "catch": [Function],
+        "catchall": [Function],
+        "check": [Function],
+        "clone": [Function],
+        "decode": [Function],
+        "decodeAsync": [Function: AsyncFunction],
+        "def": {
+          "shape": [native code],
+          "type": "object",
+        },
+        "default": [Function],
+        "describe": [Function],
+        "description": [native code],
+        "encode": [Function],
+        "encodeAsync": [Function: AsyncFunction],
+        "extend": [Function],
+        "isNullable": [Function],
+        "isOptional": [Function],
+        "keyof": [Function],
+        "loose": [Function],
+        "merge": [Function],
+        "meta": [Function],
+        "nonoptional": [Function],
+        "nullable": [Function],
+        "nullish": [Function],
+        "omit": [Function],
+        "optional": [Function],
+        "or": [Function],
+        "overwrite": [Function],
+        "parse": [Function],
+        "parseAsync": [Function: AsyncFunction],
+        "partial": [Function],
+        "passthrough": [Function],
+        "pick": [Function],
+        "pipe": [Function],
+        "prefault": [Function],
+        "readonly": [Function],
+        "refine": [Function],
+        "register": [Function],
+        "required": [Function],
+        "safeDecode": [Function],
+        "safeDecodeAsync": [Function: AsyncFunction],
+        "safeEncode": [Function],
+        "safeEncodeAsync": [Function: AsyncFunction],
+        "safeExtend": [Function],
+        "safeParse": [Function],
+        "safeParseAsync": [Function: AsyncFunction],
+        "shape": [native code],
+        "spa": [Function: AsyncFunction],
+        "strict": [Function],
+        "strip": [Function],
+        "superRefine": [Function],
+        "transform": [Function],
+        "type": "object",
+        "~standard": {
+          "validate": [Function],
+          "vendor": "zod",
+          "version": 1,
+        },
+      },
+    },
+    "tool": "invokeAgent",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should handle user cancellation of initial task input 1`] = `
+{
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "throw": [Function: AsyncFunction],
+  "tool": {
+    "input": {
+      "default": undefined,
+      "message": "What is the task you want to plan?",
+    },
+    "tool": "input",
+    "type": "tool",
+  },
+}
+`;
+
+exports[`should handle user cancellation of initial task input 2`] = `
 {
   "output": {},
   "status": "completed",
 }
 `;
 
-exports[`should handle plan with checklist format 1`] = `
+exports[`should handle user cancellation of feedback input 1`] = `
 {
-  "output": {},
-  "status": "completed",
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "throw": [Function: AsyncFunction],
+  "tool": {
+    "input": {
+      "choices": [
+        {
+          "name": "Save Plan",
+          "value": "save",
+        },
+        {
+          "name": "Execute Plan",
+          "value": "execute",
+        },
+        {
+          "name": "Provide Feedback",
+          "value": "feedback",
+        },
+        {
+          "name": "Regenerate Plan",
+          "value": "regenerate",
+        },
+        {
+          "name": "Exit",
+          "value": "exit",
+        },
+      ],
+      "message": "What do you want to do?",
+    },
+    "tool": "select",
+    "type": "tool",
+  },
 }
 `;
 
-exports[`should handle complex plan with mixed formats 1`] = `
+exports[`should save a new plan directly using a provided filePath 1`] = `
 {
-  "output": {},
-  "status": "completed",
+  "next": [Function: AsyncFunction],
+  "status": "pending",
+  "throw": [Function: AsyncFunction],
+  "tool": {
+    "input": {
+      "content": "My plan",
+      "path": "path/to/plan.md",
+    },
+    "tool": "writeToFile",
+    "type": "tool",
+  },
 }
 `;
 
-exports[`should handle workflow with question, feedback, and save cycle 1`] = `
+exports[`should handle user cancellation of save path input 1`] = `
 {
-  "output": {},
-  "status": "completed",
+  "error": [Error: User cancelled],
+  "status": "failed",
 }
 `;
 
@@ -1877,7 +2234,7 @@ exports[`should update existing plan with filePath provided 1`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "content": 

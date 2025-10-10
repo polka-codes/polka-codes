@@ -11,6 +11,7 @@ exports[`should run a workflow with one tool 1`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "a": 3,
@@ -33,6 +34,7 @@ exports[`should run a workflow with multiple tools 1`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "a": "hello",
@@ -48,7 +50,7 @@ exports[`should run a workflow with multiple tools 2`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "a": "hello ",
@@ -78,6 +80,7 @@ exports[`should handle failing after a tool call 1`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "a": 3,
@@ -100,6 +103,7 @@ exports[`should support tool calls in step functions 1`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "a": 5,
@@ -122,6 +126,7 @@ exports[`should support multiple tool calls in step functions 1`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "a": 3,
@@ -137,7 +142,7 @@ exports[`should support multiple tool calls in step functions 2`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
-  "stepFn": [Function],
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "a": 8,
@@ -160,6 +165,7 @@ exports[`should support mixing regular and generator steps 1`] = `
 {
   "next": [Function: AsyncFunction],
   "status": "pending",
+  "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
       "a": 5,

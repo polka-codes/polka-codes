@@ -4,7 +4,7 @@ import type { CliToolRegistry } from '../workflow-tools'
 import { createPlan } from './utils/createPlan'
 
 export type PlanWorkflowInput = {
-  task: string
+  task?: string
   fileContent?: string
   filePath?: string
 }
@@ -15,7 +15,8 @@ export const planWorkflow: Workflow<PlanWorkflowInput, PlainJson, CliToolRegistr
   name: 'Plan Task',
   description: 'Create or update a plan for a given task.',
   async *fn(input, _step, tools) {
-    const { task, fileContent, filePath } = input
+    const { fileContent, filePath } = input
+    let currentTask = input.task
     let plan = fileContent || ''
     let userFeedback = ''
     let state: State = 'Generating'
@@ -23,9 +24,23 @@ export const planWorkflow: Workflow<PlanWorkflowInput, PlainJson, CliToolRegistr
     while (state !== 'Done') {
       switch (state) {
         case 'Generating': {
+          if (!currentTask) {
+            const message = plan ? 'How would you like to improve the plan?' : 'What is the task you want to plan?'
+            const defaultTask = plan ? 'Review and improve the plan' : undefined
+            try {
+              currentTask = yield* tools.input({
+                message,
+                default: defaultTask,
+              })
+            } catch (_error) {
+              state = 'Done'
+              break
+            }
+          }
+
           plan = yield* createPlan({
             tools,
-            task,
+            task: currentTask,
             plan,
             userFeedback,
           })
