@@ -37,10 +37,6 @@ Example format:
 \`\`\`
 `
 
-export function getFixWorkflowPrompt(command: string, exitCode: number, stdout: string, stderr: string): string {
-  return `The command "${command}" failed with exit code ${exitCode}.\nPlease fix the code.\n\nstdout:\n${stdout}\n\nstderr:\n${stderr}\n`
-}
-
 export const INIT_WORKFLOW_ANALYZE_PROMPT = `
 Role: Analyzer agent
 Goal: Produce a valid polkacodes YAML configuration for the project.

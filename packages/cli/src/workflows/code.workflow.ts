@@ -32,7 +32,6 @@ export const codeWorkflow: Workflow<CodeWorkflowInput, PlainJson, CliToolRegistr
     const { task, files } = input
     let plan = ''
     let userFeedback = ''
-    let implementationComplete = false
 
     // Planning phase
     while (true) {
@@ -94,16 +93,14 @@ export const codeWorkflow: Workflow<CodeWorkflowInput, PlainJson, CliToolRegistr
       defaultContext: true,
     })
 
-    implementationComplete = true
     console.log('\n✅ Implementation complete!\n')
 
     // Fixing phase
     console.log('\n🔧 Phase 3: Checking for errors...\n')
-    yield* runSubWorkflow(tools, fixWorkflow, { interactive: false })
+    yield* runSubWorkflow(tools, fixWorkflow, { interactive: false, task: input.task })
 
     return {
-      success: implementationComplete,
-      plan,
+      success: true,
     }
   },
 }

@@ -2,10 +2,11 @@
 import { loadConfig } from '@polka-codes/cli-shared'
 import type { PlainJson, Workflow } from '@polka-codes/workflow'
 import type { CliToolRegistry } from '../workflow-tools'
-import { getFixWorkflowPrompt } from './prompts'
+import { getFixPrompt } from './prompts'
 
 export type FixWorkflowInput = {
   command?: string
+  task?: string
   interactive?: boolean
 }
 
@@ -13,8 +14,8 @@ export const fixWorkflow: Workflow<FixWorkflowInput, PlainJson, CliToolRegistry>
   name: 'Fix',
   description: 'Fix an issue by running a command repeatedly.',
   async *fn(input, _step, tools) {
-    let command = input.command
-    const interactive = input.interactive ?? true
+    const { command: inputCommand, task, interactive = true } = input
+    let command = inputCommand
 
     if (!command) {
       const config = loadConfig()
@@ -74,7 +75,7 @@ export const fixWorkflow: Workflow<FixWorkflowInput, PlainJson, CliToolRegistry>
 
       console.log(`Command failed with exit code ${exitCode}. Asking agent to fix it...`)
 
-      const prompt = getFixWorkflowPrompt(command, exitCode, stdout, stderr)
+      const prompt = getFixPrompt(command, exitCode, stdout, stderr, i + 1, 10, task)
 
       yield* tools.invokeAgent({
         agent: 'coder',
