@@ -53,6 +53,8 @@ export const fixWorkflow: Workflow<FixWorkflowInput, PlainJson, CliToolRegistry>
         if (!command) {
           throw new Error('No command provided. Aborting.')
         }
+      } else {
+        command = defaultCommand
       }
 
       if (!command) {
