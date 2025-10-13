@@ -3,21 +3,26 @@
 import { AiProvider } from './getModel'
 import models from './prices'
 
+export type GetProviderOptionsArgs = {
+  provider: AiProvider
+  modelId: string
+  parameters?: {
+    thinkingBudgetTokens?: number
+    [key: string]: any
+  }
+  supportThinking?: boolean
+}
+
 /**
  * Generates provider-specific options for enabling thinking capabilities.
  *
- * @param provider The provider name.
- * @param modelId The model ID.
- * @param thinkingBudgetTokens The number of tokens to budget for thinking.
- * @param supportThinking A boolean to force thinking support. If not provided, it will check the model provider.
+ * @param options The options for generating provider options.
  * @returns A provider options object for the `streamText` call.
  */
-export function getProviderOptions(
-  provider: AiProvider,
-  modelId: string,
-  thinkingBudgetTokens: number,
-  supportThinking?: boolean,
-): Record<string, any> {
+export function getProviderOptions(options: GetProviderOptionsArgs): Record<string, any> {
+  const { provider, modelId, parameters, supportThinking } = options
+  const thinkingBudgetTokens = parameters?.thinkingBudgetTokens ?? 0
+
   if (thinkingBudgetTokens <= 0 || !provider || !modelId) {
     return {}
   }

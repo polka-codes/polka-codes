@@ -31,6 +31,7 @@ export type AgentContextParameters = {
   os?: string
   policies?: AgentPolicy[]
   modelParameters?: Record<string, any>
+  providerOptions?: Record<string, any>
   scripts?: Record<string, string | { command: string; description: string }>
   retryCount?: number
   requestTimeoutSeconds?: number
@@ -80,7 +81,10 @@ export async function handleToolCall(
         toolFormat: context.parameters.toolFormat ?? 'native',
         policies: context.parameters.policies ?? [],
         usageMeter: context.parameters.usageMeter,
-        parameters: context.parameters.modelParameters,
+        parameters: {
+          ...context.parameters.modelParameters,
+          providerOptions: context.parameters.providerOptions,
+        },
         scripts: context.parameters.scripts,
         callback: context.agentCallback,
         requireToolUse: false,

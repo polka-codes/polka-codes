@@ -146,7 +146,9 @@ export class Runner {
         const ai = getOrCreateLlm(agentName)
         const config = this.#options.providerConfig.getConfigForAgent(agentName)
 
-        const providerOptions = config ? getProviderOptions(config.provider, ai.modelId, config.parameters?.thinkingBudgetTokens ?? 0) : {}
+        const providerOptions = config
+          ? getProviderOptions({ provider: config.provider, modelId: ai.modelId, parameters: config.parameters })
+          : {}
 
         const additionalTools = []
         if (this.#options.interactive) {

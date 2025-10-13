@@ -10,6 +10,7 @@ import { merge } from 'lodash'
 import ora from 'ora'
 import { UserCancelledError } from './errors'
 import { getModel } from './getModel'
+import { getProviderOptions } from './getProviderOptions'
 import { parseOptions } from './options'
 import prices from './prices'
 import { type AgentContextParameters, handleToolCall } from './tool-implementations'
@@ -50,11 +51,20 @@ export async function runWorkflow<
 
   const agentConfig = providerConfig.getConfigForCommand(commandName)
 
+  const providerOptions = agentConfig
+    ? getProviderOptions({
+        provider: agentConfig.provider,
+        modelId: agentConfig.model,
+        parameters: agentConfig.parameters,
+      })
+    : {}
+
   const parameters: AgentContextParameters = {
     toolFormat: config.toolFormat,
     os: os.platform(),
     policies: [EnableCachePolicy],
     modelParameters: agentConfig?.parameters,
+    providerOptions,
     scripts: config.scripts,
     retryCount: config.retryCount,
     requestTimeoutSeconds: config.requestTimeoutSeconds,
