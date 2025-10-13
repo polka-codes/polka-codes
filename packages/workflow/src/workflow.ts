@@ -35,13 +35,13 @@ export type WorkflowTools<TTools extends ToolRegistry> = {
   [K in keyof TTools]: (input: TTools[K]['input']) => Generator<ToolCall<TTools>, TTools[K]['output'], TTools[K]['output']>
 }
 
-export type WorkflowFn<TInput extends PlainJson, TOutput extends PlainJson, TTools extends ToolRegistry> = (
+export type WorkflowFn<TInput, TOutput extends PlainJson, TTools extends ToolRegistry> = (
   input: TInput,
   step: StepFn<TTools>,
   tools: WorkflowTools<TTools>,
 ) => AsyncGenerator<ToolCall<TTools>, TOutput, TTools[keyof TTools]['output']>
 
-export type Workflow<TInput extends PlainJson, TOutput extends PlainJson, TTools extends ToolRegistry> = {
+export type Workflow<TInput, TOutput extends PlainJson, TTools extends ToolRegistry> = {
   name: string
   description: string
   fn: WorkflowFn<TInput, TOutput, TTools>
@@ -69,7 +69,7 @@ export type WorkflowStatus<TTools extends ToolRegistry, TOutput extends PlainJso
 
 import { makeStepFn } from './helpers'
 
-export type WorkflowResult<TInput extends PlainJson, TOutput extends PlainJson, TTools extends ToolRegistry> =
+export type WorkflowResult<TInput, TOutput extends PlainJson, TTools extends ToolRegistry> =
   | (WorkflowStatusPending<TTools> & {
       next: (toolResult: TTools[keyof TTools]['output']) => Promise<WorkflowResult<TInput, TOutput, TTools>>
       throw: (error: Error) => Promise<WorkflowResult<TInput, TOutput, TTools>>
@@ -77,7 +77,7 @@ export type WorkflowResult<TInput extends PlainJson, TOutput extends PlainJson, 
   | WorkflowStatusCompleted<TOutput>
   | WorkflowStatusFailed
 
-export async function run<TInput extends PlainJson, TOutput extends PlainJson, TTools extends ToolRegistry>(
+export async function run<TInput, TOutput extends PlainJson, TTools extends ToolRegistry>(
   workflow: Workflow<TInput, TOutput, TTools>,
   input: TInput,
   stepFn?: StepFn<TTools>,
