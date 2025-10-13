@@ -1583,8 +1583,7 @@ exports[`should execute plan 1`] = `
       "defaultContext": true,
       "messages": [
         {
-          "content": [
-            
+          "content": 
 "# Code Workflow Context
 
 You are participating in a 3-phase development workflow:
@@ -1676,7 +1675,6 @@ Implement the plan above following these guidelines. Start by:
 
 Please implement all the necessary code changes according to this plan."
 ,
-          ],
           "type": "user",
         },
       ],

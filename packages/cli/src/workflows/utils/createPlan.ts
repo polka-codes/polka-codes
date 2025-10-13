@@ -73,11 +73,9 @@ export async function* createPlan(input: CreatePlanInput): AsyncGenerator<any, C
       const files: { path: string; content: string }[] = []
       if (filePaths) {
         for (const path of filePaths) {
-          try {
-            const content = yield* tools.readFile({ path })
+          const content = yield* tools.readFile({ path })
+          if (content) {
             files.push({ path, content })
-          } catch (_e) {
-            // ignore file read errors
           }
         }
       }

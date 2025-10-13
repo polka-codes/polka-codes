@@ -35,7 +35,7 @@ export type CliToolRegistry = {
   input: ToolSignature<{ message: string; default?: string }, string>
   select: ToolSignature<{ message: string; choices: { name: string; value: string }[] }, string>
   writeToFile: ToolSignature<{ path: string; content: string }, Record<string, never>>
-  readFile: ToolSignature<{ path: string }, string>
+  readFile: ToolSignature<{ path: string }, string | null>
   executeCommand: ToolSignature<
     { command: string; pipe?: boolean } & ({ args: string[]; shell?: false } | { shell: true }),
     { exitCode: number; stdout: string; stderr: string }
