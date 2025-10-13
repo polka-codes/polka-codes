@@ -109,11 +109,14 @@ When generating your plan, follow these formatting guidelines:
 # Response Format
 
 Respond with a JSON object that matches the following schema:
+\`\`\`json
 {
   "plan": "The generated or updated plan.",
   "question": "The clarifying question to ask the user.",
-  "reason": "If no plan is needed, provide a reason here."
+  "reason": "If no plan is needed, provide a reason here.",
+  "files": ["path/to/file1.ts", "path/to/file2.ts"]
 }
+\`\`\`
 "
 ,
           "type": "user",
@@ -398,11 +401,14 @@ When generating your plan, follow these formatting guidelines:
 # Response Format
 
 Respond with a JSON object that matches the following schema:
+\`\`\`json
 {
   "plan": "The generated or updated plan.",
   "question": "The clarifying question to ask the user.",
-  "reason": "If no plan is needed, provide a reason here."
+  "reason": "If no plan is needed, provide a reason here.",
+  "files": ["path/to/file1.ts", "path/to/file2.ts"]
 }
+\`\`\`
 "
 ,
           "type": "user",
@@ -639,11 +645,14 @@ When generating your plan, follow these formatting guidelines:
 # Response Format
 
 Respond with a JSON object that matches the following schema:
+\`\`\`json
 {
   "plan": "The generated or updated plan.",
   "question": "The clarifying question to ask the user.",
-  "reason": "If no plan is needed, provide a reason here."
+  "reason": "If no plan is needed, provide a reason here.",
+  "files": ["path/to/file1.ts", "path/to/file2.ts"]
 }
+\`\`\`
 "
 ,
           "type": "user",
@@ -912,11 +921,14 @@ When generating your plan, follow these formatting guidelines:
 # Response Format
 
 Respond with a JSON object that matches the following schema:
+\`\`\`json
 {
   "plan": "The generated or updated plan.",
   "question": "The clarifying question to ask the user.",
-  "reason": "If no plan is needed, provide a reason here."
+  "reason": "If no plan is needed, provide a reason here.",
+  "files": ["path/to/file1.ts", "path/to/file2.ts"]
 }
+\`\`\`
 "
 ,
           "type": "user",
@@ -1203,11 +1215,14 @@ When generating your plan, follow these formatting guidelines:
 # Response Format
 
 Respond with a JSON object that matches the following schema:
+\`\`\`json
 {
   "plan": "The generated or updated plan.",
   "question": "The clarifying question to ask the user.",
-  "reason": "If no plan is needed, provide a reason here."
+  "reason": "If no plan is needed, provide a reason here.",
+  "files": ["path/to/file1.ts", "path/to/file2.ts"]
 }
+\`\`\`
 "
 ,
           "type": "user",
@@ -1433,11 +1448,14 @@ When generating your plan, follow these formatting guidelines:
 # Response Format
 
 Respond with a JSON object that matches the following schema:
+\`\`\`json
 {
   "plan": "The generated or updated plan.",
   "question": "The clarifying question to ask the user.",
-  "reason": "If no plan is needed, provide a reason here."
+  "reason": "If no plan is needed, provide a reason here.",
+  "files": ["path/to/file1.ts", "path/to/file2.ts"]
 }
+\`\`\`
 "
 ,
           "type": "user",
@@ -1561,15 +1579,109 @@ exports[`should execute plan 1`] = `
   "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
-      "task": 
-"# Bug Fix Plan
+      "agent": "coder",
+      "defaultContext": true,
+      "messages": [
+        {
+          "content": [
+            
+"# Code Workflow Context
+
+You are participating in a 3-phase development workflow:
+
+1. **Planning Phase** (Architect Agent)
+   - Analyzes requirements and creates detailed implementation plan
+   - User reviews and approves the plan before implementation begins
+
+2. **Implementation Phase** (Coder Agent)
+   - Implements the approved plan from phase 1
+   - Makes code changes following the plan and project conventions
+   - Can delegate subtasks or hand over to specialized agents
+
+3. **Fixing Phase** (CodeFixer Agent)
+   - Runs validation commands (tests, type checks, linting)
+   - Fixes any errors that arise during validation
+   - Ensures code quality and correctness
+
+**YOU ARE IN PHASE 2: IMPLEMENTATION**
+
+Your task is to implement the plan created and approved in Phase 1.
+
+## Your Plan
+
+<plan>
+# Bug Fix Plan
 
 1. Review auth code
 2. Fix token validation
-3. Add tests"
+3. Add tests
+</plan>
+
+## Implementation Guidelines
+
+### 1. Plan Analysis
+
+Before starting implementation:
+- Review the plan carefully and understand all requirements
+- Identify dependencies between different parts of the plan
+- Determine if this is a single cohesive task or multiple independent tasks
+- Consider the scope and complexity of the work
+
+### 2. Gather Context
+
+Before making changes:
+- **Search for similar existing files** to understand patterns and conventions
+- **Read relevant files** to see how similar features are implemented
+- Look for existing tests, utilities, or helpers you can leverage
+- Understand the project structure and naming conventions
+- Verify you have all necessary context to proceed
+
+### 3. Choose Your Approach
+
+**Option A: Single Implementation (use handOver tool)**
+- When the plan is a single cohesive task
+- When all steps are tightly coupled and interdependent
+- When you need to maintain context across all changes
+- Implement everything yourself and hand over when complete
+
+**Option B: Delegate Subtasks (use delegate tool)**
+- When the plan has multiple independent steps or features
+- When tasks can be parallelized or done separately
+- When different parts require different expertise
+- Break down the plan and delegate each subtask with full context
+
+### 4. Implementation Best Practices
+
+- **Make incremental changes**: Implement one piece at a time
+- **Follow existing patterns**: Match the style and structure of similar code
+- **Add documentation**: Include comments explaining complex logic
+- **Consider edge cases**: Think about error handling and boundary conditions
+- **Verify as you go**: Test your changes incrementally if possible
+
+### 5. Code Quality
+
+- Follow the project's existing code style and conventions
+- Use appropriate TypeScript types (avoid 'any' unless necessary)
+- Add JSDoc comments for public APIs and complex functions
+- Ensure proper error handling and validation
+- Keep functions focused and maintainable
+
+## Your Task
+
+Implement the plan above following these guidelines. Start by:
+1. Analyzing the plan structure
+2. Searching for similar existing code patterns
+3. Determining whether to implement directly or delegate subtasks
+4. Proceeding with implementation
+
+Please implement all the necessary code changes according to this plan."
 ,
+          ],
+          "type": "user",
+        },
+      ],
     },
-    "tool": "runTask",
+    "tool": "invokeAgent",
     "type": "tool",
   },
 }
@@ -1823,11 +1935,14 @@ When generating your plan, follow these formatting guidelines:
 # Response Format
 
 Respond with a JSON object that matches the following schema:
+\`\`\`json
 {
   "plan": "The generated or updated plan.",
   "question": "The clarifying question to ask the user.",
-  "reason": "If no plan is needed, provide a reason here."
+  "reason": "If no plan is needed, provide a reason here.",
+  "files": ["path/to/file1.ts", "path/to/file2.ts"]
 }
+\`\`\`
 "
 ,
           "type": "user",
@@ -2065,11 +2180,14 @@ When generating your plan, follow these formatting guidelines:
 # Response Format
 
 Respond with a JSON object that matches the following schema:
+\`\`\`json
 {
   "plan": "The generated or updated plan.",
   "question": "The clarifying question to ask the user.",
-  "reason": "If no plan is needed, provide a reason here."
+  "reason": "If no plan is needed, provide a reason here.",
+  "files": ["path/to/file1.ts", "path/to/file2.ts"]
 }
+\`\`\`
 "
 ,
           "type": "user",

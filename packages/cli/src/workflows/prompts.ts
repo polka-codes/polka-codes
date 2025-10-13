@@ -205,11 +205,14 @@ When generating your plan, follow these formatting guidelines:
 # Response Format
 
 Respond with a JSON object that matches the following schema:
+\`\`\`json
 {
   "plan": "The generated or updated plan.",
   "question": "The clarifying question to ask the user.",
-  "reason": "If no plan is needed, provide a reason here."
+  "reason": "If no plan is needed, provide a reason here.",
+  "files": ["path/to/file1.ts", "path/to/file2.ts"]
 }
+\`\`\`
 `
 
 export const GET_PR_DETAILS_PROMPT = `

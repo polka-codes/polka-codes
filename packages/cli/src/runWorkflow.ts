@@ -145,7 +145,7 @@ async function handleToolCall(
 
         const parsed = parseJsonFromMarkdown(exitReason.message)
         if (!parsed.success) {
-          const errorMessage = `Failed to parse JSON from markdown. Error: ${parsed.error}. Please correct the output.`
+          const errorMessage = `Failed to parse JSON from markdown. Error: ${parsed.error}. Please correct the output. It MUST be in valid JSON format.`
           if (i < 4) {
             context.spinner.stop()
             exitReason = await agent.continueTask(errorMessage)

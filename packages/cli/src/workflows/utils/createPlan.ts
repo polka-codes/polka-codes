@@ -7,14 +7,16 @@ import type { JsonFilePart, JsonImagePart } from '../code.workflow'
 import { PLAN_PROMPT } from '../prompts'
 
 const PlanSchema = z.object({
-  plan: z.string().optional(),
-  question: z.string().optional(),
-  reason: z.string().optional(),
+  plan: z.string().nullish(),
+  question: z.string().nullish(),
+  reason: z.string().nullish(),
+  files: z.array(z.string()).nullish(),
 })
 
 export type CreatePlanOutput = {
   plan?: string
   reason?: string
+  files?: { path: string; content: string }[]
 }
 
 type CreatePlanInput = {
@@ -54,21 +56,32 @@ export async function* createPlan(input: CreatePlanInput): AsyncGenerator<any, C
       defaultContext: true,
     })
 
-    const { plan: newPlan, question, reason } = output as z.infer<typeof PlanSchema>
+    const { plan: newPlan, question, reason, files: filePaths } = output as z.infer<typeof PlanSchema>
 
     if (reason) {
       return { reason }
     }
 
     if (newPlan !== undefined) {
-      plan = newPlan
+      plan = newPlan || ''
     }
 
     if (question) {
       const answer = yield* tools.input({ message: question })
       userFeedback = `Question: ${question}\nAnswer: ${answer}`
     } else {
-      return { plan }
+      const files: { path: string; content: string }[] = []
+      if (filePaths) {
+        for (const path of filePaths) {
+          try {
+            const content = yield* tools.readFile({ path })
+            files.push({ path, content })
+          } catch (_e) {
+            // ignore file read errors
+          }
+        }
+      }
+      return { plan, files }
     }
   }
 }
