@@ -68,7 +68,7 @@ export const initWorkflow: Workflow<InitWorkflowInput, InitWorkflowOutput, CliTo
       return { global, configPath, existingConfig }
     })
 
-    const { providerConfig, provider } = await step('get-provider', async () => {
+    const { providerConfig, provider } = yield* step('get-provider', async function* () {
       const { providerConfig: optionsProviderConfig } = parseOptions(input.parentOptions ?? {})
       const commandConfig = optionsProviderConfig.getConfigForCommand('init')
       let maybeProvider: AiProvider | undefined = commandConfig?.provider

@@ -305,8 +305,7 @@ exports[`should retry and invoke coder agent when command fails 2`] = `
       "agent": "coder",
       "defaultContext": true,
       "messages": [
-        {
-          "content": 
+        
 "# Code Fixing Task
 
 ## Context
@@ -389,8 +388,6 @@ TypeError: undefined is not a function
 
 Analyze the error output systematically and fix the code. Focus on understanding the root cause before making changes. Make minimal, targeted fixes that address the actual problem."
 ,
-          "type": "user",
-        },
       ],
     },
     "tool": "invokeAgent",
@@ -444,8 +441,7 @@ exports[`should handle command with stdout and stderr 1`] = `
       "agent": "coder",
       "defaultContext": true,
       "messages": [
-        {
-          "content": 
+        
 "# Code Fixing Task
 
 ## Context
@@ -530,8 +526,6 @@ Error: compilation failed
 
 Analyze the error output systematically and fix the code. Focus on understanding the root cause before making changes. Make minimal, targeted fixes that address the actual problem."
 ,
-          "type": "user",
-        },
       ],
     },
     "tool": "invokeAgent",
@@ -573,8 +567,7 @@ exports[`should handle command with only stdout 1`] = `
       "agent": "coder",
       "defaultContext": true,
       "messages": [
-        {
-          "content": 
+        
 "# Code Fixing Task
 
 ## Context
@@ -657,8 +650,6 @@ Some output
 
 Analyze the error output systematically and fix the code. Focus on understanding the root cause before making changes. Make minimal, targeted fixes that address the actual problem."
 ,
-          "type": "user",
-        },
       ],
     },
     "tool": "invokeAgent",
@@ -686,8 +677,7 @@ exports[`should handle command with only stderr 1`] = `
       "agent": "coder",
       "defaultContext": true,
       "messages": [
-        {
-          "content": 
+        
 "# Code Fixing Task
 
 ## Context
@@ -770,8 +760,6 @@ Error occurred
 
 Analyze the error output systematically and fix the code. Focus on understanding the root cause before making changes. Make minimal, targeted fixes that address the actual problem."
 ,
-          "type": "user",
-        },
       ],
     },
     "tool": "invokeAgent",

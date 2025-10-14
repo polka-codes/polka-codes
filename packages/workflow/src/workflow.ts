@@ -1,23 +1,25 @@
-export type JsonPrimitive = string | number | boolean | null
+type ValidJsonOrVoid<T> = T extends string | number | boolean | null | void
+  ? T
+  : T extends readonly (infer U)[]
+    ? readonly ValidJsonOrVoid<U>[]
+    : // biome-ignore lint/complexity/noBannedTypes: this is needed
+      T extends Function | symbol | bigint | Date | Map<any, any> | Set<any> | WeakMap<any, any> | WeakSet<any>
+      ? never
+      : T extends object
+        ? { readonly [K in keyof T]: ValidJsonOrVoid<T[K]> }
+        : never
 
-export type PlainJson = JsonPrimitive | readonly PlainJson[] | { readonly [K in string]?: PlainJson }
+export type StepFn<TTools extends ToolRegistry = ToolRegistry> = <T>(
+  name: string,
+  fn: () => AsyncGenerator<ToolCall<TTools>, ValidJsonOrVoid<T>, TTools[keyof TTools]['output']>,
+) => AsyncGenerator<ToolCall<TTools>, T, TTools[keyof TTools]['output']>
 
-export type StepFn<TTools extends ToolRegistry = any> = {
-  // biome-ignore lint/suspicious/noConfusingVoidType: void means no return
-  <T extends PlainJson | void>(name: string, fn: () => Promise<T>): Promise<T>
-  // biome-ignore lint/suspicious/noConfusingVoidType: void means no return
-  <T extends PlainJson | void>(
-    name: string,
-    fn: () => AsyncGenerator<ToolCall<TTools>, T, TTools[keyof TTools]['output']>,
-  ): AsyncGenerator<ToolCall<TTools>, T, TTools[keyof TTools]['output']>
-}
-
-export type ToolSignature<I, O extends PlainJson> = {
+export type ToolSignature<I, O> = {
   input: I
   output: O
 }
 
-export type ToolRegistry = Record<string, ToolSignature<any, PlainJson>>
+export type ToolRegistry = Record<string, ToolSignature<any, any>>
 
 export type ToolCall<TTools extends ToolRegistry> = {
   [K in keyof TTools]: {
@@ -32,16 +34,24 @@ export type ToolsExecutor<TTools extends ToolRegistry> = {
 }
 
 export type WorkflowTools<TTools extends ToolRegistry> = {
-  [K in keyof TTools]: (input: TTools[K]['input']) => Generator<ToolCall<TTools>, TTools[K]['output'], TTools[K]['output']>
+  [K in keyof TTools]: (input: TTools[K]['input']) => Generator<
+    {
+      type: 'tool'
+      tool: K
+      input: TTools[K]['input']
+    },
+    TTools[K]['output'],
+    TTools[K]['output']
+  >
 }
 
-export type WorkflowFn<TInput, TOutput extends PlainJson, TTools extends ToolRegistry> = (
+export type WorkflowFn<TInput, TOutput, TTools extends ToolRegistry> = (
   input: TInput,
   step: StepFn<TTools>,
   tools: WorkflowTools<TTools>,
 ) => AsyncGenerator<ToolCall<TTools>, TOutput, TTools[keyof TTools]['output']>
 
-export type Workflow<TInput, TOutput extends PlainJson, TTools extends ToolRegistry> = {
+export type Workflow<TInput, TOutput, TTools extends ToolRegistry> = {
   name: string
   description: string
   fn: WorkflowFn<TInput, TOutput, TTools>
@@ -52,7 +62,7 @@ export type WorkflowStatusPending<TTools extends ToolRegistry> = {
   tool: ToolCall<TTools>
 }
 
-export type WorkflowStatusCompleted<TOutput extends PlainJson> = {
+export type WorkflowStatusCompleted<TOutput> = {
   status: 'completed'
   output: TOutput
 }
@@ -62,14 +72,16 @@ export type WorkflowStatusFailed = {
   error: unknown
 }
 
-export type WorkflowStatus<TTools extends ToolRegistry, TOutput extends PlainJson> =
+export type WorkflowStatus<TTools extends ToolRegistry, TOutput> =
   | WorkflowStatusPending<TTools>
   | WorkflowStatusCompleted<TOutput>
   | WorkflowStatusFailed
 
 import { makeStepFn } from './helpers'
 
-export type WorkflowResult<TInput, TOutput extends PlainJson, TTools extends ToolRegistry> =
+export type JSONValue = ValidJsonOrVoid<any>
+
+export type WorkflowResult<TInput, TOutput, TTools extends ToolRegistry> =
   | (WorkflowStatusPending<TTools> & {
       next: (toolResult: TTools[keyof TTools]['output']) => Promise<WorkflowResult<TInput, TOutput, TTools>>
       throw: (error: Error) => Promise<WorkflowResult<TInput, TOutput, TTools>>
@@ -77,7 +89,7 @@ export type WorkflowResult<TInput, TOutput extends PlainJson, TTools extends Too
   | WorkflowStatusCompleted<TOutput>
   | WorkflowStatusFailed
 
-export async function run<TInput, TOutput extends PlainJson, TTools extends ToolRegistry>(
+export async function run<TInput, TOutput, TTools extends ToolRegistry>(
   workflow: Workflow<TInput, TOutput, TTools>,
   input: TInput,
   stepFn?: StepFn<TTools>,
