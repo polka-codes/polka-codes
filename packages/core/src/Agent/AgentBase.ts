@@ -58,7 +58,6 @@ export enum TaskEventKind {
  */
 export interface TaskEventBase {
   kind: TaskEventKind
-  agent: AgentBase
 }
 
 /**
@@ -324,14 +323,14 @@ export abstract class AgentBase {
   }
 
   async start(prompt: UserContent): Promise<ExitReason> {
-    this.#callback({ kind: TaskEventKind.StartTask, agent: this, systemPrompt: this.config.systemPrompt })
+    this.#callback({ kind: TaskEventKind.StartTask, systemPrompt: this.config.systemPrompt })
 
     return await this.#processLoop(prompt)
   }
 
   async step(message: (UserModelMessage | ToolModelMessage)[]) {
     if (this.#messages.length === 0) {
-      this.#callback({ kind: TaskEventKind.StartTask, agent: this, systemPrompt: this.config.systemPrompt })
+      this.#callback({ kind: TaskEventKind.StartTask, systemPrompt: this.config.systemPrompt })
     }
 
     return await this.#request(message)
@@ -353,7 +352,7 @@ export abstract class AgentBase {
         return { type: 'Aborted' }
       }
       if (this.config.usageMeter.isLimitExceeded().result) {
-        this.#callback({ kind: TaskEventKind.UsageExceeded, agent: this })
+        this.#callback({ kind: TaskEventKind.UsageExceeded })
         return { type: 'UsageExceeded' }
       }
       const response = await this.#request(nextRequest)
@@ -362,7 +361,7 @@ export abstract class AgentBase {
       }
       const resp = await this.#handleResponse(response)
       if (resp.type === 'exit') {
-        this.#callback({ kind: TaskEventKind.EndTask, agent: this, exitReason: resp.reason })
+        this.#callback({ kind: TaskEventKind.EndTask, exitReason: resp.reason })
         return resp.reason
       }
       nextRequest = resp.message
@@ -378,7 +377,7 @@ export abstract class AgentBase {
       throw new Error('userMessage is missing')
     }
 
-    await this.#callback({ kind: TaskEventKind.StartRequest, agent: this, userMessage })
+    await this.#callback({ kind: TaskEventKind.StartRequest, userMessage })
 
     this.#messages.push(...userMessage)
 
@@ -445,10 +444,10 @@ export abstract class AgentBase {
             resetTimeout()
             switch (chunk.type) {
               case 'text-delta':
-                await this.#callback({ kind: TaskEventKind.Text, agent: this, newText: chunk.text })
+                await this.#callback({ kind: TaskEventKind.Text, newText: chunk.text })
                 break
               case 'reasoning-delta':
-                await this.#callback({ kind: TaskEventKind.Reasoning, agent: this, newText: chunk.text })
+                await this.#callback({ kind: TaskEventKind.Reasoning, newText: chunk.text })
                 break
               case 'tool-call':
                 break
@@ -456,7 +455,7 @@ export abstract class AgentBase {
           },
           onFinish: (evt) => {
             usageMeterOnFinishHandler(evt)
-            this.#callback({ kind: TaskEventKind.Usage, agent: this, usage: evt.totalUsage })
+            this.#callback({ kind: TaskEventKind.Usage, usage: evt.totalUsage })
           },
           onError: async (error) => {
             console.error('Error in stream:', error)
@@ -570,7 +569,7 @@ export abstract class AgentBase {
           return msg.content.map((part) => (part.type === 'text' || part.type === 'reasoning' ? part.text : '')).join('')
         })
         .join('\n')
-      await this.#callback({ kind: TaskEventKind.EndRequest, agent: this, message: assistantText })
+      await this.#callback({ kind: TaskEventKind.EndRequest, message: assistantText })
 
       return respMessages.flatMap((msg): AssistantMessageContent[] => {
         if (msg.role === 'assistant') {
@@ -608,7 +607,7 @@ export abstract class AgentBase {
 
     const ret = parseAssistantMessage(currentAssistantMessage, this.config.tools.map(toToolInfoV1), this.config.toolNamePrefix)
 
-    await this.#callback({ kind: TaskEventKind.EndRequest, agent: this, message: currentAssistantMessage })
+    await this.#callback({ kind: TaskEventKind.EndRequest, message: currentAssistantMessage })
 
     return ret
   }
@@ -648,12 +647,12 @@ export abstract class AgentBase {
         case 'text':
           break
         case 'tool_use': {
-          await this.#callback({ kind: TaskEventKind.ToolUse, agent: this, tool: content.name, params: content.params })
+          await this.#callback({ kind: TaskEventKind.ToolUse, tool: content.name, params: content.params })
           const toolResp = await this.#invokeTool(content.name, content.params)
           switch (toolResp.type) {
             case ToolResponseType.Reply: {
               // reply to the tool use
-              await this.#callback({ kind: TaskEventKind.ToolReply, agent: this, tool: content.name, content: toolResp.message })
+              await this.#callback({ kind: TaskEventKind.ToolReply, tool: content.name, content: toolResp.message })
               toolResponses.push({ type: 'response', tool: content.name, response: processResponse(toolResp.message), id: content.id })
               break
             }
@@ -669,7 +668,7 @@ export abstract class AgentBase {
                   },
                   canRetry: false,
                 }
-                await this.#callback({ kind: TaskEventKind.ToolError, agent: this, tool: content.name, error: message })
+                await this.#callback({ kind: TaskEventKind.ToolError, tool: content.name, error: message })
                 toolResponses.push({
                   type: 'response',
                   tool: content.name,
@@ -694,7 +693,6 @@ export abstract class AgentBase {
                 // hand over the task to another agent
                 await this.#callback({
                   kind: TaskEventKind.ToolHandOver,
-                  agent: this,
                   tool: content.name,
                   agentName: toolResp.agentName,
                   task: toolResp.task,
@@ -708,7 +706,6 @@ export abstract class AgentBase {
                 // delegate the task to another agent
                 await this.#callback({
                   kind: TaskEventKind.ToolDelegate,
-                  agent: this,
                   tool: content.name,
                   agentName: toolResp.agentName,
                   task: toolResp.task,
@@ -721,7 +718,7 @@ export abstract class AgentBase {
             }
             case ToolResponseType.Invalid: {
               // tell AI about the invalid arguments
-              await this.#callback({ kind: TaskEventKind.ToolInvalid, agent: this, tool: content.name, content: toolResp.message })
+              await this.#callback({ kind: TaskEventKind.ToolInvalid, tool: content.name, content: toolResp.message })
               toolResponses.push({ type: 'response', tool: content.name, response: processResponse(toolResp.message), id: content.id })
               if (this.config.toolFormat !== 'native') {
                 break outer
@@ -730,7 +727,7 @@ export abstract class AgentBase {
             }
             case ToolResponseType.Error: {
               // tell AI about the error
-              await this.#callback({ kind: TaskEventKind.ToolError, agent: this, tool: content.name, error: toolResp.message })
+              await this.#callback({ kind: TaskEventKind.ToolError, tool: content.name, error: toolResp.message })
               toolResponses.push({ type: 'response', tool: content.name, response: processResponse(toolResp.message), id: content.id })
               if (this.config.toolFormat !== 'native') {
                 break outer
@@ -739,7 +736,7 @@ export abstract class AgentBase {
             }
             case ToolResponseType.Pause: {
               // pause the execution
-              await this.#callback({ kind: TaskEventKind.ToolPause, agent: this, tool: content.name, object: toolResp.object })
+              await this.#callback({ kind: TaskEventKind.ToolPause, tool: content.name, object: toolResp.object })
               toolResponses.push({ type: 'pause', tool: content.name, object: toolResp.object, id: content.id })
               hasPause = true
             }
