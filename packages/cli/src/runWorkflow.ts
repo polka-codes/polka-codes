@@ -4,7 +4,7 @@ import os from 'node:os'
 import { getProvider, printEvent } from '@polka-codes/cli-shared'
 import type { AgentNameType } from '@polka-codes/core'
 import { EnableCachePolicy, UsageMeter } from '@polka-codes/core'
-import { type PlainJson, run, type ToolCall, type ToolSignature, type Workflow } from '@polka-codes/workflow'
+import { makeStepFn, run, type ToolCall, type ToolSignature, type Workflow } from '@polka-codes/workflow'
 import type { Command } from 'commander'
 import { merge } from 'lodash'
 import ora from 'ora'
@@ -16,11 +16,7 @@ import prices from './prices'
 import { type AgentContextParameters, handleToolCall } from './tool-implementations'
 import type { CliToolRegistry } from './workflow-tools'
 
-export async function runWorkflow<
-  TInput extends PlainJson,
-  TOutput extends PlainJson,
-  TTools extends Record<string, ToolSignature<any, any>>,
->(
+export async function runWorkflow<TInput, TOutput, TTools extends Record<string, ToolSignature<any, any>>>(
   commandName: string,
   workflow: Workflow<TInput, TOutput, TTools>,
   command: Command,
@@ -50,6 +46,7 @@ export async function runWorkflow<
   const toolProvider = getProvider({ excludeFiles: config.excludeFiles })
 
   const agentConfig = providerConfig.getConfigForCommand(commandName)
+  const model = agentConfig ? getModel(agentConfig) : undefined
 
   const providerOptions = agentConfig
     ? getProviderOptions({
@@ -78,19 +75,21 @@ export async function runWorkflow<
     console.warn = logger.warn
   }
 
-  let result = await run(workflow, workflowInput, async function* (name: string, fn: any) {
-    spinner.text = name
-    const resultOrGenerator = fn()
-    if (resultOrGenerator && typeof (resultOrGenerator as any).next === 'function') {
-      return yield* resultOrGenerator as any
-    }
-    return await resultOrGenerator
-  } as any)
+  let result = await run(
+    workflow,
+    workflowInput,
+    makeStepFn<TTools>({
+      onEnterStep: (name) => {
+        spinner.text = name
+      },
+    }),
+  )
 
   while (result.status === 'pending') {
     spinner.text = `Running tool: ${String(result.tool.tool)}`
+    let toolResult: any
     try {
-      const toolResult = await handleToolCall(result.tool as ToolCall<CliToolRegistry>, {
+      toolResult = await handleToolCall(result.tool as ToolCall<CliToolRegistry>, {
         providerConfig,
         parameters,
         spinner,
@@ -101,14 +100,16 @@ export async function runWorkflow<
           }
           return getModel(config)
         },
+        model,
         agentCallback: onEvent,
         toolProvider,
         command,
       })
-      result = await result.next(toolResult)
     } catch (e) {
-      result = { status: 'failed', error: e }
+      result = await result.throw(e as Error)
+      continue
     }
+    result = await result.next(toolResult)
   }
 
   if (json) {
