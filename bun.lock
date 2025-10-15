@@ -39,7 +39,7 @@
         "chalk": "^5.6.2",
         "commander": "^14.0.1",
         "dotenv": "^17.2.3",
-        "lodash": "^4.17.21",
+        "lodash-es": "^4.17.21",
         "mime-types": "^3.0.1",
         "ollama-ai-provider-v2": "^1.5.0",
         "ora": "^9.0.0",
@@ -47,7 +47,7 @@
         "zod": "^4.1.12",
       },
       "devDependencies": {
-        "@types/lodash": "^4.17.20",
+        "@types/lodash-es": "^4.17.12",
         "@types/mime-types": "^3.0.1",
       },
     },
@@ -58,12 +58,13 @@
         "@ai-sdk/provider-utils": "^3.0.12",
         "@polka-codes/core": "workspace:*",
         "ignore": "^7.0.5",
-        "lodash": "^4.17.21",
+        "lodash-es": "^4.17.21",
         "mime-types": "^3.0.1",
         "yaml": "^2.8.1",
         "zod": "^4.1.12",
       },
       "devDependencies": {
+        "@types/lodash-es": "^4.17.12",
         "@types/mime-types": "^3.0.1",
       },
     },
@@ -74,9 +75,12 @@
         "@ai-sdk/provider": "^2.0.0",
         "@ai-sdk/provider-utils": "^3.0.12",
         "ai": "^5.0.68",
-        "lodash": "^4.17.21",
+        "lodash-es": "^4.17.21",
         "yaml": "^2.8.1",
         "zod": "^4.1.12",
+      },
+      "devDependencies": {
+        "@types/lodash-es": "^4.17.12",
       },
     },
     "packages/github": {
@@ -104,13 +108,13 @@
         "commander": "^14.0.1",
         "dotenv": "^17.2.3",
         "ignore": "^7.0.5",
-        "lodash": "^4.17.21",
+        "lodash-es": "^4.17.21",
         "ws": "^8.18.3",
         "yaml": "^2.8.1",
         "zod": "^4.1.12",
       },
       "devDependencies": {
-        "@types/lodash": "^4.17.20",
+        "@types/lodash-es": "^4.17.12",
         "@types/ws": "^8.18.1",
       },
     },
@@ -497,6 +501,8 @@
 
     "@types/lodash": ["@types/lodash@4.17.20", "", {}, "sha512-H3MHACvFUEiujabxhaI/ImO6gUrd8oOurg7LQtS7mbwIXA/cUqWrvBsaeJ23aZEPk1TAYkurjfMbSELfoCXlGA=="],
 
+    "@types/lodash-es": ["@types/lodash-es@4.17.12", "", { "dependencies": { "@types/lodash": "*" } }, "sha512-0NgftHUcV4v34VhXm8QBSftKVXtbkBG3ViCjs6+eJ5a6y6Mi/jiFGPc1sC7QK+9BFhWrURE3EOggmWaSxL9OzQ=="],
+
     "@types/mdast": ["@types/mdast@4.0.4", "", { "dependencies": { "@types/unist": "*" } }, "sha512-kGaNbPh1k7AFzgpud/gMdvIm5xuECykRR+JnWKQno9TAXVa6WIVCGTPvYGekIDL4uwCZQSYbUxNBSb1aUo79oA=="],
 
     "@types/mime-types": ["@types/mime-types@3.0.1", "", {}, "sha512-xRMsfuQbnRq1Ef+C+RKaENOxXX87Ygl38W1vDfPHRku02TgQr+Qd8iivLtAMcR0KF5/29xlnFihkTlbqFrGOVQ=="],
@@ -854,6 +860,8 @@
     "load-tsconfig": ["load-tsconfig@0.2.5", "", {}, "sha512-IXO6OCs9yg8tMKzfPZ1YmheJbZCiEsnBdcB03l0OcfK9prKnJb96siuHCr5Fl37/yo9DnKU+TLpxzTUspw9shg=="],
 
     "lodash": ["lodash@4.17.21", "", {}, "sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg=="],
+
+    "lodash-es": ["lodash-es@4.17.21", "", {}, "sha512-mKnC+QJ9pWVzv+C4/U3rRsHapFfHvQFoFB92e52xeyGMcX6/OlIl78je1u8vePzYZSkkogMPJ2yjxxsb89cxyw=="],
 
     "lodash.sortby": ["lodash.sortby@4.7.0", "", {}, "sha512-HDWXG8isMntAyRF5vZ7xKuEvOhT4AhlRt/3czTSjvGUxjYCBVRQY48ViDHyfYz9VIoBkW4TMGQNapx+l3RUwdA=="],
 

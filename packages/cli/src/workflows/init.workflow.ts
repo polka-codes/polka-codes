@@ -2,7 +2,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { type Config, getGlobalConfigPath, loadConfigAtPath, localConfigFileName } from '@polka-codes/cli-shared'
 import type { Workflow } from '@polka-codes/workflow'
-import { set } from 'lodash'
+import { set } from 'lodash-es'
 import { parse, stringify } from 'yaml'
 import { ZodError, z } from 'zod'
 import type { ProviderConfig } from '../configPrompt'

@@ -54,7 +54,7 @@ export type AgentContextParameters = {
   usageMeter?: UsageMeter
 }
 
-import { camelCase } from 'lodash'
+import { camelCase } from 'lodash-es'
 import { gitDiff } from './tools'
 import type { CliToolRegistry } from './workflow-tools'
 import { getLocalChanges } from './workflows/workflow.utils'

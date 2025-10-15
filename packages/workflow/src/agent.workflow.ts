@@ -3,7 +3,7 @@
 import type { ExitReason, FullToolInfoV2, TaskEvent, ToolResponse } from '@polka-codes/core'
 import { parseJsonFromMarkdown, TaskEventKind, ToolResponseType } from '@polka-codes/core'
 import { jsonSchema, type ToolCallPart, type ToolSet } from 'ai'
-import { camelCase } from 'lodash'
+import { camelCase } from 'lodash-es'
 import { toJSONSchema, z } from 'zod'
 import type { JsonModelMessage, JsonResponseMessage, JsonUserModelMessage } from './json-ai-types'
 import type { Workflow } from './workflow'

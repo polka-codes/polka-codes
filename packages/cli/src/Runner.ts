@@ -24,7 +24,7 @@ import {
   UsageMeter,
 } from '@polka-codes/core'
 import type { FilePart, ImagePart, TextPart } from 'ai'
-import { merge } from 'lodash'
+import { merge } from 'lodash-es'
 import type { ApiProviderConfig } from './ApiProviderConfig'
 import { summarizeOutput } from './commandSummarizer'
 import { getModel } from './getModel'

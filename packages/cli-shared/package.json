@@ -20,12 +20,13 @@
     "@ai-sdk/provider-utils": "^3.0.12",
     "@polka-codes/core": "workspace:*",
     "ignore": "^7.0.5",
-    "lodash": "^4.17.21",
+    "lodash-es": "^4.17.21",
     "mime-types": "^3.0.1",
     "yaml": "^2.8.1",
     "zod": "^4.1.12"
   },
   "devDependencies": {
+    "@types/lodash-es": "^4.17.12",
     "@types/mime-types": "^3.0.1"
   }
 }
