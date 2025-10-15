@@ -4,7 +4,7 @@ import { confirm } from '@inquirer/prompts'
 import { type ExitReason, ToolResponseType } from '@polka-codes/core'
 import type { FilePart, ImagePart } from 'ai'
 import type { Command } from 'commander'
-import { set } from 'lodash'
+import { set } from 'lodash-es'
 import { lookup } from 'mime-types'
 
 import { ApiProviderConfig } from '../ApiProviderConfig'

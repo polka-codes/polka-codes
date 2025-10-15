@@ -3,7 +3,7 @@
 import type { ExitReason, FullToolInfoV2, TaskEvent, ToolResponse } from '@polka-codes/core'
 import { parseJsonFromMarkdown, TaskEventKind, ToolResponseType } from '@polka-codes/core'
 import { jsonSchema, type ToolCallPart, type ToolSet } from 'ai'
-import { camelCase } from 'lodash'
+import { camelCase } from 'lodash-es'
 import { toJSONSchema, z } from 'zod'
 import type { JsonModelMessage, JsonResponseMessage, JsonUserModelMessage } from './json-ai-types'
 import type { Workflow } from './workflow'
@@ -128,20 +128,6 @@ export const agentWorkflow: Workflow<AgentWorkflowInput, ExitReason, AgentToolRe
 
       const toolResults: { toolCallId: string; toolName: string; output: any }[] = []
       for (const toolCall of toolCalls) {
-        const tool = toolInfo.find((t) => t.name === toolCall.toolName)
-        if (!tool) {
-          // This should not happen if the LLM is behaving
-          toolResults.push({
-            toolCallId: toolCall.toolCallId,
-            toolName: toolCall.toolName,
-            output: {
-              type: 'error-text',
-              value: `Tool ${toolCall.toolName} not found`,
-            },
-          })
-          continue
-        }
-
         yield* event(`event-tool-use-${toolCall.toolName}-${toolCall.toolCallId}`, {
           kind: TaskEventKind.ToolUse,
           tool: toolCall.toolName,

@@ -8,7 +8,7 @@ import type {
   UserModelMessage,
 } from '@ai-sdk/provider-utils'
 import { jsonSchema, type LanguageModelUsage, streamText, type ToolSet } from 'ai'
-import { camelCase } from 'lodash'
+import { camelCase } from 'lodash-es'
 import { toJSONSchema } from 'zod'
 import type { ToolFormat } from '../config'
 import {

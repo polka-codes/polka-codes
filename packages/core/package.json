@@ -20,8 +20,11 @@
     "@ai-sdk/provider": "^2.0.0",
     "@ai-sdk/provider-utils": "^3.0.12",
     "ai": "^5.0.68",
-    "lodash": "^4.17.21",
+    "lodash-es": "^4.17.21",
     "yaml": "^2.8.1",
     "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/lodash-es": "^4.17.12"
   }
 }

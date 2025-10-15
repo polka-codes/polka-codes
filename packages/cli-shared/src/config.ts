@@ -4,7 +4,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { type Config, configSchema } from '@polka-codes/core'
-import { merge } from 'lodash'
+import { merge } from 'lodash-es'
 import { parse } from 'yaml'
 import { ZodError } from 'zod'
 

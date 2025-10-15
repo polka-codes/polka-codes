@@ -54,6 +54,8 @@ export type AgentContextParameters = {
   usageMeter?: UsageMeter
 }
 
+import { camelCase } from 'lodash-es'
+import { gitDiff } from './tools'
 import type { CliToolRegistry } from './workflow-tools'
 import { getLocalChanges } from './workflows/workflow.utils'
 
@@ -71,8 +73,9 @@ const allTools = [
   replaceInFile,
   searchFiles,
   writeToFile,
+  gitDiff,
 ] as const
-const toolHandlers = new Map(allTools.map((t) => [t.name, t]))
+const toolHandlers = new Map(allTools.map((t) => [camelCase(t.name), t]))
 
 const agentRegistry: Record<string, new (options: SharedAgentOptions) => AgentBase> = {
   analyzer: AnalyzerAgent,
