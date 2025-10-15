@@ -40,7 +40,7 @@ export const planWorkflow: Workflow<PlanWorkflowInput, any, CliToolRegistry> = {
             }
           }
 
-          const planResult: CreatePlanOutput = yield* createPlan({
+          const planResult = yield* createPlan({
             tools,
             task: currentTask,
             plan,
@@ -62,6 +62,12 @@ export const planWorkflow: Workflow<PlanWorkflowInput, any, CliToolRegistry> = {
         case 'Reviewing': {
           console.log('\nGenerated Plan:\n')
           console.log(plan)
+          if (files.length > 0) {
+            console.log('\nFiles:')
+            for (const file of files) {
+              console.log(`- ${file.path}`)
+            }
+          }
 
           const choices = [
             { name: 'Save Plan', value: 'save' },
