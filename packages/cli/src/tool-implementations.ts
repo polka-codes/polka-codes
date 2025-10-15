@@ -54,6 +54,7 @@ export type AgentContextParameters = {
   usageMeter?: UsageMeter
 }
 
+import { gitDiff } from './tools'
 import type { CliToolRegistry } from './workflow-tools'
 import { getLocalChanges } from './workflows/workflow.utils'
 
@@ -71,6 +72,7 @@ const allTools = [
   replaceInFile,
   searchFiles,
   writeToFile,
+  gitDiff,
 ] as const
 const toolHandlers = new Map(allTools.map((t) => [t.name, t]))
 
