@@ -236,17 +236,17 @@ You are a senior software engineer reviewing code changes.
 
 ## Critical Instructions
 - **ONLY review the actual changes shown in the diff.** Do not comment on existing code that wasn't modified.
-- **ONLY run git_diff on files that are reviewable source/config files** per the "File Selection for git_diff" rules below. Do not pass excluded files to git_diff.
+- **ONLY run gitDiff on files that are reviewable source/config files** per the "File Selection for gitDiff" rules below. Do not pass excluded files to gitDiff.
 
-## File Selection for git_diff
+## File Selection for gitDiff
 Use <file_status> to decide which files to diff. Include only files likely to contain human-authored source or meaningful configuration.
 
-Include (run git_diff):
+Include (run gitDiff):
 - Application/source code
 - UI/templates/assets code
 - Infra/config that affects behavior
 
-Exclude (do NOT run git_diff; do not review):
+Exclude (do NOT run gitDiff; do not review):
 - Lockfiles
 - Generated/build artifacts & deps
 - Test artifacts/snapshots
@@ -254,9 +254,9 @@ Exclude (do NOT run git_diff; do not review):
 - Binary/media/minified/maps
 
 ## Viewing Changes
-- For each included file, **use git_diff** to inspect the actual code changes:
-  - **Pull request:** use the provided commit range for the git_diff tool with contextLines: 5 and includeLineNumbers: true, but only surface and review the included files.
-  - **Local changes:** diff staged or unstaged included files using git_diff with contextLines: 5 and includeLineNumbers: true.
+- For each included file, **use gitDiff** to inspect the actual code changes:
+  - **Pull request:** use the provided commit range for the gitDiff tool with contextLines: 5 and includeLineNumbers: true, but only surface and review the included files.
+  - **Local changes:** diff staged or unstaged included files using gitDiff with contextLines: 5 and includeLineNumbers: true.
 - The diff will include line number annotations: [Line N] for additions and [Line N removed] for deletions.
 - You may receive:
   - <pr_title>
@@ -280,7 +280,7 @@ Focus exclusively on the changed lines (+ additions, - deletions, modified lines
 - **Avoid generic advice** unless directly tied to a specific problem visible in the diff.
 
 ## What NOT to review
-- Files excluded by the "File Selection for git_diff" rules (do not diff or comment on them).
+- Files excluded by the "File Selection for gitDiff" rules (do not diff or comment on them).
 - Existing unchanged code.
 - Overall project structure/architecture unless directly impacted by the changes.
 - Missing features or functionality not part of this diff.
@@ -332,13 +332,13 @@ export function formatReviewToolInput(params: ReviewToolInput): string {
 
   let instructions = ''
   if (params.commitRange) {
-    instructions = `Review the pull request. Use the git_diff tool with commit range '${params.commitRange}', contextLines: 5, and includeLineNumbers: true to inspect the actual code changes. The diff will include line number annotations to help you report accurate line numbers. File status information is already provided above.`
+    instructions = `Review the pull request. Use the gitDiff tool with commit range '${params.commitRange}', contextLines: 5, and includeLineNumbers: true to inspect the actual code changes. The diff will include line number annotations to help you report accurate line numbers. File status information is already provided above.`
   } else if (params.staged) {
     instructions =
-      'Review the staged changes. Use the git_diff tool with staged: true, contextLines: 5, and includeLineNumbers: true to inspect the actual code changes. The diff will include line number annotations to help you report accurate line numbers. File status information is already provided above.'
+      'Review the staged changes. Use the gitDiff tool with staged: true, contextLines: 5, and includeLineNumbers: true to inspect the actual code changes. The diff will include line number annotations to help you report accurate line numbers. File status information is already provided above.'
   } else {
     instructions =
-      'Review the unstaged changes. Use the git_diff tool with contextLines: 5, and includeLineNumbers: true to inspect the actual code changes. The diff will include line number annotations to help you report accurate line numbers. File status information is already provided above.'
+      'Review the unstaged changes. Use the gitDiff tool with contextLines: 5, and includeLineNumbers: true to inspect the actual code changes. The diff will include line number annotations to help you report accurate line numbers. File status information is already provided above.'
   }
   parts.push(`<review_instructions>\n${instructions}\n</review_instructions>`)
 
