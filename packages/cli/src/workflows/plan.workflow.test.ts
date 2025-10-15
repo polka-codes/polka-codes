@@ -26,7 +26,7 @@ test('should generate new plan without questions and save with default path', as
   expect(result4).toMatchSnapshot()
   assert(result4.status === 'pending')
 
-  const result5 = await result4.next({})
+  const result5 = await result4.next()
   expect(result5).toMatchSnapshot()
 })
 
@@ -59,7 +59,7 @@ test('should generate plan with clarifying question', async () => {
   const result6 = await result5.next('.plans/webapp-plan.md')
   assert(result6.status === 'pending')
 
-  const result7 = await result6.next({})
+  const result7 = await result6.next()
   expect(result7).toMatchSnapshot()
 })
 
@@ -85,7 +85,7 @@ test('should update existing plan', async () => {
   const result3 = await result2.next('save')
   assert(result3.status === 'pending')
 
-  const result4 = await result3.next({})
+  const result4 = await result3.next()
   expect(result4).toMatchSnapshot()
 })
 
@@ -121,7 +121,7 @@ test('should handle user feedback and regenerate', async () => {
   const result7 = await result6.next('.plans/mobile-plan.md')
   assert(result7.status === 'pending')
 
-  const result8 = await result7.next({})
+  const result8 = await result7.next()
   expect(result8).toMatchSnapshot()
 })
 
@@ -163,7 +163,7 @@ test('should execute plan', async () => {
   expect(result3).toMatchSnapshot()
   assert(result3.status === 'pending')
 
-  const result4 = await result3.next({})
+  const result4 = await result3.next()
   expect(result4).toMatchSnapshot()
 })
 
@@ -217,7 +217,7 @@ test('should handle multiple clarifying questions', async () => {
   const result8 = await result7.next('.plans/pipeline-plan.md')
   assert(result8.status === 'pending')
 
-  const result9 = await result8.next({})
+  const result9 = await result8.next()
   expect(result9).toMatchSnapshot()
 })
 
@@ -261,7 +261,7 @@ test('should handle multiple feedback iterations', async () => {
   const result10 = await result9.next('.plans/cache-plan.md')
   assert(result10.status === 'pending')
 
-  const result11 = await result10.next({})
+  const result11 = await result10.next()
   expect(result11).toMatchSnapshot()
 })
 
@@ -284,7 +284,7 @@ test('should save plan with custom path', async () => {
   expect(result4).toMatchSnapshot()
   assert(result4.status === 'pending')
 
-  const result5 = await result4.next({})
+  const result5 = await result4.next()
   expect(result5).toMatchSnapshot()
 })
 
@@ -316,7 +316,7 @@ test('should handle plan with both plan and question returned', async () => {
   const result5 = await result4.next('execute')
   assert(result5.status === 'pending')
 
-  const result6 = await result5.next({})
+  const result6 = await result5.next()
   expect(result6).toMatchSnapshot()
 })
 
@@ -356,7 +356,7 @@ test('should handle plan with checklist format', async () => {
   const result4 = await result3.next('.plans/onboarding.md')
   assert(result4.status === 'pending')
 
-  const result5 = await result4.next({})
+  const result5 = await result4.next()
   expect(result5).toMatchSnapshot()
 })
 
@@ -394,7 +394,7 @@ test('should handle complex plan with mixed formats', async () => {
   const result4 = await result3.next('.plans/feature-launch.md')
   assert(result4.status === 'pending')
 
-  const result5 = await result4.next({})
+  const result5 = await result4.next()
   expect(result5).toMatchSnapshot()
 })
 
@@ -439,7 +439,7 @@ test('should handle workflow with question, feedback, and save cycle', async () 
   const result9 = await result8.next('.plans/performance-optimization.md')
   assert(result9.status === 'pending')
 
-  const result10 = await result9.next({})
+  const result10 = await result9.next()
   expect(result10).toMatchSnapshot()
 })
 
@@ -551,7 +551,7 @@ test('should update existing plan with filePath provided', async () => {
   expect(result3).toMatchSnapshot()
   assert(result3.status === 'pending')
 
-  const result4 = await result3.next({})
+  const result4 = await result3.next()
   expect(result4).toMatchSnapshot()
 })
 
@@ -592,6 +592,6 @@ test('should handle regenerate after feedback', async () => {
   const result9 = await result8.next('.plans/search.md')
   assert(result9.status === 'pending')
 
-  const result10 = await result9.next({})
+  const result10 = await result9.next()
   expect(result10).toMatchSnapshot()
 })

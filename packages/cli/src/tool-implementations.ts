@@ -5,19 +5,35 @@ import { dirname } from 'node:path'
 import type { LanguageModelV2 } from '@ai-sdk/provider'
 import { confirm as inquirerConfirm, input as inquirerInput, select as inquirerSelect } from '@inquirer/prompts'
 import { listFiles, readMultiline } from '@polka-codes/cli-shared'
-import type { AgentPolicy, ToolFormat, UsageMeter } from '@polka-codes/core'
+import type { AgentPolicy, TaskEventCallback, ToolFormat, UsageMeter } from '@polka-codes/core'
 import {
   type AgentBase,
   type AgentNameType,
   AnalyzerAgent,
   ArchitectAgent,
+  attemptCompletion,
   CodeFixerAgent,
   CoderAgent,
+  computeRateLimitBackoffSeconds,
+  delegate,
+  executeCommand,
+  fetchUrl,
+  handOver,
+  listFiles as listFilesTool,
   parseJsonFromMarkdown,
+  readBinaryFile,
+  readFile,
+  removeFile,
+  renameFile,
+  replaceInFile,
   type SharedAgentOptions,
+  searchFiles,
+  TaskEventKind,
   ToolResponseType,
+  writeToFile,
 } from '@polka-codes/core'
-import type { PlainJson, ToolCall } from '@polka-codes/workflow'
+import { fromJsonModelMessage, type ToolCall } from '@polka-codes/workflow'
+import { streamText } from 'ai'
 import chalk from 'chalk'
 import type { Command } from 'commander'
 import type { Ora } from 'ora'
@@ -41,6 +57,23 @@ export type AgentContextParameters = {
 import type { CliToolRegistry } from './workflow-tools'
 import { getLocalChanges } from './workflows/workflow.utils'
 
+const allTools = [
+  attemptCompletion,
+  delegate,
+  executeCommand,
+  fetchUrl,
+  handOver,
+  listFilesTool,
+  readBinaryFile,
+  readFile,
+  removeFile,
+  renameFile,
+  replaceInFile,
+  searchFiles,
+  writeToFile,
+] as const
+const toolHandlers = new Map(allTools.map((t) => [t.name, t]))
+
 const agentRegistry: Record<string, new (options: SharedAgentOptions) => AgentBase> = {
   analyzer: AnalyzerAgent,
   architect: ArchitectAgent,
@@ -60,7 +93,8 @@ export async function handleToolCall(
     providerConfig: ApiProviderConfig
     parameters: AgentContextParameters
     getModel: (name: AgentNameType) => Promise<LanguageModelV2>
-    agentCallback?: (event: any) => void
+    model?: LanguageModelV2
+    agentCallback?: TaskEventCallback
     toolProvider: any // ToolProvider
     spinner: Ora
     command: Command
@@ -138,7 +172,7 @@ export async function handleToolCall(
         if (!input.outputSchema) {
           return {
             output: exitReason.message,
-            messages: agent.messages as PlainJson,
+            messages: agent.messages,
           }
         }
 
@@ -169,7 +203,7 @@ export async function handleToolCall(
         }
         return {
           output: validated.data,
-          messages: agent.messages as PlainJson,
+          messages: agent.messages,
         }
       }
 
@@ -354,35 +388,106 @@ export async function handleToolCall(
         })
       })
     }
-    case 'runTask': {
-      const { task } = toolCall.input as { task: string }
+    case 'generateText': {
       context.spinner.stop()
-
-      const { config, providerConfig, verbose, maxMessageCount, budget, agent, silent } = parseOptions(
-        (context.command.parent ?? context.command).opts(),
-      )
-      const { Runner } = await import('./Runner') // Lazy import to avoid circular dependency
-
-      const runner = new Runner({
-        providerConfig,
-        config,
-        maxMessageCount,
-        budget,
-        interactive: false,
-        verbose,
-        silent,
-        externalUsageMeter: context.parameters.usageMeter,
-      })
-
-      await runner.startTask(task, agent)
-
-      if (!silent) {
-        runner.printUsage()
+      const { model, agentCallback } = context
+      if (!model) {
+        throw new Error('Model not found in context')
       }
+      const { messages, tools } = toolCall.input
 
-      context.spinner.start()
-      return {}
+      const { retryCount = 5, requestTimeoutSeconds = 90 } = context.parameters
+
+      for (let i = 0; i < retryCount; i++) {
+        const abortController = new AbortController()
+        const timeout = setTimeout(() => abortController.abort(), requestTimeoutSeconds * 1000)
+
+        try {
+          const stream = streamText({
+            model,
+            temperature: 0,
+            messages: messages.map(fromJsonModelMessage),
+            tools,
+            async onChunk({ chunk }) {
+              switch (chunk.type) {
+                case 'text-delta':
+                  agentCallback?.({
+                    kind: TaskEventKind.Text,
+                    newText: chunk.text,
+                  })
+                  break
+                case 'reasoning-delta':
+                  agentCallback?.({
+                    kind: TaskEventKind.Reasoning,
+                    newText: chunk.text,
+                  })
+                  break
+              }
+            },
+            onFinish(result) {
+              agentCallback?.({
+                kind: TaskEventKind.Usage,
+                usage: result.usage,
+              })
+            },
+            providerOptions: context.parameters.providerOptions,
+            abortSignal: abortController.signal,
+          })
+
+          await stream.consumeStream({
+            onError: (error) => {
+              console.error('Error in stream:', error)
+            },
+          })
+
+          const resp = await stream.response
+          return resp.messages
+        } catch (error: any) {
+          if (error.name === 'AbortError') {
+            // This is a timeout
+            continue
+          }
+          if ('response' in error) {
+            const response: Response = error.response
+            if (response.status === 429) {
+              const backoff = computeRateLimitBackoffSeconds(i)
+              await new Promise((resolve) => setTimeout(resolve, backoff * 1000))
+              continue
+            }
+          }
+          throw error
+        } finally {
+          clearTimeout(timeout)
+          context.spinner.start()
+        }
+      }
+      throw new Error(`Failed to get a response from the model after ${retryCount} retries.`)
+    }
+    case 'invokeTool': {
+      const { toolName, input } = toolCall.input
+      const tool = toolHandlers.get(toolName as any)
+      if (!tool) {
+        return {
+          type: ToolResponseType.Error,
+          error: `Tool not found: ${toolName}`,
+        }
+      }
+      try {
+        const result = await tool.handler(context.toolProvider, input)
+        return result
+      } catch (error: any) {
+        return {
+          type: ToolResponseType.Error,
+          error: error.message,
+        }
+      }
+    }
+    case 'taskEvent': {
+      const event = toolCall.input
+      await context.agentCallback?.(event)
+
+      return
     }
   }
-  throw new Error(`Unknown tool: ${String((toolCall as any).tool)}`)
+  throw new Error(`Unknown tool: ${(toolCall as any).tool}`)
 }

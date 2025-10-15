@@ -9,7 +9,7 @@
   "scripts": {
     "build": "bun --filter './packages/**' build",
     "lint": "biome check .",
-    "fix": "biome check --write",
+    "fix": "biome check --write --unsafe",
     "check": "tsc --noEmit && biome check",
     "typecheck": "tsc --noEmit",
     "prepare": "husky",

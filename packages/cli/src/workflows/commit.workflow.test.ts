@@ -2,6 +2,7 @@
 
 import { expect, test } from 'bun:test'
 import assert from 'node:assert/strict'
+import { ToolResponseType } from '@polka-codes/core'
 import { run } from '@polka-codes/workflow'
 import { UserCancelledError } from '../errors'
 import { commitWorkflow } from './commit.workflow'
@@ -42,15 +43,19 @@ test('should generate commit message with staged files', async () => {
 
   // Provide agent response
   const result5 = await result4.next({
-    output: { commitMessage: 'feat: add new feature\n\nAdded newFunc to file.ts' },
-    messages: [],
+    type: ToolResponseType.Exit,
+    message: '',
+    object: {
+      commitMessage: '',
+    },
   })
   expect(result5).toMatchSnapshot()
   assert(result5.status === 'pending')
 
   // Provide createCommit response
-  const result6 = await result5.next({ message: 'feat: add new feature\n\nAdded newFunc to file.ts' })
+  const result6 = await result5.next()
   expect(result6).toMatchSnapshot()
+  assert(result6.status === 'completed')
 })
 
 test('should auto-stage all files when all=true', async () => {
@@ -94,15 +99,16 @@ test('should auto-stage all files when all=true', async () => {
 
   // Provide agent response
   const result6 = await result5.next({
-    output: { commitMessage: 'chore: update file' },
-    messages: [],
+    type: ToolResponseType.Exit,
+    message: { title: 'chore: update file', description: 'Updated the file.' },
   })
   expect(result6).toMatchSnapshot()
   assert(result6.status === 'pending')
 
   // Provide createCommit response
-  const result7 = await result6.next({ message: 'chore: update file' })
+  const result7 = await result6.next()
   expect(result7).toMatchSnapshot()
+  assert(result7.status === 'completed')
 })
 
 test('should prompt user and stage when confirmed', async () => {
@@ -151,15 +157,16 @@ test('should prompt user and stage when confirmed', async () => {
 
   // Provide agent response
   const result7 = await result6.next({
-    output: { commitMessage: 'fix: update logic' },
-    messages: [],
+    type: ToolResponseType.Exit,
+    message: { title: 'fix: update logic', description: 'Updated the logic.' },
   })
   expect(result7).toMatchSnapshot()
   assert(result7.status === 'pending')
 
   // Provide createCommit response
-  const result8 = await result7.next({ message: 'fix: update logic' })
+  const result8 = await result7.next()
   expect(result8).toMatchSnapshot()
+  assert(result8.status === 'completed')
 })
 
 test('should throw UserCancelledError when user declines staging', async () => {
@@ -223,14 +230,18 @@ test('should include user context in agent prompt', async () => {
 
   // Provide agent response
   const result5 = await result4.next({
-    output: { commitMessage: 'feat: implement feature X (#123)' },
-    messages: [],
+    type: ToolResponseType.Exit,
+    message: {
+      title: 'feat: implement feature X (#123)',
+      description: 'Implemented feature X as per ticket #123.',
+    },
   })
   assert(result5.status === 'pending')
 
   // Provide createCommit response
-  const result6 = await result5.next({ message: 'feat: implement feature X (#123)' })
+  const result6 = await result5.next()
   expect(result6).toMatchSnapshot()
+  assert(result6.status === 'completed')
 })
 
 test('should handle various file statuses', async () => {
@@ -268,14 +279,15 @@ test('should handle various file statuses', async () => {
 
   // Provide agent response
   const result5 = await result4.next({
-    output: { commitMessage: 'refactor: restructure files' },
-    messages: [],
+    type: ToolResponseType.Exit,
+    message: { title: 'refactor: restructure files', description: 'Restructured files.' },
   })
   assert(result5.status === 'pending')
 
   // Provide createCommit response
-  const result6 = await result5.next({ message: 'refactor: restructure files' })
+  const result6 = await result5.next()
   expect(result6).toMatchSnapshot()
+  assert(result6.status === 'completed')
 })
 
 test('should handle empty diff name status result', async () => {
@@ -308,14 +320,15 @@ test('should handle empty diff name status result', async () => {
 
   // Provide agent response
   const result5 = await result4.next({
-    output: { commitMessage: 'docs: update comments' },
-    messages: [],
+    type: ToolResponseType.Exit,
+    message: { title: 'docs: update comments', description: 'Updated comments.' },
   })
   assert(result5.status === 'pending')
 
   // Provide createCommit response
-  const result6 = await result5.next({ message: 'docs: update comments' })
+  const result6 = await result5.next()
   expect(result6).toMatchSnapshot()
+  assert(result6.status === 'completed')
 })
 
 test('should handle workflow with all stages', async () => {
@@ -350,13 +363,15 @@ test('should handle workflow with all stages', async () => {
   assert(result5.status === 'pending')
 
   const result6 = await result5.next({
-    output: { commitMessage: 'fix: correct validation logic\n\nFixed bug in validation that returned false instead of true' },
-    messages: [],
+    type: ToolResponseType.Exit,
+    message: {
+      title: 'fix: correct validation logic',
+      description: 'Fixed bug in validation that returned false instead of true',
+    },
   })
   assert(result6.status === 'pending')
 
-  const result7 = await result6.next({
-    message: 'fix: correct validation logic\n\nFixed bug in validation that returned false instead of true',
-  })
+  const result7 = await result6.next()
   expect(result7).toMatchSnapshot()
+  assert(result7.status === 'completed')
 })

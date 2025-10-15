@@ -17,7 +17,7 @@ const DecisionSchema = z.object({
   agent: z.string().optional(),
 })
 
-export const metaWorkflow: Workflow<MetaWorkflowInput, any, CliToolRegistry> = {
+export const metaWorkflow: Workflow<MetaWorkflowInput, void, CliToolRegistry> = {
   name: 'Meta Workflow',
   description: "Dynamically chooses and runs a workflow based on the user's task.",
   async *fn(input, _step, tools) {
@@ -42,9 +42,9 @@ export const metaWorkflow: Workflow<MetaWorkflowInput, any, CliToolRegistry> = {
     console.log('\n')
 
     if (decision.workflow === 'code') {
-      return yield* runSubWorkflow(tools, codeWorkflow, { task })
+      yield* runSubWorkflow(tools, codeWorkflow, { task })
     } else if (decision.workflow === 'agent' && decision.agent) {
-      return yield* runSubWorkflow(tools, taskWorkflow, {
+      yield* runSubWorkflow(tools, taskWorkflow, {
         task,
         agent: decision.agent,
       })
