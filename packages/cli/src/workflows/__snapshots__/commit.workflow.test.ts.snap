@@ -68,12 +68,11 @@ Based on the provided list of staged files in <file_status>, the diff in <diff> 
 
 Follow the conventional commit format.
 
-Respond with a JSON object containing the title and description of the commit message.
+Respond with a JSON object containing the commit message.
 Example format:
 \`\`\`json
 {
-  "title": "feat: add new feature",
-  "description": "describes the new feature in more detail"
+  "commitMessage": "feat: add new feature\\n\\ndescribe the new feature in more detail"
 }
 \`\`\`
 "
@@ -92,26 +91,9 @@ exports[`should generate commit message with staged files 5`] = `
   "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
-      "kind": "StartRequest",
-      "userMessage": [
-        {
-          "content": 
-"<file_status>
-Modified: src/file.ts
-Added: src/newfile.ts
-</file_status><diff>
---- a/src/file.ts
-+++ b/src/file.ts
-@@ -1,3 +1,4 @@
-+export const newFunc = () => {}
-
-</diff>"
-,
-          "role": "user",
-        },
-      ],
+      "message": "feat: add newFunc to file.ts",
     },
-    "tool": "taskEvent",
+    "tool": "createCommit",
     "type": "tool",
   },
 }
@@ -119,104 +101,8 @@ Added: src/newfile.ts
 
 exports[`should generate commit message with staged files 6`] = `
 {
-  "next": [Function: AsyncFunction],
-  "status": "pending",
-  "throw": [Function: AsyncFunction],
-  "tool": {
-    "input": {
-      "messages": [
-        {
-          "content": 
-"
-You are an expert at writing git commit messages.
-Based on the provided list of staged files in <file_status>, the diff in <diff> and optional user context in <tool_input_context>, generate a concise and descriptive commit message.
-
-Follow the conventional commit format.
-
-Respond with a JSON object containing the title and description of the commit message.
-Example format:
-\`\`\`json
-{
-  "title": "feat: add new feature",
-  "description": "describes the new feature in more detail"
-}
-\`\`\`
-"
-,
-          "role": "system",
-        },
-        {
-          "content": 
-"<file_status>
-Modified: src/file.ts
-Added: src/newfile.ts
-</file_status><diff>
---- a/src/file.ts
-+++ b/src/file.ts
-@@ -1,3 +1,4 @@
-+export const newFunc = () => {}
-
-</diff>"
-,
-          "role": "user",
-        },
-      ],
-      "tools": {
-        "gitDiff": {
-          "description": "Get the git diff for the current repository. Can be used to get staged changes, unstaged changes, or changes between commits. By default, it returns unstaged changes.",
-          "inputSchema": {
-            "_type": undefined,
-            "jsonSchema": [native code],
-            "validate": undefined,
-            [Symbol(vercel.ai.schema)]: true,
-            [Symbol(vercel.ai.validator)]: true,
-          },
-        },
-        "listFiles": {
-          "description": "Request to list files and directories within the specified directory. If recursive is true, it will list all files and directories recursively. If recursive is false or not provided, it will only list the top-level contents. Do not use this tool to confirm the existence of files you may have created, as the user will let you know if the files were created successfully or not.",
-          "inputSchema": {
-            "_type": undefined,
-            "jsonSchema": [native code],
-            "validate": undefined,
-            [Symbol(vercel.ai.schema)]: true,
-            [Symbol(vercel.ai.validator)]: true,
-          },
-        },
-        "readBinaryFile": {
-          "description": "Read a binary file from a URL or local path. Use file:// prefix to access local files. This can be used to access non-text files such as PDFs or images.",
-          "inputSchema": {
-            "_type": undefined,
-            "jsonSchema": [native code],
-            "validate": undefined,
-            [Symbol(vercel.ai.schema)]: true,
-            [Symbol(vercel.ai.validator)]: true,
-          },
-        },
-        "readFile": {
-          "description": "Request to read the contents of one or multiple files at the specified paths. Use comma separated paths to read multiple files. Use this when you need to examine the contents of an existing file you do not know the contents of, for example to analyze code, review text files, or extract information from configuration files. May not be suitable for other types of binary files, as it returns the raw content as a string. Try to list all the potential files are relevent to the task, and then use this tool to read all the relevant files.",
-          "inputSchema": {
-            "_type": undefined,
-            "jsonSchema": [native code],
-            "validate": undefined,
-            [Symbol(vercel.ai.schema)]: true,
-            [Symbol(vercel.ai.validator)]: true,
-          },
-        },
-        "searchFiles": {
-          "description": "Request to perform a regex search across files in a specified directory, outputting context-rich results that include surrounding lines. This tool searches for patterns or specific content across multiple files, displaying each match with encapsulating context.",
-          "inputSchema": {
-            "_type": undefined,
-            "jsonSchema": [native code],
-            "validate": undefined,
-            [Symbol(vercel.ai.schema)]: true,
-            [Symbol(vercel.ai.validator)]: true,
-          },
-        },
-      },
-    },
-    "tool": "generateText",
-    "type": "tool",
-  },
+  "output": undefined,
+  "status": "completed",
 }
 `;
 
@@ -294,12 +180,11 @@ Based on the provided list of staged files in <file_status>, the diff in <diff> 
 
 Follow the conventional commit format.
 
-Respond with a JSON object containing the title and description of the commit message.
+Respond with a JSON object containing the commit message.
 Example format:
 \`\`\`json
 {
-  "title": "feat: add new feature",
-  "description": "describes the new feature in more detail"
+  "commitMessage": "feat: add new feature\\n\\ndescribe the new feature in more detail"
 }
 \`\`\`
 "
@@ -318,24 +203,9 @@ exports[`should auto-stage all files when all=true 5`] = `
   "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
-      "kind": "StartRequest",
-      "userMessage": [
-        {
-          "content": 
-"<file_status>
-Modified: src/file.ts
-</file_status><diff>
---- a/src/file.ts
-+++ b/src/file.ts
-@@ -1 +1,2 @@
-+// new code
-</diff>"
-,
-          "role": "user",
-        },
-      ],
+      "message": "refactor: update file.ts with new code",
     },
-    "tool": "taskEvent",
+    "tool": "createCommit",
     "type": "tool",
   },
 }
@@ -343,102 +213,8 @@ Modified: src/file.ts
 
 exports[`should auto-stage all files when all=true 6`] = `
 {
-  "next": [Function: AsyncFunction],
-  "status": "pending",
-  "throw": [Function: AsyncFunction],
-  "tool": {
-    "input": {
-      "messages": [
-        {
-          "content": 
-"
-You are an expert at writing git commit messages.
-Based on the provided list of staged files in <file_status>, the diff in <diff> and optional user context in <tool_input_context>, generate a concise and descriptive commit message.
-
-Follow the conventional commit format.
-
-Respond with a JSON object containing the title and description of the commit message.
-Example format:
-\`\`\`json
-{
-  "title": "feat: add new feature",
-  "description": "describes the new feature in more detail"
-}
-\`\`\`
-"
-,
-          "role": "system",
-        },
-        {
-          "content": 
-"<file_status>
-Modified: src/file.ts
-</file_status><diff>
---- a/src/file.ts
-+++ b/src/file.ts
-@@ -1 +1,2 @@
-+// new code
-</diff>"
-,
-          "role": "user",
-        },
-      ],
-      "tools": {
-        "gitDiff": {
-          "description": "Get the git diff for the current repository. Can be used to get staged changes, unstaged changes, or changes between commits. By default, it returns unstaged changes.",
-          "inputSchema": {
-            "_type": undefined,
-            "jsonSchema": [native code],
-            "validate": undefined,
-            [Symbol(vercel.ai.schema)]: true,
-            [Symbol(vercel.ai.validator)]: true,
-          },
-        },
-        "listFiles": {
-          "description": "Request to list files and directories within the specified directory. If recursive is true, it will list all files and directories recursively. If recursive is false or not provided, it will only list the top-level contents. Do not use this tool to confirm the existence of files you may have created, as the user will let you know if the files were created successfully or not.",
-          "inputSchema": {
-            "_type": undefined,
-            "jsonSchema": [native code],
-            "validate": undefined,
-            [Symbol(vercel.ai.schema)]: true,
-            [Symbol(vercel.ai.validator)]: true,
-          },
-        },
-        "readBinaryFile": {
-          "description": "Read a binary file from a URL or local path. Use file:// prefix to access local files. This can be used to access non-text files such as PDFs or images.",
-          "inputSchema": {
-            "_type": undefined,
-            "jsonSchema": [native code],
-            "validate": undefined,
-            [Symbol(vercel.ai.schema)]: true,
-            [Symbol(vercel.ai.validator)]: true,
-          },
-        },
-        "readFile": {
-          "description": "Request to read the contents of one or multiple files at the specified paths. Use comma separated paths to read multiple files. Use this when you need to examine the contents of an existing file you do not know the contents of, for example to analyze code, review text files, or extract information from configuration files. May not be suitable for other types of binary files, as it returns the raw content as a string. Try to list all the potential files are relevent to the task, and then use this tool to read all the relevant files.",
-          "inputSchema": {
-            "_type": undefined,
-            "jsonSchema": [native code],
-            "validate": undefined,
-            [Symbol(vercel.ai.schema)]: true,
-            [Symbol(vercel.ai.validator)]: true,
-          },
-        },
-        "searchFiles": {
-          "description": "Request to perform a regex search across files in a specified directory, outputting context-rich results that include surrounding lines. This tool searches for patterns or specific content across multiple files, displaying each match with encapsulating context.",
-          "inputSchema": {
-            "_type": undefined,
-            "jsonSchema": [native code],
-            "validate": undefined,
-            [Symbol(vercel.ai.schema)]: true,
-            [Symbol(vercel.ai.validator)]: true,
-          },
-        },
-      },
-    },
-    "tool": "generateText",
-    "type": "tool",
-  },
+  "output": undefined,
+  "status": "completed",
 }
 `;
 
@@ -532,12 +308,11 @@ Based on the provided list of staged files in <file_status>, the diff in <diff> 
 
 Follow the conventional commit format.
 
-Respond with a JSON object containing the title and description of the commit message.
+Respond with a JSON object containing the commit message.
 Example format:
 \`\`\`json
 {
-  "title": "feat: add new feature",
-  "description": "describes the new feature in more detail"
+  "commitMessage": "feat: add new feature\\n\\ndescribe the new feature in more detail"
 }
 \`\`\`
 "
@@ -556,24 +331,9 @@ exports[`should prompt user and stage when confirmed 6`] = `
   "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
-      "kind": "StartRequest",
-      "userMessage": [
-        {
-          "content": 
-"<file_status>
-Modified: src/file.ts
-</file_status><diff>
---- a/src/file.ts
-+++ b/src/file.ts
-@@ -1 +1,2 @@
-+// updated
-</diff>"
-,
-          "role": "user",
-        },
-      ],
+      "message": "fix: update file.ts",
     },
-    "tool": "taskEvent",
+    "tool": "createCommit",
     "type": "tool",
   },
 }
@@ -581,102 +341,8 @@ Modified: src/file.ts
 
 exports[`should prompt user and stage when confirmed 7`] = `
 {
-  "next": [Function: AsyncFunction],
-  "status": "pending",
-  "throw": [Function: AsyncFunction],
-  "tool": {
-    "input": {
-      "messages": [
-        {
-          "content": 
-"
-You are an expert at writing git commit messages.
-Based on the provided list of staged files in <file_status>, the diff in <diff> and optional user context in <tool_input_context>, generate a concise and descriptive commit message.
-
-Follow the conventional commit format.
-
-Respond with a JSON object containing the title and description of the commit message.
-Example format:
-\`\`\`json
-{
-  "title": "feat: add new feature",
-  "description": "describes the new feature in more detail"
-}
-\`\`\`
-"
-,
-          "role": "system",
-        },
-        {
-          "content": 
-"<file_status>
-Modified: src/file.ts
-</file_status><diff>
---- a/src/file.ts
-+++ b/src/file.ts
-@@ -1 +1,2 @@
-+// updated
-</diff>"
-,
-          "role": "user",
-        },
-      ],
-      "tools": {
-        "gitDiff": {
-          "description": "Get the git diff for the current repository. Can be used to get staged changes, unstaged changes, or changes between commits. By default, it returns unstaged changes.",
-          "inputSchema": {
-            "_type": undefined,
-            "jsonSchema": [native code],
-            "validate": undefined,
-            [Symbol(vercel.ai.schema)]: true,
-            [Symbol(vercel.ai.validator)]: true,
-          },
-        },
-        "listFiles": {
-          "description": "Request to list files and directories within the specified directory. If recursive is true, it will list all files and directories recursively. If recursive is false or not provided, it will only list the top-level contents. Do not use this tool to confirm the existence of files you may have created, as the user will let you know if the files were created successfully or not.",
-          "inputSchema": {
-            "_type": undefined,
-            "jsonSchema": [native code],
-            "validate": undefined,
-            [Symbol(vercel.ai.schema)]: true,
-            [Symbol(vercel.ai.validator)]: true,
-          },
-        },
-        "readBinaryFile": {
-          "description": "Read a binary file from a URL or local path. Use file:// prefix to access local files. This can be used to access non-text files such as PDFs or images.",
-          "inputSchema": {
-            "_type": undefined,
-            "jsonSchema": [native code],
-            "validate": undefined,
-            [Symbol(vercel.ai.schema)]: true,
-            [Symbol(vercel.ai.validator)]: true,
-          },
-        },
-        "readFile": {
-          "description": "Request to read the contents of one or multiple files at the specified paths. Use comma separated paths to read multiple files. Use this when you need to examine the contents of an existing file you do not know the contents of, for example to analyze code, review text files, or extract information from configuration files. May not be suitable for other types of binary files, as it returns the raw content as a string. Try to list all the potential files are relevent to the task, and then use this tool to read all the relevant files.",
-          "inputSchema": {
-            "_type": undefined,
-            "jsonSchema": [native code],
-            "validate": undefined,
-            [Symbol(vercel.ai.schema)]: true,
-            [Symbol(vercel.ai.validator)]: true,
-          },
-        },
-        "searchFiles": {
-          "description": "Request to perform a regex search across files in a specified directory, outputting context-rich results that include surrounding lines. This tool searches for patterns or specific content across multiple files, displaying each match with encapsulating context.",
-          "inputSchema": {
-            "_type": undefined,
-            "jsonSchema": [native code],
-            "validate": undefined,
-            [Symbol(vercel.ai.schema)]: true,
-            [Symbol(vercel.ai.validator)]: true,
-          },
-        },
-      },
-    },
-    "tool": "generateText",
-    "type": "tool",
-  },
+  "output": undefined,
+  "status": "completed",
 }
 `;
 
@@ -709,12 +375,11 @@ Based on the provided list of staged files in <file_status>, the diff in <diff> 
 
 Follow the conventional commit format.
 
-Respond with a JSON object containing the title and description of the commit message.
+Respond with a JSON object containing the commit message.
 Example format:
 \`\`\`json
 {
-  "title": "feat: add new feature",
-  "description": "describes the new feature in more detail"
+  "commitMessage": "feat: add new feature\\n\\ndescribe the new feature in more detail"
 }
 \`\`\`
 "
@@ -733,100 +398,18 @@ exports[`should include user context in agent prompt 2`] = `
   "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
-      "messages": [
-        {
-          "content": 
-"
-You are an expert at writing git commit messages.
-Based on the provided list of staged files in <file_status>, the diff in <diff> and optional user context in <tool_input_context>, generate a concise and descriptive commit message.
-
-Follow the conventional commit format.
-
-Respond with a JSON object containing the title and description of the commit message.
-Example format:
-\`\`\`json
-{
-  "title": "feat: add new feature",
-  "description": "describes the new feature in more detail"
-}
-\`\`\`
-"
-,
-          "role": "system",
-        },
-        {
-          "content": 
-"<file_status>
-Added: src/feature.ts
-</file_status><diff>
---- /dev/null
-+++ b/src/feature.ts
-@@ -0,0 +1 @@
-+export const feature = () => {}
-</diff>
-<tool_input_context>
-Implementing feature X for ticket #123
-</tool_input_context>"
-,
-          "role": "user",
-        },
-      ],
-      "tools": {
-        "gitDiff": {
-          "description": "Get the git diff for the current repository. Can be used to get staged changes, unstaged changes, or changes between commits. By default, it returns unstaged changes.",
-          "inputSchema": {
-            "_type": undefined,
-            "jsonSchema": [native code],
-            "validate": undefined,
-            [Symbol(vercel.ai.schema)]: true,
-            [Symbol(vercel.ai.validator)]: true,
-          },
-        },
-        "listFiles": {
-          "description": "Request to list files and directories within the specified directory. If recursive is true, it will list all files and directories recursively. If recursive is false or not provided, it will only list the top-level contents. Do not use this tool to confirm the existence of files you may have created, as the user will let you know if the files were created successfully or not.",
-          "inputSchema": {
-            "_type": undefined,
-            "jsonSchema": [native code],
-            "validate": undefined,
-            [Symbol(vercel.ai.schema)]: true,
-            [Symbol(vercel.ai.validator)]: true,
-          },
-        },
-        "readBinaryFile": {
-          "description": "Read a binary file from a URL or local path. Use file:// prefix to access local files. This can be used to access non-text files such as PDFs or images.",
-          "inputSchema": {
-            "_type": undefined,
-            "jsonSchema": [native code],
-            "validate": undefined,
-            [Symbol(vercel.ai.schema)]: true,
-            [Symbol(vercel.ai.validator)]: true,
-          },
-        },
-        "readFile": {
-          "description": "Request to read the contents of one or multiple files at the specified paths. Use comma separated paths to read multiple files. Use this when you need to examine the contents of an existing file you do not know the contents of, for example to analyze code, review text files, or extract information from configuration files. May not be suitable for other types of binary files, as it returns the raw content as a string. Try to list all the potential files are relevent to the task, and then use this tool to read all the relevant files.",
-          "inputSchema": {
-            "_type": undefined,
-            "jsonSchema": [native code],
-            "validate": undefined,
-            [Symbol(vercel.ai.schema)]: true,
-            [Symbol(vercel.ai.validator)]: true,
-          },
-        },
-        "searchFiles": {
-          "description": "Request to perform a regex search across files in a specified directory, outputting context-rich results that include surrounding lines. This tool searches for patterns or specific content across multiple files, displaying each match with encapsulating context.",
-          "inputSchema": {
-            "_type": undefined,
-            "jsonSchema": [native code],
-            "validate": undefined,
-            [Symbol(vercel.ai.schema)]: true,
-            [Symbol(vercel.ai.validator)]: true,
-          },
-        },
-      },
+      "message": "feat: implement feature X for ticket #123",
     },
-    "tool": "generateText",
+    "tool": "createCommit",
     "type": "tool",
   },
+}
+`;
+
+exports[`should include user context in agent prompt 3`] = `
+{
+  "output": undefined,
+  "status": "completed",
 }
 `;
 
@@ -845,12 +428,11 @@ Based on the provided list of staged files in <file_status>, the diff in <diff> 
 
 Follow the conventional commit format.
 
-Respond with a JSON object containing the title and description of the commit message.
+Respond with a JSON object containing the commit message.
 Example format:
 \`\`\`json
 {
-  "title": "feat: add new feature",
-  "description": "describes the new feature in more detail"
+  "commitMessage": "feat: add new feature\\n\\ndescribe the new feature in more detail"
 }
 \`\`\`
 "
@@ -869,101 +451,18 @@ exports[`should handle various file statuses 2`] = `
   "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
-      "messages": [
-        {
-          "content": 
-"
-You are an expert at writing git commit messages.
-Based on the provided list of staged files in <file_status>, the diff in <diff> and optional user context in <tool_input_context>, generate a concise and descriptive commit message.
-
-Follow the conventional commit format.
-
-Respond with a JSON object containing the title and description of the commit message.
-Example format:
-\`\`\`json
-{
-  "title": "feat: add new feature",
-  "description": "describes the new feature in more detail"
-}
-\`\`\`
-"
-,
-          "role": "system",
-        },
-        {
-          "content": 
-"<file_status>
-Modified: src/modified.ts
-Added: src/added.ts
-Deleted: src/deleted.ts
-Renamed: src/old.ts	src/renamed.ts
-</file_status><diff>
---- a/src/modified.ts
-+++ b/src/modified.ts
-@@ -1 +1,2 @@
-+// changes
-
-</diff>"
-,
-          "role": "user",
-        },
-      ],
-      "tools": {
-        "gitDiff": {
-          "description": "Get the git diff for the current repository. Can be used to get staged changes, unstaged changes, or changes between commits. By default, it returns unstaged changes.",
-          "inputSchema": {
-            "_type": undefined,
-            "jsonSchema": [native code],
-            "validate": undefined,
-            [Symbol(vercel.ai.schema)]: true,
-            [Symbol(vercel.ai.validator)]: true,
-          },
-        },
-        "listFiles": {
-          "description": "Request to list files and directories within the specified directory. If recursive is true, it will list all files and directories recursively. If recursive is false or not provided, it will only list the top-level contents. Do not use this tool to confirm the existence of files you may have created, as the user will let you know if the files were created successfully or not.",
-          "inputSchema": {
-            "_type": undefined,
-            "jsonSchema": [native code],
-            "validate": undefined,
-            [Symbol(vercel.ai.schema)]: true,
-            [Symbol(vercel.ai.validator)]: true,
-          },
-        },
-        "readBinaryFile": {
-          "description": "Read a binary file from a URL or local path. Use file:// prefix to access local files. This can be used to access non-text files such as PDFs or images.",
-          "inputSchema": {
-            "_type": undefined,
-            "jsonSchema": [native code],
-            "validate": undefined,
-            [Symbol(vercel.ai.schema)]: true,
-            [Symbol(vercel.ai.validator)]: true,
-          },
-        },
-        "readFile": {
-          "description": "Request to read the contents of one or multiple files at the specified paths. Use comma separated paths to read multiple files. Use this when you need to examine the contents of an existing file you do not know the contents of, for example to analyze code, review text files, or extract information from configuration files. May not be suitable for other types of binary files, as it returns the raw content as a string. Try to list all the potential files are relevent to the task, and then use this tool to read all the relevant files.",
-          "inputSchema": {
-            "_type": undefined,
-            "jsonSchema": [native code],
-            "validate": undefined,
-            [Symbol(vercel.ai.schema)]: true,
-            [Symbol(vercel.ai.validator)]: true,
-          },
-        },
-        "searchFiles": {
-          "description": "Request to perform a regex search across files in a specified directory, outputting context-rich results that include surrounding lines. This tool searches for patterns or specific content across multiple files, displaying each match with encapsulating context.",
-          "inputSchema": {
-            "_type": undefined,
-            "jsonSchema": [native code],
-            "validate": undefined,
-            [Symbol(vercel.ai.schema)]: true,
-            [Symbol(vercel.ai.validator)]: true,
-          },
-        },
-      },
+      "message": "refactor: update multiple files",
     },
-    "tool": "generateText",
+    "tool": "createCommit",
     "type": "tool",
   },
+}
+`;
+
+exports[`should handle various file statuses 3`] = `
+{
+  "output": undefined,
+  "status": "completed",
 }
 `;
 
@@ -982,12 +481,11 @@ Based on the provided list of staged files in <file_status>, the diff in <diff> 
 
 Follow the conventional commit format.
 
-Respond with a JSON object containing the title and description of the commit message.
+Respond with a JSON object containing the commit message.
 Example format:
 \`\`\`json
 {
-  "title": "feat: add new feature",
-  "description": "describes the new feature in more detail"
+  "commitMessage": "feat: add new feature\\n\\ndescribe the new feature in more detail"
 }
 \`\`\`
 "
@@ -1006,97 +504,18 @@ exports[`should handle empty diff name status result 2`] = `
   "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
-      "messages": [
-        {
-          "content": 
-"
-You are an expert at writing git commit messages.
-Based on the provided list of staged files in <file_status>, the diff in <diff> and optional user context in <tool_input_context>, generate a concise and descriptive commit message.
-
-Follow the conventional commit format.
-
-Respond with a JSON object containing the title and description of the commit message.
-Example format:
-\`\`\`json
-{
-  "title": "feat: add new feature",
-  "description": "describes the new feature in more detail"
-}
-\`\`\`
-"
-,
-          "role": "system",
-        },
-        {
-          "content": 
-"<file_status>
-
-</file_status><diff>
---- a/src/file.ts
-+++ b/src/file.ts
-@@ -1 +1,2 @@
-+// code
-</diff>"
-,
-          "role": "user",
-        },
-      ],
-      "tools": {
-        "gitDiff": {
-          "description": "Get the git diff for the current repository. Can be used to get staged changes, unstaged changes, or changes between commits. By default, it returns unstaged changes.",
-          "inputSchema": {
-            "_type": undefined,
-            "jsonSchema": [native code],
-            "validate": undefined,
-            [Symbol(vercel.ai.schema)]: true,
-            [Symbol(vercel.ai.validator)]: true,
-          },
-        },
-        "listFiles": {
-          "description": "Request to list files and directories within the specified directory. If recursive is true, it will list all files and directories recursively. If recursive is false or not provided, it will only list the top-level contents. Do not use this tool to confirm the existence of files you may have created, as the user will let you know if the files were created successfully or not.",
-          "inputSchema": {
-            "_type": undefined,
-            "jsonSchema": [native code],
-            "validate": undefined,
-            [Symbol(vercel.ai.schema)]: true,
-            [Symbol(vercel.ai.validator)]: true,
-          },
-        },
-        "readBinaryFile": {
-          "description": "Read a binary file from a URL or local path. Use file:// prefix to access local files. This can be used to access non-text files such as PDFs or images.",
-          "inputSchema": {
-            "_type": undefined,
-            "jsonSchema": [native code],
-            "validate": undefined,
-            [Symbol(vercel.ai.schema)]: true,
-            [Symbol(vercel.ai.validator)]: true,
-          },
-        },
-        "readFile": {
-          "description": "Request to read the contents of one or multiple files at the specified paths. Use comma separated paths to read multiple files. Use this when you need to examine the contents of an existing file you do not know the contents of, for example to analyze code, review text files, or extract information from configuration files. May not be suitable for other types of binary files, as it returns the raw content as a string. Try to list all the potential files are relevent to the task, and then use this tool to read all the relevant files.",
-          "inputSchema": {
-            "_type": undefined,
-            "jsonSchema": [native code],
-            "validate": undefined,
-            [Symbol(vercel.ai.schema)]: true,
-            [Symbol(vercel.ai.validator)]: true,
-          },
-        },
-        "searchFiles": {
-          "description": "Request to perform a regex search across files in a specified directory, outputting context-rich results that include surrounding lines. This tool searches for patterns or specific content across multiple files, displaying each match with encapsulating context.",
-          "inputSchema": {
-            "_type": undefined,
-            "jsonSchema": [native code],
-            "validate": undefined,
-            [Symbol(vercel.ai.schema)]: true,
-            [Symbol(vercel.ai.validator)]: true,
-          },
-        },
-      },
+      "message": "fix: update file.ts with new code",
     },
-    "tool": "generateText",
+    "tool": "createCommit",
     "type": "tool",
   },
+}
+`;
+
+exports[`should handle empty diff name status result 3`] = `
+{
+  "output": undefined,
+  "status": "completed",
 }
 `;
 
@@ -1107,100 +526,17 @@ exports[`should handle workflow with all stages 1`] = `
   "throw": [Function: AsyncFunction],
   "tool": {
     "input": {
-      "messages": [
-        {
-          "content": 
-"
-You are an expert at writing git commit messages.
-Based on the provided list of staged files in <file_status>, the diff in <diff> and optional user context in <tool_input_context>, generate a concise and descriptive commit message.
-
-Follow the conventional commit format.
-
-Respond with a JSON object containing the title and description of the commit message.
-Example format:
-\`\`\`json
-{
-  "title": "feat: add new feature",
-  "description": "describes the new feature in more detail"
-}
-\`\`\`
-"
-,
-          "role": "system",
-        },
-        {
-          "content": 
-"<file_status>
-Modified: src/validator.ts
-</file_status><diff>
---- a/src/validator.ts
-+++ b/src/validator.ts
-@@ -10,7 +10,7 @@
-- return false
-+ return true
-</diff>
-<tool_input_context>
-Fix bug in validation
-</tool_input_context>"
-,
-          "role": "user",
-        },
-      ],
-      "tools": {
-        "gitDiff": {
-          "description": "Get the git diff for the current repository. Can be used to get staged changes, unstaged changes, or changes between commits. By default, it returns unstaged changes.",
-          "inputSchema": {
-            "_type": undefined,
-            "jsonSchema": [native code],
-            "validate": undefined,
-            [Symbol(vercel.ai.schema)]: true,
-            [Symbol(vercel.ai.validator)]: true,
-          },
-        },
-        "listFiles": {
-          "description": "Request to list files and directories within the specified directory. If recursive is true, it will list all files and directories recursively. If recursive is false or not provided, it will only list the top-level contents. Do not use this tool to confirm the existence of files you may have created, as the user will let you know if the files were created successfully or not.",
-          "inputSchema": {
-            "_type": undefined,
-            "jsonSchema": [native code],
-            "validate": undefined,
-            [Symbol(vercel.ai.schema)]: true,
-            [Symbol(vercel.ai.validator)]: true,
-          },
-        },
-        "readBinaryFile": {
-          "description": "Read a binary file from a URL or local path. Use file:// prefix to access local files. This can be used to access non-text files such as PDFs or images.",
-          "inputSchema": {
-            "_type": undefined,
-            "jsonSchema": [native code],
-            "validate": undefined,
-            [Symbol(vercel.ai.schema)]: true,
-            [Symbol(vercel.ai.validator)]: true,
-          },
-        },
-        "readFile": {
-          "description": "Request to read the contents of one or multiple files at the specified paths. Use comma separated paths to read multiple files. Use this when you need to examine the contents of an existing file you do not know the contents of, for example to analyze code, review text files, or extract information from configuration files. May not be suitable for other types of binary files, as it returns the raw content as a string. Try to list all the potential files are relevent to the task, and then use this tool to read all the relevant files.",
-          "inputSchema": {
-            "_type": undefined,
-            "jsonSchema": [native code],
-            "validate": undefined,
-            [Symbol(vercel.ai.schema)]: true,
-            [Symbol(vercel.ai.validator)]: true,
-          },
-        },
-        "searchFiles": {
-          "description": "Request to perform a regex search across files in a specified directory, outputting context-rich results that include surrounding lines. This tool searches for patterns or specific content across multiple files, displaying each match with encapsulating context.",
-          "inputSchema": {
-            "_type": undefined,
-            "jsonSchema": [native code],
-            "validate": undefined,
-            [Symbol(vercel.ai.schema)]: true,
-            [Symbol(vercel.ai.validator)]: true,
-          },
-        },
-      },
+      "message": "fix: correct validation logic in validator.ts",
     },
-    "tool": "generateText",
+    "tool": "createCommit",
     "type": "tool",
   },
+}
+`;
+
+exports[`should handle workflow with all stages 2`] = `
+{
+  "output": undefined,
+  "status": "completed",
 }
 `;

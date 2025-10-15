@@ -2,7 +2,6 @@
 
 import { expect, test } from 'bun:test'
 import assert from 'node:assert/strict'
-import { ToolResponseType } from '@polka-codes/core'
 import { run } from '@polka-codes/workflow'
 import { UserCancelledError } from '../errors'
 import { commitWorkflow } from './commit.workflow'
@@ -42,20 +41,25 @@ test('should generate commit message with staged files', async () => {
   assert(result4.status === 'pending')
 
   // Provide agent response
-  const result5 = await result4.next({
-    type: ToolResponseType.Exit,
-    message: '',
-    object: {
-      commitMessage: '',
-    },
-  })
-  expect(result5).toMatchSnapshot()
+  const result5 = await result4.next()
   assert(result5.status === 'pending')
+  const result6 = await result5.next()
+  assert(result6.status === 'pending')
+  const result7 = await result6.next([
+    {
+      role: 'assistant',
+      content: '```json\n{"commitMessage": "feat: add newFunc to file.ts"}\n```',
+    },
+  ])
+  assert(result7.status === 'pending')
+  const result8 = await result7.next()
+  expect(result8).toMatchSnapshot()
+  assert(result8.status === 'pending')
 
   // Provide createCommit response
-  const result6 = await result5.next()
-  expect(result6).toMatchSnapshot()
-  assert(result6.status === 'completed')
+  const result9 = await result8.next()
+  expect(result9).toMatchSnapshot()
+  assert(result9.status === 'completed')
 })
 
 test('should auto-stage all files when all=true', async () => {
@@ -98,17 +102,25 @@ test('should auto-stage all files when all=true', async () => {
   assert(result5.status === 'pending')
 
   // Provide agent response
-  const result6 = await result5.next({
-    type: ToolResponseType.Exit,
-    message: { title: 'chore: update file', description: 'Updated the file.' },
-  })
-  expect(result6).toMatchSnapshot()
+  const result6 = await result5.next()
   assert(result6.status === 'pending')
+  const result7 = await result6.next()
+  assert(result7.status === 'pending')
+  const result8 = await result7.next([
+    {
+      role: 'assistant',
+      content: '```json\n{"commitMessage": "refactor: update file.ts with new code"}\n```',
+    },
+  ])
+  assert(result8.status === 'pending')
+  const result9 = await result8.next()
+  expect(result9).toMatchSnapshot()
+  assert(result9.status === 'pending')
 
   // Provide createCommit response
-  const result7 = await result6.next()
-  expect(result7).toMatchSnapshot()
-  assert(result7.status === 'completed')
+  const result10 = await result9.next()
+  expect(result10).toMatchSnapshot()
+  assert(result10.status === 'completed')
 })
 
 test('should prompt user and stage when confirmed', async () => {
@@ -156,17 +168,25 @@ test('should prompt user and stage when confirmed', async () => {
   assert(result6.status === 'pending')
 
   // Provide agent response
-  const result7 = await result6.next({
-    type: ToolResponseType.Exit,
-    message: { title: 'fix: update logic', description: 'Updated the logic.' },
-  })
-  expect(result7).toMatchSnapshot()
+  const result7 = await result6.next()
   assert(result7.status === 'pending')
+  const result8 = await result7.next()
+  assert(result8.status === 'pending')
+  const result9 = await result8.next([
+    {
+      role: 'assistant',
+      content: '```json\n{"commitMessage": "fix: update file.ts"}\n```',
+    },
+  ])
+  assert(result9.status === 'pending')
+  const result10 = await result9.next()
+  expect(result10).toMatchSnapshot()
+  assert(result10.status === 'pending')
 
   // Provide createCommit response
-  const result8 = await result7.next()
-  expect(result8).toMatchSnapshot()
-  assert(result8.status === 'completed')
+  const result11 = await result10.next()
+  expect(result11).toMatchSnapshot()
+  assert(result11.status === 'completed')
 })
 
 test('should throw UserCancelledError when user declines staging', async () => {
@@ -229,19 +249,25 @@ test('should include user context in agent prompt', async () => {
   assert(result4.status === 'pending')
 
   // Provide agent response
-  const result5 = await result4.next({
-    type: ToolResponseType.Exit,
-    message: {
-      title: 'feat: implement feature X (#123)',
-      description: 'Implemented feature X as per ticket #123.',
-    },
-  })
+  const result5 = await result4.next()
   assert(result5.status === 'pending')
+  const result6 = await result5.next()
+  assert(result6.status === 'pending')
+  const result7 = await result6.next([
+    {
+      role: 'assistant',
+      content: '```json\n{"commitMessage": "feat: implement feature X for ticket #123"}\n```',
+    },
+  ])
+  assert(result7.status === 'pending')
+  const result8 = await result7.next()
+  expect(result8).toMatchSnapshot()
+  assert(result8.status === 'pending')
 
   // Provide createCommit response
-  const result6 = await result5.next()
-  expect(result6).toMatchSnapshot()
-  assert(result6.status === 'completed')
+  const result9 = await result8.next()
+  expect(result9).toMatchSnapshot()
+  assert(result9.status === 'completed')
 })
 
 test('should handle various file statuses', async () => {
@@ -278,16 +304,25 @@ test('should handle various file statuses', async () => {
   assert(result4.status === 'pending')
 
   // Provide agent response
-  const result5 = await result4.next({
-    type: ToolResponseType.Exit,
-    message: { title: 'refactor: restructure files', description: 'Restructured files.' },
-  })
+  const result5 = await result4.next()
   assert(result5.status === 'pending')
+  const result6 = await result5.next()
+  assert(result6.status === 'pending')
+  const result7 = await result6.next([
+    {
+      role: 'assistant',
+      content: '```json\n{"commitMessage": "refactor: update multiple files"}\n```',
+    },
+  ])
+  assert(result7.status === 'pending')
+  const result8 = await result7.next()
+  expect(result8).toMatchSnapshot()
+  assert(result8.status === 'pending')
 
   // Provide createCommit response
-  const result6 = await result5.next()
-  expect(result6).toMatchSnapshot()
-  assert(result6.status === 'completed')
+  const result9 = await result8.next()
+  expect(result9).toMatchSnapshot()
+  assert(result9.status === 'completed')
 })
 
 test('should handle empty diff name status result', async () => {
@@ -319,16 +354,25 @@ test('should handle empty diff name status result', async () => {
   assert(result4.status === 'pending')
 
   // Provide agent response
-  const result5 = await result4.next({
-    type: ToolResponseType.Exit,
-    message: { title: 'docs: update comments', description: 'Updated comments.' },
-  })
+  const result5 = await result4.next()
   assert(result5.status === 'pending')
+  const result6 = await result5.next()
+  assert(result6.status === 'pending')
+  const result7 = await result6.next([
+    {
+      role: 'assistant',
+      content: '```json\n{"commitMessage": "fix: update file.ts with new code"}\n```',
+    },
+  ])
+  assert(result7.status === 'pending')
+  const result8 = await result7.next()
+  expect(result8).toMatchSnapshot()
+  assert(result8.status === 'pending')
 
   // Provide createCommit response
-  const result6 = await result5.next()
-  expect(result6).toMatchSnapshot()
-  assert(result6.status === 'completed')
+  const result9 = await result8.next()
+  expect(result9).toMatchSnapshot()
+  assert(result9.status === 'completed')
 })
 
 test('should handle workflow with all stages', async () => {
@@ -362,16 +406,22 @@ test('should handle workflow with all stages', async () => {
   })
   assert(result5.status === 'pending')
 
-  const result6 = await result5.next({
-    type: ToolResponseType.Exit,
-    message: {
-      title: 'fix: correct validation logic',
-      description: 'Fixed bug in validation that returned false instead of true',
-    },
-  })
+  const result6 = await result5.next()
   assert(result6.status === 'pending')
-
   const result7 = await result6.next()
-  expect(result7).toMatchSnapshot()
-  assert(result7.status === 'completed')
+  assert(result7.status === 'pending')
+  const result8 = await result7.next([
+    {
+      role: 'assistant',
+      content: '```json\n{"commitMessage": "fix: correct validation logic in validator.ts"}\n```',
+    },
+  ])
+  assert(result8.status === 'pending')
+  const result9 = await result8.next()
+  expect(result9).toMatchSnapshot()
+  assert(result9.status === 'pending')
+
+  const result10 = await result9.next()
+  expect(result10).toMatchSnapshot()
+  assert(result10.status === 'completed')
 })
