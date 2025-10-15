@@ -17,6 +17,7 @@
     "build": "bun build src/index.ts --outdir dist --target node"
   },
   "dependencies": {
+    "@ai-sdk/provider": "^2.0.0",
     "@polka-codes/cli-shared": "workspace:*",
     "@polka-codes/core": "workspace:*",
     "commander": "^14.0.1",

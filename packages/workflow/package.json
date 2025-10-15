@@ -21,6 +21,10 @@
     "@ai-sdk/provider-utils": "^3.0.12",
     "@polka-codes/core": "workspace:*",
     "ai": "^5.0.68",
+    "lodash-es": "^4.17.21",
     "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/lodash-es": "^4.17.12"
   }
 }
