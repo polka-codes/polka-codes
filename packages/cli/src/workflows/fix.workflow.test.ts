@@ -2,132 +2,105 @@
 
 import { expect, spyOn, test } from 'bun:test'
 import assert from 'node:assert/strict'
-import { loadConfig } from '@polka-codes/cli-shared'
+import * as cliShared from '@polka-codes/cli-shared'
 import { run } from '@polka-codes/workflow'
 import { fixWorkflow } from './fix.workflow'
+import * as prompts from './prompts'
 
 test('should succeed when command passes on first attempt', async () => {
-  const result1 = await run(fixWorkflow, { command: 'bun test' })
-  expect(result1).toMatchSnapshot()
-  assert(result1.status === 'pending')
+  let result = await run(fixWorkflow, { command: 'bun test' })
+  assert.strictEqual(result.status, 'pending')
+  assert.strictEqual(result.tool.tool, 'executeCommand')
 
-  const result2 = await result1.next({
-    exitCode: 0,
-    stdout: 'All tests passed',
-    stderr: '',
-  })
-  expect(result2).toMatchSnapshot()
+  result = await result.next({ exitCode: 0, stdout: 'All tests passed', stderr: '' })
+  assert.strictEqual(result.status, 'completed')
+  assert.deepStrictEqual(result.output, { summaries: [] })
 })
 
 test('should prompt for command when not provided', async () => {
-  const loadConfigSpy = spyOn({ loadConfig }, 'loadConfig')
-  loadConfigSpy.mockReturnValue({
+  const loadConfigSpy = spyOn(cliShared, 'loadConfig').mockReturnValue({
     scripts: {
       check: 'bun typecheck',
       test: 'bun test',
     },
   })
 
-  const result1 = await run(fixWorkflow, {})
-  expect(result1).toMatchSnapshot()
-  assert(result1.status === 'pending')
+  let result = await run(fixWorkflow, { interactive: true })
+  assert.strictEqual(result.status, 'pending')
+  assert.strictEqual(result.tool.tool, 'input')
+  assert.strictEqual(result.tool.input.default, 'bun typecheck && bun test')
 
-  const result2 = await result1.next('bun typecheck && bun test')
-  expect(result2).toMatchSnapshot()
-  assert(result2.status === 'pending')
+  result = await result.next('bun typecheck && bun test')
+  assert.strictEqual(result.status, 'pending')
+  assert.strictEqual(result.tool.tool, 'executeCommand')
 
-  const result3 = await result2.next({
-    exitCode: 0,
-    stdout: 'Success',
-    stderr: '',
-  })
-  expect(result3).toMatchSnapshot()
+  result = await result.next({ exitCode: 0, stdout: 'Success', stderr: '' })
+  assert.strictEqual(result.status, 'completed')
+  assert.deepStrictEqual(result.output, { summaries: [] })
 
   loadConfigSpy.mockRestore()
 })
 
 test('should use check command as default when only check available', async () => {
-  const loadConfigSpy = spyOn({ loadConfig }, 'loadConfig')
-  loadConfigSpy.mockReturnValue({
+  const loadConfigSpy = spyOn(cliShared, 'loadConfig').mockReturnValue({
     scripts: {
       check: 'bun typecheck',
     },
   })
 
-  const result1 = await run(fixWorkflow, {})
-  expect(result1).toMatchSnapshot()
-  assert(result1.status === 'pending')
+  let result = await run(fixWorkflow, { interactive: false })
+  assert.strictEqual(result.status, 'pending')
+  assert.strictEqual(result.tool.tool, 'executeCommand')
+  assert.strictEqual(result.tool.input.command, 'bun typecheck')
 
-  const result2 = await result1.next('bun typecheck')
-  expect(result2).toMatchSnapshot()
-  assert(result2.status === 'pending')
-
-  const result3 = await result2.next({
-    exitCode: 0,
-    stdout: '',
-    stderr: '',
-  })
-  expect(result3).toMatchSnapshot()
+  result = await result.next({ exitCode: 0, stdout: '', stderr: '' })
+  assert.strictEqual(result.status, 'completed')
+  assert.deepStrictEqual(result.output, { summaries: [] })
 
   loadConfigSpy.mockRestore()
 })
 
 test('should use test command as default when only test available', async () => {
-  const loadConfigSpy = spyOn({ loadConfig }, 'loadConfig')
-  loadConfigSpy.mockReturnValue({
+  const loadConfigSpy = spyOn(cliShared, 'loadConfig').mockReturnValue({
     scripts: {
       test: 'bun test',
     },
   })
 
-  const result1 = await run(fixWorkflow, {})
-  expect(result1).toMatchSnapshot()
-  assert(result1.status === 'pending')
+  let result = await run(fixWorkflow, { interactive: false })
+  assert.strictEqual(result.status, 'pending')
+  assert.strictEqual(result.tool.tool, 'executeCommand')
+  assert.strictEqual(result.tool.input.command, 'bun test')
 
-  const result2 = await result1.next('bun test')
-  expect(result2).toMatchSnapshot()
-  assert(result2.status === 'pending')
-
-  const result3 = await result2.next({
-    exitCode: 0,
-    stdout: '',
-    stderr: '',
-  })
-  expect(result3).toMatchSnapshot()
+  result = await result.next({ exitCode: 0, stdout: '', stderr: '' })
+  assert.strictEqual(result.status, 'completed')
+  assert.deepStrictEqual(result.output, { summaries: [] })
 
   loadConfigSpy.mockRestore()
 })
 
 test('should combine check and test commands when both available', async () => {
-  const loadConfigSpy = spyOn({ loadConfig }, 'loadConfig')
-  loadConfigSpy.mockReturnValue({
+  const loadConfigSpy = spyOn(cliShared, 'loadConfig').mockReturnValue({
     scripts: {
       check: 'eslint .',
       test: 'jest',
     },
   })
 
-  const result1 = await run(fixWorkflow, {})
-  expect(result1).toMatchSnapshot()
-  assert(result1.status === 'pending')
+  let result = await run(fixWorkflow, { interactive: false })
+  assert.strictEqual(result.status, 'pending')
+  assert.strictEqual(result.tool.tool, 'executeCommand')
+  assert.strictEqual(result.tool.input.command, 'eslint . && jest')
 
-  const result2 = await result1.next('eslint . && jest')
-  expect(result2).toMatchSnapshot()
-  assert(result2.status === 'pending')
-
-  const result3 = await result2.next({
-    exitCode: 0,
-    stdout: '',
-    stderr: '',
-  })
-  expect(result3).toMatchSnapshot()
+  result = await result.next({ exitCode: 0, stdout: '', stderr: '' })
+  assert.strictEqual(result.status, 'completed')
+  assert.deepStrictEqual(result.output, { summaries: [] })
 
   loadConfigSpy.mockRestore()
 })
 
 test('should handle object-style script config', async () => {
-  const loadConfigSpy = spyOn({ loadConfig }, 'loadConfig')
-  loadConfigSpy.mockReturnValue({
+  const loadConfigSpy = spyOn(cliShared, 'loadConfig').mockReturnValue({
     scripts: {
       check: {
         command: 'tsc --noEmit',
@@ -140,331 +113,139 @@ test('should handle object-style script config', async () => {
     },
   })
 
-  const result1 = await run(fixWorkflow, {})
-  expect(result1).toMatchSnapshot()
-  assert(result1.status === 'pending')
+  let result = await run(fixWorkflow, { interactive: false })
+  assert.strictEqual(result.status, 'pending')
+  assert.strictEqual(result.tool.tool, 'executeCommand')
+  assert.strictEqual(result.tool.input.command, 'tsc --noEmit && vitest')
 
-  const result2 = await result1.next('tsc --noEmit && vitest')
-  expect(result2).toMatchSnapshot()
-  assert(result2.status === 'pending')
-
-  const result3 = await result2.next({
-    exitCode: 0,
-    stdout: '',
-    stderr: '',
-  })
-  expect(result3).toMatchSnapshot()
+  result = await result.next({ exitCode: 0, stdout: '', stderr: '' })
+  assert.strictEqual(result.status, 'completed')
+  assert.deepStrictEqual(result.output, { summaries: [] })
 
   loadConfigSpy.mockRestore()
 })
 
-test('should handle no default command', async () => {
-  const loadConfigSpy = spyOn({ loadConfig }, 'loadConfig')
-  loadConfigSpy.mockReturnValue({
+test('should handle no default command and no interactive', async () => {
+  const loadConfigSpy = spyOn(cliShared, 'loadConfig').mockReturnValue({
     scripts: {},
   })
 
-  const result1 = await run(fixWorkflow, {})
-  expect(result1).toMatchSnapshot()
-  assert(result1.status === 'pending')
-
-  const result2 = await result1.next('npm run build')
-  expect(result2).toMatchSnapshot()
-  assert(result2.status === 'pending')
-
-  const result3 = await result2.next({
-    exitCode: 0,
-    stdout: '',
-    stderr: '',
-  })
-  expect(result3).toMatchSnapshot()
+  const result = await run(fixWorkflow, { interactive: false })
+  assert.strictEqual(result.status, 'completed')
+  assert.deepStrictEqual(result.output, { summaries: [] })
 
   loadConfigSpy.mockRestore()
 })
 
-test('should retry and invoke coder agent when command fails', async () => {
-  const result1 = await run(fixWorkflow, { command: 'bun test' })
-  expect(result1).toMatchSnapshot()
-  assert(result1.status === 'pending')
+test('should throw error when no command provided and user provides empty input', async () => {
+  const loadConfigSpy = spyOn(cliShared, 'loadConfig').mockReturnValue({})
 
-  const result2 = await result1.next({
+  let result = await run(fixWorkflow, { interactive: true })
+  assert.strictEqual(result.status, 'pending')
+  assert.strictEqual(result.tool.tool, 'input')
+
+  result = await result.next('')
+  assert.strictEqual(result.status, 'failed')
+  assert.strictEqual(result.error.message, 'No command provided. Aborting.')
+
+  loadConfigSpy.mockRestore()
+})
+
+test('should succeed after agent fixes the issue', async () => {
+  let result = await run(fixWorkflow, { command: 'bun test' })
+  assert.strictEqual(result.tool.tool, 'executeCommand')
+
+  result = await result.next({ exitCode: 1, stdout: 'FAIL', stderr: 'Error' })
+
+  assert.strictEqual(result.status, 'pending')
+  assert.strictEqual(result.tool.tool, 'taskEvent') // agent started
+  result = await result.next() // complete taskEvent
+
+  assert.strictEqual(result.status, 'pending')
+  assert.strictEqual(result.tool.tool, 'taskEvent') // round started
+  result = await result.next() // complete taskEvent
+
+  assert.strictEqual(result.status, 'pending')
+  assert.strictEqual(result.tool.tool, 'generateText') // agent wants to talk
+  // let's pretend agent fixes it and gives summary
+  result = await result.next([
+    {
+      role: 'assistant',
+      content: '```json\n{"summary":"I did a fix"}\n```',
+    },
+  ])
+
+  assert.strictEqual(result.status, 'pending')
+  assert.strictEqual(result.tool.tool, 'taskEvent') // round ended
+  result = await result.next() // complete taskEvent
+
+  // sub-workflow completes, loop continues in fixWorkflow
+  assert.strictEqual(result.status, 'pending')
+  assert.strictEqual(result.tool.tool, 'executeCommand')
+
+  result = await result.next({ exitCode: 0, stdout: 'PASS', stderr: '' })
+
+  assert.strictEqual(result.status, 'completed')
+  assert.deepStrictEqual(result.output, { summaries: ['I did a fix'] })
+})
+
+test('should fail after exhausting all retries', async () => {
+  let result = await run(fixWorkflow, { command: 'bun test' })
+
+  for (let i = 0; i < 10; i++) {
+    assert.strictEqual(result.status, 'pending')
+    assert.strictEqual(result.tool.tool, 'executeCommand')
+    result = await result.next({ exitCode: 1, stdout: 'FAIL', stderr: 'Error' })
+
+    assert.strictEqual(result.status, 'pending')
+    assert.strictEqual(result.tool.tool, 'taskEvent') // agent started
+    result = await result.next() // complete taskEvent
+
+    assert.strictEqual(result.status, 'pending')
+    assert.strictEqual(result.tool.tool, 'taskEvent') // round started
+    result = await result.next() // complete taskEvent
+
+    assert.strictEqual(result.status, 'pending')
+    assert.strictEqual(result.tool.tool, 'generateText') // agent wants to talk
+    result = await result.next([
+      {
+        role: 'assistant',
+        content: '```json\n{"summary":"I did a fix"}\n```',
+      },
+    ])
+
+    assert.strictEqual(result.status, 'pending')
+    assert.strictEqual(result.tool.tool, 'taskEvent') // round ended
+    result = await result.next() // complete taskEvent
+  }
+
+  assert.strictEqual(result.status, 'failed')
+  assert.strictEqual(result.error.message, 'Failed to fix the issue after 10 attempts.')
+})
+
+test('should pass task to agent prompt', async () => {
+  const getFixUserPromptSpy = spyOn(prompts, 'getFixUserPrompt')
+
+  let result = await run(fixWorkflow, {
+    command: 'bun test',
+    task: 'My original task was to do this thing.',
+  })
+  assert.strictEqual(result.status, 'pending')
+
+  result = await result.next({
     exitCode: 1,
     stdout: 'FAIL src/test.ts',
     stderr: 'TypeError: undefined is not a function',
   })
-  expect(result2).toMatchSnapshot()
-  assert(result2.status === 'pending')
 
-  const result3 = await result2.next({
-    output: {},
-    messages: [],
-  })
-  expect(result3).toMatchSnapshot()
-  assert(result3.status === 'pending')
+  expect(getFixUserPromptSpy).toHaveBeenCalledTimes(1)
+  expect(getFixUserPromptSpy).toHaveBeenCalledWith(
+    'bun test',
+    1,
+    'FAIL src/test.ts',
+    'TypeError: undefined is not a function',
+    'My original task was to do this thing.',
+  )
 
-  const result4 = await result3.next({
-    exitCode: 0,
-    stdout: 'All tests passed',
-    stderr: '',
-  })
-  expect(result4).toMatchSnapshot()
-})
-
-test('should retry multiple times before succeeding', async () => {
-  const result1 = await run(fixWorkflow, { command: 'npm test' })
-  assert(result1.status === 'pending')
-
-  const result2 = await result1.next({
-    exitCode: 1,
-    stdout: '',
-    stderr: 'Error 1',
-  })
-  assert(result2.status === 'pending')
-
-  const result3 = await result2.next({
-    output: {},
-    messages: [],
-  })
-  assert(result3.status === 'pending')
-
-  const result4 = await result3.next({
-    exitCode: 1,
-    stdout: '',
-    stderr: 'Error 2',
-  })
-  assert(result4.status === 'pending')
-
-  const result5 = await result4.next({
-    output: {},
-    messages: [],
-  })
-  assert(result5.status === 'pending')
-
-  const result6 = await result5.next({
-    exitCode: 1,
-    stdout: '',
-    stderr: 'Error 3',
-  })
-  assert(result6.status === 'pending')
-
-  const result7 = await result6.next({
-    output: {},
-    messages: [],
-  })
-  assert(result7.status === 'pending')
-
-  const result8 = await result7.next({
-    exitCode: 0,
-    stdout: 'Success',
-    stderr: '',
-  })
-  expect(result8).toMatchSnapshot()
-})
-
-test('should handle command with stdout and stderr', async () => {
-  const result1 = await run(fixWorkflow, { command: 'make build' })
-  assert(result1.status === 'pending')
-
-  const result2 = await result1.next({
-    exitCode: 2,
-    stdout: 'Building...\nCompiling source files',
-    stderr: 'Warning: deprecated API\nError: compilation failed',
-  })
-  expect(result2).toMatchSnapshot()
-  assert(result2.status === 'pending')
-
-  const result3 = await result2.next({
-    output: {},
-    messages: [],
-  })
-  assert(result3.status === 'pending')
-
-  const result4 = await result3.next({
-    exitCode: 0,
-    stdout: 'Build successful',
-    stderr: '',
-  })
-  expect(result4).toMatchSnapshot()
-})
-
-test('should throw error after 10 failed attempts', async () => {
-  const result1 = await run(fixWorkflow, { command: 'failing-command' })
-  assert(result1.status === 'pending')
-
-  const result2 = await result1.next({ exitCode: 1, stdout: '', stderr: 'Error attempt 1' })
-  assert(result2.status === 'pending')
-  const result3 = await result2.next({ output: {}, messages: [] })
-  assert(result3.status === 'pending')
-
-  const result4 = await result3.next({ exitCode: 1, stdout: '', stderr: 'Error attempt 2' })
-  assert(result4.status === 'pending')
-  const result5 = await result4.next({ output: {}, messages: [] })
-  assert(result5.status === 'pending')
-
-  const result6 = await result5.next({ exitCode: 1, stdout: '', stderr: 'Error attempt 3' })
-  assert(result6.status === 'pending')
-  const result7 = await result6.next({ output: {}, messages: [] })
-  assert(result7.status === 'pending')
-
-  const result8 = await result7.next({ exitCode: 1, stdout: '', stderr: 'Error attempt 4' })
-  assert(result8.status === 'pending')
-  const result9 = await result8.next({ output: {}, messages: [] })
-  assert(result9.status === 'pending')
-
-  const result10 = await result9.next({ exitCode: 1, stdout: '', stderr: 'Error attempt 5' })
-  assert(result10.status === 'pending')
-  const result11 = await result10.next({ output: {}, messages: [] })
-  assert(result11.status === 'pending')
-
-  const result12 = await result11.next({ exitCode: 1, stdout: '', stderr: 'Error attempt 6' })
-  assert(result12.status === 'pending')
-  const result13 = await result12.next({ output: {}, messages: [] })
-  assert(result13.status === 'pending')
-
-  const result14 = await result13.next({ exitCode: 1, stdout: '', stderr: 'Error attempt 7' })
-  assert(result14.status === 'pending')
-  const result15 = await result14.next({ output: {}, messages: [] })
-  assert(result15.status === 'pending')
-
-  const result16 = await result15.next({ exitCode: 1, stdout: '', stderr: 'Error attempt 8' })
-  assert(result16.status === 'pending')
-  const result17 = await result16.next({ output: {}, messages: [] })
-  assert(result17.status === 'pending')
-
-  const result18 = await result17.next({ exitCode: 1, stdout: '', stderr: 'Error attempt 9' })
-  assert(result18.status === 'pending')
-  const result19 = await result18.next({ output: {}, messages: [] })
-  assert(result19.status === 'pending')
-
-  const result20 = await result19.next({ exitCode: 1, stdout: '', stderr: 'Error attempt 10' })
-  assert(result20.status === 'pending')
-  const result21 = await result20.next({ output: {}, messages: [] })
-
-  assert(result21.status === 'failed')
-  expect({
-    status: result21.status,
-    error: (result21.error as Error)?.message,
-  }).toMatchSnapshot()
-})
-
-test('should throw error when no command provided and user provides empty input', async () => {
-  const loadConfigSpy = spyOn({ loadConfig }, 'loadConfig')
-  loadConfigSpy.mockReturnValue({})
-
-  const result1 = await run(fixWorkflow, {})
-  assert(result1.status === 'pending')
-
-  const result2 = await result1.next('')
-
-  assert(result2.status === 'failed')
-  expect({
-    status: result2.status,
-    error: (result2.error as Error)?.message,
-  }).toMatchSnapshot()
-
-  loadConfigSpy.mockRestore()
-})
-
-test('should handle command with only stdout', async () => {
-  const result1 = await run(fixWorkflow, { command: 'echo test' })
-  assert(result1.status === 'pending')
-
-  const result2 = await result1.next({
-    exitCode: 1,
-    stdout: 'Some output',
-    stderr: '',
-  })
-  expect(result2).toMatchSnapshot()
-  assert(result2.status === 'pending')
-
-  const result3 = await result2.next({
-    output: {},
-    messages: [],
-  })
-  assert(result3.status === 'pending')
-
-  const result4 = await result3.next({
-    exitCode: 0,
-    stdout: 'test',
-    stderr: '',
-  })
-  expect(result4).toMatchSnapshot()
-})
-
-test('should handle command with only stderr', async () => {
-  const result1 = await run(fixWorkflow, { command: 'test-cmd' })
-  assert(result1.status === 'pending')
-
-  const result2 = await result1.next({
-    exitCode: 1,
-    stdout: '',
-    stderr: 'Error occurred',
-  })
-  expect(result2).toMatchSnapshot()
-  assert(result2.status === 'pending')
-
-  const result3 = await result2.next({
-    output: {},
-    messages: [],
-  })
-  assert(result3.status === 'pending')
-
-  const result4 = await result3.next({
-    exitCode: 0,
-    stdout: '',
-    stderr: '',
-  })
-  expect(result4).toMatchSnapshot()
-})
-
-test('should handle config with undefined scripts', async () => {
-  const loadConfigSpy = spyOn({ loadConfig }, 'loadConfig')
-  loadConfigSpy.mockReturnValue(undefined)
-
-  const result1 = await run(fixWorkflow, {})
-  expect(result1).toMatchSnapshot()
-  assert(result1.status === 'pending')
-
-  const result2 = await result1.next('custom-command')
-  expect(result2).toMatchSnapshot()
-  assert(result2.status === 'pending')
-
-  const result3 = await result2.next({
-    exitCode: 0,
-    stdout: '',
-    stderr: '',
-  })
-  expect(result3).toMatchSnapshot()
-
-  loadConfigSpy.mockRestore()
-})
-
-test('should handle mixed script formats', async () => {
-  const loadConfigSpy = spyOn({ loadConfig }, 'loadConfig')
-  loadConfigSpy.mockReturnValue({
-    scripts: {
-      check: 'eslint .',
-      test: {
-        command: 'jest --coverage',
-        description: 'Test with coverage',
-      },
-    },
-  })
-
-  const result1 = await run(fixWorkflow, {})
-  expect(result1).toMatchSnapshot()
-  assert(result1.status === 'pending')
-
-  const result2 = await result1.next('eslint . && jest --coverage')
-  expect(result2).toMatchSnapshot()
-  assert(result2.status === 'pending')
-
-  const result3 = await result2.next({
-    exitCode: 0,
-    stdout: '',
-    stderr: '',
-  })
-  expect(result3).toMatchSnapshot()
-
-  loadConfigSpy.mockRestore()
+  getFixUserPromptSpy.mockRestore()
 })

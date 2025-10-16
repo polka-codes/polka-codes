@@ -11,17 +11,9 @@ excludeFiles:
   - packages/cli/cli.mjs
   - packages/github/schema.docs.graphql
 scripts:
-  test:
-    command: bun test -u
-    description: Run tests and update snapshots. Pass file path to run a specific test file.
-  check:
-    command: bun typecheck
-    description: |
-      Check the code for type errors.
-      Run this command after making changes to the code.
-  format:
-    command: bun fix --unsafe
-    description: Run code formatter.
+  test: AGENT=1 bun test -u
+  check: bun check
+  format: bun fix
 rules: |
   Use #methodName / #fieldName for private methods and fields
   Use `bun` as the package manager

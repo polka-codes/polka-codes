@@ -416,32 +416,26 @@ Implement the plan above following these guidelines. Start by:
 Please implement all the necessary code changes according to this plan.`
 }
 
-export function getFixPrompt(
-  command: string,
-  exitCode: number,
-  stdout: string,
-  stderr: string,
-  attemptNumber?: number,
-  maxAttempts?: number,
-  originalTask?: string,
-): string {
-  const attemptContext = attemptNumber
-    ? `This is attempt ${attemptNumber} of ${maxAttempts} to fix the issues.${attemptNumber > 1 ? ' Previous attempts have not resolved all issues.' : ''}`
-    : ''
+export const FIX_SYSTEM_PROMPT = `You are an expert software developer. Your task is to fix a project that is failing a command. You have been provided with the failing command, its output (stdout and stderr), and the exit code. Your goal is to use the available tools to modify the files in the project to make the command pass. Analyze the error, inspect the relevant files, and apply the necessary code changes.
 
-  const taskContext = originalTask ? `\n## Original Task\n\n${originalTask}\n` : ''
+After making changes, you MUST return a JSON object in a markdown block with a summary of the changes you made.
+The JSON object must contain a "summary" field, which is a string describing the changes made during the fix attempt.
 
-  return `# Code Fixing Task
+Example:
+\`\`\`json
+{
+  "summary": "Fixed the 'add' function in 'math.ts' to correctly handle negative numbers."
+}
+\`\`\`
+`
 
-## Context
+export function getFixUserPrompt(command: string, exitCode: number, stdout: string, stderr: string, task?: string): string {
+  const taskContext = task ? `\n## Original Task\n\n${task}\n` : ''
 
-${attemptContext}${taskContext}
-## Command Failed
+  return `## Context${taskContext}
 
-Command: \`${command}\`
-Exit code: ${exitCode}
-
-## Output
+The following command failed with exit code ${exitCode}:
+\`${command}\`
 
 <stdout>
 ${stdout || '(empty)'}
@@ -450,66 +444,5 @@ ${stdout || '(empty)'}
 <stderr>
 ${stderr || '(empty)'}
 </stderr>
-
-## Systematic Debugging Approach
-
-### 1. Error Analysis
-
-- **Identify the root cause** from error messages (don't just treat symptoms)
-- **Categorize the error type**:
-  - Type errors (TypeScript compilation issues)
-  - Test failures (assertion failures, unexpected behavior)
-  - Runtime errors (crashes, exceptions)
-  - Linting/formatting issues
-  - Build/compilation errors
-- **Check for patterns**: Are multiple similar errors occurring?
-${attemptNumber && attemptNumber > 1 ? '- **Review previous attempts**: What approaches have already been tried and failed?' : ''}
-
-### 2. Investigation
-
-- **Read the files mentioned in error messages** to understand the context
-- **Search for related code** that might be affected by the same issue
-- **Look for similar patterns** in the codebase that work correctly
-- **Check imports and dependencies** for missing or incorrect references
-- **Verify type definitions** match actual usage
-
-### 3. Fix Strategy
-
-- **Make minimal targeted changes**: Fix only what's broken
-- **Address root cause, not symptoms**: Don't just silence errors
-${attemptNumber && attemptNumber > 1 ? '- **Try a different approach**: If previous attempts failed, consider alternative solutions' : ''}
-- **Consider ripple effects**: Will this fix break something else?
-- **Maintain consistency**: Follow existing patterns and conventions
-- **Preserve functionality**: Don't remove features to fix errors
-
-### 4. Common Error Patterns
-
-**Type Errors:**
-- Missing or incorrect type imports
-- Type mismatches in function calls or assignments
-- Missing properties on objects
-- Incorrect generic type parameters
-
-**Test Failures:**
-- Outdated test expectations (snapshots, assertions)
-- Missing test setup or teardown
-- Incorrect mock data or stubs
-- Changed function signatures
-
-**Import/Module Errors:**
-- Incorrect import paths
-- Missing exports
-- Circular dependencies
-- Module resolution issues
-
-### 5. Verification
-
-- Ensure your fix resolves the specific error shown
-- Check that you haven't introduced new issues
-- Verify the fix aligns with project conventions
-- Consider if similar issues exist elsewhere in the codebase
-
-## Your Task
-
-Analyze the error output systematically and fix the code. Focus on understanding the root cause before making changes. Make minimal, targeted fixes that address the actual problem.`
+`
 }

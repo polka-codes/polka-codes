@@ -51,6 +51,10 @@ export const codeWorkflow: Workflow<CodeWorkflowInput, void, CliToolRegistry> = 
 
       console.log('\n📋 Generated Implementation Plan:\n')
       console.log(plan)
+      console.log('Files:')
+      for (const file of planResult.files || []) {
+        console.log(`- ${file.path}`)
+      }
       console.log('\n')
 
       const approved = yield* tools.confirm({

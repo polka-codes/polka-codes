@@ -69,7 +69,7 @@ export type WorkflowStatusCompleted<TOutput> = {
 
 export type WorkflowStatusFailed = {
   status: 'failed'
-  error: unknown
+  error: any
 }
 
 export type WorkflowStatus<TTools extends ToolRegistry, TOutput> =
