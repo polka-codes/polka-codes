@@ -9,12 +9,12 @@ import * as prompts from './prompts'
 
 test('should succeed when command passes on first attempt', async () => {
   let result = await run(fixWorkflow, { command: 'bun test' })
-  assert.strictEqual(result.status, 'pending')
-  assert.strictEqual(result.tool.tool, 'executeCommand')
+  assert(result.status === 'pending')
+  expect(result.tool.tool).toBe('executeCommand')
 
   result = await result.next({ exitCode: 0, stdout: 'All tests passed', stderr: '' })
-  assert.strictEqual(result.status, 'completed')
-  assert.deepStrictEqual(result.output, { summaries: [] })
+  assert(result.status === 'completed')
+  expect(result.output).toStrictEqual({ summaries: [] })
 })
 
 test('should prompt for command when not provided', async () => {
@@ -26,17 +26,17 @@ test('should prompt for command when not provided', async () => {
   })
 
   let result = await run(fixWorkflow, { interactive: true })
-  assert.strictEqual(result.status, 'pending')
-  assert.strictEqual(result.tool.tool, 'input')
-  assert.strictEqual(result.tool.input.default, 'bun typecheck && bun test')
+  assert(result.status === 'pending')
+  assert(result.tool.tool === 'input')
+  expect(result.tool.input.default).toBe('bun typecheck && bun test')
 
   result = await result.next('bun typecheck && bun test')
-  assert.strictEqual(result.status, 'pending')
-  assert.strictEqual(result.tool.tool, 'executeCommand')
+  assert(result.status === 'pending')
+  expect(result.tool.tool).toBe('executeCommand')
 
   result = await result.next({ exitCode: 0, stdout: 'Success', stderr: '' })
-  assert.strictEqual(result.status, 'completed')
-  assert.deepStrictEqual(result.output, { summaries: [] })
+  assert(result.status === 'completed')
+  expect(result.output).toStrictEqual({ summaries: [] })
 
   loadConfigSpy.mockRestore()
 })
@@ -49,13 +49,13 @@ test('should use check command as default when only check available', async () =
   })
 
   let result = await run(fixWorkflow, { interactive: false })
-  assert.strictEqual(result.status, 'pending')
-  assert.strictEqual(result.tool.tool, 'executeCommand')
-  assert.strictEqual(result.tool.input.command, 'bun typecheck')
+  assert(result.status === 'pending')
+  assert(result.tool.tool === 'executeCommand')
+  expect(result.tool.input.command).toBe('bun typecheck')
 
   result = await result.next({ exitCode: 0, stdout: '', stderr: '' })
-  assert.strictEqual(result.status, 'completed')
-  assert.deepStrictEqual(result.output, { summaries: [] })
+  assert(result.status === 'completed')
+  expect(result.output).toStrictEqual({ summaries: [] })
 
   loadConfigSpy.mockRestore()
 })
@@ -68,13 +68,13 @@ test('should use test command as default when only test available', async () => 
   })
 
   let result = await run(fixWorkflow, { interactive: false })
-  assert.strictEqual(result.status, 'pending')
-  assert.strictEqual(result.tool.tool, 'executeCommand')
-  assert.strictEqual(result.tool.input.command, 'bun test')
+  assert(result.status === 'pending')
+  assert(result.tool.tool === 'executeCommand')
+  expect(result.tool.input.command).toBe('bun test')
 
   result = await result.next({ exitCode: 0, stdout: '', stderr: '' })
-  assert.strictEqual(result.status, 'completed')
-  assert.deepStrictEqual(result.output, { summaries: [] })
+  assert(result.status === 'completed')
+  expect(result.output).toStrictEqual({ summaries: [] })
 
   loadConfigSpy.mockRestore()
 })
@@ -88,13 +88,13 @@ test('should combine check and test commands when both available', async () => {
   })
 
   let result = await run(fixWorkflow, { interactive: false })
-  assert.strictEqual(result.status, 'pending')
-  assert.strictEqual(result.tool.tool, 'executeCommand')
-  assert.strictEqual(result.tool.input.command, 'eslint . && jest')
+  assert(result.status === 'pending')
+  assert(result.tool.tool === 'executeCommand')
+  expect(result.tool.input.command).toBe('eslint . && jest')
 
   result = await result.next({ exitCode: 0, stdout: '', stderr: '' })
-  assert.strictEqual(result.status, 'completed')
-  assert.deepStrictEqual(result.output, { summaries: [] })
+  assert(result.status === 'completed')
+  expect(result.output).toStrictEqual({ summaries: [] })
 
   loadConfigSpy.mockRestore()
 })
@@ -114,13 +114,13 @@ test('should handle object-style script config', async () => {
   })
 
   let result = await run(fixWorkflow, { interactive: false })
-  assert.strictEqual(result.status, 'pending')
-  assert.strictEqual(result.tool.tool, 'executeCommand')
-  assert.strictEqual(result.tool.input.command, 'tsc --noEmit && vitest')
+  assert(result.status === 'pending')
+  assert(result.tool.tool === 'executeCommand')
+  expect(result.tool.input.command).toBe('tsc --noEmit && vitest')
 
   result = await result.next({ exitCode: 0, stdout: '', stderr: '' })
-  assert.strictEqual(result.status, 'completed')
-  assert.deepStrictEqual(result.output, { summaries: [] })
+  assert(result.status === 'completed')
+  expect(result.output).toStrictEqual({ summaries: [] })
 
   loadConfigSpy.mockRestore()
 })
@@ -131,8 +131,8 @@ test('should handle no default command and no interactive', async () => {
   })
 
   const result = await run(fixWorkflow, { interactive: false })
-  assert.strictEqual(result.status, 'completed')
-  assert.deepStrictEqual(result.output, { summaries: [] })
+  assert(result.status === 'completed')
+  expect(result.output).toStrictEqual({ summaries: [] })
 
   loadConfigSpy.mockRestore()
 })
@@ -141,32 +141,33 @@ test('should throw error when no command provided and user provides empty input'
   const loadConfigSpy = spyOn(cliShared, 'loadConfig').mockReturnValue({})
 
   let result = await run(fixWorkflow, { interactive: true })
-  assert.strictEqual(result.status, 'pending')
-  assert.strictEqual(result.tool.tool, 'input')
+  assert(result.status === 'pending')
+  expect(result.tool.tool).toBe('input')
 
   result = await result.next('')
-  assert.strictEqual(result.status, 'failed')
-  assert.strictEqual(result.error.message, 'No command provided. Aborting.')
+  assert(result.status === 'failed')
+  expect(result.error.message).toBe('No command provided. Aborting.')
 
   loadConfigSpy.mockRestore()
 })
 
 test('should succeed after agent fixes the issue', async () => {
   let result = await run(fixWorkflow, { command: 'bun test' })
-  assert.strictEqual(result.tool.tool, 'executeCommand')
+  assert(result.status === 'pending')
+  expect(result.tool.tool).toBe('executeCommand')
 
   result = await result.next({ exitCode: 1, stdout: 'FAIL', stderr: 'Error' })
 
-  assert.strictEqual(result.status, 'pending')
-  assert.strictEqual(result.tool.tool, 'taskEvent') // agent started
+  assert(result.status === 'pending')
+  expect(result.tool.tool).toBe('taskEvent') // agent started
   result = await result.next() // complete taskEvent
 
-  assert.strictEqual(result.status, 'pending')
-  assert.strictEqual(result.tool.tool, 'taskEvent') // round started
+  assert(result.status === 'pending')
+  expect(result.tool.tool).toBe('taskEvent') // round started
   result = await result.next() // complete taskEvent
 
-  assert.strictEqual(result.status, 'pending')
-  assert.strictEqual(result.tool.tool, 'generateText') // agent wants to talk
+  assert(result.status === 'pending')
+  expect(result.tool.tool).toBe('generateText') // agent wants to talk
   // let's pretend agent fixes it and gives summary
   result = await result.next([
     {
@@ -175,38 +176,38 @@ test('should succeed after agent fixes the issue', async () => {
     },
   ])
 
-  assert.strictEqual(result.status, 'pending')
-  assert.strictEqual(result.tool.tool, 'taskEvent') // round ended
+  assert(result.status === 'pending')
+  expect(result.tool.tool).toBe('taskEvent') // round ended
   result = await result.next() // complete taskEvent
 
   // sub-workflow completes, loop continues in fixWorkflow
-  assert.strictEqual(result.status, 'pending')
-  assert.strictEqual(result.tool.tool, 'executeCommand')
+  assert(result.status === 'pending')
+  expect(result.tool.tool).toBe('executeCommand')
 
   result = await result.next({ exitCode: 0, stdout: 'PASS', stderr: '' })
 
-  assert.strictEqual(result.status, 'completed')
-  assert.deepStrictEqual(result.output, { summaries: ['I did a fix'] })
+  assert(result.status === 'completed')
+  expect(result.output).toStrictEqual({ summaries: ['I did a fix'] })
 })
 
 test('should fail after exhausting all retries', async () => {
   let result = await run(fixWorkflow, { command: 'bun test' })
 
   for (let i = 0; i < 10; i++) {
-    assert.strictEqual(result.status, 'pending')
-    assert.strictEqual(result.tool.tool, 'executeCommand')
+    assert(result.status === 'pending')
+    expect(result.tool.tool).toBe('executeCommand')
     result = await result.next({ exitCode: 1, stdout: 'FAIL', stderr: 'Error' })
 
-    assert.strictEqual(result.status, 'pending')
-    assert.strictEqual(result.tool.tool, 'taskEvent') // agent started
+    assert(result.status === 'pending')
+    expect(result.tool.tool).toBe('taskEvent') // agent started
     result = await result.next() // complete taskEvent
 
-    assert.strictEqual(result.status, 'pending')
-    assert.strictEqual(result.tool.tool, 'taskEvent') // round started
+    assert(result.status === 'pending')
+    expect(result.tool.tool).toBe('taskEvent') // round started
     result = await result.next() // complete taskEvent
 
-    assert.strictEqual(result.status, 'pending')
-    assert.strictEqual(result.tool.tool, 'generateText') // agent wants to talk
+    assert(result.status === 'pending')
+    expect(result.tool.tool).toBe('generateText') // agent wants to talk
     result = await result.next([
       {
         role: 'assistant',
@@ -214,13 +215,13 @@ test('should fail after exhausting all retries', async () => {
       },
     ])
 
-    assert.strictEqual(result.status, 'pending')
-    assert.strictEqual(result.tool.tool, 'taskEvent') // round ended
+    assert(result.status === 'pending')
+    expect(result.tool.tool).toBe('taskEvent') // round ended
     result = await result.next() // complete taskEvent
   }
 
-  assert.strictEqual(result.status, 'failed')
-  assert.strictEqual(result.error.message, 'Failed to fix the issue after 10 attempts.')
+  assert(result.status === 'failed')
+  expect(result.error.message).toBe('Failed to fix the issue after 10 attempts.')
 })
 
 test('should pass task to agent prompt', async () => {
@@ -230,7 +231,7 @@ test('should pass task to agent prompt', async () => {
     command: 'bun test',
     task: 'My original task was to do this thing.',
   })
-  assert.strictEqual(result.status, 'pending')
+  assert(result.status === 'pending')
 
   result = await result.next({
     exitCode: 1,
