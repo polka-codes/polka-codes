@@ -40,7 +40,7 @@ export type AgentToolRegistry = {
 export const agentWorkflow: Workflow<AgentWorkflowInput, ExitReason, AgentToolRegistry> = {
   name: 'agent',
   description: 'An angentic workflow that can use tools to complete tasks.',
-  async *fn(input, step, tools) {
+  async *fn(input, { step, tools }) {
     const event = async function* (name: string, event: TaskEvent) {
       yield* step(name, async function* () {
         yield* tools.taskEvent(event)

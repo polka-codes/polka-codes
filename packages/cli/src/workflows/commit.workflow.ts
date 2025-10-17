@@ -22,7 +22,7 @@ type FileChange = {
 export const commitWorkflow: Workflow<CommitWorkflowInput, void, CliToolRegistry> = {
   name: 'Generate Commit Message',
   description: 'Generate a Git commit message based on staged changes',
-  async *fn(input, step, tools) {
+  async *fn(input, { step, tools, logger }) {
     const { stagedFiles, unstagedFiles } = yield* tools.printChangeFile()
 
     let hasStaged = stagedFiles.length > 0
@@ -97,7 +97,7 @@ export const commitWorkflow: Workflow<CommitWorkflowInput, void, CliToolRegistry
     }
     const { commitMessage } = output.object as unknown as z.infer<typeof commitMessageSchema>
 
-    console.log(`\nCommit message:\n${commitMessage}`)
+    logger.info(`\nCommit message:\n${commitMessage}`)
 
     yield* tools.createCommit({ message: commitMessage })
   },

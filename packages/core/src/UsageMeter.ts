@@ -186,13 +186,9 @@ export class UsageMeter {
     this.#totals.messageCount += otherUsage.messageCount
   }
 
-  /** Print a concise usage summary to console. */
-  printUsage(customConsole: Console = console) {
+  getUsageText() {
     const u = this.usage
-    customConsole.log(
-      `Usage - messages: ${u.messageCount}, input: ${u.input}, cached: ${u.cachedRead}, ` +
-        `output: ${u.output}, cost: $${u.cost.toFixed(4)}`,
-    )
+    return `Usage - messages: ${u.messageCount}, input: ${u.input}, cached: ${u.cachedRead}, output: ${u.output}, cost: $${u.cost.toFixed(4)}`
   }
 
   onFinishHandler(llm: LanguageModelV2) {

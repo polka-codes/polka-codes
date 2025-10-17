@@ -282,6 +282,6 @@ export class Runner {
   }
 
   printUsage() {
-    this.usageMeter.printUsage()
+    console.log(this.usageMeter.getUsageText())
   }
 }

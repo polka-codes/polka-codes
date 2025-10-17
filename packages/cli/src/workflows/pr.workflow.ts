@@ -15,7 +15,7 @@ const prDetailsSchema = z.object({
 export const prWorkflow: Workflow<{ context?: string }, { title: string; description: string }, CliToolRegistry> = {
   name: 'Create Pull Request',
   description: 'Generate a pull request title and description and create the pull request.',
-  async *fn(input, step, tools) {
+  async *fn(input, { step, tools }) {
     const { diff, commits, branchName } = yield* step('get-git-info', async function* () {
       yield* checkGhInstalled(tools)
       const branchResult = yield* tools.executeCommand({ command: 'git', args: ['rev-parse', '--abbrev-ref', 'HEAD'] })

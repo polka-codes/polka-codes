@@ -12,7 +12,7 @@ type Tools = {
 const simpleWorkflow: Workflow<string, string, Tools> = {
   name: 'simple',
   description: 'A simple workflow',
-  async *fn(input, _step) {
+  async *fn(input, { step: _step }) {
     return `hello ${input}`
   },
 }
@@ -20,7 +20,7 @@ const simpleWorkflow: Workflow<string, string, Tools> = {
 const singleToolWorkflow: Workflow<number, number, Tools> = {
   name: 'singleTool',
   description: 'A workflow with a single tool',
-  async *fn(input, _step, tools) {
+  async *fn(input, { step: _step, tools }) {
     const result = yield* tools.add({ a: input, b: 2 })
     return result
   },
@@ -29,7 +29,7 @@ const singleToolWorkflow: Workflow<number, number, Tools> = {
 const multiToolWorkflow: Workflow<string, string, Tools> = {
   name: 'multiTool',
   description: 'A workflow with multiple tools',
-  async *fn(input, _step, tools) {
+  async *fn(input, { step: _step, tools }) {
     const r1 = yield* tools.concat({ a: 'hello', b: ' ' })
     const r2 = yield* tools.concat({ a: r1, b: input })
     return r2
@@ -47,7 +47,7 @@ const failingWorkflow: Workflow<null, null, Tools> = {
 const failingAfterToolWorkflow: Workflow<number, number, Tools> = {
   name: 'failingAfterTool',
   description: 'A workflow that fails after a tool call',
-  async *fn(input, _step, tools) {
+  async *fn(input, { step: _step, tools }) {
     yield* tools.add({ a: input, b: 2 })
     throw new Error('failed after tool')
   },
@@ -112,7 +112,7 @@ test('should execute step for each call', async () => {
   const stepWorkflow: Workflow<null, string, Tools> = {
     name: 'step',
     description: 'A workflow with steps',
-    async *fn(_input, step) {
+    async *fn(_input, { step }) {
       const r1 = yield* step('step1', async function* () {
         return await mock.innerFn()
       })
@@ -140,7 +140,7 @@ test('should support steps in a loop', async () => {
   const loopWorkflow: Workflow<number, string, Tools> = {
     name: 'loop',
     description: 'A workflow with a loop',
-    async *fn(input, step) {
+    async *fn(input, { step }) {
       const results: string[] = []
       for (let i = 0; i < input; i++) {
         const r = yield* step(`loopedStep-${i}`, async function* () {
@@ -186,7 +186,7 @@ test('should resume workflow from a step', async () => {
   const stepWorkflow: Workflow<null, string, Tools> = {
     name: 'step',
     description: 'A workflow with steps',
-    async *fn(_input, step) {
+    async *fn(_input, { step }) {
       const r1 = yield* step('step1', async function* () {
         return await mock.innerFn()
       })
@@ -230,7 +230,7 @@ test('should support tool calls in step functions', async () => {
   const stepWithToolsWorkflow: Workflow<number, number, Tools> = {
     name: 'stepWithTools',
     description: 'Step containing tool calls',
-    async *fn(input, step, tools) {
+    async *fn(input, { step, tools }) {
       const result = yield* step('toolStep', async function* () {
         const sum = yield* tools.add({ a: input, b: 10 })
         return sum
@@ -251,7 +251,7 @@ test('should support multiple tool calls in step functions', async () => {
   const stepWithMultipleToolsWorkflow: Workflow<number, number, Tools> = {
     name: 'stepWithMultipleTools',
     description: 'Step containing multiple tool calls',
-    async *fn(input, step, tools) {
+    async *fn(input, { step, tools }) {
       const result = yield* step('multiToolStep', async function* () {
         const sum1 = yield* tools.add({ a: input, b: 5 })
         const sum2 = yield* tools.add({ a: sum1, b: 10 })
@@ -298,7 +298,7 @@ test('should cache results from generator steps', async () => {
   const stepWithToolsWorkflow: Workflow<number, number, Tools> = {
     name: 'stepWithTools',
     description: 'Step containing tool calls',
-    async *fn(input, step, tools) {
+    async *fn(input, { step, tools }) {
       const result = yield* step('toolStep', async function* () {
         mock.toolCalled = true
         const sum = yield* tools.add({ a: input, b: 10 })
@@ -346,7 +346,7 @@ test('should support mixing regular and generator steps', async () => {
   const mixedStepsWorkflow: Workflow<number, number, Tools> = {
     name: 'mixedSteps',
     description: 'Workflow with both regular and generator steps',
-    async *fn(input, step, tools) {
+    async *fn(input, { step, tools }) {
       const regular = yield* step('regular', async function* () {
         return await mock.regularStep()
       })
@@ -378,7 +378,7 @@ test('should handle errors in generator steps', async () => {
   const failingGeneratorStepWorkflow: Workflow<number, number, Tools> = {
     name: 'failingGeneratorStep',
     description: 'Step that fails inside a generator',
-    async *fn(input, step, tools) {
+    async *fn(input, { step, tools }) {
       const result = yield* step('failingStep', async function* () {
         yield* tools.add({ a: input, b: 10 })
         throw new Error('error in generator step')
@@ -403,7 +403,7 @@ test('should support generator steps in a loop', async () => {
   const loopWithGeneratorStepsWorkflow: Workflow<number, number, Tools> = {
     name: 'loopWithGeneratorSteps',
     description: 'Loop with generator steps',
-    async *fn(input, step, tools) {
+    async *fn(input, { step, tools }) {
       let sum = input
       for (let i = 0; i < 3; i++) {
         sum = yield* step(`loopStep-${i}`, async function* () {

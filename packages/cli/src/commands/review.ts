@@ -2,6 +2,7 @@
 
 import { confirm } from '@inquirer/prompts'
 import { Command, InvalidOptionArgumentError } from 'commander'
+import { createLogger } from '../logger'
 import { runWorkflow } from '../runWorkflow'
 import type { CliToolRegistry } from '../workflow-tools'
 import { codeWorkflow, type ReviewWorkflowInput, reviewWorkflow } from '../workflows'
@@ -32,26 +33,34 @@ export const reviewCommand = new Command('review')
     const yes = maxIterations > 1 || yesOption
     let changesAppliedInThisIteration = false
 
+    const globalOpts = (command.parent ?? command).opts()
+    const { verbose } = globalOpts
+    const logger = createLogger({
+      verbose: verbose,
+    })
+
     for (let i = 0; i < maxIterations; i++) {
       changesAppliedInThisIteration = false
-      const input = { json, ...(pr && { pr }) }
+      const input = { pr }
 
       if (i > 0) {
-        command.opts().silent ||
-          (json ? console.error : console.log)(
-            `
-Re-running review (iteration ${i + 1} of ${maxIterations})...`,
-          )
+        logger.debug(`Re-running review (iteration ${i + 1} of ${maxIterations})...`)
       }
 
-      const reviewResult = await runWorkflow<ReviewWorkflowInput, ReviewResult, CliToolRegistry>('review', reviewWorkflow, command, input)
+      const reviewResult = await runWorkflow<ReviewWorkflowInput, ReviewResult, CliToolRegistry>(
+        'review',
+        reviewWorkflow,
+        command,
+        input,
+        logger,
+      )
 
       if (reviewResult) {
         const formattedReview = formatReviewForConsole(reviewResult)
         if (json) {
           console.log(JSON.stringify(reviewResult, null, 2))
         } else if (formattedReview) {
-          console.log(formattedReview)
+          logger.info(formattedReview)
         }
 
         let shouldRunTask = false
@@ -76,14 +85,20 @@ Re-running review (iteration ${i + 1} of ${maxIterations})...`,
         if (shouldRunTask && formattedReview) {
           changesAppliedInThisIteration = true
           const taskInstruction = `please address the review result:\n\n${formattedReview}`
-          await runWorkflow('code', codeWorkflow, command, {
-            task: taskInstruction,
-          })
+          await runWorkflow(
+            'code',
+            codeWorkflow,
+            command,
+            {
+              task: taskInstruction,
+            },
+            logger,
+          )
         }
       }
 
       if (maxIterations > 1 && !changesAppliedInThisIteration) {
-        command.opts().silent || (json ? console.error : console.log)('\nNo more review feedback to apply. Exiting loop.')
+        logger.debug('No more review feedback to apply. Exiting loop.')
         break
       }
     }

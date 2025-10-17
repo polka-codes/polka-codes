@@ -1,4 +1,5 @@
 import { Command } from 'commander'
+import { createLogger } from '../logger'
 import { runWorkflow } from '../runWorkflow'
 import { commitWorkflow } from '../workflows'
 
@@ -9,5 +10,11 @@ export const commitCommand = new Command('commit')
   .action(async (message, localOptions, command: Command) => {
     const input = { ...(localOptions.all && { all: true }), ...(message && { context: message }) }
 
-    await runWorkflow('commit', commitWorkflow, command, input)
+    const globalOpts = (command.parent ?? command).opts()
+    const { verbose } = globalOpts
+    const logger = createLogger({
+      verbose,
+    })
+
+    await runWorkflow('commit', commitWorkflow, command, input, logger)
   })

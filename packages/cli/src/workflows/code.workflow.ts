@@ -28,14 +28,14 @@ export type CodeWorkflowInput = {
 export const codeWorkflow: Workflow<CodeWorkflowInput, void, CliToolRegistry> = {
   name: 'Code Task',
   description: 'Plan and implement a feature or task using architect and coder agents.',
-  async *fn(input, _step, tools) {
+  async *fn(input, { tools, logger }) {
     const { task, files } = input
     let plan = ''
     let userFeedback = ''
 
     // Planning phase
     while (true) {
-      console.log('\n📋 Phase 1: Creating implementation plan...\n')
+      logger.info('\n📋 Phase 1: Creating implementation plan...\n')
       const planResult: CreatePlanOutput = yield* createPlan({
         tools,
         task,
@@ -44,18 +44,18 @@ export const codeWorkflow: Workflow<CodeWorkflowInput, void, CliToolRegistry> = 
       })
 
       if (planResult.reason) {
-        console.log('No plan generated. Reason:', planResult.reason)
+        logger.info('No plan generated. Reason:', planResult.reason)
         return
       }
       plan = planResult.plan || ''
 
-      console.log('\n📋 Generated Implementation Plan:\n')
-      console.log(plan)
-      console.log('Files:')
+      logger.info('\n📋 Generated Implementation Plan:\n')
+      logger.info(plan)
+      logger.info('Files:')
       for (const file of planResult.files || []) {
-        console.log(`- ${file.path}`)
+        logger.info(`- ${file.path}`)
       }
-      console.log('\n')
+      logger.info('\n')
 
       const approved = yield* tools.confirm({
         message: 'Do you approve this plan and want to proceed with implementation?',
@@ -73,7 +73,7 @@ export const codeWorkflow: Workflow<CodeWorkflowInput, void, CliToolRegistry> = 
     }
 
     // Implementation phase
-    console.log('\n⚙️  Phase 2: Implementing the plan...\n')
+    logger.info('\n⚙️  Phase 2: Implementing the plan...\n')
 
     const implementPrompt = getImplementPrompt(plan)
 
@@ -95,10 +95,10 @@ export const codeWorkflow: Workflow<CodeWorkflowInput, void, CliToolRegistry> = 
       defaultContext: true,
     })
 
-    console.log('\n✅ Implementation complete!\n')
+    logger.info('\n✅ Implementation complete!\n')
 
     // Fixing phase
-    console.log('\n🔧 Phase 3: Checking for errors...\n')
+    logger.info('\n🔧 Phase 3: Checking for errors...\n')
     yield* runSubWorkflow(tools, fixWorkflow, { interactive: false, task: input.task })
   },
 }

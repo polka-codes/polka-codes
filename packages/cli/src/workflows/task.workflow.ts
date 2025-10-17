@@ -12,10 +12,10 @@ export type TaskWorkflowInput = {
 export const taskWorkflow: Workflow<TaskWorkflowInput, { success: boolean }, CliToolRegistry> = {
   name: 'Agent Task',
   description: 'Run a specific agent with a given task.',
-  async *fn(input, _step, tools) {
+  async *fn(input, { tools, logger }) {
     const { task, agent } = input
 
-    console.log(`\n🤖 Invoking agent: ${agent}...\n`)
+    logger.info(`\n🤖 Invoking agent: ${agent}...\n`)
 
     const messages = [{ type: 'user' as const, content: task }]
 
@@ -25,7 +25,7 @@ export const taskWorkflow: Workflow<TaskWorkflowInput, { success: boolean }, Cli
       defaultContext: true,
     })
 
-    console.log('\n✅ Agent finished!\n')
+    logger.info('\n✅ Agent finished!\n')
 
     return { success: true }
   },

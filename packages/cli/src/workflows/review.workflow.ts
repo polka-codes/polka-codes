@@ -14,14 +14,13 @@ type FileChange = {
 
 export type ReviewWorkflowInput = {
   pr?: string
-  json: boolean
 }
 
 export const reviewWorkflow: Workflow<ReviewWorkflowInput, ReviewResult, CliToolRegistry> = {
   name: 'Code Review',
   description: 'Review code changes in a pull request or local changes using AI.',
-  async *fn(input, step, tools) {
-    const { pr, json } = input
+  async *fn(input, { step, tools, logger }) {
+    const { pr } = input
     let changeInfo: ReviewToolInput | undefined
 
     if (pr) {
@@ -42,7 +41,7 @@ export const reviewWorkflow: Workflow<ReviewWorkflowInput, ReviewResult, CliTool
           args: ['pr', 'checkout', prNumber],
         })
         if (checkoutResult.exitCode !== 0) {
-          console.error(checkoutResult.stderr)
+          logger.error(checkoutResult.stderr)
           throw new Error(`Error checking out PR #${prNumber}. Make sure the PR number is correct and you have access to the repository.`)
         }
       })
@@ -61,15 +60,14 @@ export const reviewWorkflow: Workflow<ReviewWorkflowInput, ReviewResult, CliTool
           args: ['--no-pager', 'diff', '--name-status', '--no-color', `${prDetails.baseRefOid}...HEAD`],
         })
         if (diffResult.exitCode !== 0) {
-          console.warn('Warning: Could not retrieve file changes list')
+          logger.warn('Warning: Could not retrieve file changes list')
           return []
         }
         return parseGitDiffNameStatus(diffResult.stdout)
       })
 
-      if (!json) {
-        printChangedFiles('Changed files:', changedFiles)
-      }
+      printChangedFiles(logger, changedFiles)
+
       changeInfo = {
         commitRange: `${prDetails.baseRefOid}...HEAD`,
         pullRequestTitle: prDetails.title,
@@ -86,9 +84,9 @@ export const reviewWorkflow: Workflow<ReviewWorkflowInput, ReviewResult, CliTool
       if (hasLocalChanges) {
         const hasStagedChanges = statusLines.some((line: string) => line[0] !== ' ' && line[0] !== '?')
         const changedFiles = parseGitStatus(gitStatus)
-        if (!json) {
-          printChangedFiles('Changed files:', changedFiles)
-        }
+
+        printChangedFiles(logger, changedFiles)
+
         changeInfo = {
           staged: hasStagedChanges,
           changedFiles,
@@ -114,7 +112,7 @@ export const reviewWorkflow: Workflow<ReviewWorkflowInput, ReviewResult, CliTool
 
         if (currentBranch === defaultBranch) {
           yield* step(`No changes to review. You are on the default branch ('${defaultBranch}').`, async function* () {})
-          console.log(`No changes to review. You are on the default branch ('${defaultBranch}').`)
+          logger.info(`No changes to review. You are on the default branch ('${defaultBranch}').`)
           return {
             overview: `No changes to review. You are on the default branch ('${defaultBranch}').`,
             specificReviews: [],
@@ -127,15 +125,13 @@ export const reviewWorkflow: Workflow<ReviewWorkflowInput, ReviewResult, CliTool
             args: ['--no-pager', 'diff', '--name-status', '--no-color', `${defaultBranch}...${currentBranch}`],
           })
           if (diffResult.exitCode !== 0) {
-            console.warn('Warning: Could not retrieve file changes list')
+            logger.warn('Warning: Could not retrieve file changes list')
             return []
           }
           return parseGitDiffNameStatus(diffResult.stdout)
         })
 
-        if (!json) {
-          printChangedFiles('Changed files:', branchChangedFiles)
-        }
+        printChangedFiles(logger, branchChangedFiles)
 
         changeInfo = {
           commitRange: `${defaultBranch}...${currentBranch}`,

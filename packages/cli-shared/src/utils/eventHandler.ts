@@ -68,7 +68,7 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter, stream: Writ
         customConsole.log('\n\n======== Request Ended ========\n')
 
         if (verbose > 1) {
-          usageMeter.printUsage(customConsole)
+          customConsole.log(usageMeter.getUsageText())
         }
 
         break

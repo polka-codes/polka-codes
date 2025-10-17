@@ -19,7 +19,7 @@ const FixIterationSummarySchema = z.object({
 export const fixWorkflow: Workflow<FixWorkflowInput, { summaries: string[] }, CliToolRegistry> = {
   name: 'Fix',
   description: 'Fix an issue by running a command repeatedly.',
-  async *fn(input, _step, tools) {
+  async *fn(input, { tools, logger }) {
     const { command: inputCommand, task, interactive = true } = input
     let command = inputCommand
     const summaries: string[] = []
@@ -67,13 +67,13 @@ export const fixWorkflow: Workflow<FixWorkflowInput, { summaries: string[] }, Cl
 
       if (!command) {
         // This can happen if interactive is false and no command is found
-        console.log('No command to run.')
+        logger.info('No command to run.')
         return { summaries: [] }
       }
     }
 
     for (let i = 0; i < 10; i++) {
-      console.log(`Running command (attempt ${i + 1}/10): ${command}`)
+      logger.info(`Running command (attempt ${i + 1}/10): ${command}`)
       const { exitCode, stdout, stderr } = yield* tools.executeCommand({
         command,
         shell: true,
@@ -81,11 +81,11 @@ export const fixWorkflow: Workflow<FixWorkflowInput, { summaries: string[] }, Cl
       })
 
       if (exitCode === 0) {
-        console.log('Command succeeded!')
+        logger.info('Command succeeded!')
         return { summaries }
       }
 
-      console.log(`Command failed with exit code ${exitCode}. Asking agent to fix it...`)
+      logger.info(`Command failed with exit code ${exitCode}. Asking agent to fix it...`)
 
       const result = yield* runSubWorkflow(tools, agentWorkflow, {
         systemPrompt: FIX_SYSTEM_PROMPT,
@@ -102,7 +102,7 @@ export const fixWorkflow: Workflow<FixWorkflowInput, { summaries: string[] }, Cl
       if (result.status === 'completed' && result.output.type === ToolResponseType.Exit && result.output.object) {
         const summary = (result.output.object as { summary: string }).summary
         summaries.push(summary)
-        console.log(`Summary of changes: ${summary}`)
+        logger.info(`Summary of changes: ${summary}`)
       }
     }
 

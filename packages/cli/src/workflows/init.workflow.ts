@@ -24,7 +24,7 @@ type InitWorkflowOutput = {
 export const initWorkflow: Workflow<InitWorkflowInput, InitWorkflowOutput, CliToolRegistry> = {
   name: 'Initialize polkacodes',
   description: 'Initialize polkacodes configuration.',
-  async *fn(input, step, tools) {
+  async *fn(input, { step, tools, logger }) {
     const { global, configPath, existingConfig } = yield* step('setup', async function* () {
       const globalConfigPath = getGlobalConfigPath()
       let global = input.global ?? false
@@ -54,14 +54,14 @@ export const initWorkflow: Workflow<InitWorkflowInput, InitWorkflowOutput, CliTo
         }
       }
 
-      console.log(`Config file path: ${configPath}`)
+      logger.info(`Config file path: ${configPath}`)
 
       let existingConfig: Config = {}
       try {
         existingConfig = loadConfigAtPath(configPath) ?? {}
       } catch (error) {
         if (error instanceof ZodError) {
-          console.error(`Unable to parse config file: ${configPath}`, error)
+          logger.error(`Unable to parse config file: ${configPath}`, error)
           process.exit(1)
         }
       }
@@ -105,7 +105,7 @@ export const initWorkflow: Workflow<InitWorkflowInput, InitWorkflowOutput, CliTo
             const globalConfig = loadConfigAtPath(globalConfigPath) ?? {}
             set(globalConfig, ['providers', provider, 'apiKey'], providerConfig.apiKey)
             yield* tools.writeToFile({ path: globalConfigPath, content: stringify(globalConfig) })
-            console.log(`API key saved to global config file: ${globalConfigPath}`)
+            logger.info(`API key saved to global config file: ${globalConfigPath}`)
             providerConfig.apiKey = undefined
             break
           }
@@ -119,7 +119,7 @@ export const initWorkflow: Workflow<InitWorkflowInput, InitWorkflowOutput, CliTo
               envFileContent = `${provider.toUpperCase()}_API_KEY=${providerConfig.apiKey}`
             }
             yield* tools.writeToFile({ path: '.env', content: envFileContent })
-            console.log('API key saved to .env file')
+            logger.info('API key saved to .env file')
             providerConfig.apiKey = undefined
             break
           }
@@ -141,7 +141,7 @@ export const initWorkflow: Workflow<InitWorkflowInput, InitWorkflowOutput, CliTo
 
     let generatedConfig = {}
     if (shouldAnalyze) {
-      console.log('Analyzing project files...')
+      logger.info('Analyzing project files...')
       const { output: response } = yield* tools.invokeAgent({
         agent: 'analyzer',
         messages: [INIT_WORKFLOW_ANALYZE_PROMPT],
@@ -166,7 +166,7 @@ export const initWorkflow: Workflow<InitWorkflowInput, InitWorkflowOutput, CliTo
       }
 
       yield* tools.writeToFile({ path: configPath, content: stringify(finalConfig) })
-      console.log(`Configuration saved to ${configPath}`)
+      logger.info(`Configuration saved to ${configPath}`)
       return {}
     })
 

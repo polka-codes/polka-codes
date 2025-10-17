@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises'
 import { input } from '@inquirer/prompts'
 import { Command } from 'commander'
 import { lookup } from 'mime-types'
+import { createLogger } from '../logger'
 import { parseOptions } from '../options'
 import { runWorkflow } from '../runWorkflow'
 import { type CodeWorkflowInput, codeWorkflow, type JsonFilePart, type JsonImagePart } from '../workflows/code.workflow'
@@ -109,7 +110,13 @@ export async function runCode(task: string | undefined, _options: any, command: 
     files: fileContents,
   }
 
-  await runWorkflow('code', codeWorkflow, command, workflowInput)
+  const globalOpts = (command.parent ?? command).opts()
+  const { verbose } = globalOpts
+  const logger = createLogger({
+    verbose,
+  })
+
+  await runWorkflow('code', codeWorkflow, command, workflowInput, logger)
 }
 
 export const codeCommand = new Command('code')

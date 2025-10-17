@@ -4,7 +4,7 @@ import os from 'node:os'
 import { getProvider, printEvent } from '@polka-codes/cli-shared'
 import type { AgentNameType } from '@polka-codes/core'
 import { EnableCachePolicy, UsageMeter } from '@polka-codes/core'
-import { makeStepFn, run, type ToolCall, type ToolSignature, type Workflow } from '@polka-codes/workflow'
+import { type Logger, makeStepFn, run, type ToolCall, type ToolSignature, type Workflow, type WorkflowResult } from '@polka-codes/workflow'
 import type { Command } from 'commander'
 import { merge } from 'lodash-es'
 import ora from 'ora'
@@ -21,12 +21,12 @@ export async function runWorkflow<TInput, TOutput, TTools extends Record<string,
   workflow: Workflow<TInput, TOutput, TTools>,
   command: Command,
   workflowInput: TInput,
+  logger: Logger,
   requiresProvider: boolean = true,
 ): Promise<TOutput | undefined> {
   const globalOpts = (command.parent ?? command).opts()
   const { json } = globalOpts
-  const logger = json ? new console.Console(process.stderr) : console
-  const { providerConfig, config, verbose } = parseOptions(globalOpts, { commandName })
+  const { providerConfig, config, verbose } = parseOptions(globalOpts, {})
 
   if (requiresProvider) {
     const commandConfig = providerConfig.getConfigForCommand(commandName)
@@ -35,13 +35,19 @@ export async function runWorkflow<TInput, TOutput, TTools extends Record<string,
       process.exit(1)
     }
 
-    logger.log('Provider:', commandConfig.provider)
-    logger.log('Model:', commandConfig.model)
+    logger.info('Provider:', commandConfig.provider)
+    logger.info('Model:', commandConfig.model)
   }
 
-  const spinner = ora({ text: 'Running workflow...', ...(json && { stream: process.stderr }) }).start()
+  const spinner = ora({
+    text: 'Running workflow...',
+    ...(json && { stream: process.stderr }),
+  }).start()
 
-  const usage = new UsageMeter(merge(prices, config.prices ?? {}), { maxMessages: config.maxMessageCount, maxCost: config.budget })
+  const usage = new UsageMeter(merge(prices, config.prices ?? {}), {
+    maxMessages: config.maxMessageCount,
+    maxCost: config.budget,
+  })
   const onEvent = printEvent(verbose, usage, process.stderr)
   const toolProvider = getProvider({ excludeFiles: config.excludeFiles })
 
@@ -68,59 +74,52 @@ export async function runWorkflow<TInput, TOutput, TTools extends Record<string,
     usageMeter: usage,
   }
 
-  const originalConsole = { log: console.log, error: console.error, warn: console.warn }
-  if (json) {
-    console.log = logger.log
-    console.error = logger.error
-    console.warn = logger.warn
-  }
-
-  let result = await run(
-    workflow,
-    workflowInput,
-    makeStepFn<TTools>({
-      onEnterStep: (name) => {
-        spinner.text = name
-      },
-    }),
-  )
-
-  while (result.status === 'pending') {
-    spinner.text = `Running tool: ${String(result.tool.tool)}`
-    let toolResult: any
-    try {
-      toolResult = await handleToolCall(result.tool as ToolCall<CliToolRegistry>, {
-        providerConfig,
-        parameters,
-        spinner,
-        getModel: async (agent: AgentNameType) => {
-          const config = providerConfig.getConfigForAgent(agent) || providerConfig.getConfigForCommand(commandName)
-          if (!config) {
-            throw new Error(`Could not get model config for agent ${agent} or command ${commandName}`)
-          }
-          return getModel(config)
+  let result: WorkflowResult<TInput, TOutput, TTools>
+  try {
+    result = await run(
+      workflow,
+      workflowInput,
+      makeStepFn<TTools>({
+        onEnterStep: (name) => {
+          spinner.text = name
         },
-        model,
-        agentCallback: onEvent,
-        toolProvider,
-        command,
-      })
-    } catch (e) {
-      result = await result.throw(e as Error)
-      continue
-    }
-    result = await result.next(toolResult)
-  }
+      }),
+      logger,
+    )
 
-  if (json) {
-    console.log = originalConsole.log
-    console.error = originalConsole.error
-    console.warn = originalConsole.warn
+    while (result.status === 'pending') {
+      spinner.text = `Running tool: ${String(result.tool.tool)}`
+      let toolResult: any
+      try {
+        toolResult = await handleToolCall(result.tool as ToolCall<CliToolRegistry>, {
+          providerConfig,
+          parameters,
+          spinner,
+          getModel: async (agent: AgentNameType) => {
+            const config = providerConfig.getConfigForAgent(agent) || providerConfig.getConfigForCommand(commandName)
+            if (!config) {
+              throw new Error(`Could not get model config for agent ${agent} or command ${commandName}`)
+            }
+            return getModel(config)
+          },
+          model,
+          agentCallback: onEvent,
+          toolProvider,
+          command,
+        })
+      } catch (e) {
+        result = await result.throw(e as Error)
+        continue
+      }
+      result = await result.next(toolResult)
+    }
+  } catch (e) {
+    result = { status: 'failed', error: e }
   }
 
   if (result.status === 'completed') {
     spinner.succeed('Workflow completed successfully.')
-    usage.printUsage(logger)
+    logger.info(usage.getUsageText())
     return result.output
   }
 
@@ -135,6 +134,6 @@ export async function runWorkflow<TInput, TOutput, TTools extends Record<string,
   }
 
   spinner.stop()
-  usage.printUsage(logger)
+  logger.info(usage.getUsageText())
   return undefined
 }

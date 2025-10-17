@@ -2,7 +2,6 @@
 
 import os from 'node:os'
 import { loadConfig } from '@polka-codes/cli-shared'
-import type { Config } from '@polka-codes/core'
 import type { Command } from 'commander'
 import { set } from 'lodash-es'
 import { ApiProviderConfig } from './ApiProviderConfig'
@@ -40,25 +39,15 @@ export function addSharedOptions(command: Command) {
     .option('-d --base-dir <path>', 'Base directory to run commands in')
     .option('--agent <agent>', 'Initial agent to use (default: architect)')
     .option('--file <path...>', 'File to include in the task')
-    .option('--json', 'Output workflow events as JSON')
     .option('--silent', 'Enable silent mode')
 }
 
 export function parseOptions(
   options: CliOptions,
-  { commandName, cwdArg }: { commandName?: string; cwdArg?: string } = {},
+  { cwdArg }: { cwdArg?: string } = {},
   home: string = os.homedir(),
   env: Partial<Env> = getEnv(),
-): {
-  maxMessageCount: number
-  budget: number
-  verbose: number
-  config: Config
-  providerConfig: ApiProviderConfig
-  agent: string
-  silent: boolean
-  file: string[] | undefined
-} {
+) {
   let cwd = cwdArg
   if (options.baseDir) {
     process.chdir(options.baseDir)
@@ -103,8 +92,7 @@ export function parseOptions(
     ...config,
   })
 
-  const defaultVerbose = commandName === 'meta' || commandName === 'code' ? 0 : -1
-  const verbose = options.verbose ?? defaultVerbose
+  const verbose = options.silent ? -1 : (options.verbose ?? 0)
 
   return {
     maxMessageCount: options.maxMessageCount ?? config.maxMessageCount ?? 100,
@@ -113,7 +101,6 @@ export function parseOptions(
     config,
     providerConfig,
     agent: options.agent ?? config.agent ?? 'architect',
-    silent: options.silent ?? false,
     file: options.file,
   }
 }

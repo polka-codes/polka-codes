@@ -3,6 +3,7 @@ import { input } from '@inquirer/prompts'
 import { readMultiline } from '@polka-codes/cli-shared'
 import chalk from 'chalk'
 import { Command } from 'commander'
+import { createLogger } from '../logger'
 import { runWorkflow } from '../runWorkflow'
 import { planWorkflow } from '../workflows/plan.workflow'
 
@@ -40,9 +41,21 @@ export const planCommand = new Command('plan')
       }
     }
 
-    await runWorkflow('plan', planWorkflow, command, {
-      task: taskInput,
-      fileContent,
-      filePath: options.file,
+    const globalOpts = (command.parent ?? command).opts()
+    const { verbose } = globalOpts
+    const logger = createLogger({
+      verbose: verbose,
     })
+
+    await runWorkflow(
+      'plan',
+      planWorkflow,
+      command,
+      {
+        task: taskInput,
+        fileContent,
+        filePath: options.file,
+      },
+      logger,
+    )
   })

@@ -15,7 +15,7 @@ type State = 'Generating' | 'Reviewing' | 'Done'
 export const planWorkflow: Workflow<PlanWorkflowInput, any, CliToolRegistry> = {
   name: 'Plan Task',
   description: 'Create or update a plan for a given task.',
-  async *fn(input, _step, tools) {
+  async *fn(input, { tools, logger }) {
     const { fileContent, filePath } = input
     let currentTask = input.task
     let plan = fileContent || ''
@@ -48,7 +48,7 @@ export const planWorkflow: Workflow<PlanWorkflowInput, any, CliToolRegistry> = {
           })
 
           if (planResult.reason) {
-            console.log(planResult.reason)
+            logger.info(planResult.reason)
             state = 'Done'
             break
           }
@@ -60,12 +60,12 @@ export const planWorkflow: Workflow<PlanWorkflowInput, any, CliToolRegistry> = {
           break
         }
         case 'Reviewing': {
-          console.log('\nGenerated Plan:\n')
-          console.log(plan)
+          logger.info('\nGenerated Plan:\n')
+          logger.info(plan)
           if (files.length > 0) {
-            console.log('\nFiles:')
+            logger.info('\nFiles:')
             for (const file of files) {
-              console.log(`- ${file.path}`)
+              logger.info(`- ${file.path}`)
             }
           }
 
@@ -93,7 +93,7 @@ export const planWorkflow: Workflow<PlanWorkflowInput, any, CliToolRegistry> = {
                   default: defaultPath,
                 }))
               yield* tools.writeToFile({ path: savePath, content: plan })
-              console.log(`Plan saved to ${savePath}`)
+              logger.info(`Plan saved to ${savePath}`)
               state = 'Done'
               break
             }

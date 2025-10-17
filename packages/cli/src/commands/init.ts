@@ -4,6 +4,7 @@
  */
 
 import { Command } from 'commander'
+import { createLogger } from '../logger'
 import { runWorkflow } from '../runWorkflow'
 import { initWorkflow } from '../workflows/init.workflow'
 
@@ -11,6 +12,11 @@ export const initCommand = new Command('init')
   .description('Initialize polkacodes configuration')
   .option('-g, --global', 'Use global config')
   .action(async (options, command: Command) => {
+    const globalOpts = (command.parent ?? command).opts()
+    const { verbose } = globalOpts
+    const logger = createLogger({
+      verbose: verbose,
+    })
     await runWorkflow(
       'init',
       initWorkflow,
@@ -19,6 +25,7 @@ export const initCommand = new Command('init')
         global: options.global,
         parentOptions: command.parent?.opts() ?? {},
       },
+      logger,
       false,
     )
   })

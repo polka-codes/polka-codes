@@ -45,10 +45,22 @@ export type WorkflowTools<TTools extends ToolRegistry> = {
   >
 }
 
+export interface Logger {
+  debug: (...args: any[]) => void
+  info: (...args: any[]) => void
+  warn: (...args: any[]) => void
+  error: (...args: any[]) => void
+}
+
+export type WorkflowContext<TTools extends ToolRegistry> = {
+  step: StepFn<TTools>
+  tools: WorkflowTools<TTools>
+  logger: Logger
+}
+
 export type WorkflowFn<TInput, TOutput, TTools extends ToolRegistry> = (
   input: TInput,
-  step: StepFn<TTools>,
-  tools: WorkflowTools<TTools>,
+  context: WorkflowContext<TTools>,
 ) => AsyncGenerator<ToolCall<TTools>, TOutput, TTools[keyof TTools]['output']>
 
 export type Workflow<TInput, TOutput, TTools extends ToolRegistry> = {
@@ -79,8 +91,6 @@ export type WorkflowStatus<TTools extends ToolRegistry, TOutput> =
 
 import { makeStepFn } from './helpers'
 
-export type JSONValue = ValidJsonOrVoid<any>
-
 export type WorkflowResult<TInput, TOutput, TTools extends ToolRegistry> =
   | (WorkflowStatusPending<TTools> & {
       next: (toolResult: TTools[keyof TTools]['output']) => Promise<WorkflowResult<TInput, TOutput, TTools>>
@@ -89,10 +99,19 @@ export type WorkflowResult<TInput, TOutput, TTools extends ToolRegistry> =
   | WorkflowStatusCompleted<TOutput>
   | WorkflowStatusFailed
 
+// Create a default silent logger
+const silentLogger: Logger = {
+  debug: () => {},
+  info: () => {},
+  warn: () => {},
+  error: () => {},
+}
+
 export async function run<TInput, TOutput, TTools extends ToolRegistry>(
   workflow: Workflow<TInput, TOutput, TTools>,
   input: TInput,
   stepFn?: StepFn<TTools>,
+  logger: Logger = silentLogger,
 ): Promise<WorkflowResult<TInput, TOutput, TTools>> {
   if (!stepFn) {
     stepFn = makeStepFn<TTools>()
@@ -110,7 +129,8 @@ export async function run<TInput, TOutput, TTools extends ToolRegistry>(
     },
   })
 
-  const gen = workflow.fn(input, stepFn, tools)
+  const context: WorkflowContext<TTools> = { step: stepFn, tools, logger }
+  const gen = workflow.fn(input, context)
 
   let status: WorkflowStatus<TTools, TOutput>
   try {
