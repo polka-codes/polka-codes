@@ -52,10 +52,16 @@ export interface Logger {
   error: (...args: any[]) => void
 }
 
+export type RunSubWorkflowFn<TCallerTools extends ToolRegistry> = <TInput, TOutput, TCalleeTools extends ToolRegistry>(
+  workflow: Workflow<TInput, TOutput, TCalleeTools>,
+  input: TInput,
+) => AsyncGenerator<ToolCall<TCallerTools>, WorkflowResult<TInput, TOutput, TCalleeTools>, TCallerTools[keyof TCallerTools]['output']>
+
 export type WorkflowContext<TTools extends ToolRegistry> = {
   step: StepFn<TTools>
   tools: WorkflowTools<TTools>
   logger: Logger
+  runSubWorkflow: RunSubWorkflowFn<TTools>
 }
 
 export type WorkflowFn<TInput, TOutput, TTools extends ToolRegistry> = (
@@ -129,7 +135,26 @@ export async function run<TInput, TOutput, TTools extends ToolRegistry>(
     },
   })
 
-  const context: WorkflowContext<TTools> = { step: stepFn, tools, logger }
+  const runSubWorkflow: RunSubWorkflowFn<TTools> = async function* <TInput, TOutput, TCalleeTools extends ToolRegistry>(
+    workflow: Workflow<TInput, TOutput, TCalleeTools>,
+    input: TInput,
+  ) {
+    let state = await run(workflow, input, undefined, logger)
+
+    while (state.status === 'pending') {
+      const toolName = state.tool.tool
+      const toolInput = state.tool.input
+
+      const toolFn = (tools as any)[toolName]
+      const toolResult = yield* toolFn(toolInput)
+
+      state = await state.next(toolResult)
+    }
+
+    return state
+  }
+
+  const context: WorkflowContext<TTools> = { step: stepFn, tools, logger, runSubWorkflow }
   const gen = workflow.fn(input, context)
 
   let status: WorkflowStatus<TTools, TOutput>
