@@ -1,16 +1,4 @@
-export type ToolSignature<I, O> = {
-  input: I
-  output: O
-}
-
-export type ToolRegistry = Record<string, ToolSignature<any, any>>
-
-export interface Logger {
-  debug: (...args: any[]) => void
-  info: (...args: any[]) => void
-  warn: (...args: any[]) => void
-  error: (...args: any[]) => void
-}
+import type { Logger, ToolRegistry } from '../workflow'
 
 export type ToolHandler<TTools extends ToolRegistry> = <TTool extends keyof TTools>(
   tool: TTool,
