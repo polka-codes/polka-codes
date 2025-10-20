@@ -2,7 +2,7 @@
 import { input } from '@inquirer/prompts'
 import type { Command } from 'commander'
 import { createLogger } from '../logger'
-import { runWorkflow } from '../runWorkflow'
+import { runWorkflowV2 } from '../runWorkflowV2'
 import { metaWorkflow } from '../workflows/meta.workflow'
 
 export async function runMeta(task: string | undefined, command: Command) {
@@ -33,13 +33,15 @@ export async function runMeta(task: string | undefined, command: Command) {
     verbose: verbose,
   })
 
-  await runWorkflow(
-    'meta',
+  await runWorkflowV2(
     metaWorkflow,
-    command,
     {
       task: taskInput,
     },
-    logger,
+    {
+      commandName: 'meta',
+      command,
+      logger,
+    },
   )
 }

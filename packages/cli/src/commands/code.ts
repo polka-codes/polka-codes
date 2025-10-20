@@ -5,7 +5,7 @@ import { Command } from 'commander'
 import { lookup } from 'mime-types'
 import { createLogger } from '../logger'
 import { parseOptions } from '../options'
-import { runWorkflow } from '../runWorkflow'
+import { runWorkflowV2 } from '../runWorkflowV2'
 import { type CodeWorkflowInput, codeWorkflow, type JsonFilePart, type JsonImagePart } from '../workflows/code.workflow'
 
 const readStdin = async (timeoutMs = 1000): Promise<string> => {
@@ -116,7 +116,7 @@ export async function runCode(task: string | undefined, _options: any, command: 
     verbose,
   })
 
-  await runWorkflow('code', codeWorkflow, command, workflowInput, logger)
+  await runWorkflowV2(codeWorkflow, workflowInput, { commandName: 'code', command, logger })
 }
 
 export const codeCommand = new Command('code')

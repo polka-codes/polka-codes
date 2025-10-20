@@ -5,7 +5,7 @@
 
 import { Command } from 'commander'
 import { createLogger } from '../logger'
-import { runWorkflow } from '../runWorkflow'
+import { runWorkflowV2 } from '../runWorkflowV2'
 import { initWorkflow } from '../workflows/init.workflow'
 
 export const initCommand = new Command('init')
@@ -17,15 +17,17 @@ export const initCommand = new Command('init')
     const logger = createLogger({
       verbose: verbose,
     })
-    await runWorkflow(
-      'init',
+    await runWorkflowV2(
       initWorkflow,
-      command,
       {
         global: options.global,
         parentOptions: command.parent?.opts() ?? {},
       },
-      logger,
-      false,
+      {
+        commandName: 'init',
+        command,
+        logger,
+        requiresProvider: false,
+      },
     )
   })

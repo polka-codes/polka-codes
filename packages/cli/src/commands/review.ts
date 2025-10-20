@@ -3,7 +3,6 @@
 import { confirm } from '@inquirer/prompts'
 import { Command, InvalidOptionArgumentError } from 'commander'
 import { createLogger } from '../logger'
-import { runWorkflow } from '../runWorkflow'
 import { runWorkflowV2 } from '../runWorkflowV2'
 import type { CliToolRegistry } from '../workflow-tools'
 import { codeWorkflow, type ReviewWorkflowInput, reviewWorkflow } from '../workflows'
@@ -84,14 +83,16 @@ export const reviewCommand = new Command('review')
         if (shouldRunTask && formattedReview) {
           changesAppliedInThisIteration = true
           const taskInstruction = `please address the review result:\n\n${formattedReview}`
-          await runWorkflow(
-            'code',
+          await runWorkflowV2(
             codeWorkflow,
-            command,
             {
               task: taskInstruction,
             },
-            logger,
+            {
+              commandName: 'code',
+              command,
+              logger,
+            },
           )
         }
       }
