@@ -232,17 +232,6 @@ export const checkGhInstalledV2 = async (executeCommand: ExecuteCommandFnV2) => 
 }
 
 export const getDefaultBranchV2 = async (executeCommand: ExecuteCommandFnV2): Promise<string | undefined> => {
-  const defaultBranches = ['master', 'main', 'develop']
-  for (const branch of defaultBranches) {
-    const result = await executeCommand({
-      command: 'git',
-      args: ['show-ref', '--verify', '--quiet', `refs/heads/${branch}`],
-    })
-    if (result.exitCode === 0) {
-      return branch
-    }
-  }
-
   const branchResult = await executeCommand({
     command: 'gh',
     args: ['repo', 'view', '--json', 'defaultBranchRef', '--jq', '.defaultBranchRef.name'],
@@ -250,6 +239,17 @@ export const getDefaultBranchV2 = async (executeCommand: ExecuteCommandFnV2): Pr
   if (branchResult.exitCode === 0) {
     const branch = branchResult.stdout.trim()
     if (branch) {
+      return branch
+    }
+  }
+
+  const defaultBranches = ['master', 'main', 'develop']
+  for (const branch of defaultBranches) {
+    const result = await executeCommand({
+      command: 'git',
+      args: ['show-ref', '--verify', '--quiet', `refs/heads/${branch}`],
+    })
+    if (result.exitCode === 0) {
       return branch
     }
   }
