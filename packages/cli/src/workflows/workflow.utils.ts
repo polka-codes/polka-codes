@@ -52,54 +52,6 @@ export function printChangedFiles(logger: Logger, changedFiles: FileChange[]) {
   }
 }
 
-type ExecuteCommandFn = (
-  input: CliToolRegistry['executeCommand']['input'],
-) => Generator<any, CliToolRegistry['executeCommand']['output'], any>
-
-export function* checkGhInstalled(tools: { executeCommand: ExecuteCommandFn }) {
-  const result = yield* tools.executeCommand({ command: 'gh', args: ['--version'] })
-  if (result.exitCode !== 0) {
-    throw new Error('GitHub CLI (gh) is not installed. Please install it from https://cli.github.com/')
-  }
-}
-
-export function* getDefaultBranch(tools: { executeCommand: ExecuteCommandFn }): Generator<any, string | undefined, any> {
-  const defaultBranches = ['master', 'main', 'develop']
-  for (const branch of defaultBranches) {
-    const result = yield* tools.executeCommand({
-      command: 'git',
-      args: ['show-ref', '--verify', '--quiet', `refs/heads/${branch}`],
-    })
-    if (result.exitCode === 0) {
-      return branch
-    }
-  }
-
-  const ghCheckResult = yield* tools.executeCommand({ command: 'gh', args: ['--version'] })
-  if (ghCheckResult.exitCode === 0) {
-    const branchResult = yield* tools.executeCommand({
-      command: 'gh',
-      args: ['repo', 'view', '--json', 'defaultBranchRef', '--jq', '.defaultBranchRef.name'],
-    })
-    if (branchResult.exitCode === 0) {
-      const branch = branchResult.stdout.trim()
-      if (branch) {
-        return branch
-      }
-    }
-  }
-
-  const remoteResult = yield* tools.executeCommand({ command: 'git', args: ['remote', 'show', 'origin'] })
-  if (remoteResult.exitCode === 0) {
-    const match = remoteResult.stdout.match(/HEAD branch: (.*)/)
-    if (match?.[1]) {
-      return match[1]
-    }
-  }
-
-  return undefined
-}
-
 // unquotes path from git status --porcelain
 // see: https://git-scm.com/docs/git-status#_changed_track_entries
 const unquotePath = (path: string) => {
@@ -222,16 +174,16 @@ export function formatReviewForConsole(output: ReviewResult): string {
   return formatted
 }
 
-type ExecuteCommandFnV2 = (input: CliToolRegistry['executeCommand']['input']) => Promise<CliToolRegistry['executeCommand']['output']>
+type ExecuteCommandFn = (input: CliToolRegistry['executeCommand']['input']) => Promise<CliToolRegistry['executeCommand']['output']>
 
-export const checkGhInstalledV2 = async (executeCommand: ExecuteCommandFnV2) => {
+export const checkGhInstalled = async (executeCommand: ExecuteCommandFn) => {
   const result = await executeCommand({ command: 'gh', args: ['--version'] })
   if (result.exitCode !== 0) {
     throw new Error('GitHub CLI (gh) is not installed. Please install it from https://cli.github.com/')
   }
 }
 
-export const getDefaultBranchV2 = async (executeCommand: ExecuteCommandFnV2): Promise<string | undefined> => {
+export const getDefaultBranch = async (executeCommand: ExecuteCommandFn): Promise<string | undefined> => {
   const branchResult = await executeCommand({
     command: 'gh',
     args: ['repo', 'view', '--json', 'defaultBranchRef', '--jq', '.defaultBranchRef.name'],

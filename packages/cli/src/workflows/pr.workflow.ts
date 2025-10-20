@@ -5,7 +5,7 @@ import { agentWorkflowV2, type WorkflowFnV2 } from '@polka-codes/workflow'
 import { z } from 'zod'
 import type { CliToolRegistry } from '../workflow-tools'
 import { GET_PR_DETAILS_PROMPT } from './prompts'
-import { checkGhInstalledV2, getDefaultBranchV2 } from './workflow.utils'
+import { checkGhInstalled, getDefaultBranch } from './workflow.utils'
 
 const prDetailsSchema = z.object({
   title: z.string(),
@@ -18,10 +18,10 @@ export const prWorkflow: WorkflowFnV2<{ context?: string }, { title: string; des
 ) => {
   const { step, toolHandler } = context
   const { diff, commits, branchName } = await step('get-git-info', async () => {
-    await checkGhInstalledV2(toolHandler.executeCommand)
+    await checkGhInstalled(toolHandler.executeCommand)
     const branchResult = await toolHandler.executeCommand({ command: 'git', args: ['rev-parse', '--abbrev-ref', 'HEAD'] })
     const branchName = branchResult.stdout.trim()
-    const defaultBranch = await getDefaultBranchV2(toolHandler.executeCommand)
+    const defaultBranch = await getDefaultBranch(toolHandler.executeCommand)
     if (!defaultBranch) {
       throw new Error('Could not determine default branch name.')
     }
