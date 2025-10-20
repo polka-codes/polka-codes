@@ -4,6 +4,7 @@ import { confirm } from '@inquirer/prompts'
 import { Command, InvalidOptionArgumentError } from 'commander'
 import { createLogger } from '../logger'
 import { runWorkflow } from '../runWorkflow'
+import { runWorkflowV2 } from '../runWorkflowV2'
 import type { CliToolRegistry } from '../workflow-tools'
 import { codeWorkflow, type ReviewWorkflowInput, reviewWorkflow } from '../workflows'
 import { formatReviewForConsole, type ReviewResult } from '../workflows/workflow.utils'
@@ -47,13 +48,11 @@ export const reviewCommand = new Command('review')
         logger.debug(`Re-running review (iteration ${i + 1} of ${maxIterations})...`)
       }
 
-      const reviewResult = await runWorkflow<ReviewWorkflowInput, ReviewResult, CliToolRegistry>(
-        'review',
-        reviewWorkflow,
+      const reviewResult = await runWorkflowV2<ReviewWorkflowInput, ReviewResult, CliToolRegistry>(reviewWorkflow, input, {
+        commandName: 'review',
         command,
-        input,
         logger,
-      )
+      })
 
       if (reviewResult) {
         const formattedReview = formatReviewForConsole(reviewResult)
