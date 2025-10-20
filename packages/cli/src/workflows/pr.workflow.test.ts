@@ -111,11 +111,10 @@ test('should fail when unable to determine default branch', async () => {
   toolHandler.executeCommand
     .mockResolvedValueOnce({ exitCode: 0, stdout: 'gh version 2.40.0', stderr: '' }) // gh --version
     .mockResolvedValueOnce({ exitCode: 0, stdout: 'feature/my-branch\n', stderr: '' }) // git rev-parse
+    .mockResolvedValueOnce({ exitCode: 1, stdout: '', stderr: 'not a git repository' }) // gh repo view
     .mockResolvedValueOnce({ exitCode: 1, stdout: '', stderr: '' }) // git show-ref master
     .mockResolvedValueOnce({ exitCode: 1, stdout: '', stderr: '' }) // git show-ref main
     .mockResolvedValueOnce({ exitCode: 1, stdout: '', stderr: '' }) // git show-ref develop
-    .mockResolvedValueOnce({ exitCode: 0, stdout: 'gh version 2.40.0', stderr: '' }) // gh --version for repo view
-    .mockResolvedValueOnce({ exitCode: 1, stdout: '', stderr: 'not a git repository' }) // gh repo view
     .mockResolvedValueOnce({ exitCode: 1, stdout: '', stderr: 'fatal: No remote named origin' }) // git remote show origin
 
   await expect(run({})).rejects.toThrow('Could not determine default branch name.')
