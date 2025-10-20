@@ -10,4 +10,5 @@ export {
   makeStepFn as makeStepFnV2,
   type ToolHandler,
   type WorkflowContextV2,
+  type WorkflowFnV2,
 } from './workflow'

@@ -1,9 +1,8 @@
 import type { Logger, ToolRegistry } from '../workflow'
 
-export type ToolHandler<TTools extends ToolRegistry> = <TTool extends keyof TTools>(
-  tool: TTool,
-  input: TTools[TTool]['input'],
-) => Promise<TTools[TTool]['output']>
+export type ToolHandler<TTools extends ToolRegistry> = {
+  [K in keyof TTools]: (input: TTools[K]['input']) => Promise<TTools[K]['output']>
+}
 
 export type WorkflowContextV2<TTools extends ToolRegistry> = {
   step: <T>(name: string, fn: () => Promise<T>) => Promise<T>

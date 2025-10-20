@@ -40,7 +40,7 @@ export type AgentToolRegistry = {
 export const agentWorkflow: WorkflowFnV2<AgentWorkflowInput, ExitReason, AgentToolRegistry> = async (input, { step, toolHandler }) => {
   const event = async (name: string, event: TaskEvent) => {
     await step(name, async () => {
-      await toolHandler('taskEvent', event)
+      await toolHandler.taskEvent(event)
     })
   }
 
@@ -66,7 +66,7 @@ export const agentWorkflow: WorkflowFnV2<AgentWorkflowInput, ExitReason, AgentTo
 
     await event(`start-round-${i}`, { kind: TaskEventKind.StartRequest, userMessage: nextMessage as any }) // TODO: the type is not exactly matching but that's ok
     const assistantMessage = await step(`agent-round-${i}`, async () => {
-      return await toolHandler('generateText', {
+      return await toolHandler.generateText({
         messages,
         tools: toolSet,
       })
@@ -79,9 +79,11 @@ export const agentWorkflow: WorkflowFnV2<AgentWorkflowInput, ExitReason, AgentTo
       if (typeof msg.content === 'string') {
         continue
       }
-      for (const part of msg.content) {
-        if (part.type === 'tool-call') {
-          toolCalls.push(part)
+      if (msg.content) {
+        for (const part of msg.content) {
+          if (part.type === 'tool-call') {
+            toolCalls.push(part as ToolCallPart)
+          }
         }
       }
     }
@@ -91,12 +93,16 @@ export const agentWorkflow: WorkflowFnV2<AgentWorkflowInput, ExitReason, AgentTo
         if (typeof m.content === 'string') {
           return [m.content]
         }
-        return m.content.map((part) => {
-          if (part.type === 'text') {
-            return part.text
-          }
-          return ''
-        })
+
+        if (m.role === 'assistant' && Array.isArray(m.content)) {
+          return m.content.map((part) => {
+            if (part.type === 'text') {
+              return part.text
+            }
+            return ''
+          })
+        }
+        return []
       })
       .join('\n')
 
@@ -131,7 +137,7 @@ export const agentWorkflow: WorkflowFnV2<AgentWorkflowInput, ExitReason, AgentTo
         params: toolCall.input as any,
       })
       const toolResponse: ToolResponse = await step(`invoke-tool-${toolCall.toolName}-${toolCall.toolCallId}`, async () => {
-        return await toolHandler('invokeTool', {
+        return await toolHandler.invokeTool({
           toolName: toolCall.toolName,
           input: toolCall.input,
         })

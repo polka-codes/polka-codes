@@ -86,22 +86,20 @@ test('should run agent workflow with a tool call and reply', async () => {
   const spied = { fn: (_: any) => {} }
   const taskEventSpy = spyOn(spied, 'fn')
 
-  const toolHandler: ToolHandler<AgentToolRegistry> = async (tool, input: any) => {
-    switch (tool) {
-      case 'generateText': {
-        const response = mockResponses.shift()
-        return [response!] as JsonResponseMessage[]
-      }
-      case 'invokeTool': {
-        const { toolName, input: toolInput } = input
-        const toolInfo = tools.find((t) => t.name === toolName)
-        if (!toolInfo) throw new Error(`Tool not found: ${toolName}`)
-        return toolInfo.handler({} as any, toolInput)
-      }
-      case 'taskEvent':
-        taskEventSpy(input)
-        return
-    }
+  const toolHandler: ToolHandler<AgentToolRegistry> = {
+    generateText: async () => {
+      const response = mockResponses.shift()
+      return [response!] as JsonResponseMessage[]
+    },
+    invokeTool: async (input) => {
+      const { toolName, input: toolInput } = input
+      const toolInfo = tools.find((t) => t.name === toolName)
+      if (!toolInfo) throw new Error(`Tool not found: ${toolName}`)
+      return toolInfo.handler({} as any, toolInput)
+    },
+    taskEvent: async (input) => {
+      taskEventSpy(input)
+    },
   }
 
   const result = await agentWorkflow(
@@ -138,22 +136,20 @@ test('should exit when a tool returns an Exit response', async () => {
   const spied = { fn: (_: any) => {} }
   const taskEventSpy = spyOn(spied, 'fn')
 
-  const toolHandler: ToolHandler<AgentToolRegistry> = async (tool, input: any) => {
-    switch (tool) {
-      case 'generateText': {
-        const response = mockResponses.shift()
-        return [response!] as JsonResponseMessage[]
-      }
-      case 'invokeTool': {
-        const { toolName, input: toolInput } = input
-        const toolInfo = tools.find((t) => t.name === toolName)
-        if (!toolInfo) throw new Error(`Tool not found: ${toolName}`)
-        return toolInfo.handler({} as any, toolInput)
-      }
-      case 'taskEvent':
-        taskEventSpy(input)
-        return
-    }
+  const toolHandler: ToolHandler<AgentToolRegistry> = {
+    generateText: async () => {
+      const response = mockResponses.shift()
+      return [response!] as JsonResponseMessage[]
+    },
+    invokeTool: async (input) => {
+      const { toolName, input: toolInput } = input
+      const toolInfo = tools.find((t) => t.name === toolName)
+      if (!toolInfo) throw new Error(`Tool not found: ${toolName}`)
+      return toolInfo.handler({} as any, toolInput)
+    },
+    taskEvent: async (input) => {
+      taskEventSpy(input)
+    },
   }
 
   const result = await agentWorkflow(
@@ -188,21 +184,18 @@ test('should exit when a tool returns a HandOver response', async () => {
 
   const tools = [handOverTool]
 
-  const toolHandler: ToolHandler<AgentToolRegistry> = async (tool, input: any) => {
-    switch (tool) {
-      case 'generateText': {
-        const response = mockResponses.shift()
-        return [response!] as JsonResponseMessage[]
-      }
-      case 'invokeTool': {
-        const { toolName, input: toolInput } = input
-        const toolInfo = tools.find((t) => t.name === toolName)
-        if (!toolInfo) throw new Error(`Tool not found: ${toolName}`)
-        return toolInfo.handler({} as any, toolInput)
-      }
-      case 'taskEvent':
-        return
-    }
+  const toolHandler: ToolHandler<AgentToolRegistry> = {
+    generateText: async () => {
+      const response = mockResponses.shift()
+      return [response!] as JsonResponseMessage[]
+    },
+    invokeTool: async (input) => {
+      const { toolName, input: toolInput } = input
+      const toolInfo = tools.find((t) => t.name === toolName)
+      if (!toolInfo) throw new Error(`Tool not found: ${toolName}`)
+      return toolInfo.handler({} as any, toolInput)
+    },
+    taskEvent: async () => {},
   }
 
   const result = await agentWorkflow(
@@ -236,21 +229,18 @@ test('should fail if maxToolRoundTrips is exceeded', async () => {
 
   const tools = [listFilesTool]
 
-  const toolHandler: ToolHandler<AgentToolRegistry> = async (tool, input: any) => {
-    switch (tool) {
-      case 'generateText': {
-        const response = mockResponses.shift()
-        return [response!] as JsonResponseMessage[]
-      }
-      case 'invokeTool': {
-        const { toolName, input: toolInput } = input
-        const toolInfo = tools.find((t) => t.name === toolName)
-        if (!toolInfo) throw new Error(`Tool not found: ${toolName}`)
-        return toolInfo.handler({} as any, toolInput)
-      }
-      case 'taskEvent':
-        return
-    }
+  const toolHandler: ToolHandler<AgentToolRegistry> = {
+    generateText: async () => {
+      const response = mockResponses.shift()
+      return [response!] as JsonResponseMessage[]
+    },
+    invokeTool: async (input) => {
+      const { toolName, input: toolInput } = input
+      const toolInfo = tools.find((t) => t.name === toolName)
+      if (!toolInfo) throw new Error(`Tool not found: ${toolName}`)
+      return toolInfo.handler({} as any, toolInput)
+    },
+    taskEvent: async () => {},
   }
 
   await expect(

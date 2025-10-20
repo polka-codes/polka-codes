@@ -1,6 +1,6 @@
 import { Command } from 'commander'
 import { createLogger } from '../logger'
-import { runWorkflow } from '../runWorkflow'
+import { runWorkflowV2 } from '../runWorkflowV2'
 import { commitWorkflow } from '../workflows'
 
 export const commitCommand = new Command('commit')
@@ -16,5 +16,9 @@ export const commitCommand = new Command('commit')
       verbose,
     })
 
-    await runWorkflow('commit', commitWorkflow, command, input, logger)
+    await runWorkflowV2(commitWorkflow, input, {
+      commandName: 'commit',
+      command,
+      logger,
+    })
   })
