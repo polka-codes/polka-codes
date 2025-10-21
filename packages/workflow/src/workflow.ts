@@ -47,14 +47,22 @@ export function createContext<TTools extends ToolRegistry>(
 
 export const makeStepFn = (): (<T>(name: string, fn: () => Promise<T>) => Promise<T>) => {
   const results: Map<string, any> = new Map()
+  const callStack: string[] = []
 
   return async <T>(name: string, fn: () => Promise<T>): Promise<T> => {
-    if (results.has(name)) {
-      return results.get(name) as T
-    }
+    callStack.push(name)
+    const key = callStack.join('>')
 
-    const result = await fn()
-    results.set(name, result)
-    return result
+    try {
+      if (results.has(key)) {
+        return results.get(key) as T
+      }
+
+      const result = await fn()
+      results.set(key, result)
+      return result
+    } finally {
+      callStack.pop()
+    }
   }
 }

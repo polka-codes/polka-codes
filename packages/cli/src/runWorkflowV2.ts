@@ -4,7 +4,7 @@ import os from 'node:os'
 import { getProvider, printEvent } from '@polka-codes/cli-shared'
 import type { AgentNameType } from '@polka-codes/core'
 import { EnableCachePolicy, UsageMeter } from '@polka-codes/core'
-import type { Logger, ToolHandler, ToolRegistry, WorkflowContext, WorkflowFn } from '@polka-codes/workflow'
+import { type Logger, makeStepFn, type ToolHandler, type ToolRegistry, type WorkflowContext, type WorkflowFn } from '@polka-codes/workflow'
 import type { Command } from 'commander'
 import { merge } from 'lodash-es'
 import ora, { type Ora } from 'ora'
@@ -23,15 +23,10 @@ type RunWorkflowV2Options = {
 }
 
 const makeStepFnWithSpinner = (spinner: Ora) => {
-  const results: Map<string, any> = new Map()
+  const stepFn = makeStepFn()
   return async <T>(name: string, fn: () => Promise<T>): Promise<T> => {
-    if (results.has(name)) {
-      return results.get(name) as T
-    }
     spinner.text = name
-    const result = await fn()
-    results.set(name, result)
-    return result
+    return await stepFn(name, fn)
   }
 }
 

@@ -26,12 +26,14 @@ export type CodeWorkflowInput = {
 }
 
 export const codeWorkflow: WorkflowFn<CodeWorkflowInput, void, CliToolRegistry> = async (input, context) => {
-  const { logger } = context
+  const { logger, step } = context
   const { task, files } = input
 
   // Planning phase
   logger.info('\n📋 Phase 1: Creating implementation plan...\n')
-  const planResult = await planWorkflow({ task, files, mode: 'confirm' }, context)
+  const planResult = await step('plan', async () => {
+    return await planWorkflow({ task, files, mode: 'confirm' }, context)
+  })
 
   if (!planResult) {
     logger.info('Plan not approved. Exiting.')
@@ -68,18 +70,22 @@ export const codeWorkflow: WorkflowFn<CodeWorkflowInput, void, CliToolRegistry> 
     }
   }
 
-  await agentWorkflow(
-    {
-      systemPrompt: CODER_SYSTEM_PROMPT,
-      userMessage: [{ role: 'user', content: userContent }],
-      tools: [readFile, writeToFile, replaceInFile, searchFiles, listFiles, executeCommand, delegate, handOver],
-    },
-    context,
-  )
+  await step('implement', async () => {
+    await agentWorkflow(
+      {
+        systemPrompt: CODER_SYSTEM_PROMPT,
+        userMessage: [{ role: 'user', content: userContent }],
+        tools: [readFile, writeToFile, replaceInFile, searchFiles, listFiles, executeCommand, delegate, handOver],
+      },
+      context,
+    )
+  })
 
   logger.info('\n✅ Implementation complete!\n')
 
   // Fixing phase
   logger.info('\n🔧 Phase 3: Checking for errors...\n')
-  await fixWorkflow({ interactive: false, task: input.task }, context)
+  await step('fix', async () => {
+    await fixWorkflow({ interactive: false, task: input.task }, context)
+  })
 }
