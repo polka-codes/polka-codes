@@ -20,7 +20,7 @@ import { getModel } from './getModel'
 import { getProviderOptions } from './getProviderOptions'
 import { parseOptions } from './options'
 import prices from './prices'
-import { type AgentContextParameters, handleToolCall } from './tool-implementations'
+import { type AgentContextParameters, toolCall } from './tool-implementations'
 
 type RunWorkflowOptions = {
   commandName: string
@@ -96,7 +96,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
     get: (_target, tool: string) => {
       return async (input: any) => {
         spinner.text = `Running tool: ${String(tool)}`
-        return await handleToolCall(
+        return await toolCall(
           { tool: tool as any, input },
           {
             providerConfig,

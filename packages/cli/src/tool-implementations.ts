@@ -5,34 +5,28 @@ import { dirname } from 'node:path'
 import type { LanguageModelV2 } from '@ai-sdk/provider'
 import { confirm as inquirerConfirm, input as inquirerInput, select as inquirerSelect } from '@inquirer/prompts'
 import { readMultiline } from '@polka-codes/cli-shared'
-import type { AgentPolicy, TaskEventCallback, ToolFormat, UsageMeter } from '@polka-codes/core'
+import type { AgentPolicy, TaskEvent, TaskEventCallback, ToolFormat, UsageMeter } from '@polka-codes/core'
 import {
-  type AgentBase,
   type AgentNameType,
-  AnalyzerAgent,
-  ArchitectAgent,
   attemptCompletion,
-  CodeFixerAgent,
-  CoderAgent,
   computeRateLimitBackoffSeconds,
   delegate,
-  executeCommand,
+  executeCommand as executeCommandTool,
   fetchUrl,
   handOver,
   listFiles as listFilesTool,
   readBinaryFile,
-  readFile,
+  readFile as readFileTool,
   removeFile,
   renameFile,
   replaceInFile,
-  type SharedAgentOptions,
   searchFiles,
   TaskEventKind,
   ToolResponseType,
-  writeToFile,
+  writeToFile as writeToFileTool,
 } from '@polka-codes/core'
-import { fromJsonModelMessage, type ToolRegistry } from '@polka-codes/workflow'
-import { streamText } from 'ai'
+import { fromJsonModelMessage, type JsonModelMessage, type ToolRegistry } from '@polka-codes/workflow'
+import { streamText, type ToolSet } from 'ai'
 import chalk from 'chalk'
 import type { Command } from 'commander'
 import type { Ora } from 'ora'
@@ -59,27 +53,20 @@ import { getLocalChanges } from './workflows/workflow.utils'
 const allTools = [
   attemptCompletion,
   delegate,
-  executeCommand,
+  executeCommandTool,
   fetchUrl,
   handOver,
   listFilesTool,
   readBinaryFile,
-  readFile,
+  readFileTool,
   removeFile,
   renameFile,
   replaceInFile,
   searchFiles,
-  writeToFile,
+  writeToFileTool,
   gitDiff,
 ] as const
 const toolHandlers = new Map(allTools.map((t) => [camelCase(t.name), t]))
-
-const _agentRegistry: Record<string, new (options: SharedAgentOptions) => AgentBase> = {
-  analyzer: AnalyzerAgent,
-  architect: ArchitectAgent,
-  coder: CoderAgent,
-  codefixer: CodeFixerAgent,
-}
 
 type ToolCall<TTools extends ToolRegistry> = {
   [K in keyof TTools]: {
@@ -88,302 +75,311 @@ type ToolCall<TTools extends ToolRegistry> = {
   }
 }[keyof TTools]
 
-export async function handleToolCall(
-  toolCall: ToolCall<CliToolRegistry>,
-  context: {
-    providerConfig: ApiProviderConfig
-    parameters: AgentContextParameters
-    getModel: (name: AgentNameType) => Promise<LanguageModelV2>
-    model?: LanguageModelV2
-    agentCallback?: TaskEventCallback
-    toolProvider: any // ToolProvider
-    spinner: Ora
-    command: Command
-  },
-) {
-  switch (toolCall.tool) {
-    case 'createPullRequest': {
-      const { title, description } = toolCall.input as {
-        title: string
-        description: string
+type ToolCallContext = {
+  providerConfig: ApiProviderConfig
+  parameters: AgentContextParameters
+  getModel: (name: AgentNameType) => Promise<LanguageModelV2>
+  model?: LanguageModelV2
+  agentCallback?: TaskEventCallback
+  toolProvider: any // ToolProvider
+  spinner: Ora
+  command: Command
+}
+
+async function createPullRequest(input: { title: string; description: string }, context: ToolCallContext) {
+  context.spinner.stop()
+  spawnSync('gh', ['pr', 'create', '--title', input.title, '--body', input.description], {
+    stdio: 'inherit',
+  })
+  context.spinner.start()
+  return { title: input.title, description: input.description }
+}
+
+async function createCommit(input: { message: string }, context: ToolCallContext) {
+  context.spinner.stop()
+
+  const result = spawnSync('git', ['commit', '-m', input.message], {
+    stdio: 'inherit',
+  })
+  if (result.status !== 0) {
+    throw new Error('Commit failed')
+  }
+  context.spinner.start()
+  return { message: input.message }
+}
+
+async function printChangeFile(_input: unknown, context: ToolCallContext) {
+  context.spinner.stop()
+
+  const { stagedFiles, unstagedFiles } = getLocalChanges()
+  if (stagedFiles.length === 0 && unstagedFiles.length === 0) {
+    console.log('No changes to commit.')
+  } else {
+    if (stagedFiles.length > 0) {
+      console.log('Staged files:')
+      for (const file of stagedFiles) {
+        console.log(`- ${file.status}: ${file.path}`)
       }
-      context.spinner.stop()
-      spawnSync('gh', ['pr', 'create', '--title', title, '--body', description], {
-        stdio: 'inherit',
+    }
+    if (unstagedFiles.length > 0) {
+      console.log('\nUnstaged files:')
+      for (const file of unstagedFiles) {
+        console.log(`- ${file.status}: ${file.path}`)
+      }
+    }
+  }
+  context.spinner.start()
+  return { stagedFiles, unstagedFiles }
+}
+
+async function confirm(input: { message: string }, context: ToolCallContext) {
+  context.spinner.stop()
+
+  // to allow ora to fully stop the spinner so inquirer can takeover the cli window
+  await new Promise((resolve) => setTimeout(resolve, 50))
+  try {
+    const result = await inquirerConfirm({ message: input.message })
+    context.spinner.start()
+    return result
+  } catch (_e) {
+    throw new UserCancelledError()
+  }
+}
+
+async function input(input: { message: string; default: string }, context: ToolCallContext) {
+  context.spinner.stop()
+
+  // to allow ora to fully stop the spinner so inquirer can takeover the cli window
+  await new Promise((resolve) => setTimeout(resolve, 50))
+  try {
+    let result = await inquirerInput({
+      message: `${input.message}${chalk.gray(' (type .m for multiline)')}`,
+      default: input.default,
+    })
+    if (result === '.m') {
+      result = await readMultiline('Enter multiline text (Ctrl+D to finish):')
+    }
+    context.spinner.start()
+    return result
+  } catch (_e) {
+    throw new UserCancelledError()
+  }
+}
+
+async function select(input: { message: string; choices: { name: string; value: string }[] }, context: ToolCallContext) {
+  context.spinner.stop()
+
+  // to allow ora to fully stop the spinner so inquirer can takeover the cli window
+  await new Promise((resolve) => setTimeout(resolve, 50))
+  try {
+    const result = await inquirerSelect({ message: input.message, choices: input.choices })
+    context.spinner.start()
+    return result
+  } catch (_e) {
+    throw new UserCancelledError()
+  }
+}
+
+async function writeToFile(input: { path: string; content: string }) {
+  // generate parent directories if they don't exist
+  await mkdir(dirname(input.path), { recursive: true })
+  await fs.writeFile(input.path, input.content)
+  return {}
+}
+
+async function readFile(input: { path: string }) {
+  try {
+    const content = await fs.readFile(input.path, 'utf8')
+    return content
+  } catch {
+    // return null if file doesn't exist or can't be read
+  }
+  return null
+}
+
+async function executeCommand(input: { command: string; shell?: boolean; pipe?: boolean; args?: string[] }) {
+  return new Promise((resolve, reject) => {
+    const child =
+      input.shell === true
+        ? spawn(input.command, { shell: true, stdio: 'pipe' })
+        : spawn(input.command, input.args, {
+            shell: false,
+            stdio: 'pipe',
+          })
+
+    let stdout = ''
+    let stderr = ''
+    let stdoutEnded = !child.stdout
+    let stderrEnded = !child.stderr
+    let closeEventFired = false
+    let exitCode: number | null = null
+
+    const checkAndResolve = () => {
+      if (stdoutEnded && stderrEnded && closeEventFired) {
+        resolve({ exitCode: exitCode ?? -1, stdout, stderr })
+      }
+    }
+
+    if (child.stdout) {
+      child.stdout.setEncoding('utf8')
+      child.stdout.on('data', (data: string) => {
+        if (input.pipe) {
+          process.stdout.write(data)
+        }
+        stdout += data
       })
-      context.spinner.start()
-      return { title, description }
-    }
-    case 'createCommit': {
-      const { message } = toolCall.input
-      context.spinner.stop()
-
-      const result = spawnSync('git', ['commit', '-m', message], {
-        stdio: 'inherit',
-      })
-      if (result.status !== 0) {
-        throw new Error('Commit failed')
-      }
-      context.spinner.start()
-      return { message }
-    }
-    case 'printChangeFile': {
-      context.spinner.stop()
-
-      const { stagedFiles, unstagedFiles } = getLocalChanges()
-      if (stagedFiles.length === 0 && unstagedFiles.length === 0) {
-        console.log('No changes to commit.')
-      } else {
-        if (stagedFiles.length > 0) {
-          console.log('Staged files:')
-          for (const file of stagedFiles) {
-            console.log(`- ${file.status}: ${file.path}`)
-          }
-        }
-        if (unstagedFiles.length > 0) {
-          console.log('\nUnstaged files:')
-          for (const file of unstagedFiles) {
-            console.log(`- ${file.status}: ${file.path}`)
-          }
-        }
-      }
-      context.spinner.start()
-      return { stagedFiles, unstagedFiles }
-    }
-    case 'confirm': {
-      const { message } = toolCall.input
-      context.spinner.stop()
-
-      // to allow ora to fully stop the spinner so inquirer can takeover the cli window
-      await new Promise((resolve) => setTimeout(resolve, 50))
-      try {
-        const result = await inquirerConfirm({ message })
-        context.spinner.start()
-        return result
-      } catch (_e) {
-        throw new UserCancelledError()
-      }
-    }
-    case 'input': {
-      const { message, default: defaultValue } = toolCall.input
-      context.spinner.stop()
-
-      // to allow ora to fully stop the spinner so inquirer can takeover the cli window
-      await new Promise((resolve) => setTimeout(resolve, 50))
-      try {
-        let result = await inquirerInput({
-          message: `${message}${chalk.gray(' (type .m for multiline)')}`,
-          default: defaultValue,
-        })
-        if (result === '.m') {
-          result = await readMultiline('Enter multiline text (Ctrl+D to finish):')
-        }
-        context.spinner.start()
-        return result
-      } catch (_e) {
-        throw new UserCancelledError()
-      }
-    }
-    case 'select': {
-      const { message, choices } = toolCall.input as {
-        message: string
-        choices: { name: string; value: string }[]
-      }
-      context.spinner.stop()
-
-      // to allow ora to fully stop the spinner so inquirer can takeover the cli window
-      await new Promise((resolve) => setTimeout(resolve, 50))
-      try {
-        const result = await inquirerSelect({ message, choices })
-        context.spinner.start()
-        return result
-      } catch (_e) {
-        throw new UserCancelledError()
-      }
-    }
-    case 'writeToFile': {
-      const { path, content } = toolCall.input
-      // generate parent directories if they don't exist
-      await mkdir(dirname(path), { recursive: true })
-      await fs.writeFile(path, content)
-      return {}
-    }
-    case 'readFile': {
-      const { path } = toolCall.input
-      try {
-        const content = await fs.readFile(path, 'utf8')
-        return content
-      } catch {
-        // return null if file doesn't exist or can't be read
-      }
-      return null
-    }
-    case 'executeCommand': {
-      const { command, shell, pipe } = toolCall.input
-      return new Promise((resolve, reject) => {
-        const child =
-          shell === true
-            ? spawn(command, { shell: true, stdio: 'pipe' })
-            : spawn(command, toolCall.input.args, {
-                shell: false,
-                stdio: 'pipe',
-              })
-
-        let stdout = ''
-        let stderr = ''
-        let stdoutEnded = !child.stdout
-        let stderrEnded = !child.stderr
-        let closeEventFired = false
-        let exitCode: number | null = null
-
-        const checkAndResolve = () => {
-          if (stdoutEnded && stderrEnded && closeEventFired) {
-            resolve({ exitCode: exitCode ?? -1, stdout, stderr })
-          }
-        }
-
-        if (child.stdout) {
-          child.stdout.setEncoding('utf8')
-          child.stdout.on('data', (data: string) => {
-            if (pipe) {
-              process.stdout.write(data)
-            }
-            stdout += data
-          })
-          child.stdout.on('end', () => {
-            stdoutEnded = true
-            checkAndResolve()
-          })
-        }
-
-        if (child.stderr) {
-          child.stderr.setEncoding('utf8')
-          child.stderr.on('data', (data: string) => {
-            if (pipe) {
-              process.stderr.write(data)
-            }
-            stderr += data
-          })
-          child.stderr.on('end', () => {
-            stderrEnded = true
-            checkAndResolve()
-          })
-        }
-
-        child.on('close', (code: number | null) => {
-          exitCode = code
-          closeEventFired = true
-          checkAndResolve()
-        })
-
-        child.on('error', (err: Error) => {
-          reject(err)
-        })
+      child.stdout.on('end', () => {
+        stdoutEnded = true
+        checkAndResolve()
       })
     }
-    case 'generateText': {
-      context.spinner.stop()
-      const { model, agentCallback } = context
-      if (!model) {
-        throw new Error('Model not found in context')
-      }
-      const { messages, tools } = toolCall.input
 
-      const { retryCount = 5, requestTimeoutSeconds = 90 } = context.parameters
+    if (child.stderr) {
+      child.stderr.setEncoding('utf8')
+      child.stderr.on('data', (data: string) => {
+        if (input.pipe) {
+          process.stderr.write(data)
+        }
+        stderr += data
+      })
+      child.stderr.on('end', () => {
+        stderrEnded = true
+        checkAndResolve()
+      })
+    }
 
-      for (let i = 0; i < retryCount; i++) {
-        const abortController = new AbortController()
-        const timeout = setTimeout(() => abortController.abort(), requestTimeoutSeconds * 1000)
+    child.on('close', (code: number | null) => {
+      exitCode = code
+      closeEventFired = true
+      checkAndResolve()
+    })
 
-        const usageMeterOnFinishHandler = context.parameters.usageMeter?.onFinishHandler(model)
+    child.on('error', (err: Error) => {
+      reject(err)
+    })
+  })
+}
 
-        try {
-          const stream = streamText({
-            model,
-            temperature: 0,
-            messages: messages.map(fromJsonModelMessage),
-            tools,
-            async onChunk({ chunk }) {
-              switch (chunk.type) {
-                case 'text-delta':
-                  agentCallback?.({
-                    kind: TaskEventKind.Text,
-                    newText: chunk.text,
-                  })
-                  break
-                case 'reasoning-delta':
-                  agentCallback?.({
-                    kind: TaskEventKind.Reasoning,
-                    newText: chunk.text,
-                  })
-                  break
-              }
-            },
-            onFinish(result) {
-              usageMeterOnFinishHandler?.(result)
+async function generateText(input: { messages: JsonModelMessage[]; tools: ToolSet }, context: ToolCallContext) {
+  context.spinner.stop()
+  const { model, agentCallback } = context
+  if (!model) {
+    throw new Error('Model not found in context')
+  }
+
+  const { retryCount = 5, requestTimeoutSeconds = 90 } = context.parameters
+
+  for (let i = 0; i < retryCount; i++) {
+    const abortController = new AbortController()
+    const timeout = setTimeout(() => abortController.abort(), requestTimeoutSeconds * 1000)
+
+    const usageMeterOnFinishHandler = context.parameters.usageMeter?.onFinishHandler(model)
+
+    try {
+      const stream = streamText({
+        model,
+        temperature: 0,
+        messages: input.messages.map(fromJsonModelMessage),
+        tools: input.tools,
+        async onChunk({ chunk }) {
+          switch (chunk.type) {
+            case 'text-delta':
               agentCallback?.({
-                kind: TaskEventKind.Usage,
-                usage: result.usage,
+                kind: TaskEventKind.Text,
+                newText: chunk.text,
               })
-            },
-            providerOptions: context.parameters.providerOptions,
-            abortSignal: abortController.signal,
-          })
-
-          await stream.consumeStream({
-            onError: (error) => {
-              console.error('Error in stream:', error)
-            },
-          })
-
-          const resp = await stream.response
-          return resp.messages
-        } catch (error: any) {
-          if (error.name === 'AbortError') {
-            // This is a timeout
-            continue
+              break
+            case 'reasoning-delta':
+              agentCallback?.({
+                kind: TaskEventKind.Reasoning,
+                newText: chunk.text,
+              })
+              break
           }
-          if ('response' in error) {
-            const response: Response = error.response
-            if (response.status === 429) {
-              const backoff = computeRateLimitBackoffSeconds(i)
-              await new Promise((resolve) => setTimeout(resolve, backoff * 1000))
-              continue
-            }
-          }
-          throw error
-        } finally {
-          clearTimeout(timeout)
-          context.spinner.start()
-        }
-      }
-      throw new Error(`Failed to get a response from the model after ${retryCount} retries.`)
-    }
-    case 'invokeTool': {
-      const { toolName, input } = toolCall.input
-      const tool = toolHandlers.get(toolName as any)
-      if (!tool) {
-        return {
-          type: ToolResponseType.Error,
-          error: `Tool not found: ${toolName}`,
-        }
-      }
-      try {
-        const result = await tool.handler(context.toolProvider, input)
-        return result
-      } catch (error: any) {
-        return {
-          type: ToolResponseType.Error,
-          error: error.message,
-        }
-      }
-    }
-    case 'taskEvent': {
-      const event = toolCall.input
-      await context.agentCallback?.(event)
+        },
+        onFinish(result) {
+          usageMeterOnFinishHandler?.(result)
+          agentCallback?.({
+            kind: TaskEventKind.Usage,
+            usage: result.usage,
+          })
+        },
+        providerOptions: context.parameters.providerOptions,
+        abortSignal: abortController.signal,
+      })
 
-      return
+      await stream.consumeStream({
+        onError: (error) => {
+          console.error('Error in stream:', error)
+        },
+      })
+
+      const resp = await stream.response
+      return resp.messages
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        // This is a timeout
+        continue
+      }
+      if ('response' in error) {
+        const response: Response = error.response
+        if (response.status === 429) {
+          const backoff = computeRateLimitBackoffSeconds(i)
+          await new Promise((resolve) => setTimeout(resolve, backoff * 1000))
+          continue
+        }
+      }
+      throw error
+    } finally {
+      clearTimeout(timeout)
+      context.spinner.start()
     }
+  }
+  throw new Error(`Failed to get a response from the model after ${retryCount} retries.`)
+}
+
+async function invokeTool(input: { toolName: string; input: any }, context: ToolCallContext) {
+  const tool = toolHandlers.get(input.toolName as any)
+  if (!tool) {
+    return {
+      type: ToolResponseType.Error,
+      error: `Tool not found: ${input.toolName}`,
+    }
+  }
+  try {
+    const result = await tool.handler(context.toolProvider, input.input)
+    return result
+  } catch (error: any) {
+    return {
+      type: ToolResponseType.Error,
+      error: error.message,
+    }
+  }
+}
+
+async function taskEvent(input: TaskEvent, context: ToolCallContext) {
+  await context.agentCallback?.(input)
+}
+
+const localToolHandlers = {
+  createPullRequest,
+  createCommit,
+  printChangeFile,
+  confirm,
+  input,
+  select,
+  writeToFile,
+  readFile,
+  executeCommand,
+  generateText,
+  invokeTool,
+  taskEvent,
+}
+
+export async function toolCall(toolCall: ToolCall<CliToolRegistry>, context: ToolCallContext) {
+  const handler = localToolHandlers[toolCall.tool]
+  if (handler) {
+    return handler(toolCall.input as any, context)
   }
   throw new Error(`Unknown tool: ${(toolCall as any).tool}`)
 }

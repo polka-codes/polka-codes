@@ -5,7 +5,6 @@ import { agentWorkflow, type WorkflowFn } from '@polka-codes/workflow'
 import { z } from 'zod'
 import type { CliToolRegistry } from '../workflow-tools'
 import { codeWorkflow } from './code.workflow'
-import { planWorkflow } from './plan.workflow'
 import { META_PROMPT } from './prompts'
 import { taskWorkflow } from './task.workflow'
 
@@ -14,7 +13,7 @@ export type MetaWorkflowInput = {
 }
 
 const DecisionSchema = z.object({
-  workflow: z.enum(['code', 'plan', 'task']),
+  workflow: z.enum(['code', 'task']),
 })
 
 export const metaWorkflow: WorkflowFn<MetaWorkflowInput, void, CliToolRegistry> = async (input, context) => {
@@ -52,8 +51,6 @@ export const metaWorkflow: WorkflowFn<MetaWorkflowInput, void, CliToolRegistry> 
 
   if (decision.workflow === 'code') {
     await codeWorkflow({ task }, context)
-  } else if (decision.workflow === 'plan') {
-    await planWorkflow({ task }, context)
   } else if (decision.workflow === 'task') {
     await taskWorkflow(
       {
