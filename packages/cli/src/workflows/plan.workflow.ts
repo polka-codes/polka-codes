@@ -113,153 +113,145 @@ export const planWorkflow: WorkflowFn<PlanWorkflowInput, PlanWorkflowOutput, Cli
   const { fileContent, filePath, mode = 'interactive' } = input
   let currentTask = input.task
   let plan = fileContent || ''
-  let files: CreatePlanOutput['files'] = []
+  let files: { path: string; content: string }[] = []
   let userFeedback = ''
   let state: State = 'Generating'
+  let count = 0
 
   while (state !== 'Done') {
-    switch (state) {
-      case 'Generating': {
-        if (!currentTask) {
-          const message = plan ? 'How would you like to improve the plan?' : 'What is the task you want to plan?'
-          const defaultTask = plan ? 'Review and improve the plan' : undefined
-          try {
-            currentTask = await tools.input({
-              message,
-              default: defaultTask,
+    state = await step(`plan-iteration-${count++}`, async () => {
+      switch (state) {
+        case 'Generating': {
+          if (!currentTask) {
+            const message = plan ? 'How would you like to improve the plan?' : 'What is the task you want to plan?'
+            const defaultTask = plan ? 'Review and improve the plan' : undefined
+            try {
+              currentTask = await tools.input({
+                message,
+                default: defaultTask,
+              })
+            } catch (_error) {
+              return 'Done'
+            }
+          }
+
+          const planResult = await createPlan(
+            {
+              task: currentTask,
+              plan,
+              userFeedback,
+              files: input.files,
+            },
+            { tools, logger, step },
+          )
+
+          if (planResult.reason) {
+            logger.info(planResult.reason)
+            return 'Done'
+          }
+
+          if (planResult.question) {
+            try {
+              userFeedback = await tools.input({ message: planResult.question })
+              plan = planResult.plan || plan // preserve plan if agent returned one with question
+              return 'Generating'
+            } catch (_error) {
+              return 'Done'
+            }
+          }
+
+          plan = planResult.plan || ''
+          files = planResult.files || []
+          userFeedback = ''
+          return 'Reviewing'
+        }
+        case 'Reviewing': {
+          logger.info('\nGenerated Plan:\n')
+          logger.info(plan)
+          if (files?.length > 0) {
+            logger.info('\nFiles:')
+            for (const file of files) {
+              logger.info(`- ${file.path}`)
+            }
+          }
+
+          if (mode === 'confirm') {
+            const approved = await tools.confirm({
+              message: 'Do you approve this plan and want to proceed with implementation?',
+              default: false,
             })
-          } catch (_error) {
-            state = 'Done'
-            break
-          }
-        }
 
-        const planResult = await createPlan(
-          {
-            task: currentTask,
-            plan,
-            userFeedback,
-            files: input.files,
-          },
-          { tools, logger, step },
-        )
+            if (approved) {
+              return 'Done'
+            }
 
-        if (planResult.reason) {
-          logger.info(planResult.reason)
-          state = 'Done'
-          break
-        }
-
-        if (planResult.question) {
-          try {
-            userFeedback = await tools.input({ message: planResult.question })
-            plan = planResult.plan || plan // preserve plan if agent returned one with question
-            state = 'Generating'
-          } catch (_error) {
-            state = 'Done'
-            break
-          }
-          break
-        }
-
-        plan = planResult.plan || ''
-        files = planResult.files || []
-        userFeedback = ''
-        state = 'Reviewing'
-        break
-      }
-      case 'Reviewing': {
-        logger.info('\nGenerated Plan:\n')
-        logger.info(plan)
-        if (files.length > 0) {
-          logger.info('\nFiles:')
-          for (const file of files) {
-            logger.info(`- ${file.path}`)
-          }
-        }
-
-        if (mode === 'confirm') {
-          const approved = await tools.confirm({
-            message: 'Do you approve this plan and want to proceed with implementation?',
-            default: false,
-          })
-
-          if (approved) {
-            return { plan, files }
-          }
-
-          try {
-            userFeedback = await tools.input({
-              message: 'What changes would you like to make to the plan?',
-            })
-            state = 'Generating'
-          } catch (_error) {
-            userFeedback = ''
-            state = 'Reviewing'
-          }
-          break
-        }
-
-        const choices = [
-          { name: 'Save Plan', value: 'save' },
-          { name: 'Provide Feedback', value: 'feedback' },
-          { name: 'Regenerate Plan', value: 'regenerate' },
-          { name: 'Exit', value: 'exit' },
-        ]
-
-        const choice = await tools.select({
-          message: 'What do you want to do?',
-          choices,
-        })
-
-        switch (choice) {
-          case 'save': {
-            // Save Plan
-            const defaultPath = `.plans/plan-${new Date().toISOString().replace(/:/g, '-')}.md`
-            const savePath =
-              filePath ||
-              (await tools.input({
-                message: 'Where do you want to save the plan?',
-                default: defaultPath,
-              }))
-            await tools.writeToFile({ path: savePath, content: plan })
-            logger.info(`Plan saved to ${savePath}`)
-            state = 'Done'
-            break
-          }
-          case 'feedback': {
-            // Provide Feedback
             try {
               userFeedback = await tools.input({
-                message: 'What changes do you want to make?',
+                message: 'What changes would you like to make to the plan?',
               })
-              state = 'Generating'
+              return 'Generating'
             } catch (_error) {
               userFeedback = ''
-              state = 'Reviewing'
+              return 'Reviewing'
             }
-            break
           }
-          case 'regenerate': {
-            // Regenerate Plan
-            plan = ''
-            userFeedback = ''
-            state = 'Generating'
-            break
+
+          const choices = [
+            { name: 'Save Plan', value: 'save' },
+            { name: 'Provide Feedback', value: 'feedback' },
+            { name: 'Regenerate Plan', value: 'regenerate' },
+            { name: 'Exit', value: 'exit' },
+          ]
+
+          const choice = await tools.select({
+            message: 'What do you want to do?',
+            choices,
+          })
+
+          switch (choice) {
+            case 'save': {
+              // Save Plan
+              const defaultPath = `.plans/plan-${new Date().toISOString().replace(/:/g, '-')}.md`
+              const savePath =
+                filePath ||
+                (await tools.input({
+                  message: 'Where do you want to save the plan?',
+                  default: defaultPath,
+                }))
+              await tools.writeToFile({ path: savePath, content: plan })
+              logger.info(`Plan saved to ${savePath}`)
+              return 'Done'
+            }
+            case 'feedback': {
+              // Provide Feedback
+              try {
+                userFeedback = await tools.input({
+                  message: 'What changes do you want to make?',
+                })
+                return 'Generating'
+              } catch (_error) {
+                userFeedback = ''
+                return 'Reviewing'
+              }
+            }
+            case 'regenerate': {
+              // Regenerate Plan
+              plan = ''
+              userFeedback = ''
+              return 'Generating'
+            }
+            case 'exit': {
+              // Exit
+              return 'Done'
+            }
+            default:
+              throw new Error(`Invalid mode: ${mode}`)
           }
-          case 'exit': {
-            // Exit
-            state = 'Done'
-            break
-          }
-          default:
-            throw new Error(`Invalid mode: ${mode}`)
         }
-        break
+        default:
+          throw new Error(`Invalid state: ${state}`)
       }
-      default:
-        throw new Error(`Invalid state: ${state}`)
-    }
+    })
   }
 
   return { plan, files }

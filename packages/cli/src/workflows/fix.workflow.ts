@@ -17,7 +17,7 @@ const FixIterationSummarySchema = z.object({
 })
 
 export const fixWorkflow: WorkflowFn<FixWorkflowInput, { summaries: string[] }, CliToolRegistry> = async (input, context) => {
-  const { tools, logger } = context
+  const { tools, logger, step } = context
   const { command: inputCommand, task, interactive = true } = input
   let command = inputCommand
   const summaries: string[] = []
@@ -85,20 +85,22 @@ export const fixWorkflow: WorkflowFn<FixWorkflowInput, { summaries: string[] }, 
 
     logger.info(`Command failed with exit code ${exitCode}. Asking agent to fix it...`)
 
-    const result = await agentWorkflow(
-      {
-        systemPrompt: FIX_SYSTEM_PROMPT,
-        userMessage: [
-          {
-            role: 'user',
-            content: getFixUserPrompt(command, exitCode, stdout, stderr, task),
-          },
-        ],
-        tools: [readFile, writeToFile, searchFiles, listFiles, executeCommand],
-        outputSchema: FixIterationSummarySchema,
-      },
-      context,
-    )
+    const result = await step(`fix-${i}`, async () => {
+      return await agentWorkflow(
+        {
+          systemPrompt: FIX_SYSTEM_PROMPT,
+          userMessage: [
+            {
+              role: 'user',
+              content: getFixUserPrompt(command, exitCode, stdout, stderr, task),
+            },
+          ],
+          tools: [readFile, writeToFile, searchFiles, listFiles, executeCommand],
+          outputSchema: FixIterationSummarySchema,
+        },
+        context,
+      )
+    })
 
     if (result.type === ToolResponseType.Exit && result.object) {
       const summary = (result.object as { summary: string }).summary
