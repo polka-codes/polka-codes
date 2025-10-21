@@ -15,7 +15,7 @@ import { parseOptions } from './options'
 import prices from './prices'
 import { type AgentContextParameters, handleToolCall } from './tool-implementations'
 
-type RunWorkflowV2Options = {
+type RunWorkflowOptions = {
   commandName: string
   command: Command
   logger: Logger
@@ -30,10 +30,10 @@ const makeStepFnWithSpinner = (spinner: Ora) => {
   }
 }
 
-export async function runWorkflowV2<TInput, TOutput, TTools extends ToolRegistry>(
+export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
   workflow: WorkflowFn<TInput, TOutput, TTools>,
   workflowInput: TInput,
-  options: RunWorkflowV2Options,
+  options: RunWorkflowOptions,
 ): Promise<TOutput | undefined> {
   const { commandName, command, logger, requiresProvider = true } = options
   const globalOpts = (command.parent ?? command).opts()

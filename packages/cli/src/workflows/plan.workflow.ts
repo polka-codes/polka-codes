@@ -28,7 +28,7 @@ export type CreatePlanInput = {
 }
 
 async function createPlan(input: CreatePlanInput, context: WorkflowContext<CliToolRegistry>): Promise<CreatePlanOutput> {
-  const { toolHandler } = context
+  const { toolHandler, step } = context
   const { task, files, plan: inputPlan, userFeedback } = input
 
   const currentTask = userFeedback ? `${task}\n\nUser feedback: ${userFeedback}` : task

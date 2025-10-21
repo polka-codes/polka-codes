@@ -4,7 +4,7 @@ import { readMultiline } from '@polka-codes/cli-shared'
 import chalk from 'chalk'
 import { Command } from 'commander'
 import { createLogger } from '../logger'
-import { runWorkflowV2 } from '../runWorkflowV2'
+import { runWorkflow } from '../runWorkflow'
 import { planWorkflow } from '../workflows/plan.workflow'
 
 export const planCommand = new Command('plan')
@@ -47,7 +47,7 @@ export const planCommand = new Command('plan')
       verbose: verbose,
     })
 
-    await runWorkflowV2(
+    await runWorkflow(
       planWorkflow,
       {
         task: taskInput,
