@@ -19,7 +19,7 @@ type JsonDataContent = {
   value: string
 }
 
-interface JsonImagePart {
+export interface JsonImagePart {
   type: 'image'
   /**
   Image data. Can either be:
@@ -45,7 +45,7 @@ interface JsonImagePart {
 /**
 File content part of a prompt. It contains a file.
  */
-interface JsonFilePart {
+export interface JsonFilePart {
   type: 'file'
   /**
   File data. Can either be:
@@ -89,7 +89,7 @@ export type JsonUserModelMessage = {
 /**
   Content of a user message. It can be a string or an array of text and image parts.
    */
-type JsonUserContent = string | Array<TextPart | JsonImagePart | JsonFilePart>
+export type JsonUserContent = string | Array<TextPart | JsonImagePart | JsonFilePart>
 
 /**
 An assistant message. It can contain text, tool calls, or a combination of text and tool calls.

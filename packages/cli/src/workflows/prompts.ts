@@ -345,16 +345,9 @@ export function formatReviewToolInput(params: ReviewToolInput): string {
   return parts.join('\n')
 }
 
-export function getImplementPrompt(plan: string): string {
-  return `${getWorkflowContextPrompt()}**YOU ARE IN PHASE 2: IMPLEMENTATION**
+export const CODER_SYSTEM_PROMPT = `${getWorkflowContextPrompt()}**YOU ARE IN PHASE 2: IMPLEMENTATION**
 
 Your task is to implement the plan created and approved in Phase 1.
-
-## Your Plan
-
-<plan>
-${plan}
-</plan>
 
 ## Implementation Guidelines
 
@@ -413,7 +406,16 @@ Implement the plan above following these guidelines. Start by:
 3. Determining whether to implement directly or delegate subtasks
 4. Proceeding with implementation
 
-Please implement all the necessary code changes according to this plan.`
+Please implement all the necessary code changes according to this plan.
+`
+
+export function getImplementPrompt(plan: string): string {
+  return `## Your Plan
+
+<plan>
+${plan}
+</plan>
+`
 }
 
 export const FIX_SYSTEM_PROMPT = `You are an expert software developer. Your task is to fix a project that is failing a command. You have been provided with the failing command, its output (stdout and stderr), and the exit code. Your goal is to use the available tools to modify the files in the project to make the command pass. Analyze the error, inspect the relevant files, and apply the necessary code changes.
