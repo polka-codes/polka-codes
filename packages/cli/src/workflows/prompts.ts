@@ -86,13 +86,11 @@ excludeFiles:     # A list of glob patterns for files that should not be read. O
 export function getMetaPrompt(task: string): string {
   return `
 You are a meta-agent that decides which workflow to use for a given task.
-Based on the user's task, decide whether to use the 'code' workflow or the 'agent' workflow.
+Based on the user's task, decide whether to use the 'plan', 'code', or 'task' workflow.
 
-- Use the 'code' workflow for complicated tasks that requires planning and modifying code.
-- Use the 'agent' workflow for simple tasks that does not need planning.
-
-If you choose the 'agent' workflow, you must also specify which agent to use.
-Available agents are: 'architect', 'analyzer', 'coder', 'code-fixer'.
+- Use the 'plan' workflow for complex tasks that require a detailed, multi-step plan before implementation.
+- Use the 'code' workflow for tasks that are well-defined and can be implemented directly without a separate planning phase.
+- Use the 'task' workflow for simple, single-action tasks like answering a question or running a command.
 
 The user's task is:
 <task>
@@ -101,8 +99,7 @@ ${task}
 
 Respond with a JSON object in a markdown block with the following structure:
 {
-  "workflow": "<workflow_name>", // 'code' or 'agent'
-  "agent": "<agent_name>" // required if workflow is 'agent'
+  "workflow": "<workflow_name>" // 'plan', 'code' or 'task'
 }
 `
 }

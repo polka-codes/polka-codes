@@ -6,7 +6,6 @@ import type { CliToolRegistry } from '../workflow-tools'
 
 export type TaskWorkflowInput = {
   task: string
-  agent: string
 }
 
 const SYSTEM_PROMPT = `You are a generic AI assistant.
