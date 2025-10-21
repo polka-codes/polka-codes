@@ -4,7 +4,7 @@ import fs, { mkdir } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import type { LanguageModelV2 } from '@ai-sdk/provider'
 import { confirm as inquirerConfirm, input as inquirerInput, select as inquirerSelect } from '@inquirer/prompts'
-import { listFiles, readMultiline } from '@polka-codes/cli-shared'
+import { readMultiline } from '@polka-codes/cli-shared'
 import type { AgentPolicy, TaskEventCallback, ToolFormat, UsageMeter } from '@polka-codes/core'
 import {
   type AgentBase,
@@ -20,7 +20,6 @@ import {
   fetchUrl,
   handOver,
   listFiles as listFilesTool,
-  parseJsonFromMarkdown,
   readBinaryFile,
   readFile,
   removeFile,
@@ -37,10 +36,8 @@ import { streamText } from 'ai'
 import chalk from 'chalk'
 import type { Command } from 'commander'
 import type { Ora } from 'ora'
-import { z } from 'zod'
 import type { ApiProviderConfig } from './ApiProviderConfig'
 import { UserCancelledError } from './errors'
-import { parseOptions } from './options'
 
 export type AgentContextParameters = {
   toolFormat?: ToolFormat
@@ -77,17 +74,11 @@ const allTools = [
 ] as const
 const toolHandlers = new Map(allTools.map((t) => [camelCase(t.name), t]))
 
-const agentRegistry: Record<string, new (options: SharedAgentOptions) => AgentBase> = {
+const _agentRegistry: Record<string, new (options: SharedAgentOptions) => AgentBase> = {
   analyzer: AnalyzerAgent,
   architect: ArchitectAgent,
   coder: CoderAgent,
   codefixer: CodeFixerAgent,
-}
-
-class WorkflowAgent extends CoderAgent {
-  protected onBeforeInvokeTool(_name: string, _args: Record<string, string>): Promise<any | undefined> {
-    return Promise.resolve(undefined)
-  }
 }
 
 type ToolCall<TTools extends ToolRegistry> = {
@@ -111,114 +102,6 @@ export async function handleToolCall(
   },
 ) {
   switch (toolCall.tool) {
-    case 'invokeAgent': {
-      context.spinner.stop()
-      const input = toolCall.input
-      const model = await context.getModel(input.agent)
-
-      const AgentClass = agentRegistry[input.agent] ?? WorkflowAgent
-
-      const agent = new AgentClass({
-        ai: model,
-        os: context.parameters.os ?? 'linux',
-        provider: context.toolProvider,
-        toolFormat: context.parameters.toolFormat ?? 'native',
-        policies: context.parameters.policies ?? [],
-        usageMeter: context.parameters.usageMeter,
-        parameters: {
-          ...context.parameters.modelParameters,
-          providerOptions: context.parameters.providerOptions,
-        },
-        scripts: context.parameters.scripts,
-        callback: context.agentCallback,
-        requireToolUse: false,
-        retryCount: context.parameters.retryCount,
-        requestTimeoutSeconds: context.parameters.requestTimeoutSeconds,
-        additionalTools: input.tools,
-      })
-
-      const messages = input.messages.map((m) =>
-        typeof m === 'string' ? { role: 'user' as const, content: m } : { role: m.type, content: m.content },
-      )
-
-      const lastMessage = messages.at(-1)
-      if (!lastMessage || lastMessage.role !== 'user') {
-        throw new Error('The last message must be a user message.')
-      }
-      const history = messages.slice(0, -1)
-      const userPrompt = lastMessage.content
-
-      // If there is history, set it. Otherwise, the agent will use its default system prompt.
-      if (history.length > 0) {
-        agent.setMessages(history)
-      }
-
-      let combinedContext = input.context ?? ''
-      if (input.defaultContext) {
-        const { config } = parseOptions((context.command.parent ?? context.command).opts())
-
-        const cwd = process.cwd()
-        const agentConfig = config.agents?.[input.agent] ?? config.agents?.default ?? {}
-        const maxFileCount = agentConfig.initialContext?.maxFileCount ?? 200
-        const excludes = agentConfig.initialContext?.excludes ?? []
-        const finalExcludes = excludes.concat(config.excludeFiles ?? [])
-        const [fileList] = await listFiles(cwd, true, maxFileCount, cwd, finalExcludes)
-        const fileContext = `<files>\n${fileList.join('\n')}\n</files>`
-
-        const defaultContext = `<now_date>${new Date().toISOString().slice(0, 10)}</now_date>${fileContext}`
-        combinedContext = defaultContext + (combinedContext ? `\n\n${combinedContext}` : '')
-      }
-
-      const finalPrompt = combinedContext ? `${userPrompt}\n\n<context>${combinedContext}</context>` : userPrompt
-      let exitReason = await agent.start(finalPrompt)
-
-      context.spinner.start()
-
-      for (let i = 0; i < 5; i++) {
-        if (exitReason.type !== ToolResponseType.Exit) {
-          throw new Error(`Agent exited for an unhandled reason: ${JSON.stringify(exitReason)}`)
-        }
-
-        if (!input.outputSchema) {
-          return {
-            output: exitReason.message,
-            messages: agent.messages,
-          }
-        }
-
-        const parsed = parseJsonFromMarkdown(exitReason.message)
-        if (!parsed.success) {
-          const errorMessage = `Failed to parse JSON from markdown. Error: ${parsed.error}. Please correct the output. It MUST be in valid JSON format.`
-          if (i < 4) {
-            context.spinner.stop()
-            exitReason = await agent.continueTask(errorMessage)
-            context.spinner.start()
-            continue
-          } else {
-            throw new Error(errorMessage)
-          }
-        }
-
-        const validated = input.outputSchema.safeParse(parsed.data)
-        if (!validated.success) {
-          const errorMessage = `Output validation failed. Error: ${z.prettifyError(validated.error)}. Please correct the output.`
-          if (i < 4) {
-            context.spinner.stop()
-            exitReason = await agent.continueTask(errorMessage)
-            context.spinner.start()
-            continue
-          } else {
-            throw new Error(z.prettifyError(validated.error))
-          }
-        }
-        return {
-          output: validated.data,
-          messages: agent.messages,
-        }
-      }
-
-      throw new Error('Agent failed to produce valid output after 5 retries.')
-    }
     case 'createPullRequest': {
       const { title, description } = toolCall.input as {
         title: string

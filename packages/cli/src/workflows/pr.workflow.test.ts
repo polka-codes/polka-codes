@@ -24,8 +24,6 @@ const createMockContext = () => {
       ]
     }),
     taskEvent: mock(async () => {}),
-    // Add other necessary mocks from CliToolRegistry here
-    invokeAgent: mock(async () => ({ output: {}, messages: [] })),
     createCommit: mock(async () => ({ message: '' })),
     printChangeFile: mock(async () => ({ stagedFiles: [], unstagedFiles: [] })),
     confirm: mock(async () => true),

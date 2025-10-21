@@ -12,7 +12,6 @@ const createMockContext = () => {
     executeCommand: mock<any>(),
     confirm: mock<any>(),
     createCommit: mock<any>(),
-    invokeAgent: mock<any>(),
     createPullRequest: mock<any>(),
     generateText: mock<any>(),
     taskEvent: mock<any>(),
