@@ -142,20 +142,22 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput, ReviewResult, CliTo
     return { overview: 'No changes to review.', specificReviews: [] }
   }
 
-  const result = await agentWorkflow(
-    {
-      systemPrompt: CODE_REVIEW_PROMPT,
-      userMessage: [
-        {
-          role: 'user',
-          content: formatReviewToolInput(changeInfo),
-        },
-      ],
-      tools: [readFile, readBinaryFile, searchFiles, listFiles, gitDiff],
-      outputSchema: reviewOutputSchema,
-    },
-    context,
-  )
+  const result = await step('review', async () => {
+    return await agentWorkflow(
+      {
+        systemPrompt: CODE_REVIEW_PROMPT,
+        userMessage: [
+          {
+            role: 'user',
+            content: formatReviewToolInput(changeInfo),
+          },
+        ],
+        tools: [readFile, readBinaryFile, searchFiles, listFiles, gitDiff],
+        outputSchema: reviewOutputSchema,
+      },
+      context,
+    )
+  })
 
   if (result.type === ToolResponseType.Exit) {
     const reviewResult = result.object as ReviewResult

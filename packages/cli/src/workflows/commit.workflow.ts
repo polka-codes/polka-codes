@@ -82,20 +82,22 @@ export const commitWorkflow: WorkflowFn<CommitWorkflowInput, void, CliToolRegist
     commitMessage: z.string(),
   })
 
-  const result = await agentWorkflow(
-    {
-      systemPrompt: COMMIT_MESSAGE_PROMPT,
-      userMessage: [
-        {
-          role: 'user',
-          content: `${fileListPrompt}${diffPrompt}${contextPrompt}`,
-        },
-      ],
-      tools: [readFile, readBinaryFile, searchFiles, listFiles, gitDiff],
-      outputSchema: commitMessageSchema,
-    },
-    context,
-  )
+  const result = await step('generate-commit-message', async () => {
+    return await agentWorkflow(
+      {
+        systemPrompt: COMMIT_MESSAGE_PROMPT,
+        userMessage: [
+          {
+            role: 'user',
+            content: `${fileListPrompt}${diffPrompt}${contextPrompt}`,
+          },
+        ],
+        tools: [readFile, readBinaryFile, searchFiles, listFiles, gitDiff],
+        outputSchema: commitMessageSchema,
+      },
+      context,
+    )
+  })
 
   if (result.type === ToolResponseType.Exit && result.object) {
     const { commitMessage } = commitMessageSchema.parse(result.object)

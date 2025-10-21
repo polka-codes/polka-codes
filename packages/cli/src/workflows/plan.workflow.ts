@@ -55,15 +55,17 @@ async function createPlan(input: CreatePlanInput, context: WorkflowContext<CliTo
     }
   }
 
-  const result = await agentWorkflow(
-    {
-      systemPrompt: ARCHITECT_SYSTEM_PROMPT,
-      userMessage: [{ role: 'user', content: userContent }],
-      tools: [readFile, listFiles, searchFiles, handOver],
-      outputSchema: PlanSchema,
-    },
-    context,
-  )
+  const result = await step('plan', async () => {
+    return await agentWorkflow(
+      {
+        systemPrompt: ARCHITECT_SYSTEM_PROMPT,
+        userMessage: [{ role: 'user', content: userContent }],
+        tools: [readFile, listFiles, searchFiles, handOver],
+        outputSchema: PlanSchema,
+      },
+      context,
+    )
+  })
 
   if (result.type === ToolResponseType.Exit && result.object) {
     const { plan, question, reason, files: filePaths } = result.object
