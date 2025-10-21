@@ -7,7 +7,6 @@ import { version } from '../package.json'
 import { runChat } from './commands/chat'
 import { codeCommand } from './commands/code'
 import { commitCommand } from './commands/commit'
-import { createCommand } from './commands/create'
 import { fixCommand } from './commands/fix'
 import { initCommand } from './commands/init'
 import { runMeta } from './commands/meta'
@@ -37,9 +36,6 @@ program.addCommand(prCommand)
 
 // Review command
 program.addCommand(reviewCommand)
-
-// Create command
-program.addCommand(createCommand)
 
 // Plan command
 program.addCommand(planCommand)
