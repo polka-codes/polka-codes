@@ -7,6 +7,7 @@ import { version } from '../package.json'
 import { runChat } from './commands/chat'
 import { codeCommand } from './commands/code'
 import { commitCommand } from './commands/commit'
+import { epicCommand } from './commands/epic'
 import { fixCommand } from './commands/fix'
 import { initCommand } from './commands/init'
 import { runMeta } from './commands/meta'
@@ -42,6 +43,9 @@ program.addCommand(planCommand)
 
 // Code command
 program.addCommand(codeCommand)
+
+// Epic command
+program.addCommand(epicCommand)
 
 // Fix command
 program.addCommand(fixCommand)
