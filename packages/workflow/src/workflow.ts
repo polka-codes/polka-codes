@@ -12,14 +12,14 @@ export type ToolSignature<I, O> = {
 
 export type ToolRegistry = Record<string, ToolSignature<any, any>>
 
-export type ToolHandler<TTools extends ToolRegistry> = {
+export type WorkflowTools<TTools extends ToolRegistry> = {
   [K in keyof TTools]: (input: TTools[K]['input']) => Promise<TTools[K]['output']>
 }
 
 export type WorkflowContext<TTools extends ToolRegistry> = {
   step: <T>(name: string, fn: () => Promise<T>) => Promise<T>
   logger: Logger
-  toolHandler: ToolHandler<TTools>
+  tools: WorkflowTools<TTools>
 }
 
 export type WorkflowFn<TInput, TOutput, TTools extends ToolRegistry> = (input: TInput, context: WorkflowContext<TTools>) => Promise<TOutput>
@@ -33,7 +33,7 @@ const silentLogger: Logger = {
 }
 
 export function createContext<TTools extends ToolRegistry>(
-  toolHandler: ToolHandler<TTools>,
+  tools: WorkflowTools<TTools>,
   stepFn?: <T>(name: string, fn: () => Promise<T>) => Promise<T>,
   logger: Logger = silentLogger,
 ): WorkflowContext<TTools> {
@@ -42,7 +42,7 @@ export function createContext<TTools extends ToolRegistry>(
     stepFn = async <T>(_name: string, fn: () => Promise<T>) => fn()
   }
 
-  return { step: stepFn, logger, toolHandler }
+  return { step: stepFn, logger, tools }
 }
 
 export const makeStepFn = (): (<T>(name: string, fn: () => Promise<T>) => Promise<T>) => {

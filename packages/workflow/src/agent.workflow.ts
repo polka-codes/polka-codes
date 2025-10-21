@@ -37,10 +37,10 @@ export type AgentToolRegistry = {
   }
 }
 
-export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentToolRegistry> = async (input, { step, toolHandler }) => {
+export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentToolRegistry> = async (input, { step, tools }) => {
   const event = async (name: string, event: TaskEvent) => {
     await step(name, async () => {
-      await toolHandler.taskEvent(event)
+      await tools.taskEvent(event)
     })
   }
 
@@ -66,7 +66,7 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
 
     await event(`start-round-${i}`, { kind: TaskEventKind.StartRequest, userMessage: nextMessage as any }) // TODO: the type is not exactly matching but that's ok
     const assistantMessage = await step(`agent-round-${i}`, async () => {
-      return await toolHandler.generateText({
+      return await tools.generateText({
         messages,
         tools: toolSet,
       })
@@ -137,7 +137,7 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
         params: toolCall.input as any,
       })
       const toolResponse: ToolResponse = await step(`invoke-tool-${toolCall.toolName}-${toolCall.toolCallId}`, async () => {
-        return await toolHandler.invokeTool({
+        return await tools.invokeTool({
           toolName: toolCall.toolName,
           input: toolCall.input,
         })

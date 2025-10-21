@@ -20,8 +20,8 @@ type FileChange = {
 }
 
 export const commitWorkflow: WorkflowFn<CommitWorkflowInput, void, CliToolRegistry> = async (input, context) => {
-  const { step, toolHandler, logger } = context
-  const { stagedFiles, unstagedFiles } = await toolHandler.printChangeFile()
+  const { step, tools, logger } = context
+  const { stagedFiles, unstagedFiles } = await tools.printChangeFile()
 
   let hasStaged = stagedFiles.length > 0
   const hasUnstaged = unstagedFiles.length > 0
@@ -29,17 +29,17 @@ export const commitWorkflow: WorkflowFn<CommitWorkflowInput, void, CliToolRegist
   if (!hasStaged) {
     if (input.all) {
       await step('stage-all', async () => {
-        await toolHandler.executeCommand({ command: 'git', args: ['add', '.'] })
+        await tools.executeCommand({ command: 'git', args: ['add', '.'] })
       })
       hasStaged = true
     } else if (hasUnstaged) {
-      const confirmed = await toolHandler.confirm({
+      const confirmed = await tools.confirm({
         message: 'No staged files found. Stage all files?',
         default: false,
       })
       if (confirmed) {
         await step('stage-all', async () => {
-          await toolHandler.executeCommand({
+          await tools.executeCommand({
             command: 'git',
             args: ['add', '.'],
           })
@@ -58,14 +58,14 @@ export const commitWorkflow: WorkflowFn<CommitWorkflowInput, void, CliToolRegist
   const { changedFiles, diff } = await step('get-diff', async () => {
     // List staged changes for visibility
     let changedFiles: FileChange[] = []
-    const diffNameStatusResult = await toolHandler.executeCommand({
+    const diffNameStatusResult = await tools.executeCommand({
       command: 'git',
       args: ['diff', '--name-status', '--no-color', '--staged'],
     })
     if (diffNameStatusResult.exitCode === 0) {
       changedFiles = parseGitDiffNameStatus(diffNameStatusResult.stdout)
     }
-    const diffResult = await toolHandler.executeCommand({
+    const diffResult = await tools.executeCommand({
       command: 'git',
       args: ['diff', '--staged'],
     })
@@ -103,7 +103,7 @@ export const commitWorkflow: WorkflowFn<CommitWorkflowInput, void, CliToolRegist
     const { commitMessage } = commitMessageSchema.parse(result.object)
     if (commitMessage) {
       logger.info(`\nCommit message:\n${commitMessage}`)
-      await toolHandler.createCommit({ message: commitMessage })
+      await tools.createCommit({ message: commitMessage })
       return
     }
   }

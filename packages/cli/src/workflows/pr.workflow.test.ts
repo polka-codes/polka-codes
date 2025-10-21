@@ -8,7 +8,7 @@ import type { CliToolRegistry } from '../workflow-tools'
 import { prWorkflow } from './pr.workflow'
 
 const createMockContext = () => {
-  const toolHandler = {
+  const tools = {
     executeCommand: mock(async () => ({ exitCode: 0, stdout: '', stderr: '' })),
     createPullRequest: mock(async (details) => details),
     generateText: mock(async () => {
@@ -37,7 +37,7 @@ const createMockContext = () => {
   }
 
   const run = (input: any) => {
-    const context = createContext<CliToolRegistry>(toolHandler as any)
+    const context = createContext<CliToolRegistry>(tools as any)
     const testContext: WorkflowContext<CliToolRegistry> = {
       ...context,
       step: (_name, fn) => {
@@ -49,16 +49,16 @@ const createMockContext = () => {
   }
 
   return {
-    toolHandler,
+    tools,
     run,
   }
 }
 
 test('should create PR with user context', async () => {
-  const { toolHandler, run } = createMockContext()
+  const { tools, run } = createMockContext()
 
   // Mock the sequence of executeCommand calls
-  toolHandler.executeCommand
+  tools.executeCommand
     .mockResolvedValueOnce({ exitCode: 0, stdout: 'gh version 2.40.0', stderr: '' }) // gh --version
     .mockResolvedValueOnce({ exitCode: 0, stdout: 'feature/add-auth\n', stderr: '' }) // git rev-parse
     .mockResolvedValueOnce({ exitCode: 1, stdout: '', stderr: '' }) // git show-ref master
@@ -88,15 +88,15 @@ test('should create PR with user context', async () => {
       'This PR implements the authentication feature for the application.\n\n### Changes\n- Added authenticate function\n- Fixed login bug',
   })
 
-  expect(toolHandler.executeCommand).toHaveBeenCalledTimes(6)
-  expect(toolHandler.generateText).toHaveBeenCalledTimes(1)
-  expect(toolHandler.createPullRequest).toHaveBeenCalledTimes(1)
+  expect(tools.executeCommand).toHaveBeenCalledTimes(6)
+  expect(tools.generateText).toHaveBeenCalledTimes(1)
+  expect(tools.createPullRequest).toHaveBeenCalledTimes(1)
 })
 
 test('should fail when GitHub CLI is not installed', async () => {
-  const { toolHandler, run } = createMockContext()
+  const { tools, run } = createMockContext()
 
-  toolHandler.executeCommand.mockResolvedValueOnce({
+  tools.executeCommand.mockResolvedValueOnce({
     exitCode: 1,
     stdout: '',
     stderr: 'command not found: gh',
@@ -106,9 +106,9 @@ test('should fail when GitHub CLI is not installed', async () => {
 })
 
 test('should fail when unable to determine default branch', async () => {
-  const { toolHandler, run } = createMockContext()
+  const { tools, run } = createMockContext()
 
-  toolHandler.executeCommand
+  tools.executeCommand
     .mockResolvedValueOnce({ exitCode: 0, stdout: 'gh version 2.40.0', stderr: '' }) // gh --version
     .mockResolvedValueOnce({ exitCode: 0, stdout: 'feature/my-branch\n', stderr: '' }) // git rev-parse
     .mockResolvedValueOnce({ exitCode: 1, stdout: '', stderr: 'not a git repository' }) // gh repo view

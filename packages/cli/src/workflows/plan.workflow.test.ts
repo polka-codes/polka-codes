@@ -6,7 +6,7 @@ import type { CliToolRegistry } from '../workflow-tools'
 import { planWorkflow } from './plan.workflow'
 
 const createMockContext = () => {
-  const toolHandler = {
+  const tools = {
     confirm: mock<any>(),
     input: mock<any>(),
     select: mock<any>(),
@@ -22,12 +22,12 @@ const createMockContext = () => {
   }
 
   const context = {
-    toolHandler,
+    tools,
     step,
     logger,
   } as unknown as workflow.WorkflowContext<CliToolRegistry>
 
-  return { context, toolHandler, step, logger }
+  return { context, tools, step, logger }
 }
 
 describe('planWorkflow', () => {
@@ -43,7 +43,7 @@ describe('planWorkflow', () => {
   })
 
   test('should generate a plan and save it', async () => {
-    const { context, toolHandler, logger } = createMockContext()
+    const { context, tools, logger } = createMockContext()
     const task = 'Create a new component'
     const generatedPlan = '1. Create the component file.'
     const savePath = '.plans/test.md'
@@ -55,14 +55,14 @@ describe('planWorkflow', () => {
       },
     })
 
-    toolHandler.select.mockResolvedValue('save')
-    toolHandler.input.mockResolvedValue(savePath)
+    tools.select.mockResolvedValue('save')
+    tools.input.mockResolvedValue(savePath)
 
     const result = await planWorkflow({ task, mode: 'interactive' }, context)
 
     expect(agentWorkflowSpy).toHaveBeenCalledTimes(1)
     expect(result.plan).toBe(generatedPlan)
-    expect(toolHandler.select).toHaveBeenCalledWith({
+    expect(tools.select).toHaveBeenCalledWith({
       message: 'What do you want to do?',
       choices: [
         { name: 'Save Plan', value: 'save' },
@@ -71,11 +71,11 @@ describe('planWorkflow', () => {
         { name: 'Exit', value: 'exit' },
       ],
     })
-    expect(toolHandler.input).toHaveBeenCalledWith({
+    expect(tools.input).toHaveBeenCalledWith({
       message: 'Where do you want to save the plan?',
       default: expect.any(String),
     })
-    expect(toolHandler.writeToFile).toHaveBeenCalledWith({
+    expect(tools.writeToFile).toHaveBeenCalledWith({
       path: savePath,
       content: generatedPlan,
     })
@@ -83,7 +83,7 @@ describe('planWorkflow', () => {
   })
 
   test('should handle user feedback and regenerate plan', async () => {
-    const { context, toolHandler } = createMockContext()
+    const { context, tools } = createMockContext()
     const task = 'Create a new component'
     const initialPlan = '1. Create the component file.'
     const feedback = 'Add a test file.'
@@ -103,8 +103,8 @@ describe('planWorkflow', () => {
         },
       })
 
-    toolHandler.select.mockResolvedValueOnce('feedback').mockResolvedValueOnce('exit')
-    toolHandler.input.mockResolvedValueOnce(feedback)
+    tools.select.mockResolvedValueOnce('feedback').mockResolvedValueOnce('exit')
+    tools.input.mockResolvedValueOnce(feedback)
 
     const result = await planWorkflow({ task, mode: 'interactive' }, context)
 
@@ -113,7 +113,7 @@ describe('planWorkflow', () => {
   })
 
   test('should exit the workflow', async () => {
-    const { context, toolHandler } = createMockContext()
+    const { context, tools } = createMockContext()
     const task = 'Create a new component'
     const generatedPlan = '1. Create the component file.'
 
@@ -124,10 +124,10 @@ describe('planWorkflow', () => {
       },
     })
 
-    toolHandler.select.mockResolvedValue('exit')
+    tools.select.mockResolvedValue('exit')
 
     const result = await planWorkflow({ task, mode: 'interactive' }, context)
     expect(result.plan).toBe(generatedPlan)
-    expect(toolHandler.select).toHaveBeenCalledTimes(1)
+    expect(tools.select).toHaveBeenCalledTimes(1)
   })
 })

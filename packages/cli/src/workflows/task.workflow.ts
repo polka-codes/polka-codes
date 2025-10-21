@@ -9,17 +9,14 @@ export type TaskWorkflowInput = {
   agent: string
 }
 
-export const taskWorkflow: WorkflowFn<TaskWorkflowInput, { success: boolean }, CliToolRegistry> = async (
-  input,
-  { toolHandler, logger },
-) => {
+export const taskWorkflow: WorkflowFn<TaskWorkflowInput, { success: boolean }, CliToolRegistry> = async (input, { tools, logger }) => {
   const { task, agent } = input
 
   logger.info(`\n🤖 Invoking agent: ${agent}...\n`)
 
   const messages = [{ type: 'user' as const, content: task }]
 
-  await toolHandler.invokeAgent({
+  await tools.invokeAgent({
     agent: agent as AgentNameType,
     messages,
     defaultContext: true,

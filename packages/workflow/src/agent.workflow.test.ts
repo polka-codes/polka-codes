@@ -6,7 +6,7 @@ import type { ModelMessage, UserModelMessage } from 'ai'
 import { z } from 'zod'
 import { type AgentToolRegistry, agentWorkflow } from './agent.workflow'
 import { type JsonResponseMessage, toJsonModelMessage } from './json-ai-types'
-import { createContext, type ToolHandler } from './workflow'
+import { createContext, type WorkflowTools } from './workflow'
 
 const createMockTool = (name: string, description: string, handler: (args: any) => Promise<ToolResponse>): FullToolInfoV2 => ({
   name,
@@ -82,18 +82,18 @@ test('should run agent workflow with a tool call and reply', async () => {
 
   const initialMessages: UserModelMessage[] = [{ role: 'user', content: 'What are the files in the src directory?' }]
 
-  const tools = [listFilesTool]
+  const allTools = [listFilesTool]
   const spied = { fn: (_: any) => {} }
   const taskEventSpy = spyOn(spied, 'fn')
 
-  const toolHandler: ToolHandler<AgentToolRegistry> = {
+  const tools: WorkflowTools<AgentToolRegistry> = {
     generateText: async () => {
       const response = mockResponses.shift()
       return [response!] as JsonResponseMessage[]
     },
     invokeTool: async (input) => {
       const { toolName, input: toolInput } = input
-      const toolInfo = tools.find((t) => t.name === toolName)
+      const toolInfo = allTools.find((t) => t.name === toolName)
       if (!toolInfo) throw new Error(`Tool not found: ${toolName}`)
       return toolInfo.handler({} as any, toolInput)
     },
@@ -105,10 +105,10 @@ test('should run agent workflow with a tool call and reply', async () => {
   const result = await agentWorkflow(
     {
       userMessage: initialMessages.map(toJsonModelMessage) as any,
-      tools,
+      tools: allTools,
       systemPrompt: 'You are a helpful assistant.',
     },
-    createContext(toolHandler),
+    createContext(tools),
   )
 
   expect(result).toEqual({
@@ -132,18 +132,18 @@ test('should exit when a tool returns an Exit response', async () => {
     },
   ]
 
-  const tools = [exitTool]
+  const allTools = [exitTool]
   const spied = { fn: (_: any) => {} }
   const taskEventSpy = spyOn(spied, 'fn')
 
-  const toolHandler: ToolHandler<AgentToolRegistry> = {
+  const tools: WorkflowTools<AgentToolRegistry> = {
     generateText: async () => {
       const response = mockResponses.shift()
       return [response!] as JsonResponseMessage[]
     },
     invokeTool: async (input) => {
       const { toolName, input: toolInput } = input
-      const toolInfo = tools.find((t) => t.name === toolName)
+      const toolInfo = allTools.find((t) => t.name === toolName)
       if (!toolInfo) throw new Error(`Tool not found: ${toolName}`)
       return toolInfo.handler({} as any, toolInput)
     },
@@ -155,10 +155,10 @@ test('should exit when a tool returns an Exit response', async () => {
   const result = await agentWorkflow(
     {
       userMessage: [toJsonModelMessage({ role: 'user', content: 'Please exit.' })] as any,
-      tools,
+      tools: allTools,
       systemPrompt: 'You are a helpful assistant.',
     },
-    createContext(toolHandler),
+    createContext(tools),
   )
 
   expect(result).toEqual({
@@ -182,16 +182,16 @@ test('should exit when a tool returns a HandOver response', async () => {
     },
   ]
 
-  const tools = [handOverTool]
+  const allTools = [handOverTool]
 
-  const toolHandler: ToolHandler<AgentToolRegistry> = {
+  const tools: WorkflowTools<AgentToolRegistry> = {
     generateText: async () => {
       const response = mockResponses.shift()
       return [response!] as JsonResponseMessage[]
     },
     invokeTool: async (input) => {
       const { toolName, input: toolInput } = input
-      const toolInfo = tools.find((t) => t.name === toolName)
+      const toolInfo = allTools.find((t) => t.name === toolName)
       if (!toolInfo) throw new Error(`Tool not found: ${toolName}`)
       return toolInfo.handler({} as any, toolInput)
     },
@@ -201,10 +201,10 @@ test('should exit when a tool returns a HandOver response', async () => {
   const result = await agentWorkflow(
     {
       userMessage: [toJsonModelMessage({ role: 'user', content: 'Please hand over.' })] as any,
-      tools,
+      tools: allTools,
       systemPrompt: 'You are a helpful assistant.',
     },
-    createContext(toolHandler),
+    createContext(tools),
   )
 
   expect(result).toEqual({
@@ -227,16 +227,16 @@ test('should fail if maxToolRoundTrips is exceeded', async () => {
     ],
   })
 
-  const tools = [listFilesTool]
+  const allTools = [listFilesTool]
 
-  const toolHandler: ToolHandler<AgentToolRegistry> = {
+  const tools: WorkflowTools<AgentToolRegistry> = {
     generateText: async () => {
       const response = mockResponses.shift()
       return [response!] as JsonResponseMessage[]
     },
     invokeTool: async (input) => {
       const { toolName, input: toolInput } = input
-      const toolInfo = tools.find((t) => t.name === toolName)
+      const toolInfo = allTools.find((t) => t.name === toolName)
       if (!toolInfo) throw new Error(`Tool not found: ${toolName}`)
       return toolInfo.handler({} as any, toolInput)
     },
@@ -247,11 +247,11 @@ test('should fail if maxToolRoundTrips is exceeded', async () => {
     agentWorkflow(
       {
         userMessage: [toJsonModelMessage({ role: 'user', content: 'List files.' })] as any,
-        tools,
+        tools: allTools,
         systemPrompt: 'You are a helpful assistant.',
         maxToolRoundTrips: 10,
       },
-      createContext(toolHandler),
+      createContext(tools),
     ),
   ).rejects.toThrow('Maximum number of tool round trips reached.')
 })

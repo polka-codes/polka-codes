@@ -8,7 +8,7 @@ import { fixWorkflow } from './fix.workflow'
 import * as prompts from './prompts'
 
 const createMockContext = () => {
-  const toolHandler = {
+  const tools = {
     executeCommand: mock<any>(),
     input: mock<any>(),
     generateText: mock<any>(),
@@ -24,12 +24,12 @@ const createMockContext = () => {
   }
 
   const context = {
-    toolHandler,
+    tools,
     step,
     logger,
   } as unknown as WorkflowContext<CliToolRegistry>
 
-  return { context, toolHandler, step, logger }
+  return { context, tools, step, logger }
 }
 
 describe('fixWorkflow', () => {
@@ -38,17 +38,17 @@ describe('fixWorkflow', () => {
   })
 
   test('should succeed when command passes on first attempt', async () => {
-    const { context, toolHandler } = createMockContext()
-    toolHandler.executeCommand.mockResolvedValue({ exitCode: 0, stdout: 'All tests passed', stderr: '' })
+    const { context, tools } = createMockContext()
+    tools.executeCommand.mockResolvedValue({ exitCode: 0, stdout: 'All tests passed', stderr: '' })
 
     const result = await fixWorkflow({ command: 'bun test' }, context)
 
-    expect(toolHandler.executeCommand).toHaveBeenCalledWith({ command: 'bun test', shell: true, pipe: true })
+    expect(tools.executeCommand).toHaveBeenCalledWith({ command: 'bun test', shell: true, pipe: true })
     expect(result).toStrictEqual({ summaries: [] })
   })
 
   test('should prompt for command when not provided', async () => {
-    const { context, toolHandler } = createMockContext()
+    const { context, tools } = createMockContext()
     const loadConfigSpy = spyOn(cliShared, 'loadConfig').mockReturnValue({
       scripts: {
         check: 'bun typecheck',
@@ -56,16 +56,16 @@ describe('fixWorkflow', () => {
       },
     })
 
-    toolHandler.input.mockResolvedValue('bun typecheck && bun test')
-    toolHandler.executeCommand.mockResolvedValue({ exitCode: 0, stdout: 'Success', stderr: '' })
+    tools.input.mockResolvedValue('bun typecheck && bun test')
+    tools.executeCommand.mockResolvedValue({ exitCode: 0, stdout: 'Success', stderr: '' })
 
     await fixWorkflow({ interactive: true }, context)
 
-    expect(toolHandler.input).toHaveBeenCalledWith({
+    expect(tools.input).toHaveBeenCalledWith({
       message: 'Please enter the command to run to identify issues:',
       default: 'bun typecheck && bun test',
     })
-    expect(toolHandler.executeCommand).toHaveBeenCalledWith({
+    expect(tools.executeCommand).toHaveBeenCalledWith({
       command: 'bun typecheck && bun test',
       shell: true,
       pipe: true,
@@ -75,26 +75,26 @@ describe('fixWorkflow', () => {
   })
 
   test('should use default command when not interactive', async () => {
-    const { context, toolHandler } = createMockContext()
+    const { context, tools } = createMockContext()
     const loadConfigSpy = spyOn(cliShared, 'loadConfig').mockReturnValue({
       scripts: {
         check: 'bun typecheck',
       },
     })
 
-    toolHandler.executeCommand.mockResolvedValue({ exitCode: 0, stdout: '', stderr: '' })
+    tools.executeCommand.mockResolvedValue({ exitCode: 0, stdout: '', stderr: '' })
 
     await fixWorkflow({ interactive: false }, context)
 
-    expect(toolHandler.executeCommand).toHaveBeenCalledWith({ command: 'bun typecheck', shell: true, pipe: true })
+    expect(tools.executeCommand).toHaveBeenCalledWith({ command: 'bun typecheck', shell: true, pipe: true })
 
     loadConfigSpy.mockRestore()
   })
 
   test('should throw error when no command provided and user provides empty input', async () => {
-    const { context, toolHandler } = createMockContext()
+    const { context, tools } = createMockContext()
     const loadConfigSpy = spyOn(cliShared, 'loadConfig').mockReturnValue({})
-    toolHandler.input.mockResolvedValue('')
+    tools.input.mockResolvedValue('')
 
     const promise = fixWorkflow({ interactive: true }, context)
 
@@ -103,13 +103,13 @@ describe('fixWorkflow', () => {
   })
 
   test('should succeed after agent fixes the issue', async () => {
-    const { context, toolHandler } = createMockContext()
+    const { context, tools } = createMockContext()
 
-    toolHandler.executeCommand
+    tools.executeCommand
       .mockResolvedValueOnce({ exitCode: 1, stdout: 'FAIL', stderr: 'Error' })
       .mockResolvedValueOnce({ exitCode: 0, stdout: 'PASS', stderr: '' })
 
-    toolHandler.generateText.mockResolvedValue([
+    tools.generateText.mockResolvedValue([
       {
         role: 'assistant',
         content: '```json\n{"summary":"I did a fix"}\n```',
@@ -118,16 +118,16 @@ describe('fixWorkflow', () => {
 
     const result = await fixWorkflow({ command: 'bun test' }, context)
 
-    expect(toolHandler.executeCommand).toHaveBeenCalledTimes(2)
-    expect(toolHandler.generateText).toHaveBeenCalledTimes(1)
+    expect(tools.executeCommand).toHaveBeenCalledTimes(2)
+    expect(tools.generateText).toHaveBeenCalledTimes(1)
     expect(result).toStrictEqual({ summaries: ['I did a fix'] })
   })
 
   test('should fail after exhausting all retries', async () => {
-    const { context, toolHandler } = createMockContext()
+    const { context, tools } = createMockContext()
 
-    toolHandler.executeCommand.mockResolvedValue({ exitCode: 1, stdout: 'FAIL', stderr: 'Error' })
-    toolHandler.generateText.mockResolvedValue([
+    tools.executeCommand.mockResolvedValue({ exitCode: 1, stdout: 'FAIL', stderr: 'Error' })
+    tools.generateText.mockResolvedValue([
       {
         role: 'assistant',
         content: '```json\n{"summary":"I did a fix"}\n```',
@@ -137,36 +137,36 @@ describe('fixWorkflow', () => {
     const promise = fixWorkflow({ command: 'bun test' }, context)
 
     await expect(promise).rejects.toThrow('Failed to fix the issue after 10 attempts.')
-    expect(toolHandler.executeCommand).toHaveBeenCalledTimes(10)
-    expect(toolHandler.generateText).toHaveBeenCalledTimes(10)
+    expect(tools.executeCommand).toHaveBeenCalledTimes(10)
+    expect(tools.generateText).toHaveBeenCalledTimes(10)
   })
 
   test('should pass task to agent prompt', async () => {
-    const { context, toolHandler } = createMockContext()
+    const { context, tools } = createMockContext()
     const getFixUserPromptSpy = spyOn(prompts, 'getFixUserPrompt')
 
-    toolHandler.executeCommand.mockResolvedValue({
+    tools.executeCommand.mockResolvedValue({
       exitCode: 1,
       stdout: 'FAIL src/test.ts',
       stderr: 'TypeError: undefined is not a function',
     })
-    toolHandler.generateText.mockResolvedValue([
+    tools.generateText.mockResolvedValue([
       {
         role: 'assistant',
         content: '```json\n{"summary":"I did a fix"}\n```',
       },
     ])
 
-    toolHandler.executeCommand
+    tools.executeCommand
       .mockResolvedValueOnce({ exitCode: 1, stdout: 'FAIL', stderr: 'Error' })
       .mockResolvedValueOnce({ exitCode: 0, stdout: 'PASS', stderr: '' })
 
     await fixWorkflow({ command: 'bun test', task: 'My original task was to do this thing.' }, context)
 
     expect(getFixUserPromptSpy).toHaveBeenCalledTimes(1)
-    expect(toolHandler.generateText).toHaveBeenCalledTimes(1)
+    expect(tools.generateText).toHaveBeenCalledTimes(1)
 
-    const generateTextCall = toolHandler.generateText.mock.calls[0][0] as { messages: { role: string; content: string }[] }
+    const generateTextCall = tools.generateText.mock.calls[0][0] as { messages: { role: string; content: string }[] }
     const userMessage = generateTextCall.messages.find((m: { role: string }) => m.role === 'user')
     expect(userMessage?.content).toContain('My original task was to do this thing.')
 

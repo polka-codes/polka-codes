@@ -16,21 +16,21 @@ export const prWorkflow: WorkflowFn<{ context?: string }, { title: string; descr
   input,
   context,
 ) => {
-  const { step, toolHandler } = context
+  const { step, tools } = context
   const { diff, commits, branchName } = await step('get-git-info', async () => {
-    await checkGhInstalled(toolHandler.executeCommand)
-    const branchResult = await toolHandler.executeCommand({ command: 'git', args: ['rev-parse', '--abbrev-ref', 'HEAD'] })
+    await checkGhInstalled(tools.executeCommand)
+    const branchResult = await tools.executeCommand({ command: 'git', args: ['rev-parse', '--abbrev-ref', 'HEAD'] })
     const branchName = branchResult.stdout.trim()
-    const defaultBranch = await getDefaultBranch(toolHandler.executeCommand)
+    const defaultBranch = await getDefaultBranch(tools.executeCommand)
     if (!defaultBranch) {
       throw new Error('Could not determine default branch name.')
     }
-    const commitsResult = await toolHandler.executeCommand({
+    const commitsResult = await tools.executeCommand({
       command: 'git',
       args: ['--no-pager', 'log', '--oneline', '--no-color', '--no-merges', '--no-decorate', `${defaultBranch}..HEAD`],
     })
     const commits = commitsResult.stdout
-    const diffResult = await toolHandler.executeCommand({
+    const diffResult = await tools.executeCommand({
       command: 'git',
       args: ['--no-pager', 'diff', `${defaultBranch}..HEAD`],
     })
@@ -64,7 +64,7 @@ export const prWorkflow: WorkflowFn<{ context?: string }, { title: string; descr
 
   const prDetails = agentResult.object as z.infer<typeof prDetailsSchema>
 
-  const result = await toolHandler.createPullRequest(prDetails)
+  const result = await tools.createPullRequest(prDetails)
 
   return result
 }

@@ -23,7 +23,7 @@ type InitWorkflowOutput = {
 }
 
 export const initWorkflow: WorkflowFn<InitWorkflowInput, InitWorkflowOutput, CliToolRegistry> = async (input, context) => {
-  const { step, logger, toolHandler } = context
+  const { step, logger, tools } = context
   const { global, configPath, existingConfig } = await step('setup', async () => {
     const globalConfigPath = getGlobalConfigPath()
     let global = input.global ?? false
@@ -32,7 +32,7 @@ export const initWorkflow: WorkflowFn<InitWorkflowInput, InitWorkflowOutput, Cli
     const exists = existsSync(configPath)
 
     if (exists) {
-      const proceed = await toolHandler.confirm({
+      const proceed = await tools.confirm({
         message: `Found existing config at ${configPath}. Do you want to proceed? This will overwrite the existing config.`,
         default: false,
       })
@@ -40,7 +40,7 @@ export const initWorkflow: WorkflowFn<InitWorkflowInput, InitWorkflowOutput, Cli
         throw new UserCancelledError('User cancelled')
       }
     } else if (!input.global) {
-      const isGlobal = await toolHandler.select({
+      const isGlobal = await tools.select({
         message: 'No config file found. Do you want to create one?',
         choices: [
           { name: `Create a global config at ${globalConfigPath}`, value: 'global' },
@@ -87,7 +87,7 @@ export const initWorkflow: WorkflowFn<InitWorkflowInput, InitWorkflowOutput, Cli
 
   await step('handle-api-key', async () => {
     if (providerConfig?.apiKey && !global) {
-      const option = await toolHandler.select({
+      const option = await tools.select({
         message: 'It is not recommended to store API keys in the local config file. How would you like to proceed?',
         choices: [
           { name: 'Save API key in the local config file', value: 'local' },
@@ -103,7 +103,7 @@ export const initWorkflow: WorkflowFn<InitWorkflowInput, InitWorkflowOutput, Cli
           const globalConfigPath = getGlobalConfigPath()
           const globalConfig = loadConfigAtPath(globalConfigPath) ?? {}
           set(globalConfig, ['providers', provider, 'apiKey'], providerConfig.apiKey)
-          await toolHandler.writeToFile({ path: globalConfigPath, content: stringify(globalConfig) })
+          await tools.writeToFile({ path: globalConfigPath, content: stringify(globalConfig) })
           logger.info(`API key saved to global config file: ${globalConfigPath}`)
           if (providerConfig) {
             providerConfig.apiKey = undefined
@@ -119,7 +119,7 @@ export const initWorkflow: WorkflowFn<InitWorkflowInput, InitWorkflowOutput, Cli
           } else {
             envFileContent = `${provider.toUpperCase()}_API_KEY=${providerConfig.apiKey}`
           }
-          await toolHandler.writeToFile({ path: '.env', content: envFileContent })
+          await tools.writeToFile({ path: '.env', content: envFileContent })
           logger.info('API key saved to .env file')
           if (providerConfig) {
             providerConfig.apiKey = undefined
@@ -133,7 +133,7 @@ export const initWorkflow: WorkflowFn<InitWorkflowInput, InitWorkflowOutput, Cli
   const { shouldAnalyze } = await step('confirm-analyze', async () => {
     let shouldAnalyze = false
     if (!global) {
-      shouldAnalyze = await toolHandler.confirm({
+      shouldAnalyze = await tools.confirm({
         message: 'Would you like to analyze the project to generate recommended configuration?',
         default: false,
       })
@@ -145,7 +145,7 @@ export const initWorkflow: WorkflowFn<InitWorkflowInput, InitWorkflowOutput, Cli
   if (shouldAnalyze) {
     generatedConfig = await step('analyze-project', async () => {
       logger.info('Analyzing project files...')
-      const { output: response } = await toolHandler.invokeAgent({
+      const { output: response } = await tools.invokeAgent({
         agent: 'analyzer',
         messages: [INIT_WORKFLOW_ANALYZE_PROMPT],
         outputSchema: z.object({ yaml: z.string() }),
@@ -169,7 +169,7 @@ export const initWorkflow: WorkflowFn<InitWorkflowInput, InitWorkflowOutput, Cli
       }
     }
 
-    await toolHandler.writeToFile({ path: configPath, content: stringify(finalConfig) })
+    await tools.writeToFile({ path: configPath, content: stringify(finalConfig) })
     logger.info(`Configuration saved to ${configPath}`)
   })
 

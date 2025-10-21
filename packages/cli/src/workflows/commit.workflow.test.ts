@@ -7,7 +7,7 @@ import type { CliToolRegistry } from '../workflow-tools'
 import { commitWorkflow } from './commit.workflow'
 
 const createMockContext = () => {
-  const toolHandler = {
+  const tools = {
     printChangeFile: mock<any>(),
     executeCommand: mock<any>(),
     confirm: mock<any>(),
@@ -31,12 +31,12 @@ const createMockContext = () => {
   }
 
   const context = {
-    toolHandler,
+    tools,
     step,
     logger,
   } as unknown as WorkflowContext<CliToolRegistry>
 
-  return { context, toolHandler, step, logger }
+  return { context, tools, step, logger }
 }
 
 describe('commitWorkflow', () => {
@@ -45,18 +45,18 @@ describe('commitWorkflow', () => {
   })
 
   test('should generate commit message with staged files', async () => {
-    const { context, toolHandler, logger } = createMockContext()
+    const { context, tools, logger } = createMockContext()
 
-    toolHandler.printChangeFile.mockResolvedValue({
+    tools.printChangeFile.mockResolvedValue({
       stagedFiles: [{ path: 'src/file.ts', status: 'M' }],
       unstagedFiles: [],
     })
-    toolHandler.executeCommand.mockResolvedValueOnce({ exitCode: 0, stdout: 'M\tsrc/file.ts' }).mockResolvedValueOnce({
+    tools.executeCommand.mockResolvedValueOnce({ exitCode: 0, stdout: 'M\tsrc/file.ts' }).mockResolvedValueOnce({
       exitCode: 0,
       stdout: '--- a/src/file.ts\n+++ b/src/file.ts\n@@ -1,3 +1,4 @@\n+export const newFunc = () => {}\n',
     })
-    toolHandler.createCommit.mockResolvedValue({})
-    toolHandler.generateText.mockResolvedValue([
+    tools.createCommit.mockResolvedValue({})
+    tools.generateText.mockResolvedValue([
       {
         role: 'assistant',
         content: JSON.stringify({ commitMessage: 'feat: add newFunc' }),
@@ -65,31 +65,31 @@ describe('commitWorkflow', () => {
 
     await commitWorkflow({}, context)
 
-    expect(toolHandler.printChangeFile).toHaveBeenCalled()
-    expect(toolHandler.executeCommand).toHaveBeenCalledWith({
+    expect(tools.printChangeFile).toHaveBeenCalled()
+    expect(tools.executeCommand).toHaveBeenCalledWith({
       command: 'git',
       args: ['diff', '--name-status', '--no-color', '--staged'],
     })
-    expect(toolHandler.executeCommand).toHaveBeenCalledWith({
+    expect(tools.executeCommand).toHaveBeenCalledWith({
       command: 'git',
       args: ['diff', '--staged'],
     })
-    expect(toolHandler.generateText).toHaveBeenCalled()
+    expect(tools.generateText).toHaveBeenCalled()
     expect(logger.info).toHaveBeenCalledWith('\nCommit message:\nfeat: add newFunc')
-    expect(toolHandler.createCommit).toHaveBeenCalledWith({
+    expect(tools.createCommit).toHaveBeenCalledWith({
       message: 'feat: add newFunc',
     })
   })
 
   test('should auto-stage all files when all=true', async () => {
-    const { context, toolHandler } = createMockContext()
+    const { context, tools } = createMockContext()
 
-    toolHandler.printChangeFile.mockResolvedValue({
+    tools.printChangeFile.mockResolvedValue({
       stagedFiles: [],
       unstagedFiles: [{ path: 'src/file.ts', status: 'M' }],
     })
-    toolHandler.executeCommand.mockResolvedValue({ exitCode: 0, stdout: 'M\tsrc/file.ts' })
-    toolHandler.generateText.mockResolvedValue([
+    tools.executeCommand.mockResolvedValue({ exitCode: 0, stdout: 'M\tsrc/file.ts' })
+    tools.generateText.mockResolvedValue([
       {
         role: 'assistant',
         content: JSON.stringify({ commitMessage: 'feat: stage file' }),
@@ -98,26 +98,26 @@ describe('commitWorkflow', () => {
 
     await commitWorkflow({ all: true }, context)
 
-    expect(toolHandler.executeCommand).toHaveBeenCalledWith({
+    expect(tools.executeCommand).toHaveBeenCalledWith({
       command: 'git',
       args: ['add', '.'],
     })
-    expect(toolHandler.generateText).toHaveBeenCalled()
-    expect(toolHandler.createCommit).toHaveBeenCalledWith({
+    expect(tools.generateText).toHaveBeenCalled()
+    expect(tools.createCommit).toHaveBeenCalledWith({
       message: 'feat: stage file',
     })
   })
 
   test('should prompt user and stage when confirmed', async () => {
-    const { context, toolHandler } = createMockContext()
+    const { context, tools } = createMockContext()
 
-    toolHandler.printChangeFile.mockResolvedValue({
+    tools.printChangeFile.mockResolvedValue({
       stagedFiles: [],
       unstagedFiles: [{ path: 'src/file.ts', status: 'M' }],
     })
-    toolHandler.confirm.mockResolvedValue(true)
-    toolHandler.executeCommand.mockResolvedValue({ exitCode: 0, stdout: 'M\tsrc/file.ts' })
-    toolHandler.generateText.mockResolvedValue([
+    tools.confirm.mockResolvedValue(true)
+    tools.executeCommand.mockResolvedValue({ exitCode: 0, stdout: 'M\tsrc/file.ts' })
+    tools.generateText.mockResolvedValue([
       {
         role: 'assistant',
         content: JSON.stringify({ commitMessage: 'feat: stage file' }),
@@ -126,36 +126,36 @@ describe('commitWorkflow', () => {
 
     await commitWorkflow({}, context)
 
-    expect(toolHandler.confirm).toHaveBeenCalledWith({
+    expect(tools.confirm).toHaveBeenCalledWith({
       message: 'No staged files found. Stage all files?',
       default: false,
     })
-    expect(toolHandler.executeCommand).toHaveBeenCalledWith({
+    expect(tools.executeCommand).toHaveBeenCalledWith({
       command: 'git',
       args: ['add', '.'],
     })
-    expect(toolHandler.generateText).toHaveBeenCalled()
-    expect(toolHandler.createCommit).toHaveBeenCalledWith({
+    expect(tools.generateText).toHaveBeenCalled()
+    expect(tools.createCommit).toHaveBeenCalledWith({
       message: 'feat: stage file',
     })
   })
 
   test('should throw UserCancelledError when user declines staging', async () => {
-    const { context, toolHandler } = createMockContext()
+    const { context, tools } = createMockContext()
 
-    toolHandler.printChangeFile.mockResolvedValue({
+    tools.printChangeFile.mockResolvedValue({
       stagedFiles: [],
       unstagedFiles: [{ path: 'src/file.ts', status: 'M' }],
     })
-    toolHandler.confirm.mockResolvedValue(false)
+    tools.confirm.mockResolvedValue(false)
 
     await expect(commitWorkflow({}, context)).rejects.toThrow(UserCancelledError)
   })
 
   test('should throw error when no files to commit', async () => {
-    const { context, toolHandler } = createMockContext()
+    const { context, tools } = createMockContext()
 
-    toolHandler.printChangeFile.mockResolvedValue({ stagedFiles: [], unstagedFiles: [] })
+    tools.printChangeFile.mockResolvedValue({ stagedFiles: [], unstagedFiles: [] })
 
     await expect(commitWorkflow({}, context)).rejects.toThrow('No files to commit. Aborting.')
   })

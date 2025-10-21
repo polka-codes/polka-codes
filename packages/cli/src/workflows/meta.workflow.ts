@@ -18,11 +18,11 @@ const DecisionSchema = z.object({
 
 export const metaWorkflow: WorkflowFn<MetaWorkflowInput, void, CliToolRegistry> = async (input, context) => {
   const { task } = input
-  const { toolHandler, logger } = context
+  const { tools, logger } = context
 
   logger.info(`\n🤔 Deciding which workflow to use for task...\n`)
 
-  const { output: decision } = await toolHandler.invokeAgent({
+  const { output: decision } = await tools.invokeAgent({
     agent: 'architect',
     messages: [getMetaPrompt(task)],
     outputSchema: DecisionSchema,

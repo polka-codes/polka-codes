@@ -28,7 +28,7 @@ export type CreatePlanInput = {
 }
 
 async function createPlan(input: CreatePlanInput, context: WorkflowContext<CliToolRegistry>): Promise<CreatePlanOutput> {
-  const { toolHandler, step } = context
+  const { tools, step } = context
   const { task, files, plan: inputPlan, userFeedback } = input
 
   const currentTask = userFeedback ? `${task}\n\nUser feedback: ${userFeedback}` : task
@@ -81,7 +81,7 @@ async function createPlan(input: CreatePlanInput, context: WorkflowContext<CliTo
     const outputFiles: { path: string; content: string }[] = []
     if (filePaths) {
       for (const path of filePaths) {
-        const content = await toolHandler.readFile({ path })
+        const content = await tools.readFile({ path })
         if (content) {
           outputFiles.push({ path, content })
         }
@@ -109,10 +109,7 @@ export type PlanWorkflowOutput = {
 
 type State = 'Generating' | 'Reviewing' | 'Done'
 
-export const planWorkflow: WorkflowFn<PlanWorkflowInput, PlanWorkflowOutput, CliToolRegistry> = async (
-  input,
-  { toolHandler, logger, step },
-) => {
+export const planWorkflow: WorkflowFn<PlanWorkflowInput, PlanWorkflowOutput, CliToolRegistry> = async (input, { tools, logger, step }) => {
   const { fileContent, filePath, mode = 'interactive' } = input
   let currentTask = input.task
   let plan = fileContent || ''
@@ -127,7 +124,7 @@ export const planWorkflow: WorkflowFn<PlanWorkflowInput, PlanWorkflowOutput, Cli
           const message = plan ? 'How would you like to improve the plan?' : 'What is the task you want to plan?'
           const defaultTask = plan ? 'Review and improve the plan' : undefined
           try {
-            currentTask = await toolHandler.input({
+            currentTask = await tools.input({
               message,
               default: defaultTask,
             })
@@ -144,7 +141,7 @@ export const planWorkflow: WorkflowFn<PlanWorkflowInput, PlanWorkflowOutput, Cli
             userFeedback,
             files: input.files,
           },
-          { toolHandler, logger, step },
+          { tools, logger, step },
         )
 
         if (planResult.reason) {
@@ -155,7 +152,7 @@ export const planWorkflow: WorkflowFn<PlanWorkflowInput, PlanWorkflowOutput, Cli
 
         if (planResult.question) {
           try {
-            userFeedback = await toolHandler.input({ message: planResult.question })
+            userFeedback = await tools.input({ message: planResult.question })
             plan = planResult.plan || plan // preserve plan if agent returned one with question
             state = 'Generating'
           } catch (_error) {
@@ -182,7 +179,7 @@ export const planWorkflow: WorkflowFn<PlanWorkflowInput, PlanWorkflowOutput, Cli
         }
 
         if (mode === 'confirm') {
-          const approved = await toolHandler.confirm({
+          const approved = await tools.confirm({
             message: 'Do you approve this plan and want to proceed with implementation?',
             default: false,
           })
@@ -192,7 +189,7 @@ export const planWorkflow: WorkflowFn<PlanWorkflowInput, PlanWorkflowOutput, Cli
           }
 
           try {
-            userFeedback = await toolHandler.input({
+            userFeedback = await tools.input({
               message: 'What changes would you like to make to the plan?',
             })
             state = 'Generating'
@@ -210,7 +207,7 @@ export const planWorkflow: WorkflowFn<PlanWorkflowInput, PlanWorkflowOutput, Cli
           { name: 'Exit', value: 'exit' },
         ]
 
-        const choice = await toolHandler.select({
+        const choice = await tools.select({
           message: 'What do you want to do?',
           choices,
         })
@@ -221,11 +218,11 @@ export const planWorkflow: WorkflowFn<PlanWorkflowInput, PlanWorkflowOutput, Cli
             const defaultPath = `.plans/plan-${new Date().toISOString().replace(/:/g, '-')}.md`
             const savePath =
               filePath ||
-              (await toolHandler.input({
+              (await tools.input({
                 message: 'Where do you want to save the plan?',
                 default: defaultPath,
               }))
-            await toolHandler.writeToFile({ path: savePath, content: plan })
+            await tools.writeToFile({ path: savePath, content: plan })
             logger.info(`Plan saved to ${savePath}`)
             state = 'Done'
             break
@@ -233,7 +230,7 @@ export const planWorkflow: WorkflowFn<PlanWorkflowInput, PlanWorkflowOutput, Cli
           case 'feedback': {
             // Provide Feedback
             try {
-              userFeedback = await toolHandler.input({
+              userFeedback = await tools.input({
                 message: 'What changes do you want to make?',
               })
               state = 'Generating'

@@ -17,7 +17,7 @@ export type ReviewWorkflowInput = {
 }
 
 export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput, ReviewResult, CliToolRegistry> = async (input, context) => {
-  const { step, toolHandler, logger } = context
+  const { step, tools, logger } = context
   const { pr } = input
   let changeInfo: ReviewToolInput | undefined
 
@@ -28,13 +28,13 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput, ReviewResult, CliTo
     }
     const prNumber = prNumberMatch[0]
 
-    const ghCheckResult = await toolHandler.executeCommand({ command: 'gh', args: ['--version'] })
+    const ghCheckResult = await tools.executeCommand({ command: 'gh', args: ['--version'] })
     if (ghCheckResult.exitCode !== 0) {
       throw new Error('Error: GitHub CLI (gh) is not installed. Please install it from https://cli.github.com/')
     }
 
     await step(`Checking out PR #${prNumber}...`, async () => {
-      const checkoutResult = await toolHandler.executeCommand({
+      const checkoutResult = await tools.executeCommand({
         command: 'gh',
         args: ['pr', 'checkout', prNumber],
       })
@@ -45,7 +45,7 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput, ReviewResult, CliTo
     })
 
     const prDetails = await step('Fetching pull request details...', async () => {
-      const result = await toolHandler.executeCommand({
+      const result = await tools.executeCommand({
         command: 'gh',
         args: ['pr', 'view', prNumber, '--json', 'title,body,commits,baseRefName,baseRefOid'],
       })
@@ -53,7 +53,7 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput, ReviewResult, CliTo
     })
     const commitMessages = prDetails.commits.map((c: any) => c.messageBody).join('\n---\n')
     const changedFiles: FileChange[] = await step('Getting file changes...', async () => {
-      const diffResult = await toolHandler.executeCommand({
+      const diffResult = await tools.executeCommand({
         command: 'git',
         args: ['--no-pager', 'diff', '--name-status', '--no-color', `${prDetails.baseRefOid}...HEAD`],
       })
@@ -74,7 +74,7 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput, ReviewResult, CliTo
       changedFiles,
     }
   } else {
-    const statusResult = await toolHandler.executeCommand({ command: 'git', args: ['status', '--porcelain=v1'] })
+    const statusResult = await tools.executeCommand({ command: 'git', args: ['status', '--porcelain=v1'] })
     const gitStatus = statusResult.stdout
     const statusLines = gitStatus.split('\n').filter((line: string) => line)
     const hasLocalChanges = statusLines.length > 0
@@ -92,20 +92,20 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput, ReviewResult, CliTo
     } else {
       await step('No local changes detected. Falling back to branch diff...', async () => {})
 
-      const ghCheckResult = await toolHandler.executeCommand({ command: 'gh', args: ['--version'] })
+      const ghCheckResult = await tools.executeCommand({ command: 'gh', args: ['--version'] })
       if (ghCheckResult.exitCode !== 0) {
         throw new Error(
           'Error: GitHub CLI (gh) is not installed, and there are no local changes to review. Please install it from https://cli.github.com/ to review branch changes.',
         )
       }
 
-      const defaultBranchResult = await toolHandler.executeCommand({
+      const defaultBranchResult = await tools.executeCommand({
         command: 'gh',
         args: ['repo', 'view', '--json', 'defaultBranchRef', '--jq', '.defaultBranchRef.name'],
       })
       const defaultBranch = defaultBranchResult.stdout.trim()
 
-      const currentBranchResult = await toolHandler.executeCommand({ command: 'git', args: ['rev-parse', '--abbrev-ref', 'HEAD'] })
+      const currentBranchResult = await tools.executeCommand({ command: 'git', args: ['rev-parse', '--abbrev-ref', 'HEAD'] })
       const currentBranch = currentBranchResult.stdout.trim()
 
       if (currentBranch === defaultBranch) {
@@ -118,7 +118,7 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput, ReviewResult, CliTo
       }
 
       const branchChangedFiles = await step('Getting file changes...', async () => {
-        const diffResult = await toolHandler.executeCommand({
+        const diffResult = await tools.executeCommand({
           command: 'git',
           args: ['--no-pager', 'diff', '--name-status', '--no-color', `${defaultBranch}...${currentBranch}`],
         })

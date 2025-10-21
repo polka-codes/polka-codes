@@ -4,7 +4,14 @@ import os from 'node:os'
 import { getProvider, printEvent } from '@polka-codes/cli-shared'
 import type { AgentNameType } from '@polka-codes/core'
 import { EnableCachePolicy, UsageMeter } from '@polka-codes/core'
-import { type Logger, makeStepFn, type ToolHandler, type ToolRegistry, type WorkflowContext, type WorkflowFn } from '@polka-codes/workflow'
+import {
+  type Logger,
+  makeStepFn,
+  type ToolRegistry,
+  type WorkflowContext,
+  type WorkflowFn,
+  type WorkflowTools,
+} from '@polka-codes/workflow'
 import type { Command } from 'commander'
 import { merge } from 'lodash-es'
 import ora, { type Ora } from 'ora'
@@ -85,7 +92,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
     usageMeter: usage,
   }
 
-  const toolHandler = new Proxy({} as ToolHandler<TTools>, {
+  const tools = new Proxy({} as WorkflowTools<TTools>, {
     get: (_target, tool: string) => {
       return async (input: any) => {
         spinner.text = `Running tool: ${String(tool)}`
@@ -115,7 +122,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
   const context: WorkflowContext<TTools> = {
     step: makeStepFnWithSpinner(spinner),
     logger,
-    toolHandler,
+    tools,
   }
 
   try {

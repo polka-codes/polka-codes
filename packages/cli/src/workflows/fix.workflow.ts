@@ -17,7 +17,7 @@ const FixIterationSummarySchema = z.object({
 })
 
 export const fixWorkflow: WorkflowFn<FixWorkflowInput, { summaries: string[] }, CliToolRegistry> = async (input, context) => {
-  const { toolHandler, logger } = context
+  const { tools, logger } = context
   const { command: inputCommand, task, interactive = true } = input
   let command = inputCommand
   const summaries: string[] = []
@@ -51,7 +51,7 @@ export const fixWorkflow: WorkflowFn<FixWorkflowInput, { summaries: string[] }, 
     }
 
     if (interactive) {
-      command = await toolHandler.input({
+      command = await tools.input({
         message: 'Please enter the command to run to identify issues:',
         default: defaultCommand,
       })
@@ -72,7 +72,7 @@ export const fixWorkflow: WorkflowFn<FixWorkflowInput, { summaries: string[] }, 
 
   for (let i = 0; i < 10; i++) {
     logger.info(`Running command (attempt ${i + 1}/10): ${command}`)
-    const { exitCode, stdout, stderr } = await toolHandler.executeCommand({
+    const { exitCode, stdout, stderr } = await tools.executeCommand({
       command,
       shell: true,
       pipe: true,
