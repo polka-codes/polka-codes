@@ -3,7 +3,7 @@ import type { ToolHandler, WorkflowFn } from '@polka-codes/workflow'
 import { z } from 'zod'
 import type { CliToolRegistry } from '../workflow-tools'
 import type { JsonFilePart, JsonImagePart } from './code.workflow'
-import { getImplementPrompt, PLAN_PROMPT } from './prompts'
+import { PLAN_PROMPT } from './prompts'
 
 const PlanSchema = z.object({
   plan: z.string().nullish(),
@@ -178,7 +178,6 @@ export const planWorkflow: WorkflowFn<PlanWorkflowInput, PlanWorkflowOutput, Cli
 
         const choices = [
           { name: 'Save Plan', value: 'save' },
-          { name: 'Execute Plan', value: 'execute' },
           { name: 'Provide Feedback', value: 'feedback' },
           { name: 'Regenerate Plan', value: 'regenerate' },
           { name: 'Exit', value: 'exit' },
@@ -201,16 +200,6 @@ export const planWorkflow: WorkflowFn<PlanWorkflowInput, PlanWorkflowOutput, Cli
               }))
             await toolHandler.writeToFile({ path: savePath, content: plan })
             logger.info(`Plan saved to ${savePath}`)
-            state = 'Done'
-            break
-          }
-          case 'execute': {
-            // Execute Plan
-            await toolHandler.invokeAgent({
-              agent: 'coder',
-              messages: [getImplementPrompt(plan), ...(files?.map((f) => `<file path="${f.path}">${f.content}</file>`) || [])],
-              defaultContext: true,
-            })
             state = 'Done'
             break
           }
@@ -239,6 +228,8 @@ export const planWorkflow: WorkflowFn<PlanWorkflowInput, PlanWorkflowOutput, Cli
             state = 'Done'
             break
           }
+          default:
+            throw new Error(`Invalid mode: ${mode}`)
         }
         break
       }

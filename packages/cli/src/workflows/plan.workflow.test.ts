@@ -154,26 +154,4 @@ describe('planWorkflow', () => {
     expect((secondCall.messages[0] as any).content).toContain(`Question: ${question}\nAnswer: ${answer}`)
     expect(mockContext.logger.info).toHaveBeenCalledWith(finalPlan)
   })
-
-  it('Interactive Mode - Execute Plan', async () => {
-    const mockContext = createMockContext()
-    const task = 'Implement a feature'
-    const plan = '1. Do this. 2. Do that.'
-
-    vi.spyOn(mockContext.toolHandler, 'input').mockResolvedValue(task)
-    const invokeAgentSpy = vi
-      .spyOn(mockContext.toolHandler, 'invokeAgent')
-      .mockResolvedValueOnce({ output: { plan }, messages: [] }) // For createPlan
-      .mockResolvedValueOnce({ output: {}, messages: [] }) // For execute
-
-    vi.spyOn(mockContext.toolHandler, 'select').mockResolvedValue('execute')
-
-    await planWorkflow({ task }, mockContext)
-
-    expect(mockContext.toolHandler.select).toHaveBeenCalled()
-    expect(invokeAgentSpy).toHaveBeenCalledTimes(2)
-    const executeCall = invokeAgentSpy.mock.calls[1][0]
-    expect(executeCall.agent).toBe('coder')
-    expect(executeCall.messages[0]).toContain(plan)
-  })
 })
