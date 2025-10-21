@@ -6,7 +6,7 @@ import { jsonSchema, type ToolCallPart, type ToolSet } from 'ai'
 import { camelCase } from 'lodash-es'
 import { toJSONSchema, z } from 'zod'
 import type { JsonModelMessage, JsonResponseMessage, JsonUserModelMessage } from './json-ai-types'
-import type { Workflow } from './workflow'
+import type { WorkflowFn } from './workflow'
 
 export type AgentWorkflowInput = {
   tools: Readonly<FullToolInfoV2[]>
@@ -37,181 +37,183 @@ export type AgentToolRegistry = {
   }
 }
 
-export const agentWorkflow: Workflow<AgentWorkflowInput, ExitReason, AgentToolRegistry> = {
-  name: 'agent',
-  description: 'An angentic workflow that can use tools to complete tasks.',
-  async *fn(input, { step, tools }) {
-    const event = async function* (name: string, event: TaskEvent) {
-      yield* step(name, async function* () {
-        yield* tools.taskEvent(event)
-      })
+export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentToolRegistry> = async (input, { step, toolHandler }) => {
+  const event = async (name: string, event: TaskEvent) => {
+    await step(name, async () => {
+      await toolHandler.taskEvent(event)
+    })
+  }
+
+  const { tools: toolInfo, maxToolRoundTrips = 200 } = input
+
+  const messages: JsonModelMessage[] = 'systemPrompt' in input ? [{ role: 'system', content: input.systemPrompt }] : input.messages
+
+  await event('start-task', { kind: TaskEventKind.StartTask, systemPrompt: 'systemPrompt' in input ? input.systemPrompt : '' })
+
+  const toolSet: ToolSet = {}
+  for (const tool of toolInfo) {
+    const toolName = camelCase(tool.name)
+    toolSet[toolName] = {
+      description: tool.description,
+      inputSchema: jsonSchema(toJSONSchema(tool.parameters)),
     }
+  }
 
-    const { tools: toolInfo, maxToolRoundTrips = 200 } = input
+  let nextMessage: JsonModelMessage[] = input.userMessage
 
-    const messages: JsonModelMessage[] = 'systemPrompt' in input ? [{ role: 'system', content: input.systemPrompt }] : input.messages
+  for (let i = 0; i < maxToolRoundTrips; i++) {
+    messages.push(...nextMessage)
 
-    yield* event('start-task', { kind: TaskEventKind.StartTask, systemPrompt: 'systemPrompt' in input ? input.systemPrompt : '' })
+    await event(`start-round-${i}`, { kind: TaskEventKind.StartRequest, userMessage: nextMessage as any }) // TODO: the type is not exactly matching but that's ok
+    const assistantMessage = await step(`agent-round-${i}`, async () => {
+      return await toolHandler.generateText({
+        messages,
+        tools: toolSet,
+      })
+    })
 
-    const toolSet: ToolSet = {}
-    for (const tool of toolInfo) {
-      const toolName = camelCase(tool.name)
-      toolSet[toolName] = {
-        description: tool.description,
-        inputSchema: jsonSchema(toJSONSchema(tool.parameters)),
+    messages.push(...assistantMessage)
+
+    const toolCalls: ToolCallPart[] = []
+    for (const msg of assistantMessage) {
+      if (typeof msg.content === 'string') {
+        continue
       }
-    }
-
-    let nextMessage: JsonModelMessage[] = input.userMessage
-
-    for (let i = 0; i < maxToolRoundTrips; i++) {
-      messages.push(...nextMessage)
-
-      yield* event(`start-round-${i}`, { kind: TaskEventKind.StartRequest, userMessage: nextMessage as any }) // TODO: the type is not exactly matching but that's ok
-      const assistantMessage = yield* step(`agent-round-${i}`, async function* () {
-        return yield* tools.generateText({
-          messages,
-          tools: toolSet,
-        })
-      })
-
-      messages.push(...assistantMessage)
-
-      const toolCalls: ToolCallPart[] = []
-      for (const msg of assistantMessage) {
-        if (typeof msg.content === 'string') {
-          continue
-        }
+      if (msg.content) {
         for (const part of msg.content) {
           if (part.type === 'tool-call') {
-            toolCalls.push(part)
+            toolCalls.push(part as ToolCallPart)
           }
         }
       }
+    }
 
-      const textContent = assistantMessage
-        .flatMap((m) => {
-          if (typeof m.content === 'string') {
-            return [m.content]
-          }
+    const textContent = assistantMessage
+      .flatMap((m) => {
+        if (typeof m.content === 'string') {
+          return [m.content]
+        }
+
+        if (m.role === 'assistant' && Array.isArray(m.content)) {
           return m.content.map((part) => {
             if (part.type === 'text') {
               return part.text
             }
             return ''
           })
-        })
-        .join('\n')
-
-      yield* event(`end-round-${i}`, { kind: TaskEventKind.EndRequest, message: textContent })
-
-      if (toolCalls.length === 0) {
-        if (!input.outputSchema) {
-          return { type: ToolResponseType.Exit, message: textContent }
         }
+        return []
+      })
+      .join('\n')
 
-        const parsed = parseJsonFromMarkdown(textContent)
-        if (!parsed.success) {
-          const errorMessage = `Failed to parse JSON from markdown. Error: ${parsed.error}. Please correct the output. It MUST be in valid JSON format.`
-          nextMessage = [{ role: 'user', content: errorMessage }]
-          continue
-        }
+    await event(`end-round-${i}`, { kind: TaskEventKind.EndRequest, message: textContent })
 
-        const validated = input.outputSchema.safeParse(parsed.data)
-        if (!validated.success) {
-          const errorMessage = `Output validation failed. Error: ${z.prettifyError(validated.error)}. Please correct the output.`
-          nextMessage = [{ role: 'user', content: errorMessage }]
-          continue
-        }
-        return { type: ToolResponseType.Exit, message: textContent, object: validated.data }
+    if (toolCalls.length === 0) {
+      if (!input.outputSchema) {
+        return { type: ToolResponseType.Exit, message: textContent }
       }
 
-      const toolResults: { toolCallId: string; toolName: string; output: any }[] = []
-      for (const toolCall of toolCalls) {
-        yield* event(`event-tool-use-${toolCall.toolName}-${toolCall.toolCallId}`, {
-          kind: TaskEventKind.ToolUse,
-          tool: toolCall.toolName,
-          params: toolCall.input as any,
-        })
-        const toolResponse: ToolResponse = yield* step(`invoke-tool-${toolCall.toolName}-${toolCall.toolCallId}`, async function* () {
-          return yield* tools.invokeTool({
-            toolName: toolCall.toolName,
-            input: toolCall.input,
-          })
-        })
-
-        switch (toolResponse.type) {
-          case ToolResponseType.Reply:
-            yield* event(`event-tool-reply-${toolCall.toolName}-${toolCall.toolCallId}`, {
-              kind: TaskEventKind.ToolReply,
-              tool: toolCall.toolName,
-              content: toolResponse.message,
-            })
-            toolResults.push({
-              toolCallId: toolCall.toolCallId,
-              toolName: toolCall.toolName,
-              output: toolResponse.message,
-            })
-            break
-          case ToolResponseType.Error:
-            yield* event(`event-tool-error-${toolCall.toolName}-${toolCall.toolCallId}`, {
-              kind: TaskEventKind.ToolError,
-              tool: toolCall.toolName,
-              error: toolResponse.message,
-            })
-            toolResults.push({
-              toolCallId: toolCall.toolCallId,
-              toolName: toolCall.toolName,
-              output: toolResponse.message,
-            })
-            break
-          case ToolResponseType.Invalid:
-            yield* event(`event-tool-invalid-${toolCall.toolName}-${toolCall.toolCallId}`, {
-              kind: TaskEventKind.ToolInvalid,
-              tool: toolCall.toolName,
-              content: toolResponse.message,
-            })
-            toolResults.push({
-              toolCallId: toolCall.toolCallId,
-              toolName: toolCall.toolName,
-              output: toolResponse.message,
-            })
-            break
-          case ToolResponseType.Exit:
-          case ToolResponseType.HandOver:
-          case ToolResponseType.Delegate:
-            if (toolCalls.length > 1) {
-              toolResults.push({
-                toolCallId: toolCall.toolCallId,
-                toolName: toolCall.toolName,
-                output: {
-                  type: 'error-text',
-                  value: `Error: The tool '${toolCall.toolName}' must be called alone, but it was called with other tools.`,
-                },
-              })
-              break
-            }
-            if (toolResults.length > 0) {
-              // Another tool already ran.
-              break
-            }
-            // Otherwise, it's a clean exit.
-            yield* event('end-task', { kind: TaskEventKind.EndTask, exitReason: toolResponse })
-            return toolResponse
-        }
+      const parsed = parseJsonFromMarkdown(textContent)
+      if (!parsed.success) {
+        const errorMessage = `Failed to parse JSON from markdown. Error: ${parsed.error}. Please correct the output. It MUST be in valid JSON format.`
+        nextMessage = [{ role: 'user', content: errorMessage }]
+        continue
       }
 
-      nextMessage = [
-        {
-          role: 'tool',
-          content: toolResults.map((r) => ({
-            type: 'tool-result',
-            ...r,
-          })),
-        },
-      ]
+      const validated = input.outputSchema.safeParse(parsed.data)
+      if (!validated.success) {
+        const errorMessage = `Output validation failed. Error: ${z.prettifyError(validated.error)}. Please correct the output.`
+        nextMessage = [{ role: 'user', content: errorMessage }]
+        continue
+      }
+      return { type: ToolResponseType.Exit, message: textContent, object: validated.data }
     }
 
-    throw new Error('Maximum number of tool round trips reached.')
-  },
+    const toolResults: { toolCallId: string; toolName: string; output: any }[] = []
+    for (const toolCall of toolCalls) {
+      await event(`event-tool-use-${toolCall.toolName}-${toolCall.toolCallId}`, {
+        kind: TaskEventKind.ToolUse,
+        tool: toolCall.toolName,
+        params: toolCall.input as any,
+      })
+      const toolResponse: ToolResponse = await step(`invoke-tool-${toolCall.toolName}-${toolCall.toolCallId}`, async () => {
+        return await toolHandler.invokeTool({
+          toolName: toolCall.toolName,
+          input: toolCall.input,
+        })
+      })
+
+      switch (toolResponse.type) {
+        case ToolResponseType.Reply:
+          await event(`event-tool-reply-${toolCall.toolName}-${toolCall.toolCallId}`, {
+            kind: TaskEventKind.ToolReply,
+            tool: toolCall.toolName,
+            content: toolResponse.message,
+          })
+          toolResults.push({
+            toolCallId: toolCall.toolCallId,
+            toolName: toolCall.toolName,
+            output: toolResponse.message,
+          })
+          break
+        case ToolResponseType.Error:
+          await event(`event-tool-error-${toolCall.toolName}-${toolCall.toolCallId}`, {
+            kind: TaskEventKind.ToolError,
+            tool: toolCall.toolName,
+            error: toolResponse.message,
+          })
+          toolResults.push({
+            toolCallId: toolCall.toolCallId,
+            toolName: toolCall.toolName,
+            output: toolResponse.message,
+          })
+          break
+        case ToolResponseType.Invalid:
+          await event(`event-tool-invalid-${toolCall.toolName}-${toolCall.toolCallId}`, {
+            kind: TaskEventKind.ToolInvalid,
+            tool: toolCall.toolName,
+            content: toolResponse.message,
+          })
+          toolResults.push({
+            toolCallId: toolCall.toolCallId,
+            toolName: toolCall.toolName,
+            output: toolResponse.message,
+          })
+          break
+        case ToolResponseType.Exit:
+        case ToolResponseType.HandOver:
+        case ToolResponseType.Delegate:
+          if (toolCalls.length > 1) {
+            toolResults.push({
+              toolCallId: toolCall.toolCallId,
+              toolName: toolCall.toolName,
+              output: {
+                type: 'error-text',
+                value: `Error: The tool '${toolCall.toolName}' must be called alone, but it was called with other tools.`,
+              },
+            })
+            break
+          }
+          if (toolResults.length > 0) {
+            // Another tool already ran.
+            break
+          }
+          // Otherwise, it's a clean exit.
+          await event('end-task', { kind: TaskEventKind.EndTask, exitReason: toolResponse })
+          return toolResponse
+      }
+    }
+
+    nextMessage = [
+      {
+        role: 'tool',
+        content: toolResults.map((r) => ({
+          type: 'tool-result',
+          ...r,
+        })),
+      },
+    ]
+  }
+
+  throw new Error('Maximum number of tool round trips reached.')
 }

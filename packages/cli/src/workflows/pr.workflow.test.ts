@@ -2,7 +2,7 @@
 
 import { expect, mock, test } from 'bun:test'
 import { ToolResponseType } from '@polka-codes/core'
-import type { WorkflowContextV2 } from '@polka-codes/workflow'
+import type { WorkflowContext } from '@polka-codes/workflow'
 import { createContext } from '@polka-codes/workflow'
 import type { CliToolRegistry } from '../workflow-tools'
 import { prWorkflow } from './pr.workflow'
@@ -38,7 +38,7 @@ const createMockContext = () => {
 
   const run = (input: any) => {
     const context = createContext<CliToolRegistry>(toolHandler as any)
-    const testContext: WorkflowContextV2<CliToolRegistry> = {
+    const testContext: WorkflowContext<CliToolRegistry> = {
       ...context,
       step: (_name, fn) => {
         // In tests, we can simplify the step function to execute immediately

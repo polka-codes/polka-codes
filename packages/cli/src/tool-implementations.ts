@@ -32,7 +32,7 @@ import {
   ToolResponseType,
   writeToFile,
 } from '@polka-codes/core'
-import { fromJsonModelMessage, type ToolCall } from '@polka-codes/workflow'
+import { fromJsonModelMessage, type ToolRegistry } from '@polka-codes/workflow'
 import { streamText } from 'ai'
 import chalk from 'chalk'
 import type { Command } from 'commander'
@@ -89,6 +89,13 @@ class WorkflowAgent extends CoderAgent {
     return Promise.resolve(undefined)
   }
 }
+
+type ToolCall<TTools extends ToolRegistry> = {
+  [K in keyof TTools]: {
+    tool: K
+    input: TTools[K]['input']
+  }
+}[keyof TTools]
 
 export async function handleToolCall(
   toolCall: ToolCall<CliToolRegistry>,

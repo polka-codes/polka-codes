@@ -2,7 +2,7 @@
 
 import { afterEach, describe, expect, mock, spyOn, test } from 'bun:test'
 import * as cliShared from '@polka-codes/cli-shared'
-import type { WorkflowContextV2 } from '@polka-codes/workflow'
+import type { WorkflowContext } from '@polka-codes/workflow'
 import type { CliToolRegistry } from '../workflow-tools'
 import { fixWorkflow } from './fix.workflow'
 import * as prompts from './prompts'
@@ -27,7 +27,7 @@ const createMockContext = () => {
     toolHandler,
     step,
     logger,
-  } as unknown as WorkflowContextV2<CliToolRegistry>
+  } as unknown as WorkflowContext<CliToolRegistry>
 
   return { context, toolHandler, step, logger }
 }

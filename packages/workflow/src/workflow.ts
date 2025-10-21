@@ -1,18 +1,9 @@
-type ValidJsonOrVoid<T> = T extends string | number | boolean | null | void
-  ? T
-  : T extends readonly (infer U)[]
-    ? readonly ValidJsonOrVoid<U>[]
-    : // biome-ignore lint/complexity/noBannedTypes: this is needed
-      T extends Function | symbol | bigint | Date | Map<any, any> | Set<any> | WeakMap<any, any> | WeakSet<any>
-      ? never
-      : T extends object
-        ? { readonly [K in keyof T]: ValidJsonOrVoid<T[K]> }
-        : never
-
-export type StepFn<TTools extends ToolRegistry = ToolRegistry> = <T>(
-  name: string,
-  fn: () => AsyncGenerator<ToolCall<TTools>, ValidJsonOrVoid<T>, TTools[keyof TTools]['output']>,
-) => AsyncGenerator<ToolCall<TTools>, T, TTools[keyof TTools]['output']>
+export interface Logger {
+  debug: (...args: any[]) => void
+  info: (...args: any[]) => void
+  warn: (...args: any[]) => void
+  error: (...args: any[]) => void
+}
 
 export type ToolSignature<I, O> = {
   input: I
@@ -21,89 +12,17 @@ export type ToolSignature<I, O> = {
 
 export type ToolRegistry = Record<string, ToolSignature<any, any>>
 
-export type ToolCall<TTools extends ToolRegistry> = {
-  [K in keyof TTools]: {
-    type: 'tool'
-    tool: K
-    input: TTools[K]['input']
-  }
-}[keyof TTools]
-
-export type ToolsExecutor<TTools extends ToolRegistry> = {
+export type ToolHandler<TTools extends ToolRegistry> = {
   [K in keyof TTools]: (input: TTools[K]['input']) => Promise<TTools[K]['output']>
 }
 
-export type WorkflowTools<TTools extends ToolRegistry> = {
-  [K in keyof TTools]: (input: TTools[K]['input']) => Generator<
-    {
-      type: 'tool'
-      tool: K
-      input: TTools[K]['input']
-    },
-    TTools[K]['output'],
-    TTools[K]['output']
-  >
-}
-
-export interface Logger {
-  debug: (...args: any[]) => void
-  info: (...args: any[]) => void
-  warn: (...args: any[]) => void
-  error: (...args: any[]) => void
-}
-
-export type RunSubWorkflowFn<TCallerTools extends ToolRegistry> = <TInput, TOutput, TCalleeTools extends ToolRegistry>(
-  workflow: Workflow<TInput, TOutput, TCalleeTools>,
-  input: TInput,
-) => AsyncGenerator<ToolCall<TCallerTools>, WorkflowResult<TInput, TOutput, TCalleeTools>, TCallerTools[keyof TCallerTools]['output']>
-
 export type WorkflowContext<TTools extends ToolRegistry> = {
-  step: StepFn<TTools>
-  tools: WorkflowTools<TTools>
+  step: <T>(name: string, fn: () => Promise<T>) => Promise<T>
   logger: Logger
-  runSubWorkflow: RunSubWorkflowFn<TTools>
+  toolHandler: ToolHandler<TTools>
 }
 
-export type WorkflowFn<TInput, TOutput, TTools extends ToolRegistry> = (
-  input: TInput,
-  context: WorkflowContext<TTools>,
-) => AsyncGenerator<ToolCall<TTools>, TOutput, TTools[keyof TTools]['output']>
-
-export type Workflow<TInput, TOutput, TTools extends ToolRegistry> = {
-  name: string
-  description: string
-  fn: WorkflowFn<TInput, TOutput, TTools>
-}
-
-export type WorkflowStatusPending<TTools extends ToolRegistry> = {
-  status: 'pending'
-  tool: ToolCall<TTools>
-}
-
-export type WorkflowStatusCompleted<TOutput> = {
-  status: 'completed'
-  output: TOutput
-}
-
-export type WorkflowStatusFailed = {
-  status: 'failed'
-  error: any
-}
-
-export type WorkflowStatus<TTools extends ToolRegistry, TOutput> =
-  | WorkflowStatusPending<TTools>
-  | WorkflowStatusCompleted<TOutput>
-  | WorkflowStatusFailed
-
-import { makeStepFn } from './helpers'
-
-export type WorkflowResult<TInput, TOutput, TTools extends ToolRegistry> =
-  | (WorkflowStatusPending<TTools> & {
-      next: (toolResult: TTools[keyof TTools]['output']) => Promise<WorkflowResult<TInput, TOutput, TTools>>
-      throw: (error: Error) => Promise<WorkflowResult<TInput, TOutput, TTools>>
-    })
-  | WorkflowStatusCompleted<TOutput>
-  | WorkflowStatusFailed
+export type WorkflowFn<TInput, TOutput, TTools extends ToolRegistry> = (input: TInput, context: WorkflowContext<TTools>) => Promise<TOutput>
 
 // Create a default silent logger
 const silentLogger: Logger = {
@@ -113,115 +32,29 @@ const silentLogger: Logger = {
   error: () => {},
 }
 
-export async function run<TInput, TOutput, TTools extends ToolRegistry>(
-  workflow: Workflow<TInput, TOutput, TTools>,
-  input: TInput,
-  stepFn?: StepFn<TTools>,
+export function createContext<TTools extends ToolRegistry>(
+  toolHandler: ToolHandler<TTools>,
+  stepFn?: <T>(name: string, fn: () => Promise<T>) => Promise<T>,
   logger: Logger = silentLogger,
-): Promise<WorkflowResult<TInput, TOutput, TTools>> {
+): WorkflowContext<TTools> {
   if (!stepFn) {
-    stepFn = makeStepFn<TTools>()
+    // simple default step function
+    stepFn = async <T>(_name: string, fn: () => Promise<T>) => fn()
   }
 
-  const tools = new Proxy({} as WorkflowTools<TTools>, {
-    get: (_target, tool: string) => {
-      return function* (input: any): Generator<ToolCall<TTools>, any, any> {
-        return yield {
-          type: 'tool',
-          tool,
-          input,
-        }
-      }
-    },
-  })
+  return { step: stepFn, logger, toolHandler }
+}
 
-  const runSubWorkflow: RunSubWorkflowFn<TTools> = async function* <TInput, TOutput, TCalleeTools extends ToolRegistry>(
-    workflow: Workflow<TInput, TOutput, TCalleeTools>,
-    input: TInput,
-  ) {
-    let state = await run(workflow, input, undefined, logger)
+export const makeStepFn = (): (<T>(name: string, fn: () => Promise<T>) => Promise<T>) => {
+  const results: Map<string, any> = new Map()
 
-    while (state.status === 'pending') {
-      const toolName = state.tool.tool
-      const toolInput = state.tool.input
-
-      const toolFn = (tools as any)[toolName]
-      const toolResult = yield* toolFn(toolInput)
-
-      state = await state.next(toolResult)
+  return async <T>(name: string, fn: () => Promise<T>): Promise<T> => {
+    if (results.has(name)) {
+      return results.get(name) as T
     }
 
-    return state
+    const result = await fn()
+    results.set(name, result)
+    return result
   }
-
-  const context: WorkflowContext<TTools> = { step: stepFn, tools, logger, runSubWorkflow }
-  const gen = workflow.fn(input, context)
-
-  let status: WorkflowStatus<TTools, TOutput>
-  try {
-    const { value, done } = await gen.next()
-    if (done) {
-      const status: WorkflowStatusCompleted<TOutput> = { status: 'completed', output: value }
-      return status
-    }
-    status = { status: 'pending', tool: value }
-  } catch (e) {
-    status = { status: 'failed', error: e }
-    return status
-  }
-
-  const next: (toolResult: TTools[keyof TTools]['output']) => Promise<WorkflowResult<TInput, TOutput, TTools>> = async (
-    toolResult: TTools[keyof TTools]['output'],
-  ) => {
-    switch (status.status) {
-      case 'pending': {
-        try {
-          const { value, done } = await gen.next(toolResult)
-          if (done) {
-            status = { status: 'completed', output: value }
-            return status
-          }
-          status = { status: 'pending', tool: value }
-        } catch (e) {
-          status = { status: 'failed', error: e }
-          return status
-        }
-        return { ...status, next, throw: throwError }
-      }
-      case 'completed':
-      case 'failed':
-        return status
-    }
-  }
-
-  const throwError: (error: Error) => Promise<WorkflowResult<TInput, TOutput, TTools>> = async (error: Error) => {
-    switch (status.status) {
-      case 'pending': {
-        try {
-          const { value, done } = await gen.throw(error)
-          if (done) {
-            status = { status: 'completed', output: value }
-            return status
-          }
-          status = { status: 'pending', tool: value }
-        } catch (e) {
-          status = { status: 'failed', error: e }
-          return status
-        }
-        return { ...status, next, throw: throwError }
-      }
-      case 'completed':
-      case 'failed':
-        return status
-    }
-  }
-
-  if (status.status === 'pending') {
-    return {
-      ...status,
-      next,
-      throw: throwError,
-    }
-  }
-  return status
 }

@@ -4,7 +4,7 @@ import os from 'node:os'
 import { getProvider, printEvent } from '@polka-codes/cli-shared'
 import type { AgentNameType } from '@polka-codes/core'
 import { EnableCachePolicy, UsageMeter } from '@polka-codes/core'
-import type { Logger, ToolHandler, ToolRegistry, WorkflowContextV2, WorkflowFnV2 } from '@polka-codes/workflow'
+import type { Logger, ToolHandler, ToolRegistry, WorkflowContext, WorkflowFn } from '@polka-codes/workflow'
 import type { Command } from 'commander'
 import { merge } from 'lodash-es'
 import ora, { type Ora } from 'ora'
@@ -36,7 +36,7 @@ const makeStepFnWithSpinner = (spinner: Ora) => {
 }
 
 export async function runWorkflowV2<TInput, TOutput, TTools extends ToolRegistry>(
-  workflow: WorkflowFnV2<TInput, TOutput, TTools>,
+  workflow: WorkflowFn<TInput, TOutput, TTools>,
   workflowInput: TInput,
   options: RunWorkflowV2Options,
 ): Promise<TOutput | undefined> {
@@ -95,7 +95,7 @@ export async function runWorkflowV2<TInput, TOutput, TTools extends ToolRegistry
       return async (input: any) => {
         spinner.text = `Running tool: ${String(tool)}`
         return await handleToolCall(
-          { type: 'tool', tool: tool as any, input },
+          { tool: tool as any, input },
           {
             providerConfig,
             parameters,
@@ -117,7 +117,7 @@ export async function runWorkflowV2<TInput, TOutput, TTools extends ToolRegistry
     },
   })
 
-  const context: WorkflowContextV2<TTools> = {
+  const context: WorkflowContext<TTools> = {
     step: makeStepFnWithSpinner(spinner),
     logger,
     toolHandler,
