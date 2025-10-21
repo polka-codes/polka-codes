@@ -412,6 +412,8 @@ export async function handleToolCall(
         const abortController = new AbortController()
         const timeout = setTimeout(() => abortController.abort(), requestTimeoutSeconds * 1000)
 
+        const usageMeterOnFinishHandler = context.parameters.usageMeter?.onFinishHandler(model)
+
         try {
           const stream = streamText({
             model,
@@ -435,6 +437,7 @@ export async function handleToolCall(
               }
             },
             onFinish(result) {
+              usageMeterOnFinishHandler?.(result)
               agentCallback?.({
                 kind: TaskEventKind.Usage,
                 usage: result.usage,

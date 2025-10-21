@@ -102,6 +102,9 @@ export const commitWorkflow: WorkflowFn<CommitWorkflowInput, void, CliToolRegist
     if (commitMessage) {
       logger.info(`\nCommit message:\n${commitMessage}`)
       await toolHandler.createCommit({ message: commitMessage })
+      return
     }
   }
+
+  context.logger.warn('Failed to generate commit message.', result)
 }

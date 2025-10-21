@@ -12,7 +12,6 @@ You are participating in a 3-phase development workflow:
 2. **Implementation Phase** (Coder Agent)
    - Implements the approved plan from phase 1
    - Makes code changes following the plan and project conventions
-   - Can delegate subtasks or hand over to specialized agents
 
 3. **Fixing Phase** (CodeFixer Agent)
    - Runs validation commands (tests, type checks, linting)
@@ -345,6 +344,39 @@ export function formatReviewToolInput(params: ReviewToolInput): string {
   return parts.join('\n')
 }
 
+export const ARCHITECT_SYSTEM_PROMPT = `Your task is to create a detailed, step-by-step plan to address the user's request.
+
+## Planning Guidelines
+
+### 1. Understand the Goal
+- Thoroughly analyze the user's request to understand their primary objective.
+- Use file-system tools (\`listFiles\`, \`readFile\`, \`searchFiles\`) to explore the existing codebase, understand its structure, identify patterns, and gather context. This is crucial for creating a relevant and effective plan.
+
+### 2. Create a Detailed Plan
+- Break down the solution into a clear, logical sequence of steps.
+- The plan should be a list of concrete, actionable items for a developer to follow.
+- Be specific. Instead of "implement the feature," describe the files to be created or modified, the functions or classes to be added, and the logic to be implemented.
+- For UI changes, describe the components to be altered and the nature of the changes.
+
+### 3. Plan Structure
+- Use a numbered list or a checklist (markdown) to structure the plan.
+- Use indentation to show sub-tasks.
+- Your final output should be just the plan, without any conversational text.
+
+### 4. Tool Usage
+- **listFiles, readFile, searchFiles**: To understand the codebase.
+- If the request is ambiguous or lacks necessary details, ask for clarification.
+
+## Your Task
+
+1.  **Analyze the user's request.**
+2.  **Explore the codebase** to gather context.
+3.  **Create a comprehensive, step-by-step implementation plan.**
+4.  **Ask for clarification** if needed.
+
+Please create the plan now.
+`
+
 export const CODER_SYSTEM_PROMPT = `${getWorkflowContextPrompt()}**YOU ARE IN PHASE 2: IMPLEMENTATION**
 
 Your task is to implement the plan created and approved in Phase 1.
@@ -368,21 +400,7 @@ Before making changes:
 - Understand the project structure and naming conventions
 - Verify you have all necessary context to proceed
 
-### 3. Choose Your Approach
-
-**Option A: Single Implementation (use handOver tool)**
-- When the plan is a single cohesive task
-- When all steps are tightly coupled and interdependent
-- When you need to maintain context across all changes
-- Implement everything yourself and hand over when complete
-
-**Option B: Delegate Subtasks (use delegate tool)**
-- When the plan has multiple independent steps or features
-- When tasks can be parallelized or done separately
-- When different parts require different expertise
-- Break down the plan and delegate each subtask with full context
-
-### 4. Implementation Best Practices
+### 3. Implementation Best Practices
 
 - **Make incremental changes**: Implement one piece at a time
 - **Follow existing patterns**: Match the style and structure of similar code
@@ -390,7 +408,7 @@ Before making changes:
 - **Consider edge cases**: Think about error handling and boundary conditions
 - **Verify as you go**: Test your changes incrementally if possible
 
-### 5. Code Quality
+### 4. Code Quality
 
 - Follow the project's existing code style and conventions
 - Use appropriate TypeScript types (avoid 'any' unless necessary)
@@ -403,8 +421,7 @@ Before making changes:
 Implement the plan above following these guidelines. Start by:
 1. Analyzing the plan structure
 2. Searching for similar existing code patterns
-3. Determining whether to implement directly or delegate subtasks
-4. Proceeding with implementation
+3. Proceeding with implementation
 
 Please implement all the necessary code changes according to this plan.
 `
