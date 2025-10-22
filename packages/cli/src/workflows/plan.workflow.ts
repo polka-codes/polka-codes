@@ -99,7 +99,7 @@ export type PlanWorkflowInput = {
   fileContent?: string
   filePath?: string
   files?: (JsonFilePart | JsonImagePart)[]
-  mode?: 'interactive' | 'confirm'
+  mode?: 'interactive' | 'confirm' | 'noninteractive'
 }
 
 export type PlanWorkflowOutput = {
@@ -173,6 +173,10 @@ export const planWorkflow: WorkflowFn<PlanWorkflowInput, PlanWorkflowOutput, Cli
             for (const file of files) {
               logger.info(`- ${file.path}`)
             }
+          }
+
+          if (mode === 'noninteractive') {
+            return 'Done'
           }
 
           if (mode === 'confirm') {

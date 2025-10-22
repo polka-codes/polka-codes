@@ -92,7 +92,7 @@ The branch name should be short, descriptive, and in kebab-case. For example: \`
     logger.info(`▶️  Starting task: ${taskItem.description}`)
 
     await step(`task-${index}`, async () => {
-      await codeWorkflow({ task: taskItem.description }, context)
+      await codeWorkflow({ task: taskItem.description, mode: 'noninteractive' }, context)
     })
 
     await step(`commit-${index}`, async () => {

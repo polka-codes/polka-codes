@@ -23,16 +23,17 @@ export type JsonFilePart = {
 export type CodeWorkflowInput = {
   task: string
   files?: (JsonFilePart | JsonImagePart)[]
+  mode?: 'interactive' | 'noninteractive'
 }
 
 export const codeWorkflow: WorkflowFn<CodeWorkflowInput, void, CliToolRegistry> = async (input, context) => {
   const { logger, step } = context
-  const { task, files } = input
+  const { task, files, mode = 'interactive' } = input
 
   // Planning phase
   logger.info('\n📋 Phase 1: Creating implementation plan...\n')
   const planResult = await step('plan', async () => {
-    return await planWorkflow({ task, files, mode: 'confirm' }, context)
+    return await planWorkflow({ task, files, mode: mode === 'interactive' ? 'confirm' : 'noninteractive' }, context)
   })
 
   if (!planResult) {
