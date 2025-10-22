@@ -28,7 +28,7 @@ export async function runMeta(task: string | undefined, command: Command) {
   }
 
   const globalOpts = (command.parent ?? command).opts()
-  const { verbose } = globalOpts
+  const { verbose, yes } = globalOpts
   const logger = createLogger({
     verbose: verbose,
   })
@@ -42,6 +42,7 @@ export async function runMeta(task: string | undefined, command: Command) {
       commandName: 'meta',
       command,
       logger,
+      yes,
     },
   )
 }

@@ -21,6 +21,7 @@ export interface CliOptions {
   silent?: boolean
   file?: string[]
   json?: boolean
+  yes?: boolean | undefined
 }
 
 export function addSharedOptions(command: Command) {
@@ -40,6 +41,7 @@ export function addSharedOptions(command: Command) {
     .option('--agent <agent>', 'Initial agent to use (default: architect)')
     .option('--file <path...>', 'File to include in the task')
     .option('--silent', 'Enable silent mode')
+    .option('-y, --yes', 'Skip interactive prompts', false)
 }
 
 export function parseOptions(

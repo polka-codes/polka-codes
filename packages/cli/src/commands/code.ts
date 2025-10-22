@@ -111,12 +111,12 @@ export async function runCode(task: string | undefined, _options: any, command: 
   }
 
   const globalOpts = (command.parent ?? command).opts()
-  const { verbose } = globalOpts
+  const { verbose, yes } = globalOpts
   const logger = createLogger({
     verbose,
   })
 
-  await runWorkflow(codeWorkflow, workflowInput, { commandName: 'code', command, logger })
+  await runWorkflow(codeWorkflow, workflowInput, { commandName: 'code', command, logger, yes })
 }
 
 export const codeCommand = new Command('code')

@@ -27,6 +27,7 @@ type RunWorkflowOptions = {
   command: Command
   logger: Logger
   requiresProvider?: boolean
+  yes?: boolean
 }
 
 const makeStepFnWithSpinner = (spinner: Ora) => {
@@ -42,7 +43,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
   workflowInput: TInput,
   options: RunWorkflowOptions,
 ): Promise<TOutput | undefined> {
-  const { commandName, command, logger, requiresProvider = true } = options
+  const { commandName, command, logger, requiresProvider = true, yes } = options
   const globalOpts = (command.parent ?? command).opts()
   const { json } = globalOpts
   const { providerConfig, config, verbose } = parseOptions(globalOpts, {})
@@ -113,6 +114,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
             agentCallback: onEvent,
             toolProvider,
             command,
+            yes,
           },
         )
       }

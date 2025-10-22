@@ -10,13 +10,13 @@ import { planWorkflow } from '../workflows/plan.workflow'
 export const planCommand = new Command('plan')
   .description('Create or update a plan for a task.')
   .argument('[task]', 'The task to plan.')
-  .option('-f, --file <path>', 'The path to the plan file.')
-  .action(async (task: string | undefined, options: { file?: string }, command: Command) => {
+  .option('-p, --plan-file <path>', 'The path to the plan file.')
+  .action(async (task: string | undefined, options: { planFile?: string }, command: Command) => {
     let taskInput = task
     let fileContent: string | undefined
-    if (options.file) {
+    if (options.planFile) {
       try {
-        fileContent = readFileSync(options.file, 'utf-8').trim()
+        fileContent = readFileSync(options.planFile, 'utf-8').trim()
       } catch {
         // we can't read the file, maybe it doesn't exist, that's fine
       }
@@ -42,7 +42,7 @@ export const planCommand = new Command('plan')
     }
 
     const globalOpts = (command.parent ?? command).opts()
-    const { verbose } = globalOpts
+    const { verbose, yes } = globalOpts
     const logger = createLogger({
       verbose: verbose,
     })
@@ -52,8 +52,8 @@ export const planCommand = new Command('plan')
       {
         task: taskInput,
         fileContent,
-        filePath: options.file,
+        filePath: options.planFile,
       },
-      { commandName: 'plan', command, logger },
+      { commandName: 'plan', command, logger, yes },
     )
   })

@@ -32,12 +32,12 @@ export async function runEpic(task: string | undefined, _options: any, command: 
   }
 
   const globalOpts = (command.parent ?? command).opts()
-  const { verbose } = globalOpts
+  const { verbose, yes } = globalOpts
   const logger = createLogger({
     verbose,
   })
 
-  await runWorkflow(epicWorkflow, workflowInput, { commandName: 'epic', command, logger })
+  await runWorkflow(epicWorkflow, workflowInput, { commandName: 'epic', command, logger, yes })
 }
 
 export const epicCommand = new Command('epic')

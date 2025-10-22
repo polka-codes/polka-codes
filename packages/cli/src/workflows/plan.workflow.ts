@@ -176,20 +176,16 @@ export const planWorkflow: WorkflowFn<PlanWorkflowInput, PlanWorkflowOutput, Cli
           }
 
           if (mode === 'confirm') {
-            const approved = await tools.confirm({
-              message: 'Do you approve this plan and want to proceed with implementation?',
-              default: false,
-            })
-
-            if (approved) {
-              return 'Done'
-            }
-
             try {
               userFeedback = await tools.input({
-                message: 'What changes would you like to make to the plan?',
+                message: 'Do you approve this plan and want to proceed with implementation? (leave blank to approve, or enter feedback)',
               })
-              return 'Generating'
+
+              if (userFeedback === '') {
+                return 'Done'
+              } else {
+                return 'Generating'
+              }
             } catch (_error) {
               userFeedback = ''
               return 'Reviewing'

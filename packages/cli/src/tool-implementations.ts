@@ -84,6 +84,7 @@ type ToolCallContext = {
   toolProvider: any // ToolProvider
   spinner: Ora
   command: Command
+  yes?: boolean
 }
 
 async function createPullRequest(input: { title: string; description: string }, context: ToolCallContext) {
@@ -133,6 +134,9 @@ async function printChangeFile(_input: unknown, context: ToolCallContext) {
 }
 
 async function confirm(input: { message: string }, context: ToolCallContext) {
+  if (context.yes) {
+    return true
+  }
   context.spinner.stop()
 
   // to allow ora to fully stop the spinner so inquirer can takeover the cli window
@@ -147,6 +151,9 @@ async function confirm(input: { message: string }, context: ToolCallContext) {
 }
 
 async function input(input: { message: string; default: string }, context: ToolCallContext) {
+  if (context.yes) {
+    return input.default ?? ''
+  }
   context.spinner.stop()
 
   // to allow ora to fully stop the spinner so inquirer can takeover the cli window
@@ -167,6 +174,9 @@ async function input(input: { message: string; default: string }, context: ToolC
 }
 
 async function select(input: { message: string; choices: { name: string; value: string }[] }, context: ToolCallContext) {
+  if (context.yes) {
+    return input.choices[0].value
+  }
   context.spinner.stop()
 
   // to allow ora to fully stop the spinner so inquirer can takeover the cli window
