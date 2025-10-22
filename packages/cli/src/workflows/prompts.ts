@@ -26,7 +26,8 @@ You are an expert at breaking down a large project into smaller, manageable task
 Based on the provided high-level plan, create a sequence of smaller, implementable tasks and a brief technical overview of the epic.
 The overview should be a short paragraph that summarizes the overall technical approach.
 Each task should be a self-contained unit of work that can be implemented and committed separately.
-Respond with a JSON object containing an "overview" string and a "tasks" array. Each object in the array should have a "description".
+For example, if the epic is to review all the files, then each task should be for each file.
+Respond with a JSON object containing an "overview" string, "branchName" string, and a "tasks" array. Each object in the array should have a "description".
 
 Example format:
 \`\`\`json
