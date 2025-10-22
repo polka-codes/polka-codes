@@ -317,7 +317,6 @@ describe('ApiProviderConfig', () => {
         // Explicitly set to polka-codes
         analyzer: {
           provider: AiProvider.Anthropic,
-          toolFormat: 'polka-codes',
         },
         // Non-sonnet model should default to polka-codes
         architect: {
@@ -337,7 +336,6 @@ describe('ApiProviderConfig', () => {
         // Explicitly set to polka-codes
         commit: {
           provider: AiProvider.Anthropic,
-          toolFormat: 'polka-codes',
         },
         // Non-sonnet model should default to polka-codes
         pr: {

@@ -1,12 +1,9 @@
 import { z } from 'zod'
 
-const toolFormatSchema = z.enum(['native', 'polka-codes']).optional()
-
 const providerModelSchema = z.object({
   provider: z.string().optional(),
   model: z.string().optional(),
   parameters: z.record(z.string(), z.any()).optional(),
-  toolFormat: toolFormatSchema,
 })
 
 const agentSchema = providerModelSchema.extend({
@@ -53,7 +50,6 @@ export const configSchema = z
     defaultProvider: z.string().optional(),
     defaultModel: z.string().optional(),
     defaultParameters: z.record(z.string(), z.any()).optional(),
-    toolFormat: toolFormatSchema,
     maxMessageCount: z.number().int().positive().optional(),
     budget: z.number().positive().optional(),
     retryCount: z.number().int().min(0).optional(),
@@ -79,15 +75,7 @@ export const configSchema = z
       .optional(),
     rules: z.array(z.string()).optional().or(z.string()).optional(),
     excludeFiles: z.array(z.string()).optional(),
-    policies: z.array(z.string()).optional(),
   })
   .strict()
 
 export type Config = z.infer<typeof configSchema>
-
-export enum Policies {
-  TruncateContext = 'truncatecontext',
-  EnableCache = 'enablecache',
-}
-
-export type ToolFormat = 'native' | 'polka-codes'

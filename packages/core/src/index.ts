@@ -1,6 +1,5 @@
 export * from './Agent'
 export * from './Agent/backoff'
-export type { ToolFormat } from './config'
 export * from './config'
 export * from './getAvailableTools'
 export * from './tool'

@@ -10,7 +10,6 @@ exports[`ApiProviderConfig getConfigForCommand with command-specific config 1`] 
   "parameters": {},
   "project": undefined,
   "provider": "deepseek",
-  "toolFormat": "polka-codes",
 }
 `;
 
@@ -24,7 +23,6 @@ exports[`ApiProviderConfig getConfigForCommand falls back to default provider 1`
   "parameters": {},
   "project": undefined,
   "provider": "anthropic",
-  "toolFormat": "native",
 }
 `;
 
@@ -38,7 +36,6 @@ exports[`ApiProviderConfig getConfigForAgent with agent-specific config 1`] = `
   "parameters": {},
   "project": undefined,
   "provider": "anthropic",
-  "toolFormat": "native",
 }
 `;
 
@@ -52,7 +49,6 @@ exports[`parseOptions prioritizes CLI flags over env vars and config 1`] = `
   "parameters": {},
   "project": undefined,
   "provider": "deepseek",
-  "toolFormat": "polka-codes",
 }
 `;
 
@@ -83,6 +79,5 @@ exports[`parseOptions merges environment variables with config 1`] = `
   "parameters": {},
   "project": undefined,
   "provider": "deepseek",
-  "toolFormat": "polka-codes",
 }
 `;
