@@ -13,7 +13,7 @@ import { agentWorkflow, type JsonUserContent, type WorkflowContext, type Workflo
 import { z } from 'zod'
 import type { CliToolRegistry } from '../workflow-tools'
 import type { JsonFilePart, JsonImagePart } from './code.workflow'
-import { PLAN_PROMPT, PLANNER_SYSTEM_PROMPT } from './prompts'
+import { getPlanPrompt, PLANNER_SYSTEM_PROMPT } from './prompts'
 import { getDefaultContext } from './workflow.utils'
 
 const PlanSchema = z.object({
@@ -43,9 +43,8 @@ async function createPlan(input: CreatePlanInput, context: WorkflowContext<CliTo
   const { task, files, plan: inputPlan, userFeedback, interactive } = input
 
   const currentTask = userFeedback ? `${task}\n\nUser feedback: ${userFeedback}` : task
-  const planContent = inputPlan ? `The content of an existing plan file:\n<plan_file>\n${inputPlan}\n</plan_file>` : ''
   const defaultContext = await getDefaultContext()
-  const prompt = `${PLAN_PROMPT.replace('{task}', currentTask).replace('{planContent}', planContent)}\n\n${defaultContext}`
+  const prompt = `${getPlanPrompt(currentTask, inputPlan)}\n\n${defaultContext}`
 
   const userContent: JsonUserContent = [{ type: 'text', text: prompt }]
   if (files) {
