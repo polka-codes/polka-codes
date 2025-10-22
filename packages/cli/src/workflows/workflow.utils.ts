@@ -248,7 +248,37 @@ export async function getDefaultContext(): Promise<string> {
   const [files, truncated] = await listFiles(cwd, true, 2000, cwd, config?.excludeFiles ?? [])
   const fileList = files.join('\n')
 
-  return `<file_list truncated="${truncated}">
+  const contextParts: string[] = []
+
+  contextParts.push(`<file_list truncated="${truncated}">
 ${fileList}
-</file_list>`
+</file_list>`)
+
+  if (config?.rules) {
+    if (Array.isArray(config.rules) && config.rules.length > 0) {
+      const rules = config.rules.map((rule) => `- ${rule}`).join('\n')
+      contextParts.push(`<rules>\n${rules}\n</rules>`)
+    } else if (typeof config.rules === 'string') {
+      const trimmed = config.rules.trim()
+      if (trimmed.length > 0) {
+        contextParts.push(`<rules>\n${trimmed}\n</rules>`)
+      }
+    }
+  }
+
+  if (config?.scripts) {
+    const scripts = Object.entries(config.scripts)
+      .map(([name, script]) => {
+        if (typeof script === 'string') {
+          return `${name}: ${script}`
+        }
+        return `${name}: ${script.command}${script.description ? ` # ${script.description}` : ''}`
+      })
+      .join('\n')
+    if (scripts.length > 0) {
+      contextParts.push(`<scripts>\n${scripts}\n</scripts>`)
+    }
+  }
+
+  return contextParts.join('\n')
 }
