@@ -14,7 +14,6 @@ import {
 } from '@polka-codes/workflow'
 import type { Command } from 'commander'
 import { merge } from 'lodash-es'
-import ora, { type Ora } from 'ora'
 import { UserCancelledError } from './errors'
 import { getModel } from './getModel'
 import { getProviderOptions } from './getProviderOptions'
@@ -30,14 +29,6 @@ type RunWorkflowOptions = {
   yes?: boolean
 }
 
-const makeStepFnWithSpinner = (spinner: Ora) => {
-  const stepFn = makeStepFn()
-  return async <T>(name: string, fn: () => Promise<T>): Promise<T> => {
-    spinner.text = name
-    return await stepFn(name, fn)
-  }
-}
-
 export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
   workflow: WorkflowFn<TInput, TOutput, TTools>,
   workflowInput: TInput,
@@ -45,7 +36,6 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
 ): Promise<TOutput | undefined> {
   const { commandName, command, logger, requiresProvider = true, yes } = options
   const globalOpts = (command.parent ?? command).opts()
-  const { json } = globalOpts
   const { providerConfig, config, verbose } = parseOptions(globalOpts, {})
 
   if (requiresProvider) {
@@ -57,11 +47,6 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
     logger.info('Provider:', commandConfig.provider)
     logger.info('Model:', commandConfig.model)
   }
-
-  const spinner = ora({
-    text: 'Running workflow...',
-    ...(json && { stream: process.stderr }),
-  }).start()
 
   const usage = new UsageMeter(merge(prices, config.prices ?? {}), {
     maxMessages: config.maxMessageCount,
@@ -96,13 +81,12 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
   const tools = new Proxy({} as WorkflowTools<TTools>, {
     get: (_target, tool: string) => {
       return async (input: any) => {
-        spinner.text = `Running tool: ${String(tool)}`
+        logger.info(`Running tool: ${String(tool)}`)
         return await toolCall(
           { tool: tool as any, input },
           {
             providerConfig,
             parameters,
-            spinner,
             getModel: async (agent: AgentNameType) => {
               const config = providerConfig.getConfigForAgent(agent) || providerConfig.getConfigForCommand(commandName)
               if (!config) {
@@ -121,26 +105,30 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
     },
   })
 
+  const baseStepFn = makeStepFn()
   const context: WorkflowContext<TTools> = {
-    step: makeStepFnWithSpinner(spinner),
+    step: async (name, fn) => {
+      logger.info(name)
+      return await baseStepFn(name, fn)
+    },
     logger,
     tools,
   }
 
   try {
+    logger.info('Running workflow...')
     const output = await workflow(workflowInput, context)
-    spinner.succeed('Workflow completed successfully.')
+    logger.info('Workflow completed successfully.')
     logger.info(usage.getUsageText())
     return output
   } catch (e) {
     const error = e as any
     if (error instanceof UserCancelledError) {
-      spinner.warn('Workflow cancelled by user.')
+      logger.warn('Workflow cancelled by user.')
     } else {
-      spinner.fail(`Workflow failed: ${error.message}`)
+      logger.error(`Workflow failed: ${error.message}`)
       logger.error(error)
     }
-    spinner.stop()
     logger.info(usage.getUsageText())
     return undefined
   }

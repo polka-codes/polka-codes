@@ -27,7 +27,7 @@ import { fromJsonModelMessage, type JsonModelMessage, type ToolRegistry } from '
 import { streamText, type ToolSet } from 'ai'
 import chalk from 'chalk'
 import type { Command } from 'commander'
-import type { Ora } from 'ora'
+
 import type { ApiProviderConfig } from './ApiProviderConfig'
 import { UserCancelledError } from './errors'
 
@@ -78,36 +78,28 @@ type ToolCallContext = {
   model?: LanguageModelV2
   agentCallback?: TaskEventCallback
   toolProvider: any // ToolProvider
-  spinner: Ora
   command: Command
   yes?: boolean
 }
 
-async function createPullRequest(input: { title: string; description: string }, context: ToolCallContext) {
-  context.spinner.stop()
+async function createPullRequest(input: { title: string; description: string }, _context: ToolCallContext) {
   spawnSync('gh', ['pr', 'create', '--title', input.title, '--body', input.description], {
     stdio: 'inherit',
   })
-  context.spinner.start()
   return { title: input.title, description: input.description }
 }
 
-async function createCommit(input: { message: string }, context: ToolCallContext) {
-  context.spinner.stop()
-
+async function createCommit(input: { message: string }, _context: ToolCallContext) {
   const result = spawnSync('git', ['commit', '-m', input.message], {
     stdio: 'inherit',
   })
   if (result.status !== 0) {
     throw new Error('Commit failed')
   }
-  context.spinner.start()
   return { message: input.message }
 }
 
-async function printChangeFile(_input: unknown, context: ToolCallContext) {
-  context.spinner.stop()
-
+async function printChangeFile(_input: unknown, _context: ToolCallContext) {
   const { stagedFiles, unstagedFiles } = getLocalChanges()
   if (stagedFiles.length === 0 && unstagedFiles.length === 0) {
     console.log('No changes to commit.')
@@ -125,7 +117,6 @@ async function printChangeFile(_input: unknown, context: ToolCallContext) {
       }
     }
   }
-  context.spinner.start()
   return { stagedFiles, unstagedFiles }
 }
 
@@ -133,13 +124,11 @@ async function confirm(input: { message: string }, context: ToolCallContext) {
   if (context.yes) {
     return true
   }
-  context.spinner.stop()
 
   // to allow ora to fully stop the spinner so inquirer can takeover the cli window
   await new Promise((resolve) => setTimeout(resolve, 50))
   try {
     const result = await inquirerConfirm({ message: input.message })
-    context.spinner.start()
     return result
   } catch (_e) {
     throw new UserCancelledError()
@@ -150,7 +139,6 @@ async function input(input: { message: string; default: string }, context: ToolC
   if (context.yes) {
     return input.default ?? ''
   }
-  context.spinner.stop()
 
   // to allow ora to fully stop the spinner so inquirer can takeover the cli window
   await new Promise((resolve) => setTimeout(resolve, 50))
@@ -162,7 +150,6 @@ async function input(input: { message: string; default: string }, context: ToolC
     if (result === '.m') {
       result = await readMultiline('Enter multiline text (Ctrl+D to finish):')
     }
-    context.spinner.start()
     return result
   } catch (_e) {
     throw new UserCancelledError()
@@ -173,13 +160,11 @@ async function select(input: { message: string; choices: { name: string; value: 
   if (context.yes) {
     return input.choices[0].value
   }
-  context.spinner.stop()
 
   // to allow ora to fully stop the spinner so inquirer can takeover the cli window
   await new Promise((resolve) => setTimeout(resolve, 50))
   try {
     const result = await inquirerSelect({ message: input.message, choices: input.choices })
-    context.spinner.start()
     return result
   } catch (_e) {
     throw new UserCancelledError()
@@ -267,7 +252,6 @@ async function executeCommand(input: { command: string; shell?: boolean; pipe?: 
 }
 
 async function generateText(input: { messages: JsonModelMessage[]; tools: ToolSet }, context: ToolCallContext) {
-  context.spinner.stop()
   const { model, agentCallback } = context
   if (!model) {
     throw new Error('Model not found in context')
@@ -338,7 +322,6 @@ async function generateText(input: { messages: JsonModelMessage[]; tools: ToolSe
       throw error
     } finally {
       clearTimeout(timeout)
-      context.spinner.start()
     }
   }
   throw new Error(`Failed to get a response from the model after ${retryCount} retries.`)
