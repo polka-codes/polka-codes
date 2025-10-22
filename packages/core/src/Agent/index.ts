@@ -12,7 +12,6 @@ export * from './CoderAgent'
 export * from './MultiAgent'
 export * from './parseAssistantMessage'
 export * from './parseJsonFromMarkdown'
-export * from './policies'
 export * from './prompts'
 
 export const allAgents = [architectAgentInfo, coderAgentInfo, analyzerAgentInfo, codeFixerAgentInfo] as const
