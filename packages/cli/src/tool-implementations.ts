@@ -8,12 +8,10 @@ import { readMultiline } from '@polka-codes/cli-shared'
 import type { AgentPolicy, TaskEvent, TaskEventCallback, ToolFormat, UsageMeter } from '@polka-codes/core'
 import {
   type AgentNameType,
-  attemptCompletion,
+  askFollowupQuestion,
   computeRateLimitBackoffSeconds,
-  delegate,
   executeCommand as executeCommandTool,
   fetchUrl,
-  handOver,
   listFiles as listFilesTool,
   readBinaryFile,
   readFile as readFileTool,
@@ -51,11 +49,9 @@ import type { CliToolRegistry } from './workflow-tools'
 import { getLocalChanges } from './workflows/workflow.utils'
 
 const allTools = [
-  attemptCompletion,
-  delegate,
+  askFollowupQuestion,
   executeCommandTool,
   fetchUrl,
-  handOver,
   listFilesTool,
   readBinaryFile,
   readFileTool,

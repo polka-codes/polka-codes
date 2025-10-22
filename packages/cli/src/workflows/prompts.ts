@@ -462,7 +462,7 @@ export function formatReviewToolInput(params: ReviewToolInput): string {
   return parts.join('\n')
 }
 
-export const ARCHITECT_SYSTEM_PROMPT = `Your task is to create a detailed, step-by-step plan to address the user's request.
+export const PLANNER_SYSTEM_PROMPT = `Your task is to create a detailed, step-by-step plan to address the user's request.
 
 ## Planning Guidelines
 
