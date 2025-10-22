@@ -21,11 +21,13 @@ export const fixWorkflow: WorkflowFn<FixWorkflowInput, { summaries: string[] }, 
   const { command: inputCommand, task, interactive = true } = input
   let command = inputCommand
   const summaries: string[] = []
+  let formatCommand: string | undefined
 
   if (!command) {
     const config = loadConfig()
     const check = config?.scripts?.check
     const test = config?.scripts?.test
+    const format = config?.scripts?.format
 
     let checkCommand: string | undefined
     if (typeof check === 'string') {
@@ -39,6 +41,12 @@ export const fixWorkflow: WorkflowFn<FixWorkflowInput, { summaries: string[] }, 
       testCommand = test
     } else if (test) {
       testCommand = test.command
+    }
+
+    if (typeof format === 'string') {
+      formatCommand = format
+    } else if (format) {
+      formatCommand = format.command
     }
 
     let defaultCommand: string | undefined
@@ -72,6 +80,9 @@ export const fixWorkflow: WorkflowFn<FixWorkflowInput, { summaries: string[] }, 
 
   for (let i = 0; i < 10; i++) {
     logger.info(`Running command (attempt ${i + 1}/10): ${command}`)
+    if (formatCommand) {
+      await tools.executeCommand({ command: formatCommand, shell: true, pipe: true })
+    }
     const { exitCode, stdout, stderr } = await tools.executeCommand({
       command,
       shell: true,
