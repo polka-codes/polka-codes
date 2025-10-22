@@ -65,7 +65,7 @@ The branch name should be short, descriptive, and in kebab-case. For example: \`
       {
         systemPrompt: EPIC_TASK_BREAKDOWN_PROMPT,
         userMessage: [{ role: 'user', content: userMessage }],
-        tools: [], // No tools needed for breakdown
+        tools: [listFiles, readFile, searchFiles, readBinaryFile],
         outputSchema: epicSchema,
       },
       context,

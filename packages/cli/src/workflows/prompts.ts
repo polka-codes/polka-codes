@@ -39,7 +39,8 @@ Example format:
     {
       "description": "Implement the main feature."
     }
-  ]
+  ],
+  "branchName": "feat/new-caching-layer"
 }
 \`\`\`
 `

@@ -190,7 +190,10 @@ export const planWorkflow: WorkflowFn<PlanWorkflowInput, PlanWorkflowOutput, Cli
               } else {
                 return 'Generating'
               }
-            } catch (_error) {
+            } catch (error) {
+              if (error instanceof Error && error.name === 'ExitPromptError') {
+                throw error
+              }
               userFeedback = ''
               return 'Reviewing'
             }
