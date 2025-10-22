@@ -20,6 +20,7 @@ import type { CliToolRegistry } from '../workflow-tools'
 import { fixWorkflow } from './fix.workflow'
 import { planWorkflow } from './plan.workflow'
 import { CODER_SYSTEM_PROMPT, getImplementPrompt } from './prompts'
+import { getDefaultContext } from './workflow.utils'
 
 export type JsonImagePart = {
   type: 'image'
@@ -102,6 +103,16 @@ export const codeWorkflow: WorkflowFn<CodeWorkflowInput, void, CliToolRegistry> 
   }
 
   const res = await step('implement', async () => {
+    const defaultContext = await getDefaultContext()
+    const textContent = userContent.find((c) => c.type === 'text')
+    if (textContent && textContent.type === 'text') {
+      textContent.text = `${textContent.text}\n\n${defaultContext}`
+    } else {
+      userContent.push({
+        type: 'text',
+        text: defaultContext,
+      })
+    }
     return await agentWorkflow(
       {
         systemPrompt: CODER_SYSTEM_PROMPT,

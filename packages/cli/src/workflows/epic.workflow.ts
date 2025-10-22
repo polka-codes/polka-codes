@@ -6,7 +6,7 @@ import type { CliToolRegistry } from '../workflow-tools'
 import { codeWorkflow } from './code.workflow'
 import { planWorkflow } from './plan.workflow'
 import { CODE_REVIEW_PROMPT, EPIC_TASK_BREAKDOWN_PROMPT, formatReviewToolInput, type ReviewToolInput } from './prompts'
-import { formatElapsedTime, parseGitDiffNameStatus, type ReviewResult, reviewOutputSchema } from './workflow.utils'
+import { formatElapsedTime, getDefaultContext, parseGitDiffNameStatus, type ReviewResult, reviewOutputSchema } from './workflow.utils'
 
 export type EpicWorkflowInput = {
   task: string
@@ -65,7 +65,8 @@ export const epicWorkflow: WorkflowFn<EpicWorkflowInput, void, CliToolRegistry> 
   // Phase 3: Task Breakdown
   logger.info('🔨 Phase 3: Breaking down plan into tasks...\n')
   const taskBreakdownResult = await step('taskBreakdown', async () => {
-    const userMessage = `Based on the following high-level plan, break it down into a list of smaller, sequential, and implementable tasks. Also, provide a suitable git branch name for this epic and a brief technical overview of the epic.
+    const defaultContext = await getDefaultContext()
+    const userMessage = `Based on the following high-level plan, break it down into a list of smaller, sequential, and implementable tasks. Also, provide a suitable git branch name for this epic and a brief technical overview of the epic\n\n${defaultContext}.
 
 <plan>
 ${highLevelPlan}
@@ -206,10 +207,12 @@ The branch name should be short, descriptive, and in kebab-case. For example: \`
       }
 
       const reviewAgentResult = await step(`review-${index}-${i}`, async () => {
+        const defaultContext = await getDefaultContext()
+        const userMessage = `${defaultContext}\n\n${formatReviewToolInput(changeInfo)}`
         return await agentWorkflow(
           {
             systemPrompt: CODE_REVIEW_PROMPT,
-            userMessage: [{ role: 'user', content: formatReviewToolInput(changeInfo) }],
+            userMessage: [{ role: 'user', content: userMessage }],
             tools: [readFile, readBinaryFile, searchFiles, listFiles, gitDiff],
             outputSchema: reviewOutputSchema,
           },

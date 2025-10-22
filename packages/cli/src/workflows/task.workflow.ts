@@ -14,6 +14,7 @@ import {
 } from '@polka-codes/core'
 import { agentWorkflow, type WorkflowFn } from '@polka-codes/workflow'
 import type { CliToolRegistry } from '../workflow-tools'
+import { getDefaultContext } from './workflow.utils'
 
 export type TaskWorkflowInput = {
   task: string
@@ -32,10 +33,12 @@ export const taskWorkflow: WorkflowFn<TaskWorkflowInput, { success: boolean }, C
 `)
 
   await step('agent', async () => {
+    const defaultContext = await getDefaultContext()
+    const userMessage = `${task}\n\n${defaultContext}`
     await agentWorkflow(
       {
         systemPrompt: SYSTEM_PROMPT,
-        userMessage: [{ role: 'user', content: task }],
+        userMessage: [{ role: 'user', content: userMessage }],
         tools: [
           readFile,
           writeToFile,

@@ -17,6 +17,7 @@ import { agentWorkflow, type WorkflowFn } from '@polka-codes/workflow'
 import { z } from 'zod'
 import type { CliToolRegistry } from '../workflow-tools'
 import { FIX_SYSTEM_PROMPT, getFixUserPrompt } from './prompts'
+import { getDefaultContext } from './workflow.utils'
 
 export type FixWorkflowInput = {
   command?: string
@@ -109,13 +110,15 @@ export const fixWorkflow: WorkflowFn<FixWorkflowInput, { summaries: string[] }, 
     logger.info(`Command failed with exit code ${exitCode}. Asking agent to fix it...`)
 
     const result = await step(`fix-${i}`, async () => {
+      const defaultContext = await getDefaultContext()
+      const userPrompt = getFixUserPrompt(command, exitCode, stdout, stderr, task)
       return await agentWorkflow(
         {
           systemPrompt: FIX_SYSTEM_PROMPT,
           userMessage: [
             {
               role: 'user',
-              content: getFixUserPrompt(command, exitCode, stdout, stderr, task),
+              content: `${userPrompt}\n\n${defaultContext}`,
             },
           ],
           tools: [
