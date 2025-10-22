@@ -5,9 +5,8 @@ import { dirname } from 'node:path'
 import type { LanguageModelV2 } from '@ai-sdk/provider'
 import { confirm as inquirerConfirm, input as inquirerInput, select as inquirerSelect } from '@inquirer/prompts'
 import { readMultiline } from '@polka-codes/cli-shared'
-import type { AgentPolicy, TaskEvent, TaskEventCallback, ToolFormat, UsageMeter } from '@polka-codes/core'
+import type { TaskEvent, TaskEventCallback, UsageMeter } from '@polka-codes/core'
 import {
-  type AgentNameType,
   askFollowupQuestion,
   computeRateLimitBackoffSeconds,
   executeCommand as executeCommandTool,
@@ -28,19 +27,14 @@ import { streamText, type ToolSet } from 'ai'
 import chalk from 'chalk'
 import type { Command } from 'commander'
 
-import type { ApiProviderConfig } from './ApiProviderConfig'
 import { UserCancelledError } from './errors'
 
 export type AgentContextParameters = {
-  toolFormat?: ToolFormat
-  os?: string
-  policies?: AgentPolicy[]
-  modelParameters?: Record<string, any>
   providerOptions?: Record<string, any>
   scripts?: Record<string, string | { command: string; description: string }>
   retryCount?: number
   requestTimeoutSeconds?: number
-  usageMeter?: UsageMeter
+  usageMeter: UsageMeter
 }
 
 import { camelCase } from 'lodash-es'
@@ -72,10 +66,8 @@ type ToolCall<TTools extends ToolRegistry> = {
 }[keyof TTools]
 
 type ToolCallContext = {
-  providerConfig: ApiProviderConfig
   parameters: AgentContextParameters
-  getModel: (name: AgentNameType) => Promise<LanguageModelV2>
-  model?: LanguageModelV2
+  model: LanguageModelV2
   agentCallback?: TaskEventCallback
   toolProvider: any // ToolProvider
   command: Command
@@ -263,7 +255,7 @@ async function generateText(input: { messages: JsonModelMessage[]; tools: ToolSe
     const abortController = new AbortController()
     const timeout = setTimeout(() => abortController.abort(), requestTimeoutSeconds * 1000)
 
-    const usageMeterOnFinishHandler = context.parameters.usageMeter?.onFinishHandler(model)
+    const usageMeterOnFinishHandler = context.parameters.usageMeter.onFinishHandler(model)
 
     try {
       const stream = streamText({
@@ -341,7 +333,7 @@ async function invokeTool(input: { toolName: string; input: any }, context: Tool
   } catch (error: any) {
     return {
       type: ToolResponseType.Error,
-      error: error.message,
+      error: error.message ?? `${error}`,
     }
   }
 }
