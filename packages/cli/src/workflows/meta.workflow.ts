@@ -5,6 +5,7 @@ import { agentWorkflow, type WorkflowFn } from '@polka-codes/workflow'
 import { z } from 'zod'
 import type { CliToolRegistry } from '../workflow-tools'
 import { codeWorkflow } from './code.workflow'
+import { epicWorkflow } from './epic.workflow'
 import { META_PROMPT } from './prompts'
 import { taskWorkflow } from './task.workflow'
 
@@ -13,7 +14,7 @@ export type MetaWorkflowInput = {
 }
 
 const DecisionSchema = z.object({
-  workflow: z.enum(['code', 'task']),
+  workflow: z.enum(['code', 'task', 'epic']),
 })
 
 export const metaWorkflow: WorkflowFn<MetaWorkflowInput, void, CliToolRegistry> = async (input, context) => {
@@ -49,16 +50,27 @@ export const metaWorkflow: WorkflowFn<MetaWorkflowInput, void, CliToolRegistry> 
 
   logger.info(`\n✅ Decision: Using '${decision.workflow}' workflow.`)
 
-  if (decision.workflow === 'code') {
-    await codeWorkflow({ task }, context)
-  } else if (decision.workflow === 'task') {
-    await taskWorkflow(
-      {
-        task,
-      },
-      context,
-    )
-  } else {
-    throw new Error(`Invalid workflow decision: ${JSON.stringify(decision, null, 2)}`)
+  switch (decision.workflow) {
+    case 'code':
+      await codeWorkflow({ task }, context)
+      break
+    case 'task':
+      await taskWorkflow(
+        {
+          task,
+        },
+        context,
+      )
+      break
+    case 'epic':
+      await epicWorkflow(
+        {
+          task,
+        },
+        context,
+      )
+      break
+    default:
+      throw new Error(`Unknown workflow: ${decision.workflow}`)
   }
 }

@@ -212,16 +212,17 @@ excludeFiles:     # A list of glob patterns for files that should not be read. O
 
 export const META_PROMPT = `
 You are a meta-agent that decides which workflow to use for a given task.
-Based on the user's task, decide whether to use the 'code', or 'task' workflow.
+Based on the user's task, decide whether to use the 'code', 'task', or 'epic' workflow.
 
 - Use the 'code' workflow for tasks that are well-defined and can be implemented directly without a separate planning phase.
 - Use the 'task' workflow for simple, single-action tasks like answering a question or running a command.
+- Use the 'epic' workflow for large, complex features that require breaking down into multiple sequential tasks, creating a feature branch, and executing multiple implementation-commit-review cycles.
 
 The user's task is provided in the <task> tag.
 
 Respond with a JSON object in a markdown block with the following structure:
 {
-  "workflow": "<workflow_name>" // 'code' or 'task'
+  "workflow": "<workflow_name>" // 'code', 'task', or 'epic'
 }
 `
 
