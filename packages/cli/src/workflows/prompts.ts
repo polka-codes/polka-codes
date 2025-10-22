@@ -23,20 +23,20 @@ You are participating in a 3-phase development workflow:
 
 export const EPIC_TASK_BREAKDOWN_PROMPT = `
 You are an expert at breaking down a large project into smaller, manageable tasks.
-Based on the provided high-level plan, create a sequence of smaller, implementable tasks.
+Based on the provided high-level plan, create a sequence of smaller, implementable tasks and a brief technical overview of the epic.
+The overview should be a short paragraph that summarizes the overall technical approach.
 Each task should be a self-contained unit of work that can be implemented and committed separately.
-Respond with a JSON object containing a "tasks" array. Each object in the array should have an "id" and a "description".
+Respond with a JSON object containing an "overview" string and a "tasks" array. Each object in the array should have a "description".
 
 Example format:
 \`\`\`json
 {
+  "overview": "This epic will introduce a new caching layer to improve performance. It involves setting up a Redis client, implementing a cache-aside pattern for data fetching, and adding configuration for the cache.",
   "tasks": [
     {
-      "id": 1,
       "description": "Set up the initial project structure."
     },
     {
-      "id": 2,
       "description": "Implement the main feature."
     }
   ]
