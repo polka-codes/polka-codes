@@ -1,0 +1,318 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`applyCacheControl should not apply cache control for non-cacheable models 1`] = `
+[
+  {
+    "content": "System message",
+    "role": "system",
+  },
+  {
+    "content": "User message 1",
+    "role": "user",
+  },
+  {
+    "content": "Assistant message 1",
+    "role": "assistant",
+  },
+  {
+    "content": "User message 2",
+    "role": "user",
+  },
+  {
+    "content": "Assistant message 2",
+    "role": "assistant",
+  },
+  {
+    "content": "User message 3",
+    "role": "user",
+  },
+]
+`;
+
+exports[`applyCacheControl should not apply cache control for unsupported providers 1`] = `
+[
+  {
+    "content": "System message",
+    "role": "system",
+  },
+  {
+    "content": "User message 1",
+    "role": "user",
+  },
+  {
+    "content": "Assistant message 1",
+    "role": "assistant",
+  },
+  {
+    "content": "User message 2",
+    "role": "user",
+  },
+  {
+    "content": "Assistant message 2",
+    "role": "assistant",
+  },
+  {
+    "content": "User message 3",
+    "role": "user",
+  },
+]
+`;
+
+exports[`applyCacheControl should apply cache control for anthropic provider with a supported model 1`] = `
+[
+  {
+    "content": "System message",
+    "providerOptions": {
+      "anthropic": {
+        "cacheControl": {
+          "type": "ephemeral",
+        },
+      },
+    },
+    "role": "system",
+  },
+  {
+    "content": "User message 1",
+    "role": "user",
+  },
+  {
+    "content": "Assistant message 1",
+    "role": "assistant",
+  },
+  {
+    "content": "User message 2",
+    "providerOptions": {
+      "anthropic": {
+        "cacheControl": {
+          "type": "ephemeral",
+        },
+      },
+    },
+    "role": "user",
+  },
+  {
+    "content": "Assistant message 2",
+    "role": "assistant",
+  },
+  {
+    "content": "User message 3",
+    "providerOptions": {
+      "anthropic": {
+        "cacheControl": {
+          "type": "ephemeral",
+        },
+      },
+    },
+    "role": "user",
+  },
+]
+`;
+
+exports[`applyCacheControl should apply cache control for openrouter provider with a supported model 1`] = `
+[
+  {
+    "content": "System message",
+    "providerOptions": {
+      "openrouter": {
+        "cacheControl": {
+          "type": "ephemeral",
+        },
+      },
+    },
+    "role": "system",
+  },
+  {
+    "content": "User message 1",
+    "role": "user",
+  },
+  {
+    "content": "Assistant message 1",
+    "role": "assistant",
+  },
+  {
+    "content": "User message 2",
+    "providerOptions": {
+      "openrouter": {
+        "cacheControl": {
+          "type": "ephemeral",
+        },
+      },
+    },
+    "role": "user",
+  },
+  {
+    "content": "Assistant message 2",
+    "role": "assistant",
+  },
+  {
+    "content": "User message 3",
+    "providerOptions": {
+      "openrouter": {
+        "cacheControl": {
+          "type": "ephemeral",
+        },
+      },
+    },
+    "role": "user",
+  },
+]
+`;
+
+exports[`applyCacheControl should apply cache control for gemini models 1`] = `
+[
+  {
+    "content": "System message",
+    "providerOptions": {
+      "openrouter": {
+        "cacheControl": {
+          "type": "ephemeral",
+        },
+      },
+    },
+    "role": "system",
+  },
+  {
+    "content": "User message 1",
+    "role": "user",
+  },
+  {
+    "content": "Assistant message 1",
+    "role": "assistant",
+  },
+  {
+    "content": "User message 2",
+    "providerOptions": {
+      "openrouter": {
+        "cacheControl": {
+          "type": "ephemeral",
+        },
+      },
+    },
+    "role": "user",
+  },
+  {
+    "content": "Assistant message 2",
+    "role": "assistant",
+  },
+  {
+    "content": "User message 3",
+    "providerOptions": {
+      "openrouter": {
+        "cacheControl": {
+          "type": "ephemeral",
+        },
+      },
+    },
+    "role": "user",
+  },
+]
+`;
+
+exports[`applyCacheControl should handle fewer than two user messages 1`] = `
+[
+  {
+    "content": "System message",
+    "providerOptions": {
+      "anthropic": {
+        "cacheControl": {
+          "type": "ephemeral",
+        },
+      },
+    },
+    "role": "system",
+  },
+  {
+    "content": "User message 1",
+    "providerOptions": {
+      "anthropic": {
+        "cacheControl": {
+          "type": "ephemeral",
+        },
+      },
+    },
+    "role": "user",
+  },
+]
+`;
+
+exports[`applyCacheControl should work correctly without a system message 1`] = `
+[
+  {
+    "content": "User message 1",
+    "role": "user",
+  },
+  {
+    "content": "Assistant message 1",
+    "role": "assistant",
+  },
+  {
+    "content": "User message 2",
+    "providerOptions": {
+      "anthropic": {
+        "cacheControl": {
+          "type": "ephemeral",
+        },
+      },
+    },
+    "role": "user",
+  },
+  {
+    "content": "User message 3",
+    "providerOptions": {
+      "anthropic": {
+        "cacheControl": {
+          "type": "ephemeral",
+        },
+      },
+    },
+    "role": "user",
+  },
+]
+`;
+
+exports[`applyCacheControl should merge with existing providerOptions 1`] = `
+[
+  {
+    "content": "System message",
+    "providerOptions": {
+      "anthropic": {
+        "cacheControl": {
+          "type": "ephemeral",
+        },
+      },
+    },
+    "role": "system",
+  },
+  {
+    "content": "User message 1",
+    "role": "user",
+  },
+  {
+    "content": "Assistant message 1",
+    "role": "assistant",
+  },
+  {
+    "content": "User message 2",
+    "providerOptions": {
+      "anthropic": {
+        "cacheControl": {
+          "type": "ephemeral",
+        },
+        "someOtherOption": "value",
+      },
+    },
+    "role": "user",
+  },
+  {
+    "content": "User message 3",
+    "providerOptions": {
+      "anthropic": {
+        "cacheControl": {
+          "type": "ephemeral",
+        },
+      },
+    },
+    "role": "user",
+  },
+]
+`;

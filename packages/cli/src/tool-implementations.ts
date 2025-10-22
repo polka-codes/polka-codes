@@ -39,6 +39,7 @@ export type AgentContextParameters = {
 
 import { camelCase } from 'lodash-es'
 import { gitDiff } from './tools'
+import { applyCacheControl } from './utils/cacheControl'
 import type { CliToolRegistry } from './workflow-tools'
 import { getLocalChanges } from './workflows/workflow.utils'
 
@@ -251,6 +252,9 @@ async function generateText(input: { messages: JsonModelMessage[]; tools: ToolSe
 
   const { retryCount = 5, requestTimeoutSeconds = 90 } = context.parameters
 
+  // Convert messages and apply cache control
+  const messages = applyCacheControl(input.messages.map(fromJsonModelMessage), model.provider, model.modelId)
+
   for (let i = 0; i < retryCount; i++) {
     const abortController = new AbortController()
     const timeout = setTimeout(() => abortController.abort(), requestTimeoutSeconds * 1000)
@@ -261,7 +265,7 @@ async function generateText(input: { messages: JsonModelMessage[]; tools: ToolSe
       const stream = streamText({
         model,
         temperature: 0,
-        messages: input.messages.map(fromJsonModelMessage),
+        messages,
         tools: input.tools,
         async onChunk({ chunk }) {
           switch (chunk.type) {
