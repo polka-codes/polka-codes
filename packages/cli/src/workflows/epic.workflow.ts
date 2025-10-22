@@ -14,11 +14,7 @@ export type EpicWorkflowInput = {
 
 const epicSchema = z.object({
   overview: z.string().describe('A brief technical overview of the epic.'),
-  tasks: z.array(
-    z.object({
-      description: z.string().describe('A concise, one-sentence description of the task.'),
-    }),
-  ),
+  tasks: z.array(z.string().describe('A detailed, self-contained, and implementable task description.')),
   branchName: z.string().describe('A short, descriptive branch name in kebab-case. For example: `feat/new-feature`'),
 })
 
@@ -93,16 +89,16 @@ The branch name should be short, descriptive, and in kebab-case. For example: \`
   // Phase 6: Task Execution Loop
   logger.info('🚀 Phase 5: Executing tasks...\n')
   for (const [index, taskItem] of tasks.entries()) {
-    logger.info(`▶️  Starting task: ${taskItem.description}`)
+    logger.info(`▶️  Starting task: ${taskItem}`)
 
     await step(`task-${index}`, async () => {
-      const taskWithOverview = `You are in the middle of a larger epic. Here is the overview of the epic:\n${overview}\n\nYour current task is: ${taskItem.description}`
+      const taskWithOverview = `You are in the middle of a larger epic. Here is the overview of the epic:\n${overview}\n\nYour current task is: ${taskItem}`
       await codeWorkflow({ task: taskWithOverview, mode: 'noninteractive' }, context)
     })
 
     await step(`commit-initial-${index}`, async () => {
       await tools.executeCommand({ command: 'git', args: ['add', '.'] })
-      await tools.executeCommand({ command: 'git', args: ['commit', '-m', `feat: ${taskItem.description}`] })
+      await tools.executeCommand({ command: 'git', args: ['commit', '-m', `feat: ${taskItem}`] })
     })
 
     const maxRetries = 5
@@ -147,7 +143,7 @@ The branch name should be short, descriptive, and in kebab-case. For example: \`
       logger.warn(`🚨 Review found ${reviewResult.specificReviews.length} issues. Attempting to fix...`)
 
       const reviewSummary = reviewResult.specificReviews.map((r) => `File: ${r.file} (lines: ${r.lines})\nReview: ${r.review}`).join('\n\n')
-      const fixTask = `You are in the middle of a larger epic. The original task was: "${taskItem.description}".
+      const fixTask = `You are in the middle of a larger epic. The original task was: "${taskItem}".
 Here is the overview of the epic:
 ${overview}
 
@@ -163,12 +159,12 @@ After an initial implementation, a review found the following issues. Please fix
       })
 
       if (i === maxRetries - 1) {
-        logger.error(`🚫 Max retries reached for task: ${taskItem.description}. Moving to the next task, but issues might remain.`)
+        logger.error(`🚫 Max retries reached for task: ${taskItem}. Moving to the next task, but issues might remain.`)
       }
     }
 
     if (reviewPassed) {
-      logger.info(`✅ Task completed and committed: ${taskItem.description}`)
+      logger.info(`✅ Task completed and committed: ${taskItem}`)
     }
   }
 }

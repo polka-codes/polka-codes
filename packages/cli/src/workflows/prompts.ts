@@ -25,21 +25,17 @@ export const EPIC_TASK_BREAKDOWN_PROMPT = `
 You are an expert at breaking down a large project into smaller, manageable tasks.
 Based on the provided high-level plan, create a sequence of smaller, implementable tasks and a brief technical overview of the epic.
 The overview should be a short paragraph that summarizes the overall technical approach.
-Each task should be a self-contained unit of work that can be implemented and committed separately.
+Each task should be a detailed, self-contained, and implementable task description.
 For example, if the epic is to review all the files, then each task should be for each file.
-Respond with a JSON object containing an "overview" string, "branchName" string, and a "tasks" array. Each object in the array should have a "description".
+Respond with a JSON object containing an "overview" string, "branchName" string, and a "tasks" array of strings.
 
 Example format:
 \`\`\`json
 {
   "overview": "This epic will introduce a new caching layer to improve performance. It involves setting up a Redis client, implementing a cache-aside pattern for data fetching, and adding configuration for the cache.",
   "tasks": [
-    {
-      "description": "Set up the initial project structure."
-    },
-    {
-      "description": "Implement the main feature."
-    }
+    "Set up the initial project structure.",
+    "Implement the main feature."
   ],
   "branchName": "feat/new-caching-layer"
 }
