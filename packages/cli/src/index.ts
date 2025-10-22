@@ -4,7 +4,6 @@ globalThis.AI_SDK_LOG_WARNINGS = false
 import 'dotenv/config'
 import { Command } from 'commander'
 import { version } from '../package.json'
-import { runChat } from './commands/chat'
 import { codeCommand } from './commands/code'
 import { commitCommand } from './commands/commit'
 import { epicCommand } from './commands/epic'
@@ -22,9 +21,6 @@ program.name('polka').description('Polka Codes CLI').version(version)
 
 // Main command for executing tasks
 program.argument('[task]', 'The task to execute').action((task, _options, command) => runMeta(task, command))
-
-// Chat command
-program.command('chat').description('Start an interactive chat session').action(runChat)
 
 // Init command
 program.addCommand(initCommand)
