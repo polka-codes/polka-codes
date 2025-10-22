@@ -216,3 +216,27 @@ export const getDefaultBranch = async (executeCommand: ExecuteCommandFn): Promis
 
   return undefined
 }
+
+/**
+ * Formats elapsed time in milliseconds to a human-readable string
+ * @param ms - Time in milliseconds
+ * @returns Formatted time string (e.g., "1.5s", "2m 30s", "1h 15m")
+ */
+export function formatElapsedTime(ms: number): string {
+  const seconds = ms / 1000
+  if (seconds < 60) {
+    return `${seconds.toFixed(1)}s`
+  }
+
+  const minutes = Math.floor(seconds / 60)
+  const remainingSeconds = Math.floor(seconds % 60)
+
+  if (minutes < 60) {
+    return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`
+  }
+
+  const hours = Math.floor(minutes / 60)
+  const remainingMinutes = minutes % 60
+
+  return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`
+}

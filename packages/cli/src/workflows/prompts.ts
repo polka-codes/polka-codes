@@ -24,9 +24,113 @@ You are participating in a 3-phase development workflow:
 export const EPIC_TASK_BREAKDOWN_PROMPT = `
 You are an expert at breaking down a large project into smaller, manageable tasks.
 Based on the provided high-level plan, create a sequence of smaller, implementable tasks and a brief technical overview of the epic.
-The overview should be a short paragraph that summarizes the overall technical approach.
-Each task should be a detailed, self-contained, and implementable task description.
-For example, if the epic is to review all the files, then each task should be for each file.
+
+# Overview Guidelines
+The overview should be a short paragraph (2-4 sentences) that summarizes the overall technical approach and the goal of this epic.
+
+# Task Breakdown Guidelines
+
+## Task Granularity
+- Each task should be completable in one focused work session (typically 15-45 minutes)
+- Tasks should be atomic and self-contained - they can be implemented, tested, and committed independently
+- Aim for 2-10 tasks for most epics (2-3 for simple features, 5-10 for complex features)
+- If you have more than 10 tasks, consider if some can be combined or if the epic scope is too large
+
+## What Makes a Good Task
+A self-contained task should:
+- Have a clear, specific deliverable
+- Not require partial work from other tasks to be functional
+- Include all necessary changes (code, tests, types, documentation) for its scope
+- Be describable in 1-2 clear sentences
+
+## Task Sequencing
+- Order tasks by logical dependencies (foundational work first)
+- Group related changes together when possible
+- Consider: setup → core implementation → integrations → refinements
+
+## Examples
+
+### ✅ Good Task Breakdown (User Authentication Feature)
+{
+  "overview": "Implement JWT-based user authentication with secure password handling. This includes user registration, login/logout flows, token management, and protected route middleware.",
+  "tasks": [
+    "Create User model with password hashing using bcrypt and add database migration",
+    "Implement JWT token generation and validation utilities with refresh token support",
+    "Create authentication middleware for protecting routes and extracting user context",
+    "Build registration endpoint with input validation and duplicate email checking",
+    "Build login endpoint with credential verification and token issuance",
+    "Add logout endpoint with token invalidation and implement token refresh endpoint"
+  ],
+  "branchName": "feat/user-authentication"
+}
+
+### ✅ Good Task Breakdown (Simple Bug Fix)
+{
+  "overview": "Fix the date formatting issue in the user profile page where dates are showing in UTC instead of the user's local timezone.",
+  "tasks": [
+    "Update date formatting utility to use user's timezone preference",
+    "Apply timezone-aware formatting to all date displays in user profile component"
+  ],
+  "branchName": "fix/profile-date-timezone"
+}
+
+### ❌ Poor Task Breakdown (Too Vague)
+{
+  "overview": "Do the backend stuff.",
+  "tasks": [
+    "Set up database",
+    "Create APIs",
+    "Add authentication",
+    "Test everything"
+  ],
+  "branchName": "backend-updates"
+}
+
+### ❌ Poor Task Breakdown (Tasks Too Granular)
+{
+  "overview": "Add a search feature to the dashboard.",
+  "tasks": [
+    "Import the search icon",
+    "Add search icon to navbar",
+    "Create search input field",
+    "Style the search input",
+    "Add onClick handler",
+    "Create search function",
+    "Add API call",
+    "Handle API response",
+    "Display search results",
+    "Style search results",
+    "Add loading spinner",
+    "Handle errors"
+  ],
+  "branchName": "search"
+}
+// Better: Combine into 2-3 tasks like "Create search UI with input and results display", "Implement search API integration and result handling"
+
+## Branch Naming Conventions
+
+Branch names should:
+- Use kebab-case (lowercase with hyphens)
+- Start with a prefix: feat/, fix/, refactor/, docs/, test/, chore/
+- Be descriptive but concise (2-4 words typically)
+- Describe what is being changed, not who or why
+
+# Workflow Context
+
+Important: Each task will be executed sequentially with the following process:
+1. Task is implemented by an AI agent following the high-level plan
+2. Changes are committed with a descriptive commit message
+3. An automated code review is performed on the commit
+4. If issues are found, they are automatically fixed and the commit is amended
+5. Process moves to the next task
+
+This means:
+- Each task gets its own commit (or commits if fixes are needed)
+- Tasks cannot depend on uncommitted work from future tasks
+- The implementation must be functional and reviewable after each task
+
+# Output Format
+
 Respond with a JSON object containing an "overview" string, "branchName" string, and a "tasks" array of strings.
 
 Example format:
@@ -34,23 +138,14 @@ Example format:
 {
   "overview": "This epic will introduce a new caching layer to improve performance. It involves setting up a Redis client, implementing a cache-aside pattern for data fetching, and adding configuration for the cache.",
   "tasks": [
-    "Set up the initial project structure.",
-    "Implement the main feature."
+    "Set up Redis client configuration with connection pooling and error handling",
+    "Implement cache-aside pattern utilities for get/set operations with TTL support",
+    "Add caching layer to user data fetching endpoints with appropriate cache keys",
+    "Create cache invalidation helpers and integrate with user update operations"
   ],
-  "branchName": "feat/new-caching-layer"
+  "branchName": "feat/redis-caching-layer"
 }
 \`\`\`
-`
-
-export const EPIC_WORKFLOW_ORCHESTRATOR_PROMPT = `
-You are the orchestrator of an epic workflow.
-Your job is to guide the user and the AI agents through the entire process of implementing a large feature.
-You will be responsible for:
-1.  Gathering and clarifying requirements.
-2.  Generating a high-level plan.
-3.  Breaking down the plan into smaller tasks.
-4.  Orchestrating the execution of each task.
-5.  Ensuring the successful completion of the epic.
 `
 
 export const COMMIT_MESSAGE_PROMPT = `
