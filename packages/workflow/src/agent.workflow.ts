@@ -3,7 +3,6 @@
 import type { ExitReason, FullToolInfoV2, TaskEvent, ToolResponse } from '@polka-codes/core'
 import { parseJsonFromMarkdown, TaskEventKind, ToolResponseType } from '@polka-codes/core'
 import { jsonSchema, type ToolCallPart, type ToolSet } from 'ai'
-import { camelCase } from 'lodash-es'
 import { toJSONSchema, z } from 'zod'
 import type { JsonModelMessage, JsonResponseMessage, JsonUserModelMessage } from './json-ai-types'
 import type { WorkflowFn } from './workflow'
@@ -52,8 +51,7 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
 
   const toolSet: ToolSet = {}
   for (const tool of toolInfo) {
-    const toolName = camelCase(tool.name)
-    toolSet[toolName] = {
+    toolSet[tool.name] = {
       description: tool.description,
       inputSchema: jsonSchema(toJSONSchema(tool.parameters)),
     }

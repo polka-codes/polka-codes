@@ -3,7 +3,7 @@ import { type FullToolInfoV2, type ToolHandler, type ToolInfoV2, ToolResponseTyp
 import type { FilesystemProvider } from './provider'
 
 export const toolInfo = {
-  name: 'search_files',
+  name: 'searchFiles',
   description:
     'Request to perform a regex search across files in a specified directory, outputting context-rich results that include surrounding lines. This tool searches for patterns or specific content across multiple files, displaying each match with encapsulating context.',
   parameters: z
@@ -58,7 +58,7 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
       type: ToolResponseType.Invalid,
       message: {
         type: 'error-text',
-        value: `Invalid arguments for search_files: ${parsed.error.message}`,
+        value: `Invalid arguments for searchFiles: ${parsed.error.message}`,
       },
     }
   }

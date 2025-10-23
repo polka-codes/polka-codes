@@ -3,7 +3,7 @@ import { type FullToolInfoV2, type ToolHandler, type ToolInfoV2, ToolResponseTyp
 import type { FilesystemProvider } from './provider'
 
 export const toolInfo = {
-  name: 'remove_file',
+  name: 'removeFile',
   description: 'Request to remove a file at the specified path.',
   parameters: z
     .object({
@@ -38,7 +38,7 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
       type: ToolResponseType.Invalid,
       message: {
         type: 'error-text',
-        value: `Invalid arguments for remove_file: ${parsed.error.message}`,
+        value: `Invalid arguments for removeFile: ${parsed.error.message}`,
       },
     }
   }

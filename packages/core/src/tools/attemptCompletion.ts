@@ -3,7 +3,7 @@ import { type FullToolInfoV2, type ToolHandler, type ToolInfoV2, ToolResponseTyp
 import type { InteractionProvider } from './provider'
 
 export const toolInfo = {
-  name: 'attempt_completion',
+  name: 'attemptCompletion',
   description:
     'Use this tool when you believe the user’s requested task is complete. Indicate that your work is finished, but acknowledge the user may still provide additional instructions or questions if they want to continue. This tool MUST NOT to be used with any other tool.',
   parameters: z
@@ -34,7 +34,7 @@ export const handler: ToolHandler<typeof toolInfo, InteractionProvider> = async 
       type: ToolResponseType.Invalid,
       message: {
         type: 'error-text',
-        value: `Invalid arguments for attempt_completion: ${parsed.error.message}`,
+        value: `Invalid arguments for attemptCompletion: ${parsed.error.message}`,
       },
     }
   }

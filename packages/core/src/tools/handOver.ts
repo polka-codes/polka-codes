@@ -7,7 +7,7 @@ import { z } from 'zod'
 import { type FullToolInfoV2, type ToolHandler, type ToolInfoV2, ToolResponseType } from '../tool'
 
 export const toolInfo = {
-  name: 'hand_over',
+  name: 'handOver',
   description: 'Hand over the current task to another agent to complete. This tool MUST NOT to be used with any other tool.',
   parameters: z
     .object({
@@ -46,7 +46,7 @@ export const handler: ToolHandler<typeof toolInfo, any> = async (_provider, args
       type: ToolResponseType.Invalid,
       message: {
         type: 'error-text',
-        value: `Invalid arguments for hand_over: ${parsed.error.message}`,
+        value: `Invalid arguments for handOver: ${parsed.error.message}`,
       },
     }
   }

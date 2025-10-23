@@ -37,7 +37,6 @@ export type AgentContextParameters = {
   usageMeter: UsageMeter
 }
 
-import { camelCase } from 'lodash-es'
 import { gitDiff } from './tools'
 import { applyCacheControl } from './utils/cacheControl'
 import type { CliToolRegistry } from './workflow-tools'
@@ -57,7 +56,7 @@ const allTools = [
   writeToFileTool,
   gitDiff,
 ] as const
-const toolHandlers = new Map(allTools.map((t) => [camelCase(t.name), t]))
+const toolHandlers = new Map(allTools.map((t) => [t.name, t]))
 
 type ToolCall<TTools extends ToolRegistry> = {
   [K in keyof TTools]: {

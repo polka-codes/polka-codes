@@ -3,7 +3,7 @@ import { type FullToolInfoV2, type ToolHandler, type ToolInfoV2, ToolResponseTyp
 import type { FilesystemProvider } from './provider'
 
 export const toolInfo = {
-  name: 'write_to_file',
+  name: 'writeToFile',
   description:
     "Request to write content to a file at the specified path. If the file exists, it will be overwritten with the provided content. If the file doesn't exist, it will be created. This tool will automatically create any directories needed to write the file. Ensure that the output content does not include incorrect escaped character patterns such as `&lt;`, `&gt;`, or `&amp;`. Also ensure there is no unwanted CDATA tags in the content.",
   parameters: z
@@ -57,7 +57,7 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
       type: ToolResponseType.Invalid,
       message: {
         type: 'error-text',
-        value: `Invalid arguments for write_to_file: ${parsed.error.message}`,
+        value: `Invalid arguments for writeToFile: ${parsed.error.message}`,
       },
     }
   }

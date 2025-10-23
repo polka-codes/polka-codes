@@ -3,7 +3,7 @@ import { type FullToolInfoV2, type ToolHandler, type ToolInfoV2, ToolResponseTyp
 import type { CommandProvider } from './provider'
 
 export const toolInfo = {
-  name: 'execute_command',
+  name: 'executeCommand',
   description:
     'Run a single CLI command. The command is always executed in the project-root working directory (regardless of earlier commands). Prefer one-off shell commands over wrapper scripts for flexibility. **IMPORTANT**: After an `execute_command` call, you MUST stop and NOT allowed to make further tool calls in the same message.',
 

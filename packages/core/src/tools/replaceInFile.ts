@@ -5,7 +5,7 @@ import type { FilesystemProvider } from './provider'
 import { replaceInFile } from './utils/replaceInFile'
 
 export const toolInfo = {
-  name: 'replace_in_file',
+  name: 'replaceInFile',
   description:
     'Request to replace sections of content in an existing file using SEARCH/REPLACE blocks that define exact changes to specific parts of the file. This tool should be used when you need to make targeted changes to specific parts of a file.',
   parameters: z
@@ -140,7 +140,7 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
       type: ToolResponseType.Invalid,
       message: {
         type: 'error-text',
-        value: `Invalid arguments for replace_in_file: ${parsed.error.message}`,
+        value: `Invalid arguments for replaceInFile: ${parsed.error.message}`,
       },
     }
   }
@@ -199,7 +199,7 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
       type: ToolResponseType.Invalid,
       message: {
         type: 'error-text',
-        value: `Invalid arguments for replace_in_file: ${error}`,
+        value: `Invalid arguments for replaceInFile: ${error}`,
       },
     }
   }

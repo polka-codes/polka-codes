@@ -6,7 +6,7 @@ import { type FullToolInfoV2, type ToolHandler, type ToolInfoV2, ToolResponseTyp
 import type { FilesystemProvider } from './provider'
 
 export const toolInfo = {
-  name: 'rename_file',
+  name: 'renameFile',
   description: 'Request to rename a file from source path to target path.',
   parameters: z
     .object({

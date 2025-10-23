@@ -4,7 +4,7 @@ import { type FullToolInfoV2, type ToolHandler, type ToolInfoV2, ToolResponseTyp
 import type { WebProvider } from './provider'
 
 export const toolInfo = {
-  name: 'fetch_url',
+  name: 'fetchUrl',
   description:
     'Fetch the content located at one or more HTTP(S) URLs and return it in Markdown format. This works for standard web pages as well as raw files (e.g. README.md, source code) hosted on platforms like GitHub.',
   parameters: z

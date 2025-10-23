@@ -3,7 +3,7 @@ import { type FullToolInfoV2, type ToolHandler, type ToolInfoV2, ToolResponseTyp
 import type { FilesystemProvider } from './provider'
 
 export const toolInfo = {
-  name: 'read_binary_file',
+  name: 'readBinaryFile',
   description:
     'Read a binary file from a URL or local path. Use file:// prefix to access local files. This can be used to access non-text files such as PDFs or images.',
   parameters: z.object({

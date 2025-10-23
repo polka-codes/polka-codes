@@ -12,7 +12,7 @@ const questionObject = z.object({
 })
 
 export const toolInfo = {
-  name: 'ask_followup_question',
+  name: 'askFollowupQuestion',
   description:
     'Call this when vital details are missing. Pose each follow-up as one direct, unambiguous question. If it speeds the reply, add up to five short, mutually-exclusive answer options. Group any related questions in the same call to avoid a back-and-forth chain.',
   parameters: z

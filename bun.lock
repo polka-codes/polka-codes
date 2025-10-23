@@ -19,7 +19,7 @@
     },
     "packages/cli": {
       "name": "@polka-codes/cli",
-      "version": "0.9.45",
+      "version": "0.9.46",
       "bin": {
         "polka": "cli.mjs",
       },
@@ -53,7 +53,7 @@
     },
     "packages/cli-shared": {
       "name": "@polka-codes/cli-shared",
-      "version": "0.9.45",
+      "version": "0.9.46",
       "dependencies": {
         "@ai-sdk/provider-utils": "^3.0.12",
         "@inquirer/prompts": "^7.9.0",
@@ -72,22 +72,18 @@
     },
     "packages/core": {
       "name": "@polka-codes/core",
-      "version": "0.9.45",
+      "version": "0.9.46",
       "dependencies": {
         "@ai-sdk/provider": "^2.0.0",
         "@ai-sdk/provider-utils": "^3.0.12",
         "ai": "^5.0.68",
-        "lodash-es": "^4.17.21",
         "yaml": "^2.8.1",
         "zod": "^4.1.12",
-      },
-      "devDependencies": {
-        "@types/lodash-es": "^4.17.12",
       },
     },
     "packages/github": {
       "name": "@polka-codes/github",
-      "version": "0.9.45",
+      "version": "0.9.46",
       "dependencies": {
         "@octokit/core": "^6.1.4",
         "mdast": "^3.0.0",
@@ -103,7 +99,7 @@
     },
     "packages/runner": {
       "name": "@polka-codes/runner",
-      "version": "0.9.45",
+      "version": "0.9.46",
       "bin": {
         "polka-runner": "cli.mjs",
       },
@@ -114,29 +110,23 @@
         "commander": "^14.0.1",
         "dotenv": "^17.2.3",
         "ignore": "^7.0.5",
-        "lodash-es": "^4.17.21",
         "ws": "^8.18.3",
         "yaml": "^2.8.1",
         "zod": "^4.1.12",
       },
       "devDependencies": {
-        "@types/lodash-es": "^4.17.12",
         "@types/ws": "^8.18.1",
       },
     },
     "packages/workflow": {
       "name": "@polka-codes/workflow",
-      "version": "0.9.45",
+      "version": "0.9.46",
       "dependencies": {
         "@ai-sdk/provider": "^2.0.0",
         "@ai-sdk/provider-utils": "^3.0.12",
         "@polka-codes/core": "workspace:*",
         "ai": "^5.0.68",
-        "lodash-es": "^4.17.21",
         "zod": "^4.1.12",
-      },
-      "devDependencies": {
-        "@types/lodash-es": "^4.17.12",
       },
     },
   },
