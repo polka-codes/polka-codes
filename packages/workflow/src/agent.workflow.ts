@@ -166,18 +166,6 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
             output: toolResponse.message,
           })
           break
-        case ToolResponseType.Invalid:
-          await event(`event-tool-invalid-${toolCall.toolName}-${toolCall.toolCallId}`, {
-            kind: TaskEventKind.ToolInvalid,
-            tool: toolCall.toolName,
-            content: toolResponse.message,
-          })
-          toolResults.push({
-            toolCallId: toolCall.toolCallId,
-            toolName: toolCall.toolName,
-            output: toolResponse.message,
-          })
-          break
         case ToolResponseType.Exit:
           if (toolCalls.length > 1) {
             toolResults.push({

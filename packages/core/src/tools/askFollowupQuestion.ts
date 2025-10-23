@@ -82,7 +82,7 @@ export const handler: ToolHandler<typeof toolInfo, InteractionProvider> = async 
   const { questions } = toolInfo.parameters.parse(args)
   if (questions.length === 0) {
     return {
-      type: ToolResponseType.Invalid,
+      type: ToolResponseType.Error,
       message: {
         type: 'error-text',
         value: 'No questions provided',

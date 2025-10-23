@@ -26,7 +26,6 @@ export type FullToolInfo = ToolInfo & {
 export enum ToolResponseType {
   Reply = 'Reply',
   Exit = 'Exit',
-  Invalid = 'Invalid',
   Error = 'Error',
   Pause = 'Pause',
 }
@@ -81,12 +80,6 @@ export type ToolResponseExit = {
   object?: any
 }
 
-// The tool arguments are invalid
-export type ToolResponseInvalid = {
-  type: ToolResponseType.Invalid
-  message: ToolResponseResult
-}
-
 // Some error occurred when executing the tool
 // e.g. network request error, IO error
 export type ToolResponseError = {
@@ -103,6 +96,6 @@ export type ToolResponsePause = {
   object: any
 }
 
-export type ToolResponse = ToolResponseReply | ToolResponseExit | ToolResponseInvalid | ToolResponseError | ToolResponsePause
+export type ToolResponse = ToolResponseReply | ToolResponseExit | ToolResponseError | ToolResponsePause
 
 export type ToolHandler<_T, P> = (provider: P, args: Partial<Record<string, ToolParameterValue>>) => Promise<ToolResponse>

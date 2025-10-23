@@ -54,7 +54,7 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
   const parsed = toolInfo.parameters.safeParse(args)
   if (!parsed.success) {
     return {
-      type: ToolResponseType.Invalid,
+      type: ToolResponseType.Error,
       message: {
         type: 'error-text',
         value: `Invalid arguments for writeToFile: ${parsed.error.message}`,
