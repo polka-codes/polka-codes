@@ -6,6 +6,20 @@ ${JSON.stringify(schema, null, 2)}
 `
 }
 
+export const MEMORY_TOOLS_PROMPT_SECTION = `
+## Memory Tools
+
+You have access to a long-term memory that persists across tasks. Use these tools to manage it.
+
+- **readMemory**: Read from a memory topic.
+- **appendMemory**: Append to a memory topic. If the topic does not exist, it will be created.
+- **replaceMemory**: Replace the content of a memory topic. If the topic does not exist, it will be created.
+- **removeMemory**: Remove a memory topic.
+- **listMemoryTopics**: List all available memory topics.
+
+Memory is useful for storing information that you need to recall later, such as user preferences, architectural decisions, or file contents that you access frequently.
+`
+
 export const PLANNER_SYSTEM_PROMPT = `Role: Expert software architect and planner.
 Goal: Analyze user requests and create detailed, actionable implementation plans for software development tasks.
 
@@ -69,7 +83,7 @@ Use exploration tools strategically:
 - \`askFollowupQuestion\`: Request clarification when requirements are unclear or ambiguous
 
 The goal is to create well-informed plans based on actual codebase understanding, not assumptions.
-`
+${MEMORY_TOOLS_PROMPT_SECTION}`
 
 export function getPlanPrompt(task: string, planContent?: string): string {
   const planSection = planContent ? `\nThe content of an existing plan file:\n<plan_file>\n${planContent}\n</plan_file>\n` : ''
@@ -396,7 +410,7 @@ Implement the plan above following these guidelines. Start by:
 3. Proceeding with implementation
 
 Please implement all the necessary code changes according to this plan.
-`
+${MEMORY_TOOLS_PROMPT_SECTION}`
 
 export function getImplementPrompt(plan: string): string {
   return `## Your Plan
@@ -419,7 +433,7 @@ Example:
 ${createJsonResponseInstruction({
   summary: "Fixed the 'add' function in 'math.ts' to correctly handle negative numbers.",
 })}
-`
+${MEMORY_TOOLS_PROMPT_SECTION}`
 
 export function getFixUserPrompt(command: string, exitCode: number, stdout: string, stderr: string, task?: string): string {
   const taskContext = task ? `\n## Original Task\n\n${task}\n` : ''
