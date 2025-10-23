@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { type FullToolInfoV2, type ToolHandler, type ToolInfoV2, ToolResponseType } from '../tool'
+import { type FullToolInfo, type ToolHandler, type ToolInfo, ToolResponseType } from '../tool'
 import type { FilesystemProvider } from './provider'
 
 export const toolInfo = {
@@ -38,7 +38,7 @@ export default App;
         },
       ],
     }),
-} as const satisfies ToolInfoV2
+} as const satisfies ToolInfo
 
 export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (provider, args) => {
   if (!provider.writeFile) {
@@ -87,4 +87,4 @@ export default {
   ...toolInfo,
   handler,
   isAvailable,
-} satisfies FullToolInfoV2
+} satisfies FullToolInfo

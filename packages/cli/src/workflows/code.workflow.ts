@@ -3,7 +3,7 @@
 import {
   askFollowupQuestion,
   executeCommand,
-  type FullToolInfoV2,
+  type FullToolInfo,
   fetchUrl,
   listFiles,
   readBinaryFile,
@@ -86,7 +86,7 @@ export const codeWorkflow: WorkflowFn<CodeWorkflowInput, void, CliToolRegistry> 
     }
   }
 
-  const agentTools: FullToolInfoV2[] = [
+  const agentTools: FullToolInfo[] = [
     readFile,
     writeToFile,
     replaceInFile,

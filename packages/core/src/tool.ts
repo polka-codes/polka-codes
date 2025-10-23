@@ -20,23 +20,11 @@ export type ToolParameter = {
 export type ToolInfo = {
   name: string
   description: string
-  parameters: ToolParameter[]
-  examples?: ToolExample[]
-}
-
-export type ToolInfoV2 = {
-  name: string
-  description: string
   parameters: z.ZodObject<any>
 }
 
 export type FullToolInfo = ToolInfo & {
   handler: ToolHandler<ToolInfo, any>
-  isAvailable: (provider: any) => boolean
-}
-
-export type FullToolInfoV2 = ToolInfoV2 & {
-  handler: ToolHandler<ToolInfoV2, any>
   isAvailable: (provider: any) => boolean
 }
 
