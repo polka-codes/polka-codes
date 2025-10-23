@@ -7,7 +7,7 @@
 [![Bun Version](https://img.shields.io/badge/Bun-v1.0.0+-brightgreen)](https://bun.sh)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue)](https://www.typescriptlang.org)
 
-The Polka Codes CLI provides a powerful command-line interface for interacting with AI-powered coding assistants. It offers features like interactive chat, task execution, commit message generation, and pull request creation.
+The Polka Codes CLI provides a powerful command-line interface for interacting with AI-powered coding assistants. It offers features like code generation, implementation planning, bug fixing, and pull request reviews.
 
 ## Installation
 
@@ -22,48 +22,66 @@ yarn global add @polka-codes/cli
 bun add -g @polka-codes/cli
 
 # Or run directly with npx
-npx @polka-codes/cli
+npx @polka-codes/cli "Your task description"
 ```
 
 ## Commands
 
-### Interactive Chat
-
-Start an interactive chat session with the AI assistant:
+The primary way to use Polka is by providing a task description directly:
 
 ```bash
-polka chat
-# or simply
-polka
+polka "implement user authentication"
 ```
 
-### Task Execution
+The CLI will intelligently determine the best workflow to handle your request. For more specific tasks, you can use the following commands:
 
-Execute a specific task:
+### `code`
+
+Generate code based on a description.
 
 ```bash
-polka task "improve error handling in auth module"
-# or pipe input
-echo "optimize database queries" | polka task
+polka code "create a React component for a login form"
 ```
 
-### Project Creation
+### `plan`
 
-Create a new project with AI assistance:
+Create an implementation plan for a new feature or refactor.
 
 ```bash
-polka create my-project
+polka plan "refactor the database schema to support multi-tenancy"
 ```
 
-The command will:
-1. Prompt for project location confirmation
-2. Set up initial project structure
-3. Configure basic dependencies
-4. Generate starter code
+### `epic`
 
-### Configuration
+Break down a large task into smaller, manageable sub-tasks.
 
-Initialize Polka Codes configuration:
+```bash
+polka epic "build a new e-commerce platform"
+```
+
+### `fix`
+
+Identify and fix bugs in your codebase.
+
+```bash
+polka fix "the login button is not working on the mobile app"
+```
+
+### `review`
+
+Review a pull request.
+
+```bash
+polka review "https://github.com/my-org/my-repo/pull/123"
+```
+
+### `meta`
+
+The `meta` command orchestrates complex workflows by running other commands in sequence. It's used internally by the CLI but can also be used for advanced use cases.
+
+### `init`
+
+Initialize Polka Codes configuration for your project.
 
 ```bash
 # Create local config
@@ -75,23 +93,27 @@ polka init --global
 
 ### Git Integration
 
-Generate commit messages based on staged changes:
+#### `commit`
+
+Generate a commit message based on your staged changes.
 
 ```bash
 # Generate commit message for staged changes
 polka commit
 
-# Generate commit message with context
+# Generate commit message with additional context
 polka commit "closes #123"
 
 # Stage all changes and commit
 polka commit -a
 ```
 
-Create pull requests with AI-generated details:
+#### `pr`
+
+Create a pull request with an AI-generated title and description.
 
 ```bash
-# Create PR with current branch changes
+# Create PR for the current branch
 polka pr
 
 # Create PR with additional context
@@ -156,41 +178,41 @@ rules: |
 ## Features
 
 - 🤖 Multiple AI provider support
-- 💬 Interactive chat mode
-- 🎯 Task-focused commands
-- 🔄 Git workflow integration
-- 📊 Project analysis and configuration
-- 🛠️ Custom command integration
+- 🧠 Intelligent workflow execution
+- 💻 Code generation, planning, and bug fixing
+- 🔄 Git workflow integration (commit messages and PRs)
+- 🔎 Pull request reviews
+- 📊 Project-specific configuration and commands
 - 🔑 Secure API key management
 - 📝 Detailed logging with `--verbose`
 
 ## Usage Tips
 
-1. Use interactive mode for complex tasks:
-   ```bash
-   polka chat
-   ```
+1.  For general tasks, let Polka figure it out:
+    ```bash
+    polka "add a dark mode toggle to the settings page"
+    ```
 
-2. Pipe tasks for automation:
-   ```bash
-   echo "update dependencies" | polka task
-   ```
+2.  Create a plan before implementing a large feature:
+    ```bash
+    polka plan "migrate the frontend from Vue to React"
+    ```
 
-3. Combine with git workflow:
-   ```bash
-   git add . && polka commit && polka pr
-   ```
+3.  Combine with your git workflow:
+    ```bash
+    git add . && polka commit && polka pr
+    ```
 
-4. Monitor AI usage:
-   ```bash
-   polka task "refactor auth" --verbose
-   ```
+4.  Get help with a bug:
+    ```bash
+    polka fix "users are reporting a 500 error on the checkout page" --verbose
+    ```
 
 ## Requirements
 
-- Node.js 18+
-- Git (for commit/PR features)
-- GitHub CLI (for PR creation)
+- Bun (v1.0.0+)
+- `git` (for `commit` and `pr` commands)
+- `GitHub CLI (gh)` (for `pr` command)
 
 ---
 
