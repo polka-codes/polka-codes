@@ -20,7 +20,6 @@ export type ToolInfo = {
 
 export type FullToolInfo = ToolInfo & {
   handler: ToolHandler<ToolInfo, any>
-  isAvailable: (provider: any) => boolean
 }
 
 export enum ToolResponseType {

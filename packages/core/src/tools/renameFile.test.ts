@@ -37,8 +37,6 @@ describe('renameFile', () => {
     // @ts-expect-error
     mockProvider.renameFile = undefined
 
-    expect(renameFile.isAvailable(mockProvider)).toBe(false)
-
     const result = await renameFile.handler(mockProvider, {
       source_path: 'test.txt',
       target_path: 'new.txt',

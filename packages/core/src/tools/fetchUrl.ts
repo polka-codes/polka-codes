@@ -87,12 +87,7 @@ export const handler: ToolHandler<typeof toolInfo, WebProvider> = async (provide
   }
 }
 
-export const isAvailable = (provider: WebProvider): boolean => {
-  return typeof provider.fetchUrl === 'function'
-}
-
 export default {
   ...toolInfo,
   handler,
-  isAvailable,
 } satisfies FullToolInfo

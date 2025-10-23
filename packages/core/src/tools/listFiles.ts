@@ -81,12 +81,7 @@ ${files.join('\n')}
   }
 }
 
-export const isAvailable = (provider: FilesystemProvider): boolean => {
-  return !!provider.listFiles
-}
-
 export default {
   ...toolInfo,
   handler,
-  isAvailable,
 } satisfies FullToolInfo

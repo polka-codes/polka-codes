@@ -2,7 +2,7 @@
 import { describe, expect, type Mock, mock, spyOn, test } from 'bun:test'
 import { type ToolHandler, ToolResponseType } from '../tool'
 import type { FilesystemProvider } from './provider'
-import { handler, isAvailable } from './replaceInFile'
+import { handler } from './replaceInFile'
 import * as replaceInFileModule from './utils/replaceInFile'
 
 describe('replaceInFile tool', () => {
@@ -10,20 +10,6 @@ describe('replaceInFile tool', () => {
     readFile: mock((_path: string): Promise<string | undefined> => Promise.resolve('')),
     writeFile: mock((_path: string, _content: string): Promise<void> => Promise.resolve()),
   }
-
-  test('isAvailable should return true when provider has readFile and writeFile', () => {
-    expect(isAvailable(mockProvider)).toBe(true)
-  })
-
-  test('isAvailable should return false when provider is missing readFile', () => {
-    const incompleteProvider = { writeFile: mock(() => Promise.resolve()) }
-    expect(isAvailable(incompleteProvider)).toBe(false)
-  })
-
-  test('isAvailable should return false when provider is missing writeFile', () => {
-    const incompleteProvider = { readFile: mock(() => Promise.resolve('')) }
-    expect(isAvailable(incompleteProvider)).toBe(false)
-  })
 
   test('handler should return error if provider is missing methods', async () => {
     const incompleteProvider = { writeFile: mock(() => Promise.resolve()) }

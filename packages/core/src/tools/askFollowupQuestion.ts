@@ -108,12 +108,7 @@ ${answer}
   }
 }
 
-export const isAvailable = (provider: InteractionProvider): boolean => {
-  return !!provider.askFollowupQuestion
-}
-
 export default {
   ...toolInfo,
   handler,
-  isAvailable,
 } satisfies FullToolInfo

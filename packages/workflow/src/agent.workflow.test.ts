@@ -15,7 +15,6 @@ const createMockTool = (name: string, description: string, handler: (args: any) 
     path: z.string().describe('The path to list files from'),
   }),
   handler,
-  isAvailable: () => true,
 })
 
 const listFilesTool = createMockTool('listFiles', 'List files in a directory', async ({ path }: { path: string }) => {

@@ -105,12 +105,7 @@ export const handler: ToolHandler<typeof toolInfo, CommandProvider> = async (pro
   }
 }
 
-export const isAvailable = (provider: CommandProvider): boolean => {
-  return !!provider.executeCommand
-}
-
 export default {
   ...toolInfo,
   handler,
-  isAvailable,
 } satisfies FullToolInfo

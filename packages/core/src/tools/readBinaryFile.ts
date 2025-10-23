@@ -53,12 +53,7 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
   }
 }
 
-export const isAvailable = (provider: FilesystemProvider): boolean => {
-  return typeof provider.readBinaryFile === 'function'
-}
-
 export default {
   ...toolInfo,
   handler,
-  isAvailable,
 } satisfies FullToolInfo
