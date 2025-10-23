@@ -110,22 +110,6 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter, stream: Writ
         toolCallStats.set(event.tool, stats)
         break
       }
-      case TaskEventKind.ToolHandOver:
-        customConsole.log('\n\n======== Task Handed Over ========\n')
-        customConsole.log('Agent:', event.agentName)
-        customConsole.log('Task:', event.task)
-        customConsole.log('Context:', event.context)
-        customConsole.log('Files:', event.files)
-        customConsole.log()
-        break
-      case TaskEventKind.ToolDelegate:
-        customConsole.log('\n\n======== Task Delegated ========\n')
-        customConsole.log('Agent:', event.agentName)
-        customConsole.log('Task:', event.task)
-        customConsole.log('Context:', event.context)
-        customConsole.log('Files:', event.files)
-        customConsole.log()
-        break
       case TaskEventKind.UsageExceeded:
         customConsole.log('\n\n======= Usage Exceeded ========\n')
         break

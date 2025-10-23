@@ -28,8 +28,6 @@ export enum ToolResponseType {
   Exit = 'Exit',
   Invalid = 'Invalid',
   Error = 'Error',
-  HandOver = 'HandOver',
-  Delegate = 'Delegate',
   Pause = 'Pause',
 }
 
@@ -100,37 +98,11 @@ export type ToolResponseError = {
   canRetry?: boolean
 }
 
-// Hand over the task to another agent
-// e.g. hand over a coding task to the coder agent
-export type ToolResponseHandOver = {
-  type: ToolResponseType.HandOver
-  agentName: string
-  task: string
-  context?: string
-  files?: string[]
-}
-
-// Delegate the task to another agent
-export type ToolResponseDelegate = {
-  type: ToolResponseType.Delegate
-  agentName: string
-  task: string
-  context?: string
-  files?: string[]
-}
-
 export type ToolResponsePause = {
   type: ToolResponseType.Pause
   object: any
 }
 
-export type ToolResponse =
-  | ToolResponseReply
-  | ToolResponseExit
-  | ToolResponseInvalid
-  | ToolResponseError
-  | ToolResponseHandOver
-  | ToolResponseDelegate
-  | ToolResponsePause
+export type ToolResponse = ToolResponseReply | ToolResponseExit | ToolResponseInvalid | ToolResponseError | ToolResponsePause
 
 export type ToolHandler<_T, P> = (provider: P, args: Partial<Record<string, ToolParameterValue>>) => Promise<ToolResponse>

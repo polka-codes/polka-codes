@@ -179,8 +179,6 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
           })
           break
         case ToolResponseType.Exit:
-        case ToolResponseType.HandOver:
-        case ToolResponseType.Delegate:
           if (toolCalls.length > 1) {
             toolResults.push({
               toolCallId: toolCall.toolCallId,

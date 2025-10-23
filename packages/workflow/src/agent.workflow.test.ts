@@ -39,28 +39,6 @@ const exitTool = createMockTool('exitTool', 'Exit the workflow', async () => ({
   message: 'Workflow exited',
 }))
 
-const handOverTool = createMockTool('handOverTool', 'Hand over to another agent', async () => ({
-  type: ToolResponseType.HandOver,
-  agentName: 'test-agent',
-  task: 'test-task',
-}))
-
-const _delegateTool = createMockTool('delegateTool', 'Delegate to another agent', async () => ({
-  type: ToolResponseType.Delegate,
-  agentName: 'test-agent',
-  task: 'test-task',
-}))
-
-const _errorTool = createMockTool('errorTool', 'Return an error', async () => ({
-  type: ToolResponseType.Error,
-  message: { type: 'error-text', value: 'Something went wrong' },
-}))
-
-const _invalidTool = createMockTool('invalidTool', 'Return invalid', async () => ({
-  type: ToolResponseType.Invalid,
-  message: { type: 'error-text', value: 'Invalid arguments' },
-}))
-
 test('should run agent workflow with a tool call and reply', async () => {
   const mockResponses: ModelMessage[] = [
     {
@@ -164,53 +142,6 @@ test('should exit when a tool returns an Exit response', async () => {
   expect(result).toEqual({
     type: ToolResponseType.Exit,
     message: 'Workflow exited',
-  })
-})
-
-test('should exit when a tool returns a HandOver response', async () => {
-  const mockResponses: ModelMessage[] = [
-    {
-      role: 'assistant',
-      content: [
-        {
-          type: 'tool-call',
-          toolCallId: 'tool-call-1',
-          toolName: 'handOverTool',
-          input: {},
-        },
-      ],
-    },
-  ]
-
-  const allTools = [handOverTool]
-
-  const tools: WorkflowTools<AgentToolRegistry> = {
-    generateText: async () => {
-      const response = mockResponses.shift()
-      return [response!] as JsonResponseMessage[]
-    },
-    invokeTool: async (input) => {
-      const { toolName, input: toolInput } = input
-      const toolInfo = allTools.find((t) => t.name === toolName)
-      if (!toolInfo) throw new Error(`Tool not found: ${toolName}`)
-      return toolInfo.handler({} as any, toolInput)
-    },
-    taskEvent: async () => {},
-  }
-
-  const result = await agentWorkflow(
-    {
-      userMessage: [toJsonModelMessage({ role: 'user', content: 'Please hand over.' })] as any,
-      tools: allTools,
-      systemPrompt: 'You are a helpful assistant.',
-    },
-    createContext(tools),
-  )
-
-  expect(result).toEqual({
-    type: ToolResponseType.HandOver,
-    agentName: 'test-agent',
-    task: 'test-task',
   })
 })
 

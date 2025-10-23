@@ -1,7 +1,7 @@
 import type { LanguageModelV2ToolResultOutput } from '@ai-sdk/provider'
 import type { ModelMessage } from '@ai-sdk/provider-utils'
 import type { LanguageModelUsage } from 'ai'
-import type { ToolResponseDelegate, ToolResponseError, ToolResponseExit, ToolResponseHandOver, ToolResponseResult } from '../tool'
+import type { ToolResponseError, ToolResponseExit, ToolResponseResult } from '../tool'
 
 /**
  * Enum representing different kinds of task events
@@ -17,8 +17,6 @@ export enum TaskEventKind {
   ToolReply = 'ToolReply',
   ToolInvalid = 'ToolInvalid',
   ToolError = 'ToolError',
-  ToolHandOver = 'ToolHandOver',
-  ToolDelegate = 'ToolDelegate',
   ToolPause = 'ToolPause',
   UsageExceeded = 'UsageExceeded',
   EndTask = 'EndTask',
@@ -99,18 +97,6 @@ export interface TaskEventToolPause extends TaskEventBase {
 }
 
 /**
- * Event for tool handover
- */
-export interface TaskEventToolHandOverDelegate extends TaskEventBase {
-  kind: TaskEventKind.ToolHandOver | TaskEventKind.ToolDelegate
-  tool: string
-  agentName: string
-  task: string
-  context?: string
-  files?: string[]
-}
-
-/**
  * Event for task usage exceeded
  */
 export interface TaskEventUsageExceeded extends TaskEventBase {
@@ -138,7 +124,6 @@ export type TaskEvent =
   | TaskEventToolResult
   | TaskEventToolError
   | TaskEventToolPause
-  | TaskEventToolHandOverDelegate
   | TaskEventUsageExceeded
   | TaskEventEndTask
 
@@ -153,8 +138,6 @@ export type ExitReason =
   | { type: 'WaitForUserInput' }
   | { type: 'Aborted' }
   | ToolResponseExit
-  | ToolResponseHandOver
-  | ToolResponseDelegate
   | {
       type: 'Pause'
       responses: ToolResponseOrToolPause[]
