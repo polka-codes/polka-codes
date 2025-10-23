@@ -63,8 +63,7 @@ console.log(prText);
 ### Building
 
 ```bash
-cd packages/github
-bun run build
+bun --filter @polka-codes/github build
 ```
 
 ### Testing
