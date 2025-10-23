@@ -26,7 +26,15 @@ export type WebProvider = {
   fetchUrl?: (url: string) => Promise<string>
 }
 
-export type ToolProvider = FilesystemProvider & CommandProvider & InteractionProvider & WebProvider
+export type MemoryProvider = {
+  listMemoryTopics?: () => Promise<string[]>
+  readMemory?: (topic: string) => Promise<string | undefined>
+  appendMemory?: (topic: string, content: string) => Promise<void>
+  replaceMemory?: (topic: string, content: string) => Promise<void>
+  removeMemory?: (topic: string) => Promise<void>
+}
+
+export type ToolProvider = FilesystemProvider & CommandProvider & InteractionProvider & WebProvider & MemoryProvider
 
 export class MockProvider implements ToolProvider {
   async readFile(_path: string, _includeIgnored?: boolean): Promise<string> {
@@ -62,5 +70,31 @@ export class MockProvider implements ToolProvider {
 
   async askFollowupQuestion(_question: string, _options?: string[]): Promise<string> {
     return 'mock answer'
+  }
+
+  private memory: Record<string, string> = {}
+
+  async listMemoryTopics(): Promise<string[]> {
+    return Object.keys(this.memory)
+  }
+
+  async readMemory(topic: string): Promise<string | undefined> {
+    return this.memory[topic]
+  }
+
+  async appendMemory(topic: string, content: string): Promise<void> {
+    if (this.memory[topic]) {
+      this.memory[topic] += `\n${content}`
+    } else {
+      this.memory[topic] = content
+    }
+  }
+
+  async replaceMemory(topic: string, content: string): Promise<void> {
+    this.memory[topic] = content
+  }
+
+  async removeMemory(topic: string): Promise<void> {
+    delete this.memory[topic]
   }
 }

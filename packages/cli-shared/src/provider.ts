@@ -23,6 +23,9 @@ export type ProviderOptions = {
 }
 
 export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
+  // This is intentionally stateful to allow the MemoryProvider to store data
+  // that persists across tool calls within a single agent workflow.
+  const memory: Record<string, string> = {}
   const ig = ignore().add(options.excludeFiles ?? [])
   const provider: ToolProvider = {
     readFile: async (path: string, includeIgnored: boolean): Promise<string | undefined> => {
@@ -184,6 +187,25 @@ export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
         console.error('Error fetching URL:', error)
         throw error
       }
+    },
+    listMemoryTopics: async (): Promise<string[]> => {
+      return Object.keys(memory)
+    },
+    readMemory: async (topic: string): Promise<string | undefined> => {
+      return memory[topic]
+    },
+    appendMemory: async (topic: string, content: string): Promise<void> => {
+      if (topic in memory) {
+        memory[topic] += content
+      } else {
+        memory[topic] = content
+      }
+    },
+    replaceMemory: async (topic: string, content: string): Promise<void> => {
+      memory[topic] = content
+    },
+    removeMemory: async (topic: string): Promise<void> => {
+      delete memory[topic]
     },
   }
 
