@@ -110,8 +110,6 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter, stream: Writ
         toolCallStats.set(event.tool, stats)
         break
       }
-      case TaskEventKind.ToolInterrupted:
-        break
       case TaskEventKind.ToolHandOver:
         customConsole.log('\n\n======== Task Handed Over ========\n')
         customConsole.log('Agent:', event.agentName)
@@ -137,9 +135,6 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter, stream: Writ
         switch (event.exitReason.type) {
           case ToolResponseType.Exit:
             customConsole.log('Exit Message:', event.exitReason.message)
-            break
-          case ToolResponseType.Interrupted:
-            customConsole.log('Interrupted Message:', event.exitReason.message)
             break
         }
         customConsole.log('\n\n======== Tool Call Stats ========')

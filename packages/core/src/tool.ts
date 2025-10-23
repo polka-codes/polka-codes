@@ -28,7 +28,6 @@ export enum ToolResponseType {
   Exit = 'Exit',
   Invalid = 'Invalid',
   Error = 'Error',
-  Interrupted = 'Interrupted',
   HandOver = 'HandOver',
   Delegate = 'Delegate',
   Pause = 'Pause',
@@ -101,14 +100,6 @@ export type ToolResponseError = {
   canRetry?: boolean
 }
 
-// The tool execution was interrupted
-// e.g. user cancelled the tool execution
-// or some security policy was violated
-export type ToolResponseInterrupted = {
-  type: ToolResponseType.Interrupted
-  message: string
-}
-
 // Hand over the task to another agent
 // e.g. hand over a coding task to the coder agent
 export type ToolResponseHandOver = {
@@ -138,7 +129,6 @@ export type ToolResponse =
   | ToolResponseExit
   | ToolResponseInvalid
   | ToolResponseError
-  | ToolResponseInterrupted
   | ToolResponseHandOver
   | ToolResponseDelegate
   | ToolResponsePause

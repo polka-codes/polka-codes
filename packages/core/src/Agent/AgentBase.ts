@@ -1,14 +1,7 @@
 import type { LanguageModelV2ToolResultOutput } from '@ai-sdk/provider'
 import type { ModelMessage } from '@ai-sdk/provider-utils'
 import type { LanguageModelUsage } from 'ai'
-import type {
-  ToolResponseDelegate,
-  ToolResponseError,
-  ToolResponseExit,
-  ToolResponseHandOver,
-  ToolResponseInterrupted,
-  ToolResponseResult,
-} from '../tool'
+import type { ToolResponseDelegate, ToolResponseError, ToolResponseExit, ToolResponseHandOver, ToolResponseResult } from '../tool'
 
 /**
  * Enum representing different kinds of task events
@@ -24,7 +17,6 @@ export enum TaskEventKind {
   ToolReply = 'ToolReply',
   ToolInvalid = 'ToolInvalid',
   ToolError = 'ToolError',
-  ToolInterrupted = 'ToolInterrupted',
   ToolHandOver = 'ToolHandOver',
   ToolDelegate = 'ToolDelegate',
   ToolPause = 'ToolPause',
@@ -89,7 +81,7 @@ export interface TaskEventToolUse extends TaskEventBase {
 }
 
 export interface TaskEventToolResult extends TaskEventBase {
-  kind: TaskEventKind.ToolReply | TaskEventKind.ToolInvalid | TaskEventKind.ToolInterrupted
+  kind: TaskEventKind.ToolReply | TaskEventKind.ToolInvalid
   tool: string
   content: ToolResponseResult
 }
@@ -161,7 +153,6 @@ export type ExitReason =
   | { type: 'WaitForUserInput' }
   | { type: 'Aborted' }
   | ToolResponseExit
-  | ToolResponseInterrupted
   | ToolResponseHandOver
   | ToolResponseDelegate
   | {
