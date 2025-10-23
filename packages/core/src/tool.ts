@@ -3,11 +3,6 @@ import type { z } from 'zod'
 
 export type ToolParameterValue = string | { [key: string]: ToolParameterValue } | ToolParameterValue[]
 
-export type ToolExample = {
-  description: string
-  input: Record<string, ToolParameterValue>
-}
-
 export type ToolParameter = {
   name: string
   description: string

@@ -169,9 +169,6 @@ export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
       }
       return answer
     },
-    attemptCompletion: async (_result: string): Promise<string | undefined> => {
-      return undefined
-    },
     fetchUrl: async (url: string): Promise<string> => {
       const isRaw = url.startsWith('https://raw.githubusercontent.com/')
 

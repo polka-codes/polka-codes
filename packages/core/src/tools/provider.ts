@@ -20,7 +20,6 @@ export type CommandProvider = {
 
 export type InteractionProvider = {
   askFollowupQuestion?: (question: string, options: string[]) => Promise<string>
-  attemptCompletion?: (result: string) => Promise<string | undefined>
 }
 
 export type WebProvider = {
@@ -63,9 +62,5 @@ export class MockProvider implements ToolProvider {
 
   async askFollowupQuestion(_question: string, _options?: string[]): Promise<string> {
     return 'mock answer'
-  }
-
-  async attemptCompletion(_result: string): Promise<string | undefined> {
-    return 'mock completion'
   }
 }
