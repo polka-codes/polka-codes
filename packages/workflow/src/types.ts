@@ -1,4 +1,3 @@
-import type { LanguageModelV2ToolResultOutput } from '@ai-sdk/provider'
 import type { ToolResponseError, ToolResponseExit, ToolResponseResult } from '@polka-codes/core'
 import type { JsonModelMessage } from './json-ai-types'
 
@@ -14,7 +13,6 @@ export enum TaskEventKind {
   ToolUse = 'ToolUse',
   ToolReply = 'ToolReply',
   ToolError = 'ToolError',
-  ToolPause = 'ToolPause',
   UsageExceeded = 'UsageExceeded',
   EndTask = 'EndTask',
 }
@@ -79,12 +77,6 @@ export interface TaskEventToolError extends TaskEventBase {
   error: ToolResponseError | ToolResponseResult
 }
 
-export interface TaskEventToolPause extends TaskEventBase {
-  kind: TaskEventKind.ToolPause
-  tool: string
-  object: any
-}
-
 /**
  * Event for task usage exceeded
  */
@@ -111,22 +103,9 @@ export type TaskEvent =
   | TaskEventToolUse
   | TaskEventToolResult
   | TaskEventToolError
-  | TaskEventToolPause
   | TaskEventUsageExceeded
   | TaskEventEndTask
 
 export type TaskEventCallback = (event: TaskEvent) => void | Promise<void>
 
-export type ToolResponseOrToolPause =
-  | { type: 'response'; tool: string; response: LanguageModelV2ToolResultOutput; id?: string }
-  | { type: 'pause'; tool: string; object: any; id?: string }
-
-export type ExitReason =
-  | { type: 'UsageExceeded' }
-  | { type: 'WaitForUserInput' }
-  | { type: 'Aborted' }
-  | ToolResponseExit
-  | {
-      type: 'Pause'
-      responses: ToolResponseOrToolPause[]
-    }
+export type ExitReason = { type: 'UsageExceeded' } | ToolResponseExit

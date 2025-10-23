@@ -255,6 +255,15 @@ async function generateText(input: { messages: JsonModelMessage[]; tools: ToolSe
     throw new Error('Model not found in context')
   }
 
+  if (context.parameters.usageMeter.isLimitExceeded()) {
+    agentCallback?.({
+      kind: TaskEventKind.UsageExceeded,
+    })
+    return {
+      type: 'UsageExceeded',
+    }
+  }
+
   const { retryCount = 5, requestTimeoutSeconds = 90 } = context.parameters
 
   // Convert messages and apply cache control

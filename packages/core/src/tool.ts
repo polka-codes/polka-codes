@@ -27,7 +27,6 @@ export enum ToolResponseType {
   Reply = 'Reply',
   Exit = 'Exit',
   Error = 'Error',
-  Pause = 'Pause',
 }
 
 export type ToolResponseResultMedia = {
@@ -91,11 +90,6 @@ export type ToolResponseError = {
   canRetry?: boolean
 }
 
-export type ToolResponsePause = {
-  type: ToolResponseType.Pause
-  object: any
-}
-
-export type ToolResponse = ToolResponseReply | ToolResponseExit | ToolResponseError | ToolResponsePause
+export type ToolResponse = ToolResponseReply | ToolResponseExit | ToolResponseError
 
 export type ToolHandler<_T, P> = (provider: P, args: Partial<Record<string, ToolParameterValue>>) => Promise<ToolResponse>
