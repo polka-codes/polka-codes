@@ -1,7 +1,6 @@
 import type { LanguageModelV2ToolResultOutput } from '@ai-sdk/provider'
-import type { ModelMessage } from '@ai-sdk/provider-utils'
-import type { LanguageModelUsage } from 'ai'
-import type { ToolResponseError, ToolResponseExit, ToolResponseResult } from '../tool'
+import type { ToolResponseError, ToolResponseExit, ToolResponseResult } from '@polka-codes/core'
+import type { JsonModelMessage } from './json-ai-types'
 
 /**
  * Enum representing different kinds of task events
@@ -10,12 +9,10 @@ export enum TaskEventKind {
   StartTask = 'StartTask',
   StartRequest = 'StartRequest',
   EndRequest = 'EndRequest',
-  Usage = 'Usage',
   Text = 'Text',
   Reasoning = 'Reasoning',
   ToolUse = 'ToolUse',
   ToolReply = 'ToolReply',
-  ToolInvalid = 'ToolInvalid',
   ToolError = 'ToolError',
   ToolPause = 'ToolPause',
   UsageExceeded = 'UsageExceeded',
@@ -42,7 +39,7 @@ export interface TaskEventStartTask extends TaskEventBase {
  */
 export interface TaskEventStartRequest extends TaskEventBase {
   kind: TaskEventKind.StartRequest
-  userMessage: ModelMessage[]
+  userMessage: JsonModelMessage[]
 }
 
 /**
@@ -51,14 +48,6 @@ export interface TaskEventStartRequest extends TaskEventBase {
 export interface TaskEventEndRequest extends TaskEventBase {
   kind: TaskEventKind.EndRequest
   message: string
-}
-
-/**
- * Event for API usage updates
- */
-export interface TaskEventUsage extends TaskEventBase {
-  kind: TaskEventKind.Usage
-  usage: LanguageModelUsage
 }
 
 /**
@@ -79,7 +68,7 @@ export interface TaskEventToolUse extends TaskEventBase {
 }
 
 export interface TaskEventToolResult extends TaskEventBase {
-  kind: TaskEventKind.ToolReply | TaskEventKind.ToolInvalid
+  kind: TaskEventKind.ToolReply
   tool: string
   content: ToolResponseResult
 }
@@ -118,7 +107,6 @@ export type TaskEvent =
   | TaskEventStartTask
   | TaskEventStartRequest
   | TaskEventEndRequest
-  | TaskEventUsage
   | TaskEventText
   | TaskEventToolUse
   | TaskEventToolResult

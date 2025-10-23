@@ -1,29 +1,6 @@
 import type { LanguageModelV2ToolResultOutput } from '@ai-sdk/provider'
 import type { FilePart, ImagePart, TextPart } from 'ai'
 
-export const customScripts = (commands: Record<string, string | { command: string; description: string }>) => {
-  const joined = Object.entries(commands)
-    .map(([name, command]) => {
-      if (typeof command === 'string') {
-        return `- ${name}\n  - Command: \`${command}\``
-      }
-      return `- ${name}\n  - Command: \`${command.command}\`\n  - Description: ${command.description}`
-    })
-    .join('\n')
-  if (joined.trim() === '') {
-    return ''
-  }
-
-  return `
-====
-
-USER'S CUSTOM COMMANDS
-
-The following additional commands are provided by the user, and should be followed to the best of your ability without interfering with the TOOL USE guidelines.
-
-${joined}`
-}
-
 export const responsePrompts = {
   errorInvokeTool: (tool: string, error: unknown) => `An error occurred while invoking the tool "${tool}": ${error}`,
   requireUseTool: `Error: No tool use detected. You MUST use a tool before proceeding.

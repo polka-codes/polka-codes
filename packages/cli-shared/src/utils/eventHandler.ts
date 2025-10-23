@@ -1,6 +1,7 @@
 import { Console } from 'node:console'
 import type { Writable } from 'node:stream'
-import { type TaskEvent, TaskEventKind, ToolResponseType, type UsageMeter } from '@polka-codes/core'
+import { ToolResponseType, type UsageMeter } from '@polka-codes/core'
+import { type TaskEvent, TaskEventKind } from '@polka-codes/workflow'
 import chalk from 'chalk'
 
 type ToolStat = { calls: number; success: number; errors: number }
@@ -72,8 +73,6 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter, stream: Writ
         }
 
         break
-      case TaskEventKind.Usage:
-        break
       case TaskEventKind.Text: {
         if (hadReasoning) {
           write('\n\n')
@@ -100,8 +99,6 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter, stream: Writ
         toolCallStats.set(event.tool, stats)
         break
       }
-      case TaskEventKind.ToolInvalid:
-        break
       case TaskEventKind.ToolError: {
         customConsole.error(chalk.red('\n\nTool error:', event.tool))
         customConsole.error(event.error)

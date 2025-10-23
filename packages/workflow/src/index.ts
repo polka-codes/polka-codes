@@ -2,4 +2,5 @@
 
 export * from './agent.workflow'
 export * from './json-ai-types'
+export * from './types'
 export * from './workflow'

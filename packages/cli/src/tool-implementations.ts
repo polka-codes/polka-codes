@@ -5,7 +5,7 @@ import { dirname } from 'node:path'
 import type { LanguageModelV2 } from '@ai-sdk/provider'
 import { confirm as inquirerConfirm, input as inquirerInput, select as inquirerSelect } from '@inquirer/prompts'
 import { readMultiline } from '@polka-codes/cli-shared'
-import type { TaskEvent, TaskEventCallback, UsageMeter } from '@polka-codes/core'
+import type { UsageMeter } from '@polka-codes/core'
 import {
   askFollowupQuestion,
   computeRateLimitBackoffSeconds,
@@ -18,11 +18,17 @@ import {
   renameFile,
   replaceInFile,
   searchFiles,
-  TaskEventKind,
   ToolResponseType,
   writeToFile as writeToFileTool,
 } from '@polka-codes/core'
-import { fromJsonModelMessage, type JsonModelMessage, type ToolRegistry } from '@polka-codes/workflow'
+import {
+  fromJsonModelMessage,
+  type JsonModelMessage,
+  type TaskEvent,
+  type TaskEventCallback,
+  TaskEventKind,
+  type ToolRegistry,
+} from '@polka-codes/workflow'
 import { streamText, type ToolSet } from 'ai'
 import chalk from 'chalk'
 import type { Command } from 'commander'
@@ -284,10 +290,6 @@ async function generateText(input: { messages: JsonModelMessage[]; tools: ToolSe
         },
         onFinish(result) {
           usageMeterOnFinishHandler?.(result)
-          agentCallback?.({
-            kind: TaskEventKind.Usage,
-            usage: result.usage,
-          })
         },
         providerOptions: context.parameters.providerOptions,
         abortSignal: abortController.signal,
