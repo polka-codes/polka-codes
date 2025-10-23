@@ -6,7 +6,7 @@ import { z } from 'zod'
 import { UserCancelledError } from '../errors'
 import { gitDiff } from '../tools'
 import type { CliToolRegistry } from '../workflow-tools'
-import { COMMIT_MESSAGE_PROMPT } from './prompts'
+import { COMMIT_MESSAGE_SYSTEM_PROMPT } from './prompts'
 import { parseGitDiffNameStatus } from './workflow.utils'
 
 export type CommitWorkflowInput = {
@@ -85,7 +85,7 @@ export const commitWorkflow: WorkflowFn<CommitWorkflowInput, void, CliToolRegist
   const result = await step('generate-commit-message', async () => {
     return await agentWorkflow(
       {
-        systemPrompt: COMMIT_MESSAGE_PROMPT,
+        systemPrompt: COMMIT_MESSAGE_SYSTEM_PROMPT,
         userMessage: [
           {
             role: 'user',

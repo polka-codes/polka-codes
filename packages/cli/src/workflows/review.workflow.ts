@@ -4,7 +4,7 @@ import { listFiles, readBinaryFile, readFile, searchFiles, ToolResponseType } fr
 import { agentWorkflow, type WorkflowFn } from '@polka-codes/workflow'
 import { gitDiff } from '../tools'
 import type { CliToolRegistry } from '../workflow-tools'
-import { CODE_REVIEW_PROMPT, formatReviewToolInput, type ReviewToolInput } from './prompts'
+import { CODE_REVIEW_SYSTEM_PROMPT, formatReviewToolInput, type ReviewToolInput } from './prompts'
 import { parseGitDiffNameStatus, parseGitStatus, printChangedFiles, type ReviewResult, reviewOutputSchema } from './workflow.utils'
 
 type FileChange = {
@@ -145,7 +145,7 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput, ReviewResult, CliTo
   const result = await step('review', async () => {
     return await agentWorkflow(
       {
-        systemPrompt: CODE_REVIEW_PROMPT,
+        systemPrompt: CODE_REVIEW_SYSTEM_PROMPT,
         userMessage: [
           {
             role: 'user',

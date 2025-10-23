@@ -11,6 +11,7 @@ import {
 } from '@polka-codes/core'
 import { agentWorkflow, type JsonUserContent, type WorkflowContext, type WorkflowFn } from '@polka-codes/workflow'
 import { z } from 'zod'
+import { UserCancelledError } from '../errors'
 import type { CliToolRegistry } from '../workflow-tools'
 import type { JsonFilePart, JsonImagePart } from './code.workflow'
 import { getPlanPrompt, PLANNER_SYSTEM_PROMPT } from './prompts'
@@ -172,7 +173,10 @@ export const planWorkflow: WorkflowFn<PlanWorkflowInput, PlanWorkflowOutput, Cli
               userFeedback = await tools.input({ message: planResult.question })
               plan = planResult.plan || plan // preserve plan if agent returned one with question
               return 'Generating'
-            } catch (_error) {
+            } catch (error) {
+              if (error instanceof UserCancelledError) {
+                throw error
+              }
               return 'Done'
             }
           }
@@ -208,7 +212,7 @@ export const planWorkflow: WorkflowFn<PlanWorkflowInput, PlanWorkflowOutput, Cli
                 return 'Generating'
               }
             } catch (error) {
-              if (error instanceof Error && error.name === 'ExitPromptError') {
+              if (error instanceof UserCancelledError) {
                 throw error
               }
               userFeedback = ''

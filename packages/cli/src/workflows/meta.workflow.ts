@@ -6,7 +6,7 @@ import { z } from 'zod'
 import type { CliToolRegistry } from '../workflow-tools'
 import { codeWorkflow } from './code.workflow'
 import { epicWorkflow } from './epic.workflow'
-import { META_PROMPT } from './prompts'
+import { META_SYSTEM_PROMPT } from './prompts'
 import { taskWorkflow } from './task.workflow'
 
 export type MetaWorkflowInput = {
@@ -25,7 +25,7 @@ export const metaWorkflow: WorkflowFn<MetaWorkflowInput, void, CliToolRegistry> 
 
   const result = await agentWorkflow(
     {
-      systemPrompt: META_PROMPT,
+      systemPrompt: META_SYSTEM_PROMPT,
       userMessage: [
         {
           role: 'user',

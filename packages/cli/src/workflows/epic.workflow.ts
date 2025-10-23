@@ -5,7 +5,7 @@ import { gitDiff } from '../tools'
 import type { CliToolRegistry } from '../workflow-tools'
 import { codeWorkflow } from './code.workflow'
 import { planWorkflow } from './plan.workflow'
-import { CODE_REVIEW_PROMPT, EPIC_TASK_BREAKDOWN_PROMPT, formatReviewToolInput, type ReviewToolInput } from './prompts'
+import { CODE_REVIEW_SYSTEM_PROMPT, EPIC_TASK_BREAKDOWN_SYSTEM_PROMPT, formatReviewToolInput, type ReviewToolInput } from './prompts'
 import { formatElapsedTime, getDefaultContext, parseGitDiffNameStatus, type ReviewResult, reviewOutputSchema } from './workflow.utils'
 
 export type EpicWorkflowInput = {
@@ -78,7 +78,7 @@ The branch name should be short, descriptive, and in kebab-case. For example: \`
 `
     return await agentWorkflow(
       {
-        systemPrompt: EPIC_TASK_BREAKDOWN_PROMPT,
+        systemPrompt: EPIC_TASK_BREAKDOWN_SYSTEM_PROMPT,
         userMessage: [{ role: 'user', content: userMessage }],
         tools: [listFiles, readFile, searchFiles, readBinaryFile],
         outputSchema: epicSchema,
@@ -211,7 +211,7 @@ The branch name should be short, descriptive, and in kebab-case. For example: \`
         const userMessage = `${defaultContext}\n\n${formatReviewToolInput(changeInfo)}`
         return await agentWorkflow(
           {
-            systemPrompt: CODE_REVIEW_PROMPT,
+            systemPrompt: CODE_REVIEW_SYSTEM_PROMPT,
             userMessage: [{ role: 'user', content: userMessage }],
             tools: [readFile, readBinaryFile, searchFiles, listFiles, gitDiff],
             outputSchema: reviewOutputSchema,

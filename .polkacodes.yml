@@ -17,4 +17,6 @@ rules: |
   In tests, ensure no redundant assertions. i.e. if `.toMatchSnapshot()` is used, then there is no need to have other assertions.
   NEVER mock modules
   Avoid unnecessary comments. Doc comments are not required when the code is self-explanatory.
+  DO NOT use comment as section separators
+  DO NOT add comment to explain changes
   Use '.nullish()' instead of '.optional()' in zod schema unless there is a specific reason to use optional.

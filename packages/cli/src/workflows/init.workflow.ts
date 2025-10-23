@@ -12,7 +12,7 @@ import { UserCancelledError } from '../errors'
 import type { AiProvider } from '../getModel'
 import { parseOptions } from '../options'
 import type { CliToolRegistry } from '../workflow-tools'
-import { INIT_WORKFLOW_ANALYZE_PROMPT } from './prompts'
+import { INIT_WORKFLOW_ANALYZE_SYSTEM_PROMPT } from './prompts'
 
 type InitWorkflowInput = {
   global?: boolean
@@ -149,7 +149,7 @@ export const initWorkflow: WorkflowFn<InitWorkflowInput, InitWorkflowOutput, Cli
 
       return await agentWorkflow(
         {
-          systemPrompt: INIT_WORKFLOW_ANALYZE_PROMPT,
+          systemPrompt: INIT_WORKFLOW_ANALYZE_SYSTEM_PROMPT,
           userMessage: [
             {
               role: 'user',
