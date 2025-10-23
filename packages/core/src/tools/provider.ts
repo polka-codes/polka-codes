@@ -26,7 +26,15 @@ export type WebProvider = {
   fetchUrl?: (url: string) => Promise<string>
 }
 
-export type ToolProvider = FilesystemProvider & CommandProvider & InteractionProvider & WebProvider
+export interface MemoryProvider {
+  listTopics: () => Promise<string[]>
+  read: (topic: string) => Promise<string | undefined>
+  append: (topic: string, content: string) => Promise<void>
+  replace: (topic: string, content: string) => Promise<void>
+  remove: (topic: string) => Promise<void>
+}
+
+export type ToolProvider = FilesystemProvider & CommandProvider & InteractionProvider & WebProvider & Partial<MemoryProvider>
 
 export class MockProvider implements ToolProvider {
   async readFile(_path: string, _includeIgnored?: boolean): Promise<string> {

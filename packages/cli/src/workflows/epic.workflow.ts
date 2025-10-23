@@ -1,4 +1,15 @@
-import { listFiles, readBinaryFile, readFile, searchFiles, ToolResponseType } from '@polka-codes/core'
+import {
+  appendMemory,
+  listFiles,
+  listMemoryTopics,
+  readBinaryFile,
+  readFile,
+  readMemory,
+  removeMemory,
+  replaceMemory,
+  searchFiles,
+  ToolResponseType,
+} from '@polka-codes/core'
 import { agentWorkflow, type WorkflowFn } from '@polka-codes/workflow'
 import { z } from 'zod'
 import { gitDiff } from '../tools'
@@ -80,7 +91,7 @@ The branch name should be short, descriptive, and in kebab-case. For example: \`
       {
         systemPrompt: EPIC_TASK_BREAKDOWN_SYSTEM_PROMPT,
         userMessage: [{ role: 'user', content: userMessage }],
-        tools: [listFiles, readFile, searchFiles, readBinaryFile],
+        tools: [listFiles, readFile, searchFiles, readBinaryFile, readMemory, appendMemory, replaceMemory, removeMemory, listMemoryTopics],
         outputSchema: epicSchema,
       },
       context,
@@ -213,7 +224,18 @@ The branch name should be short, descriptive, and in kebab-case. For example: \`
           {
             systemPrompt: CODE_REVIEW_SYSTEM_PROMPT,
             userMessage: [{ role: 'user', content: userMessage }],
-            tools: [readFile, readBinaryFile, searchFiles, listFiles, gitDiff],
+            tools: [
+              readFile,
+              readBinaryFile,
+              searchFiles,
+              listFiles,
+              gitDiff,
+              readMemory,
+              appendMemory,
+              replaceMemory,
+              removeMemory,
+              listMemoryTopics,
+            ],
             outputSchema: reviewOutputSchema,
           },
           context,

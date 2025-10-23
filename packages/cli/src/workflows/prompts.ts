@@ -6,10 +6,28 @@ ${JSON.stringify(schema, null, 2)}
 `
 }
 
+const MEMORY_USAGE_SECTION = `## Memory Usage
+
+You have access to a memory feature to store and retrieve information across tool calls.
+
+- \`listMemoryTopics()\`: Lists all topics in memory.
+- \`readMemory(topic?: string)\`: Reads content from a memory topic. Defaults to ":default:".
+- \`appendMemory(topic?: string, content: string)\`: Appends content to a memory topic. Defaults to ":default:".
+- \`replaceMemory(topic?: string, content: string)\`: Replaces content of a memory topic. Defaults to ":default:".
+- \`removeMemory(topic?: string)\`: Removes a topic from memory. Defaults to ":default:".
+
+Use memory to:
+- Store context between steps.
+- Keep track of important information like file paths or decisions made.
+- Avoid re-running expensive discovery tools.
+`
+
 export const PLANNER_SYSTEM_PROMPT = `Role: Expert software architect and planner.
 Goal: Analyze user requests and create detailed, actionable implementation plans for software development tasks.
 
 You are an expert software architect and planner with deep experience in breaking down complex requirements into actionable implementation plans.
+
+${MEMORY_USAGE_SECTION}
 
 ## Your Role
 
@@ -178,6 +196,8 @@ Goal: Break down a large project/feature into a sequence of smaller, self-contai
 
 You are an expert at breaking down a large project into smaller, manageable tasks.
 Based on the provided high-level plan, create a sequence of smaller, implementable tasks and a brief technical overview of the epic.
+
+${MEMORY_USAGE_SECTION}
 
 # Overview Guidelines
 
@@ -353,6 +373,8 @@ Goal: Implement the provided plan by writing and modifying code.
 
 Your task is to implement the plan created and approved in Phase 1.
 
+${MEMORY_USAGE_SECTION}
+
 ## Implementation Guidelines
 
 ### 1. Plan Analysis
@@ -411,6 +433,8 @@ export const FIX_SYSTEM_PROMPT = `Role: Expert software developer.
 Goal: Fix a failing command by analyzing the error and modifying the code.
 
 You are an expert software developer. Your task is to fix a project that is failing a command. You have been provided with the failing command, its output (stdout and stderr), and the exit code. Your goal is to use the available tools to modify the files in the project to make the command pass. Analyze the error, inspect the relevant files, and apply the necessary code changes.
+
+${MEMORY_USAGE_SECTION}
 
 After making changes, you MUST return a JSON object in a markdown block with a summary of the changes you made.
 The JSON object must contain a "summary" field, which is a string describing the changes made during the fix attempt.

@@ -24,7 +24,27 @@ export type ProviderOptions = {
 
 export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
   const ig = ignore().add(options.excludeFiles ?? [])
+  const memoryStore: Record<string, string> = {}
   const provider: ToolProvider = {
+    listTopics: async (): Promise<string[]> => {
+      return Object.keys(memoryStore)
+    },
+    read: async (topic: string): Promise<string | undefined> => {
+      return memoryStore[topic]
+    },
+    append: async (topic: string, content: string): Promise<void> => {
+      if (memoryStore[topic]) {
+        memoryStore[topic] += content
+      } else {
+        memoryStore[topic] = content
+      }
+    },
+    replace: async (topic: string, content: string): Promise<void> => {
+      memoryStore[topic] = content
+    },
+    remove: async (topic: string): Promise<void> => {
+      delete memoryStore[topic]
+    },
     readFile: async (path: string, includeIgnored: boolean): Promise<string | undefined> => {
       if (!includeIgnored && ig.ignores(path)) {
         throw new Error(`Not allow to access file ${path}`)
