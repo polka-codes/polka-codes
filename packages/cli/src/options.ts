@@ -38,7 +38,6 @@ export function addSharedOptions(command: Command) {
       (_value, prev: number | undefined) => (prev ?? 0) + 1,
     )
     .option('-d --base-dir <path>', 'Base directory to run commands in')
-    .option('--agent <agent>', 'Initial agent to use (default: architect)')
     .option('--file <path...>', 'File to include in the task')
     .option('--silent', 'Enable silent mode')
     .option('-y, --yes', 'Skip interactive prompts', false)
@@ -102,7 +101,6 @@ export function parseOptions(
     verbose,
     config,
     providerConfig,
-    agent: options.agent ?? config.agent ?? 'architect',
     file: options.file,
   }
 }

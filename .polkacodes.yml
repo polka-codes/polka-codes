@@ -1,10 +1,3 @@
-agents:
-  default:
-    initialContext:
-      excludes:
-        - __snapshots__
-        - .husky
-        - packages/github/src/types/github-types.ts
 excludeFiles:
   - .env
   - bun.lock

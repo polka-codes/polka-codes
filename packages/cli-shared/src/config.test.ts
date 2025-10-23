@@ -149,17 +149,11 @@ rules:
     expect(config?.rules).toEqual(['rule1', 'rule2'])
   })
 
-  test('handles agent and command defaults', () => {
+  test('handles command defaults', () => {
     const configPath = join(testSubDir, 'defaults-config.yml')
     writeFileSync(
       configPath,
       `
-agents:
-  default:
-    provider: anthropic
-    model: claude-3-opus
-  coder:
-    model: claude-3-sonnet
 commands:
   default:
     provider: deepseek
@@ -170,15 +164,6 @@ commands:
     )
 
     const config = loadConfig(configPath, testSubDir, testHomeDir)
-    expect(config?.agents).toEqual({
-      default: {
-        provider: 'anthropic',
-        model: 'claude-3-opus',
-      },
-      coder: {
-        model: 'claude-3-sonnet',
-      },
-    })
     expect(config?.commands).toEqual({
       default: {
         provider: 'deepseek',
@@ -227,12 +212,6 @@ commands:
       `
 defaultProvider: anthropic
 defaultModel: claude-3-opus
-agents:
-  default:
-    provider: anthropic
-    model: claude-3-opus
-  coder:
-    model: claude-3-sonnet
 commands:
   default:
     provider: deepseek
@@ -253,11 +232,6 @@ rules:
 providers:
   anthropic:
     apiKey: local-key
-agents:
-  coder:
-    model: claude-3-haiku
-  architect:
-    provider: deepseek
 commands:
   default:
     model: deepseek-coder-instruct

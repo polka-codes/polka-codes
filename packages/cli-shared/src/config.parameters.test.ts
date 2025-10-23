@@ -82,37 +82,6 @@ providers:
     })
   })
 
-  test('loads agent parameters', () => {
-    const configPath = join(testSubDir, 'agent-params-config.yml')
-    writeFileSync(
-      configPath,
-      `
-agents:
-  default:
-    provider: anthropic
-    model: claude-3-opus
-    parameters:
-      temperature: 0.9
-      max_tokens: 8000
-  coder:
-    model: claude-3-sonnet
-    parameters:
-      temperature: 0.7
-      top_p: 0.95
-    `,
-    )
-
-    const config = loadConfig(configPath, testSubDir, testHomeDir)
-    expect(config?.agents?.default?.parameters).toEqual({
-      temperature: 0.9,
-      max_tokens: 8000,
-    })
-    expect(config?.agents?.coder?.parameters).toEqual({
-      temperature: 0.7,
-      top_p: 0.95,
-    })
-  })
-
   test('loads command parameters', () => {
     const configPath = join(testSubDir, 'command-params-config.yml')
     writeFileSync(
@@ -205,11 +174,6 @@ providers:
     defaultParameters:
       temperature: 0.5
       max_tokens: 2000
-agents:
-  default:
-    parameters:
-      temperature: 0.8
-      max_tokens: 3000
     `,
     )
 
@@ -224,16 +188,11 @@ providers:
     defaultParameters:
       temperature: 0.4
       top_k: 50
-agents:
-  default:
-    parameters:
-      temperature: 0.9
     `,
     )
 
     const config = loadConfig(localConfigPath, testSubDir, testHomeDir)
     expect(config?.defaultParameters).toMatchSnapshot()
     expect(config?.providers?.anthropic?.defaultParameters).toMatchSnapshot()
-    expect(config?.agents?.default?.parameters).toMatchSnapshot()
   })
 })

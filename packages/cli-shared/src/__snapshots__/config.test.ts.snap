@@ -2,18 +2,6 @@
 
 exports[`config merges global and local config with local precedence 1`] = `
 {
-  "agents": {
-    "architect": {
-      "provider": "deepseek",
-    },
-    "coder": {
-      "model": "claude-3-haiku",
-    },
-    "default": {
-      "model": "claude-3-opus",
-      "provider": "anthropic",
-    },
-  },
   "commands": {
     "default": {
       "model": "deepseek-coder-instruct",

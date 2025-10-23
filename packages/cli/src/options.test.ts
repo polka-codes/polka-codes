@@ -54,25 +54,6 @@ describe('ApiProviderConfig', () => {
 
     expect(config.getConfigForCommand('unknown')).toMatchSnapshot()
   })
-
-  test('getConfigForAgent with agent-specific config', () => {
-    const config = new ApiProviderConfig({
-      defaultProvider: AiProvider.Anthropic,
-      providers: {
-        [AiProvider.Anthropic]: {
-          apiKey: 'test-key',
-          defaultModel: 'claude-3-opus',
-        },
-      },
-      agents: {
-        coder: {
-          model: 'claude-3-sonnet',
-        },
-      },
-    })
-
-    expect(config.getConfigForAgent('coder')).toMatchSnapshot()
-  })
 })
 
 describe('parseOptions', () => {

@@ -26,19 +26,6 @@ exports[`ApiProviderConfig getConfigForCommand falls back to default provider 1`
 }
 `;
 
-exports[`ApiProviderConfig getConfigForAgent with agent-specific config 1`] = `
-{
-  "apiKey": "test-key",
-  "baseUrl": undefined,
-  "keyFile": undefined,
-  "location": undefined,
-  "model": "claude-3-sonnet",
-  "parameters": {},
-  "project": undefined,
-  "provider": "anthropic",
-}
-`;
-
 exports[`parseOptions prioritizes CLI flags over env vars and config 1`] = `
 {
   "apiKey": "cli-key",

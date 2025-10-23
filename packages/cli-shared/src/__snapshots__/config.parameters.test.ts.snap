@@ -15,10 +15,3 @@ exports[`config parameters merges global and local parameters with local precede
   "top_k": 50,
 }
 `;
-
-exports[`config parameters merges global and local parameters with local precedence 3`] = `
-{
-  "max_tokens": 3000,
-  "temperature": 0.9,
-}
-`;

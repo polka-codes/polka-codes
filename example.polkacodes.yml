@@ -72,28 +72,6 @@ scripts:
     command: "bun build"
     description: "Build the project. Pass file path to build a specific file."
 
-# Agent-specific configurations
-# Override provider and model for specific agents
-agents:
-  default: # Default agent configuration
-    provider: "deepseek"
-    model: "deepseek-chat"
-    retryCount: 5
-    requestTimeoutSeconds: 15
-    initialContext: # Parameters for the initial context
-      maxFileCount: 200 # Maximum number of files to include in the context
-      excludes:
-        - "__snapshots__"
-        - "*.lock"
-
-  coder:
-    provider: "anthropic"
-    model: "claude-3-7-sonnet-20250219"
-
-  architect:
-    provider: "deepseek"
-    model: "deepseek-reasoner"
-
 # Command-specific configurations
 # Override provider and model for specific commands
 commands:

@@ -6,20 +6,8 @@ const providerModelSchema = z.object({
   parameters: z.record(z.string(), z.any()).optional(),
 })
 
-const agentSchema = providerModelSchema.extend({
-  initialContext: z
-    .object({
-      maxFileCount: z.number().int().positive().optional(),
-      excludes: z.array(z.string()).optional(),
-    })
-    .optional(),
-  retryCount: z.number().int().min(0).optional(),
-  requestTimeoutSeconds: z.number().int().positive().optional(),
-})
-
 export const configSchema = z
   .object({
-    agent: z.string().optional(),
     prices: z
       .record(
         z.string(), // provider
@@ -66,7 +54,6 @@ export const configSchema = z
         ),
       )
       .optional(),
-    agents: z.record(z.string(), agentSchema).optional(),
     commands: z
       .object({
         default: providerModelSchema.optional(),

@@ -74,52 +74,6 @@ describe('ApiProviderConfig', () => {
     expect(undefinedCommandConfig).toMatchSnapshot()
   })
 
-  test('getConfigForAgent resolves parameters correctly', () => {
-    const configWithAgents: Config = {
-      ...basicConfig,
-      agents: {
-        default: {
-          provider: AiProvider.Anthropic,
-          model: 'claude-3-opus',
-          parameters: {
-            temperature: 0.6,
-            max_tokens: 3000,
-          },
-        },
-        coder: {
-          model: 'claude-3-sonnet',
-          parameters: {
-            temperature: 0.8,
-          },
-        },
-        analyzer: {
-          provider: AiProvider.OpenRouter,
-          parameters: {
-            frequency_penalty: 0.3,
-          },
-        },
-      },
-    }
-
-    const apiConfig = new ApiProviderConfig(configWithAgents)
-
-    // Test default agent config
-    const defaultConfig = apiConfig.getConfigForAgent('default')
-    expect(defaultConfig).toMatchSnapshot()
-
-    // Test specific agent that inherits provider
-    const coderConfig = apiConfig.getConfigForAgent('coder')
-    expect(coderConfig).toMatchSnapshot()
-
-    // Test agent with different provider
-    const analyzerConfig = apiConfig.getConfigForAgent('analyzer')
-    expect(analyzerConfig).toMatchSnapshot()
-
-    // Test agent not defined (should use default)
-    const undefinedAgentConfig = apiConfig.getConfigForAgent('undefined-agent')
-    expect(undefinedAgentConfig).toMatchSnapshot()
-  })
-
   test('parameters inherit correctly from different levels', () => {
     const complexConfig: Config = {
       defaultProvider: AiProvider.Anthropic,
@@ -138,16 +92,6 @@ describe('ApiProviderConfig', () => {
           },
         },
       },
-      agents: {
-        default: {
-          parameters: {
-            temperature: 0.6,
-          },
-        },
-        coder: {
-          model: 'claude-3-sonnet',
-        },
-      },
       commands: {
         default: {
           parameters: {
@@ -159,10 +103,6 @@ describe('ApiProviderConfig', () => {
     }
 
     const apiConfig = new ApiProviderConfig(complexConfig)
-
-    // Test inheritance for agent
-    const coderConfig = apiConfig.getConfigForAgent('coder')
-    expect(coderConfig?.parameters).toMatchSnapshot()
 
     // Test inheritance for command
     const taskConfig = apiConfig.getConfigForCommand('task')
@@ -176,9 +116,6 @@ describe('ApiProviderConfig', () => {
 
     const apiConfig = new ApiProviderConfig(minimalConfig)
 
-    const agentConfig = apiConfig.getConfigForAgent('coder')
-    expect(agentConfig).toMatchSnapshot()
-
     const commandConfig = apiConfig.getConfigForCommand('task')
     expect(commandConfig).toMatchSnapshot()
   })
@@ -188,7 +125,6 @@ describe('ApiProviderConfig', () => {
 
     const apiConfig = new ApiProviderConfig(emptyConfig)
 
-    expect(apiConfig.getConfigForAgent('coder')).toMatchSnapshot()
     expect(apiConfig.getConfigForCommand('task')).toMatchSnapshot()
   })
 
@@ -216,22 +152,6 @@ describe('ApiProviderConfig', () => {
           },
         },
       },
-      agents: {
-        default: {
-          // Uses OpenRouter by default, should inherit global params
-        },
-        coder: {
-          provider: AiProvider.Anthropic,
-          // Uses Anthropic, should use Anthropic's params, overriding global temp
-        },
-        analyzer: {
-          provider: AiProvider.OpenRouter, // Changed from OpenAI
-          parameters: {
-            temperature: 0.3, // This should override global and provider temperature for this agent
-            top_p: 0.3, // This should override global and provider top_p for this agent
-          },
-        },
-      },
       commands: {
         default: {
           // Uses OpenRouter by default, should inherit global params
@@ -247,18 +167,6 @@ describe('ApiProviderConfig', () => {
     }
 
     const apiConfig = new ApiProviderConfig(configWithGlobalDefaults)
-
-    // Agent: default (OpenRouter with global defaults)
-    const defaultAgentConfig = apiConfig.getConfigForAgent('default')
-    expect(defaultAgentConfig?.parameters).toMatchSnapshot('agent default - global params')
-
-    // Agent: coder (Anthropic, merging global and Anthropic defaults)
-    const coderAgentConfig = apiConfig.getConfigForAgent('coder')
-    expect(coderAgentConfig?.parameters).toMatchSnapshot('agent coder - anthropic params override global')
-
-    // Agent: analyzer (OpenRouter, with agent-specific overrides)
-    const analyzerAgentConfig = apiConfig.getConfigForAgent('analyzer')
-    expect(analyzerAgentConfig?.parameters).toMatchSnapshot('agent analyzer - agent params override global')
 
     // Command: default (OpenRouter with global defaults)
     const defaultCommandConfig = apiConfig.getConfigForCommand('default')
@@ -283,16 +191,13 @@ describe('ApiProviderConfig', () => {
           // No defaultParameters
         },
       },
-      agents: {
-        default: {}, // Should use global defaults
-      },
     }
     const apiConfigOnlyGlobal = new ApiProviderConfig(configOnlyGlobal)
-    const agentOnlyGlobalConfig = apiConfigOnlyGlobal.getConfigForAgent('default')
-    expect(agentOnlyGlobalConfig?.parameters).toMatchSnapshot('agent default - only global params')
+    const commandOnlyGlobalConfig = apiConfigOnlyGlobal.getConfigForCommand('default')
+    expect(commandOnlyGlobalConfig?.parameters).toMatchSnapshot('command default - only global params')
   })
 
-  test('resolves toolFormat correctly for agents and commands', () => {
+  test('resolves toolFormat correctly for commands', () => {
     const config: Config = {
       defaultProvider: AiProvider.Anthropic,
       providers: {
@@ -303,25 +208,6 @@ describe('ApiProviderConfig', () => {
         openrouter: {
           apiKey: 'openrouter-key',
           defaultModel: 'anthropic/claude-sonnet-4',
-        },
-      },
-      agents: {
-        // Sonnet model should default to native
-        default: {
-          provider: AiProvider.Anthropic,
-        },
-        // Sonnet model on OpenRouter should default to native
-        coder: {
-          provider: AiProvider.OpenRouter,
-        },
-        // Explicitly set to polka-codes
-        analyzer: {
-          provider: AiProvider.Anthropic,
-        },
-        // Non-sonnet model should default to polka-codes
-        architect: {
-          provider: AiProvider.Anthropic,
-          model: 'claude-3-opus-20240229',
         },
       },
       commands: {
@@ -347,12 +233,6 @@ describe('ApiProviderConfig', () => {
 
     const apiConfig = new ApiProviderConfig(config)
 
-    // Agent tests
-    expect(apiConfig.getConfigForAgent('default')).toMatchSnapshot()
-    expect(apiConfig.getConfigForAgent('coder')).toMatchSnapshot()
-    expect(apiConfig.getConfigForAgent('analyzer')).toMatchSnapshot()
-    expect(apiConfig.getConfigForAgent('architect')).toMatchSnapshot()
-
     // Command tests
     expect(apiConfig.getConfigForCommand('default')).toMatchSnapshot()
     expect(apiConfig.getConfigForCommand('task')).toMatchSnapshot()
@@ -371,11 +251,6 @@ describe('ApiProviderConfig', () => {
           keyFile: '/path/to/keyfile.json',
         },
       },
-      agents: {
-        default: {
-          model: 'gemini-1.5-pro',
-        },
-      },
       commands: {
         default: {
           model: 'gemini-1.5-flash',
@@ -384,9 +259,6 @@ describe('ApiProviderConfig', () => {
     }
 
     const apiConfig = new ApiProviderConfig(vertexConfig)
-
-    const agentConfig = apiConfig.getConfigForAgent('default')
-    expect(agentConfig).toMatchSnapshot()
 
     const commandConfig = apiConfig.getConfigForCommand('default')
     expect(commandConfig).toMatchSnapshot()
