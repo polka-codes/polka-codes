@@ -20,3 +20,4 @@ rules: |
   DO NOT use comment as section separators
   DO NOT add comment to explain changes
   Use '.nullish()' instead of '.optional()' in zod schema unless there is a specific reason to use optional.
+  DO NOT use global variables unless absolutely necessary. Add justification as comment.
