@@ -10,24 +10,23 @@
 > **Warning**
 > This project is still in very early stages of development. Please use with caution as APIs and features may change frequently.
 
-Polka Codes is a powerful TypeScript-based AI coding assistant framework that helps developers write, improve, and maintain code through natural language interactions. It features a multi-agent system, a command-line interface, and seamless GitHub integration to streamline your development workflow.
+Polka Codes is a powerful TypeScript-based AI coding assistant framework that helps developers with epic decomposition, task planning, code generation, and more. It uses natural language interactions, a multi-agent system, a command-line interface, and seamless GitHub integration to streamline your development workflow.
 
 ## Features
 
-- 🎯 **Project Scaffolding**: Easily create new projects with the `create` command.
+- ✨ **Epic Decomposition**: Break down large features into smaller, manageable tasks with the `epic` command.
+- 📝 **Task Planning**: Create detailed implementation plans for your tasks using the `plan` command.
+- 💻 **Code Generation**: Implement features from a plan or a simple description with the `code` command.
+- 🐛 **Automated Debugging**: Automatically fix failing tests or commands with the `fix` command.
+- 🤖 **AI-Assisted Git Workflow**: Generate commit messages and create pull requests with the `commit` and `pr` commands.
+- 🕵️ **Code Review**: Get AI-powered feedback on your pull requests and local changes, and even have the AI apply the fixes for you.
+- 🤝 **Multi-Agent System**: Specialized AI agents (Architect, Coder, etc.) collaborate on complex tasks like planning, coding, and fixing.
 - 🔧 **Simple Setup**: Quickly initialize your project configuration with `init`.
-- 🤖 **Multiple AI Providers**: Supports Google Vertex, DeepSeek (recommended), Anthropic Claude, Ollama, and OpenRouter.
-- 🤝 **Multi-Agent System**: Specialized AI agents collaborate on complex tasks:
-  - **Architect Agent**: Handles system design and high-level planning.
-  - **Coder Agent**: Focuses on implementation, coding, and maintenance.
-  - **Analyzer Agent**: Analyzes code and project structure.
-  - **Code Fixer Agent**: Fixes bugs and addresses issues.
-- 💻 **Interactive CLI**: A powerful command-line interface for task execution and interactive chat.
 - 🔄 **GitHub Integration**: A GitHub Action that allows you to run Polka Codes by mentioning it in pull requests and issues.
-- 🕵️ **Code Review**: Get AI-powered feedback on your pull requests and local changes.
 - 📦 **Extensible Architecture**: A modular design that allows for adding new AI providers, tools, and agents.
 - ⚡ **Type Safety**: Fully typed with TypeScript for a better developer experience.
 - 🧪 **Thoroughly Tested**: Comprehensive test suite using `bun:test` with snapshot testing.
+- 🤖 **Multiple AI Providers**: Supports Google Vertex, DeepSeek (recommended), Anthropic Claude, Ollama, and OpenRouter.
 
 ## Quick Start
 
@@ -41,34 +40,33 @@ npm install -g @polka-codes/cli
 npx @polka-codes/cli "your task description"
 '''
 
-### Basic Usage
+### Example Workflow
+
+Here's an example of a typical development workflow using Polka Codes:
 
 '''bash
-# Create a new project
-polka create my-project
+# 1. Break down a large feature into tasks
+polka epic "Implement user authentication"
 
-# Initialize configuration
-polka init
+# 2. Create a detailed implementation plan for a task
+polka plan --plan-file auth.plan.md "Implement JWT-based auth"
 
-# Run a task
-polka "improve README.md"
+# 3. Implement the feature based on the plan
+polka code --file auth.plan.md
 
-# Review a pull request
-polka review --pr 123
+# 4. Fix any issues that arise (e.g., failing tests)
+polka fix "bun test"
 
-# Review local changes (staged or unstaged)
-polka review
+# 5. Commit your changes with an AI-generated message
+polka commit -a
 
-# Start an interactive chat session
-polka
-
-# Get help
-polka --help
+# 6. Create a pull request
+polka pr
 '''
 
 ## Code Review
 
-The `review` command provides AI-powered code reviews for your projects. It can be used to review GitHub pull requests or local changes.
+The `review` command provides AI-powered code reviews for your projects. It can be used to review GitHub pull requests or local changes. The command can also attempt to automatically fix the issues it finds. Use the `--loop` option to have it re-review its own changes until the review is clean or the loop limit is reached.
 
 ### Reviewing Pull Requests
 
@@ -80,6 +78,9 @@ polka review --pr 123
 
 # Review a pull request by URL
 polka review --pr https://github.com/owner/repo/pull/123
+
+# Review and automatically apply feedback in a loop (up to 3 times)
+polka review --pr 123 --loop 3
 '''
 
 ### Reviewing Local Changes
@@ -93,6 +94,9 @@ If no local changes are found, it will fall back to reviewing the diff between t
 '''bash
 # Review staged or unstaged changes
 polka review
+
+# Review and apply feedback
+polka review --yes
 '''
 
 ### JSON Output
@@ -116,6 +120,7 @@ The project is organized as a monorepo with the following packages:
 | [`cli-shared`](/packages/cli-shared) | Shared utilities and types for CLI packages. |
 | [`github`](/packages/github) | GitHub integration, including the GitHub Action. |
 | [`runner`](/packages/runner) | Service for running agents and managing tasks. |
+| [`workflow`](/packages/workflow) | Defines the core workflow engine and agent orchestration logic. |
 
 ## Getting Started
 
@@ -137,9 +142,17 @@ bun install
 
 ### Available Scripts
 
-- `bun test`: Run tests across all packages and update snapshots.
-- `bun typecheck`: Run type checking.
-- `bun fix --unsafe`: Fix linting and formatting issues.
+- `bun build`: Build all packages.
+- `bun lint`: Check for linting and formatting errors.
+- `bun fix`: Automatically fix linting and formatting issues.
+- `bun check`: Run type checking and linting.
+- `bun typecheck`: Run type checking only.
+- `bun test`: Run tests across all packages.
+- `bun clean`: Remove build artifacts.
+- `bun cli`: Run the CLI in development mode.
+- `bun pr`: A shortcut for `bun cli pr`.
+- `bun commit`: A shortcut for `bun cli commit`.
+- `bun codegen`: Generate GraphQL types for the GitHub package.
 
 ## Configuration
 
