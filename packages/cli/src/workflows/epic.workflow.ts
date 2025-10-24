@@ -14,30 +14,26 @@ import {
   ToolResponseType,
 } from '@polka-codes/core'
 import { agentWorkflow, type JsonUserContent, type WorkflowContext, type WorkflowFn } from '@polka-codes/workflow'
-import { z } from 'zod'
+import type { z } from 'zod'
 import { UserCancelledError } from '../errors'
 import { gitDiff } from '../tools'
 import type { CliToolRegistry } from '../workflow-tools'
 import { codeWorkflow, type JsonFilePart, type JsonImagePart } from './code.workflow'
 import {
   CODE_REVIEW_SYSTEM_PROMPT,
+  EPIC_PLAN_UPDATE_SYSTEM_PROMPT,
   EPIC_PLANNER_SYSTEM_PROMPT,
-  EPIC_TASK_BREAKDOWN_SYSTEM_PROMPT,
   EpicPlanSchema,
   formatReviewToolInput,
   getPlanPrompt,
   type ReviewToolInput,
+  UpdatedPlanSchema,
 } from './prompts'
 import { formatElapsedTime, getDefaultContext, parseGitDiffNameStatus, type ReviewResult, reviewOutputSchema } from './workflow.utils'
 
 export type EpicWorkflowInput = {
   task: string
 }
-
-const EpicSchema = z.object({
-  overview: z.string().describe('A brief technical overview of the epic.'),
-  tasks: z.array(z.string().describe('A detailed, self-contained, and implementable task description.')),
-})
 
 type CreatePlanOutput = z.infer<typeof EpicPlanSchema>
 type CreatePlanInput = {
@@ -106,6 +102,61 @@ async function createPlan(
   }
 
   return { plan: '', reason: 'Usage limit exceeded.', type: ToolResponseType.Exit, branchName: '' }
+}
+
+async function updatePlanAgent(
+  currentPlan: string,
+  implementationSummary: string,
+  completedTask: string,
+  context: WorkflowContext<CliToolRegistry>,
+): Promise<{ updatedPlan: string; isComplete: boolean; nextTask: string | null }> {
+  const userMessage = `# Current Plan
+
+<plan>
+${currentPlan}
+</plan>
+
+# Implementation Summary
+
+${implementationSummary}
+
+# Completed Task
+
+${completedTask}
+
+Please update the plan by marking the completed task as [x] and identify the next incomplete task.`
+
+  const result = await agentWorkflow(
+    {
+      systemPrompt: EPIC_PLAN_UPDATE_SYSTEM_PROMPT,
+      userMessage: [{ role: 'user', content: userMessage }],
+      tools: [] as FullToolInfo[],
+      outputSchema: UpdatedPlanSchema,
+    },
+    context,
+  )
+
+  if (result.type !== ToolResponseType.Exit || !result.object) {
+    throw new Error('Plan update agent failed')
+  }
+
+  const updateResult = result.object as z.infer<typeof UpdatedPlanSchema>
+  return {
+    updatedPlan: updateResult.updatedPlan,
+    isComplete: updateResult.isComplete,
+    nextTask: updateResult.nextTask || null,
+  }
+}
+
+function extractFirstIncompleteTask(plan: string): string | null {
+  const lines = plan.split('\n')
+  for (const line of lines) {
+    const match = line.match(/^\s*-\s*\[\s*\]\s*(.+)$/)
+    if (match) {
+      return match[1].trim()
+    }
+  }
+  return null
 }
 
 export const epicWorkflow: WorkflowFn<EpicWorkflowInput, void, CliToolRegistry> = async (input, context) => {
@@ -197,54 +248,8 @@ export const epicWorkflow: WorkflowFn<EpicWorkflowInput, void, CliToolRegistry> 
     return
   }
 
-  // Phase 3: Task Breakdown
-  logger.info('🔨 Phase 3: Breaking down plan into tasks...\n')
-  const taskBreakdownResult = await step('taskBreakdown', async () => {
-    const defaultContext = await getDefaultContext()
-    const memoryContext = await tools.getMemoryContext()
-    const userMessage = `Based on the following high-level plan, break it down into a list of smaller, sequential, and implementable tasks and a brief technical overview of the epic.
-
-<plan>
-${highLevelPlan}
-</plan>
-
-The overview should be a short paragraph that summarizes the overall technical approach.
-Each task should be a self-contained unit of work that can be implemented and committed separately.
-
-${defaultContext}\n${memoryContext}
-`
-    return await agentWorkflow(
-      {
-        systemPrompt: EPIC_TASK_BREAKDOWN_SYSTEM_PROMPT,
-        userMessage: [{ role: 'user', content: userMessage }],
-        tools: [listFiles, readFile, searchFiles, readBinaryFile, readMemory, appendMemory, replaceMemory, removeMemory, listMemoryTopics],
-        outputSchema: EpicSchema,
-      },
-      context,
-    )
-  })
-
-  if (taskBreakdownResult.type !== ToolResponseType.Exit || !taskBreakdownResult.object) {
-    logger.error('Task breakdown failed.')
-    return
-  }
-
-  const { tasks, overview } = taskBreakdownResult.object as z.infer<typeof EpicSchema>
-
-  if (!tasks || tasks.length === 0) {
-    logger.error('❌ Error: No tasks were generated from the plan. Exiting.')
-    return
-  }
-
-  logger.info(`✅ Tasks created: ${tasks.length} task(s)\n`)
-  logger.info('📝 Task list:')
-  tasks.forEach((t, i) => {
-    logger.info(`  ${i + 1}. ${t}`)
-  })
-  logger.info('')
-
-  // Phase 4: Branch Creation
-  logger.info('🌿 Phase 4: Creating feature branch...\n')
+  // Phase 3: Branch Creation
+  logger.info('🌿 Phase 3: Creating feature branch...\n')
 
   // Validate branch name format
   if (!/^[a-zA-Z0-9/_-]+$/.test(branchName)) {
@@ -267,27 +272,54 @@ ${defaultContext}\n${memoryContext}
   await step('createBranch', async () => await tools.executeCommand({ command: 'git', args: ['checkout', '-b', branchName] }))
   logger.info(`✅ Branch '${branchName}' created.\n`)
 
-  // Phase 5: Task Execution Loop
-  logger.info('🚀 Phase 5: Executing tasks...\n')
+  // Phase 4: Iterative Implementation Loop
+  logger.info('🚀 Phase 4: Iterative Implementation Loop...\n')
   logger.info(`${'='.repeat(80)}\n`)
 
-  for (const [index, taskItem] of tasks.entries()) {
+  let currentPlan = highLevelPlan
+  let iterationCount = 0
+  let isComplete = false
+
+  while (!isComplete) {
+    iterationCount++
     const taskStartTime = Date.now()
-    const taskNumber = index + 1
-    const totalTasks = tasks.length
+
+    const taskItem = extractFirstIncompleteTask(currentPlan)
+
+    if (!taskItem) {
+      logger.error('❌ Error: No incomplete checklist item found in plan, but isComplete is false.')
+      break
+    }
 
     logger.info(`\n${'━'.repeat(80)}`)
-    logger.info(`📌 Task ${taskNumber} of ${totalTasks}`)
+    logger.info(`📌 Iteration ${iterationCount}`)
     logger.info(`${'━'.repeat(80)}`)
     logger.info(`${taskItem}\n`)
 
-    await step(`task-${index}`, async () => {
-      const taskWithOverview = `You are in the middle of a larger epic. Here is the overview of the epic:\n${overview}\n\nYour current task is: ${taskItem}`
-      await codeWorkflow({ task: taskWithOverview, mode: 'noninteractive' }, context)
+    let implementationSummary = ''
+
+    const codeResult = await step(`task-${iterationCount}`, async () => {
+      const taskWithContext = `You are working on an epic. Here is the full plan:
+
+<plan>
+${currentPlan}
+</plan>
+
+Your current task is to implement this specific item:
+${taskItem}
+
+Focus only on this item, but use the plan for context.`
+      return await codeWorkflow({ task: taskWithContext, mode: 'noninteractive' }, context)
     })
 
+    if (codeResult && 'summaries' in codeResult && codeResult.summaries.length > 0) {
+      implementationSummary = codeResult.summaries.join('\n')
+    } else {
+      implementationSummary = taskItem
+    }
+
     const commitMessage = `feat: ${taskItem}`
-    await step(`commit-initial-${index}`, async () => {
+    await step(`commit-initial-${iterationCount}`, async () => {
       await tools.executeCommand({ command: 'git', args: ['add', '.'] })
       await tools.executeCommand({ command: 'git', args: ['commit', '-m', commitMessage] })
     })
@@ -300,14 +332,12 @@ ${defaultContext}\n${memoryContext}
       const diffResult = await tools.executeCommand({ command: 'git', args: ['diff', '--name-status', 'HEAD~1', 'HEAD'] })
       const changedFiles = parseGitDiffNameStatus(diffResult.stdout)
 
-      // Early exit: Skip review if no files were changed
       if (changedFiles.length === 0) {
         logger.info('ℹ️  No files were changed. Skipping review.\n')
         reviewPassed = true
         break
       }
 
-      // Check if any reviewable source files were modified
       const reviewableExtensions = [
         '.ts',
         '.tsx',
@@ -343,7 +373,7 @@ ${defaultContext}\n${memoryContext}
         changedFiles,
       }
 
-      const reviewAgentResult = await step(`review-${index}-${i}`, async () => {
+      const reviewAgentResult = await step(`review-${iterationCount}-${i}`, async () => {
         const defaultContext = await getDefaultContext()
         const memoryContext = await tools.getMemoryContext()
         const userMessage = `${defaultContext}\n${memoryContext}\n\n${formatReviewToolInput(changeInfo)}`
@@ -379,7 +409,7 @@ ${defaultContext}\n${memoryContext}
       if (!reviewResult || !reviewResult.specificReviews || reviewResult.specificReviews.length === 0) {
         logger.info('✅ Review passed. No issues found.\n')
         reviewPassed = true
-        break // Exit review loop
+        break
       }
 
       logger.warn(`⚠️  Review found ${reviewResult.specificReviews.length} issue(s). Attempting to fix...\n`)
@@ -389,17 +419,22 @@ ${defaultContext}\n${memoryContext}
       logger.warn('')
 
       const reviewSummary = reviewResult.specificReviews.map((r) => `File: ${r.file} (lines: ${r.lines})\nReview: ${r.review}`).join('\n\n')
-      const fixTask = `You are in the middle of a larger epic. The original task was: "${taskItem}".
-Here is the overview of the epic:
-${overview}
+      const fixTask = `You are working on an epic. The original task was: "${taskItem}".
 
-After an initial implementation, a review found the following issues. Please fix them:\n\n${reviewSummary}`
+Here is the full plan for context:
+<plan>
+${currentPlan}
+</plan>
 
-      await step(`fix-${index}-${i}`, async () => {
+After an initial implementation, a review found the following issues. Please fix them:
+
+${reviewSummary}`
+
+      await step(`fix-${iterationCount}-${i}`, async () => {
         await codeWorkflow({ task: fixTask, mode: 'noninteractive' }, context)
       })
 
-      await step(`commit-fix-${index}-${i}`, async () => {
+      await step(`commit-fix-${iterationCount}-${i}`, async () => {
         await tools.executeCommand({ command: 'git', args: ['add', '.'] })
         await tools.executeCommand({ command: 'git', args: ['commit', '--amend', '--no-edit'] })
       })
@@ -413,15 +448,34 @@ After an initial implementation, a review found the following issues. Please fix
     const taskElapsedTime = formatElapsedTime(taskElapsed)
 
     if (reviewPassed) {
-      logger.info(`✅ Task ${taskNumber}/${totalTasks} completed successfully (${taskElapsedTime})`)
+      logger.info(`✅ Iteration ${iterationCount} completed successfully (${taskElapsedTime})`)
     } else {
-      logger.warn(`⚠️  Task ${taskNumber}/${totalTasks} completed with potential issues (${taskElapsedTime})`)
+      logger.warn(`⚠️  Iteration ${iterationCount} completed with potential issues (${taskElapsedTime})`)
+    }
+
+    const updateResult = await step(`update-plan-${iterationCount}`, async () => {
+      return await updatePlanAgent(currentPlan, implementationSummary, taskItem, context)
+    })
+
+    currentPlan = updateResult.updatedPlan
+    isComplete = updateResult.isComplete
+
+    const completedCount = (currentPlan.match(/- \[x\]/g) || []).length
+    const totalCount = (currentPlan.match(/- \[[x ]\]/g) || []).length
+    logger.info(`\n📊 Progress: ${completedCount}/${totalCount} items completed`)
+
+    if (isComplete) {
+      logger.info('✅ All tasks complete!\n')
+      break
+    }
+
+    if (updateResult.nextTask) {
+      logger.info(`📌 Next task: ${updateResult.nextTask}\n`)
     }
 
     logger.info(`${'━'.repeat(80)}\n`)
   }
 
-  // End-of-workflow summary
   const totalElapsed = Date.now() - workflowStartTime
   const totalElapsedTime = formatElapsedTime(totalElapsed)
 
@@ -429,7 +483,7 @@ After an initial implementation, a review found the following issues. Please fix
   logger.info('🎉 Epic Workflow Complete!')
   logger.info(`${'='.repeat(80)}`)
   logger.info('\n📊 Summary:')
-  logger.info(`   Total tasks: ${tasks.length}`)
+  logger.info(`   Total iterations: ${iterationCount}`)
   logger.info(`   Total commits: ${commitMessages.length}`)
   logger.info(`   Branch: ${branchName}`)
   logger.info(`   Total time: ${totalElapsedTime}\n`)

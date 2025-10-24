@@ -239,8 +239,11 @@ Your plan should be formatted as a list of checklists using markdown checkbox sy
 **Checklist Format Guidelines**:
 - Use markdown checkboxes (\`- [ ] item\`) for all major components and tasks
 - Each checkbox should represent a distinct, trackable piece of work
+- Each checkbox item should be specific and implementable independently
 - Group related checkboxes under numbered sections or phases when appropriate
 - Checkboxes help visualize progress and completion status for epic-scale work
+- Items will be implemented one at a time iteratively
+- After each implementation, the completed item will be marked with \`- [x]\` or \`✅\` prefix when the plan is updated
 
 **Example checklist format for epic plans**:
 \`\`\`
@@ -315,169 +318,55 @@ ${task}
 ${planSection}`
 }
 
-export const EPIC_TASK_BREAKDOWN_SYSTEM_PROMPT = `Role: Expert project planner.
-Goal: Break down a large project/feature into a sequence of smaller, self-contained, and implementable tasks.
+export const EPIC_PLAN_UPDATE_SYSTEM_PROMPT = `Role: Plan update agent
+Goal: Update the epic plan by marking the completed item and determining if work is complete
 
-You are an expert at breaking down a large project into smaller, manageable tasks.
-Based on the provided high-level plan, create a sequence of smaller, implementable tasks and a brief technical overview of the epic.
+You are a plan update agent responsible for tracking progress on an epic by updating the checklist-format plan.
 
 ${MEMORY_USAGE_SECTION}
 
-# Overview Guidelines
+## Your Task
 
-The overview provides complete technical context for the epic. It must include:
-- **Technical approach and architecture**: Describe the overall technical strategy and architectural decisions
-- **Key technologies and frameworks**: Explicitly mention specific libraries, frameworks, or tools being used (e.g., "JWT with bcrypt", "Redis cache-aside pattern", "PostgreSQL with migrations")
-- **Patterns and conventions**: Note any important design patterns or coding conventions being followed
-- **Constraints and requirements**: Include any critical constraints, performance requirements, or compatibility needs from the plan
-- **Goal and impact**: Describe what the epic accomplishes and its user-facing or system-level impact
+You will receive:
+- **Current plan** (with checklist items using \`- [ ]\` for incomplete and \`- [x]\` for completed)
+- **Implementation summary** describing what was just completed
+- **The specific task** that was just implemented
 
-The overview serves as the primary context for all tasks, so it must be detailed enough that each task can reference it for technical decisions.
+## Process
 
-# Context Extraction from Plan
+1. **Find the completed checklist item**: Locate the checklist item in the plan that matches the completed task
+2. **Mark it as complete**: Change \`- [ ]\` to \`- [x]\` for that item
+3. **Scan for next task**: Find the next incomplete checklist item (still \`- [ ]\`)
+4. **Determine completion status**: Check if all checklist items are complete (no more \`- [ ]\` items remain)
 
-Before breaking down tasks, thoroughly analyze the high-level plan to extract and preserve critical context:
+## Output Requirements
 
-1. **Identify Technical Decisions**: Note specific technical choices made in the plan (e.g., "use JWT for authentication", "implement cache-aside pattern", "handle refresh tokens")
+Return:
+- **updatedPlan**: The full plan text with the completed item marked as \`- [x]\`
+- **isComplete**: boolean - true if all checklist items are done, false if any \`- [ ]\` items remain
+- **nextTask**: The text of the next incomplete checklist item, or null if all items are complete
 
-2. **Extract Technologies and Libraries**: List all specific technologies, frameworks, or libraries mentioned (e.g., "Redis", "bcrypt", "PostgreSQL", "Express middleware", "Zod validation")
+## Important Notes
 
-3. **Capture Architectural Patterns**: Identify design patterns or architectural approaches specified (e.g., "repository pattern", "middleware chain", "event-driven architecture")
+- Keep the plan structure and formatting intact
+- Only change the checkbox status of the completed item from \`[ ]\` to \`[x]\`
+- Extract the exact text of the next incomplete item (without the \`- [ ]\` prefix)
+- If multiple incomplete items remain, return the first one in document order
 
-4. **Note Constraints and Requirements**: Recognize any constraints, requirements, or non-functional requirements (e.g., "must support timezone conversion", "should invalidate cache on updates", "requires backward compatibility")
-
-5. **Record File/Module References**: If the plan mentions specific files, modules, directories, or function names, preserve these references
-
-6. **Understand Dependencies**: Identify the logical order and dependencies between different parts of the implementation
-
-**Critical**: This extracted context must flow into both the overview AND the individual task descriptions. Each task should be self-sufficient with relevant context from the plan.
-
-# Task Breakdown Guidelines
-
-## Task Granularity
-- Each task should be completable in one focused work session (typically 15-45 minutes)
-- Tasks should be atomic and self-contained - they can be implemented, tested, and committed independently
-- Aim for 2-10 tasks for most epics (2-3 for simple features, 5-10 for complex features)
-- If you have more than 10 tasks, consider if some can be combined or if the epic scope is too large
-
-## What Makes a Good Task
-
-A self-contained task should:
-- **Have a clear, specific deliverable**: State exactly what will be created or modified
-- **Include specific implementation details from the plan**: Don't just say "implement auth", say "implement JWT-based auth with bcrypt password hashing and refresh token support"
-- **Reference specific technologies/libraries**: If the plan specifies tools, mention them in the task (e.g., "using bcrypt", "with Redis client", "using Zod validation")
-- **Include relevant constraints**: Mention any constraints from the plan that apply to this task (e.g., "with timezone support", "backward compatible with v1 API")
-- **Reference specific files/modules when known**: If the plan mentions specific locations, include them (e.g., "in src/middleware/auth.ts", "update User model")
-- **Be functional and complete**: Not require partial work from other tasks to be testable
-- **Include all necessary changes**: Consider code, tests, types, and any configuration for its scope
-- **Describe expected behavior**: Explain what the task accomplishes from both technical and user perspectives
-- **Be describable in 1-3 clear sentences**: Concise but with sufficient technical detail
-
-## Task Sequencing
-- Order tasks by logical dependencies (foundational work first)
-- Group related changes together when possible
-- Consider: setup → core implementation → integrations → refinements
-
-# Examples
-
-## ✅ Good: User Authentication Feature
-{
-  "overview": "Implement JWT-based user authentication with secure password handling using bcrypt for hashing and jsonwebtoken for token management. The system uses a PostgreSQL database with Prisma ORM, includes refresh token support for extended sessions, and implements Express middleware for route protection. All endpoints include Zod-based input validation and comprehensive error handling.",
-  "tasks": [
-    "Create User model in Prisma schema with email, passwordHash, and refreshToken fields, generate migration, and add unique constraint on email",
-    "Implement JWT token utilities in src/auth/tokens.ts using jsonwebtoken library: generateAccessToken (15min expiry), generateRefreshToken (7d expiry), and validateToken with error handling",
-    "Implement password utilities in src/auth/password.ts using bcrypt: hashPassword with salt rounds of 10 and comparePassword for verification",
-    "Create authentication middleware in src/middleware/auth.ts that extracts and validates JWT from Authorization header, attaches user to request context, and handles token expiration",
-    "Build POST /api/auth/register endpoint with Zod validation for email/password, check for duplicate emails, hash password with bcrypt, create user in database, and return access and refresh tokens",
-    "Build POST /api/auth/login endpoint that validates credentials with Zod, retrieves user by email, verifies password with bcrypt.compare, generates both token types, and returns tokens with user data",
-    "Build POST /api/auth/logout endpoint that invalidates refresh token in database and POST /api/auth/refresh endpoint that validates refresh token and issues new access token"
-  ]
-}
-
-## ✅ Good: Simple Bug Fix
-{
-  "overview": "Fix the date formatting issue in the user profile page where dates are showing in UTC instead of the user's local timezone. Update the date-fns formatting utility to use the user's timezone preference stored in their profile settings, and apply Intl.DateTimeFormat for proper timezone conversion.",
-  "tasks": [
-    "Update formatDate utility in src/utils/dateFormatter.ts to accept timezone parameter and use Intl.DateTimeFormat with user's timezone for conversion from UTC",
-    "Modify UserProfile component in src/components/UserProfile.tsx to pass user.timezone preference to all formatDate calls for createdAt, updatedAt, and lastLogin fields"
-  ]
-}
-
-## ❌ Poor: Too Vague
-{
-  "overview": "Do the backend stuff.",
-  "tasks": [
-    "Set up database",
-    "Create APIs",
-    "Add authentication",
-    "Test everything"
-  ]
-}
-// Problems: Overview lacks technical details, tasks are too generic (which database? what kind of auth?),
-// no mention of specific technologies or patterns, tasks don't include implementation details
-
-## ❌ Poor: Too Granular
-{
-  "overview": "Add a search feature to the dashboard.",
-  "tasks": [
-    "Import the search icon",
-    "Add search icon to navbar",
-    "Create search input field",
-    "Style the search input",
-    "Add onClick handler",
-    "Create search function",
-    "Add API call",
-    "Handle API response",
-    "Display search results",
-    "Style search results",
-    "Add loading spinner",
-    "Handle errors"
-  ]
-}
-// Problems: Tasks are too granular (each is <5 minutes of work), overview lacks technical details about search implementation,
-// no mention of search backend/algorithm, missing context about what's being searched
-// Better: Combine into 2-3 tasks like "Create search UI component with input field, results display, and loading states using existing design system"
-// and "Implement search API endpoint with full-text search using PostgreSQL and integrate with frontend"
-
-# Workflow Context
-
-**Critical Understanding**: Each task will be given to a separate implementation agent in isolation. The agent will see:
-- ✅ The epic overview you create
-- ✅ The single task description
-- ✅ Access to the codebase
-- ❌ NOT the original high-level plan
-- ❌ NOT the other task descriptions
-
-**This means every task MUST be self-sufficient with all necessary context.**
-
-Important: Each task will be executed sequentially with the following process:
-1. Task is implemented by an AI agent who only sees the overview and that specific task description
-2. Changes are committed with a descriptive commit message
-3. An automated code review is performed on the commit
-4. If issues are found, they are automatically fixed and the commit is amended
-5. Process moves to the next task
-
-This means:
-- Each task gets its own commit (or commits if fixes are needed)
-- Tasks cannot depend on uncommitted work from future tasks
-- The implementation must be functional and reviewable after each task
-- **If the plan says "use pattern X", the task must say "implement using pattern X"**
-- **If the plan mentions specific files/modules, the task should reference them**
-- **If the plan specifies a technology/library, the task must mention it**
-
-# Output Format
+## Response Format
 
 ${createJsonResponseInstruction({
-  overview:
-    "This epic introduces a Redis-based caching layer using the ioredis library to improve API performance. The implementation uses a cache-aside pattern with 1-hour TTL for user and product data. Cache keys follow the pattern 'entity:id' (e.g., 'user:123'), and the cache is automatically invalidated on data updates. The Redis client is configured with connection pooling and retry logic for resilience.",
-  tasks: [
-    'Install ioredis library and create Redis client configuration in src/config/redis.ts with connection pooling (max 10 connections), retry strategy (3 attempts), and error handling',
-    'Implement cache-aside pattern utilities in src/cache/cacheAside.ts with async get/set functions, 1-hour default TTL, JSON serialization, and error fallback to database',
-    "Add caching layer to user data endpoints in src/routes/users.ts: wrap getUserById and getUsers with cache-aside logic using 'user:id' and 'users:list' keys",
-    'Create cache invalidation helpers in src/cache/invalidation.ts and integrate with user update/delete operations to invalidate affected cache entries by pattern matching',
-  ],
+  updatedPlan: 'The full plan with completed item marked as [x]',
+  isComplete: false,
+  nextTask: 'The text of the next incomplete checklist item (or null if complete)',
 })}
 `
+
+export const UpdatedPlanSchema = z.object({
+  updatedPlan: z.string().describe('The updated plan with completed item marked as [x]'),
+  isComplete: z.boolean().describe('True if all checklist items are completed, false if incomplete items remain'),
+  nextTask: z.string().nullish().describe('The next incomplete checklist item to implement, or null if complete'),
+})
 
 export const CODER_SYSTEM_PROMPT = `Role: AI developer.
 Goal: Implement the provided plan by writing and modifying code.
