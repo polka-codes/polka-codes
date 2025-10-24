@@ -13,12 +13,12 @@ export const toolInfo = {
 
 export const handler: ToolHandler<typeof toolInfo, MemoryProvider> = async (provider, args) => {
   const { topic, content } = toolInfo.parameters.parse(args)
-  await provider.replace(topic || ':default:', content)
+  await provider.replaceMemory(topic, content)
   return {
     type: ToolResponseType.Reply,
     message: {
       type: 'text',
-      value: `Memory topic '${topic || ':default:'}' replaced.`,
+      value: `Memory topic '${topic || ''}' replaced.`,
     },
   }
 }

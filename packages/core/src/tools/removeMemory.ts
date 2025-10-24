@@ -12,12 +12,12 @@ export const toolInfo = {
 
 export const handler: ToolHandler<typeof toolInfo, MemoryProvider> = async (provider, args) => {
   const { topic } = toolInfo.parameters.parse(args)
-  await provider.remove(topic || ':default:')
+  await provider.removeMemory(topic)
   return {
     type: ToolResponseType.Reply,
     message: {
       type: 'text',
-      value: `Memory topic '${topic || ':default:'}' removed.`,
+      value: `Memory topic '${topic || ''}' removed.`,
     },
   }
 }

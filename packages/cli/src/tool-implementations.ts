@@ -356,8 +356,8 @@ async function taskEvent(input: TaskEvent, context: ToolCallContext) {
 
 async function getMemoryContext(_input: unknown, context: ToolCallContext) {
   const provider: MemoryProvider = context.toolProvider
-  const topics = await provider?.listTopics()
-  const defaultContent = await provider?.read(':default:')
+  const topics = await provider.listMemoryTopics()
+  const defaultContent = await provider.readMemory()
 
   const contextParts: string[] = []
 
@@ -371,6 +371,11 @@ async function getMemoryContext(_input: unknown, context: ToolCallContext) {
   }
 
   return contextParts.join('\n')
+}
+
+async function appendMemory(input: { topic?: string; content: string }, context: ToolCallContext) {
+  const provider: MemoryProvider = context.toolProvider
+  await provider.appendMemory(input.topic, input.content)
 }
 
 const localToolHandlers = {
@@ -387,6 +392,7 @@ const localToolHandlers = {
   invokeTool,
   taskEvent,
   getMemoryContext,
+  appendMemory,
 }
 
 export async function toolCall(toolCall: ToolCall<CliToolRegistry>, context: ToolCallContext) {

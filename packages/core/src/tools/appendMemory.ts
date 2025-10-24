@@ -13,12 +13,12 @@ export const toolInfo = {
 
 export const handler: ToolHandler<typeof toolInfo, MemoryProvider> = async (provider, args) => {
   const { topic, content } = toolInfo.parameters.parse(args)
-  await provider.append(topic || ':default:', content)
+  await provider.appendMemory(topic, content)
   return {
     type: ToolResponseType.Reply,
     message: {
       type: 'text',
-      value: `Content appended to memory topic '${topic || ':default:'}'.`,
+      value: `Content appended to memory topic '${topic || ''}'.`,
     },
   }
 }

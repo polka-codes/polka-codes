@@ -150,11 +150,14 @@ export const fixWorkflow: WorkflowFn<FixWorkflowInput, { summaries: string[] }, 
       )
     })
 
-    if (result.type === ToolResponseType.Exit && result.object) {
-      const summary = (result.object as { summary: string }).summary
-      summaries.push(summary)
-      logger.info(`Summary of changes: ${summary}`)
-    }
+    await step(`fix-summary-${i}`, async () => {
+      if (result.type === ToolResponseType.Exit && result.object) {
+        const summary = (result.object as { summary: string }).summary
+        summaries.push(summary)
+        await tools.appendMemory({ content: `Summary of changes for fix attempt ${i + 1}: ${summary}` })
+        logger.info(`Summary of changes: ${summary}`)
+      }
+    })
   }
 
   throw new Error('Failed to fix the issue after 10 attempts.')

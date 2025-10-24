@@ -12,12 +12,21 @@ export const toolInfo = {
 
 export const handler: ToolHandler<typeof toolInfo, MemoryProvider> = async (provider, args) => {
   const { topic } = toolInfo.parameters.parse(args)
-  const content = await provider.read(topic || ':default:')
+  const content = await provider.readMemory(topic)
+  if (content) {
+    return {
+      type: ToolResponseType.Reply,
+      message: {
+        type: 'text',
+        value: `<memory${topic ? ` topic="${topic}"` : ''}>\n${content}\n</memory>`,
+      },
+    }
+  }
   return {
     type: ToolResponseType.Reply,
     message: {
       type: 'text',
-      value: content || `No content found for memory topic '${topic || ':default:'}'.`,
+      value: `<memory ${topic ? `topic="${topic}"` : ''} isEmpty="true" />`,
     },
   }
 }
