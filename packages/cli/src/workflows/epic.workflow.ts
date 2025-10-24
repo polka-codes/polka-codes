@@ -23,6 +23,7 @@ import {
   CODE_REVIEW_SYSTEM_PROMPT,
   EPIC_PLANNER_SYSTEM_PROMPT,
   EPIC_TASK_BREAKDOWN_SYSTEM_PROMPT,
+  EpicPlanSchema,
   formatReviewToolInput,
   getPlanPrompt,
   type ReviewToolInput,
@@ -33,19 +34,13 @@ export type EpicWorkflowInput = {
   task: string
 }
 
-const epicSchema = z.object({
+const EpicSchema = z.object({
   overview: z.string().describe('A brief technical overview of the epic.'),
   tasks: z.array(z.string().describe('A detailed, self-contained, and implementable task description.')),
   branchName: z.string().describe('A short, descriptive branch name in kebab-case. For example: `feat/new-feature`'),
 })
 
-const PlanSchema = z.object({
-  plan: z.string().nullish().describe('The implementation plan. It should be concise and clear.'),
-  question: z.string().nullish().describe('A question to ask the user to clarify the task.'),
-  reason: z.string().nullish().describe('The reason why no plan is needed.'),
-})
-
-type CreatePlanOutput = z.infer<typeof PlanSchema>
+type CreatePlanOutput = z.infer<typeof EpicPlanSchema>
 type CreatePlanInput = {
   task: string
   plan?: string
@@ -102,7 +97,7 @@ async function createPlan(
         removeMemory,
         listMemoryTopics,
       ] as FullToolInfo[],
-      outputSchema: PlanSchema,
+      outputSchema: EpicPlanSchema,
     },
     context,
   )
@@ -155,8 +150,11 @@ export const epicWorkflow: WorkflowFn<EpicWorkflowInput, void, CliToolRegistry> 
       const result = await step('plan', () => createPlan({ task, feedback }, context))
 
       if (result.question) {
-        const answer = await tools.input({ message: result.question })
-        feedback = `The user answered the question "${result.question}" with: "${answer}"`
+        const answer = await tools.input({
+          message: result.question.question,
+          default: result.question.defaultAnswer || undefined,
+        })
+        feedback = `The user answered the question "${result.question.question}" with: "${answer}"`
         continue
       }
 
@@ -212,7 +210,7 @@ ${defaultContext}\n${memoryContext}
         systemPrompt: EPIC_TASK_BREAKDOWN_SYSTEM_PROMPT,
         userMessage: [{ role: 'user', content: userMessage }],
         tools: [listFiles, readFile, searchFiles, readBinaryFile, readMemory, appendMemory, replaceMemory, removeMemory, listMemoryTopics],
-        outputSchema: epicSchema,
+        outputSchema: EpicSchema,
       },
       context,
     )
@@ -223,7 +221,7 @@ ${defaultContext}\n${memoryContext}
     return
   }
 
-  const { tasks, branchName, overview } = taskBreakdownResult.object as z.infer<typeof epicSchema>
+  const { tasks, branchName, overview } = taskBreakdownResult.object as z.infer<typeof EpicSchema>
 
   if (!tasks || tasks.length === 0) {
     logger.error('❌ Error: No tasks were generated from the plan. Exiting.')

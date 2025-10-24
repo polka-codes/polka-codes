@@ -15,25 +15,17 @@ import {
   ToolResponseType,
 } from '@polka-codes/core'
 import { agentWorkflow, type JsonUserContent, type WorkflowContext, type WorkflowFn } from '@polka-codes/workflow'
-import { z } from 'zod'
 import { UserCancelledError } from '../errors'
 import type { CliToolRegistry } from '../workflow-tools'
 import type { JsonFilePart, JsonImagePart } from './code.workflow'
-import { getPlanPrompt, PLANNER_SYSTEM_PROMPT } from './prompts'
+import { getPlanPrompt, PLANNER_SYSTEM_PROMPT, PlanSchema } from './prompts'
 import { getDefaultContext } from './workflow.utils'
-
-const PlanSchema = z.object({
-  plan: z.string().nullish(),
-  question: z.string().nullish(),
-  reason: z.string().nullish(),
-  files: z.array(z.string()).nullish(),
-})
 
 export type CreatePlanOutput = {
   plan?: string
   reason?: string
   files?: { path: string; content: string }[]
-  question?: string
+  question?: { question: string; defaultAnswer?: string | null }
 }
 
 type CreatePlanInput = {
@@ -188,7 +180,10 @@ export const planWorkflow: WorkflowFn<PlanWorkflowInput, PlanWorkflowOutput, Cli
 
           if (planResult.question) {
             try {
-              userFeedback = await tools.input({ message: planResult.question })
+              userFeedback = await tools.input({
+                message: planResult.question.question,
+                default: planResult.question.defaultAnswer || undefined,
+              })
               plan = planResult.plan || plan // preserve plan if agent returned one with question
               return 'Generating'
             } catch (error) {

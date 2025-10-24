@@ -1,3 +1,5 @@
+import { z } from 'zod'
+
 function createJsonResponseInstruction(schema: Record<string, any>): string {
   return `Respond with a JSON object in a markdown code block matching this schema:
 \`\`\`json
@@ -158,11 +160,26 @@ When generating your plan, follow these formatting guidelines:
 
 ${createJsonResponseInstruction({
   plan: 'The generated or updated plan.',
-  question: 'The clarifying question to ask the user.',
+  question: {
+    question: 'The clarifying question to ask the user.',
+    defaultAnswer: 'The default answer to provide if the user does not provide an answer.',
+  },
   reason: 'If no plan is needed, provide a reason here.',
   files: ['path/to/file1.ts', 'path/to/file2.ts'],
 })}
 `
+
+export const PlanSchema = z.object({
+  plan: z.string().nullish(),
+  question: z
+    .object({
+      question: z.string(),
+      defaultAnswer: z.string().nullish(),
+    })
+    .nullish(),
+  reason: z.string().nullish(),
+  files: z.array(z.string()).nullish(),
+})
 
 export const EPIC_PLANNER_SYSTEM_PROMPT = `Role: Expert software architect and high-level planner.
 Goal: Analyze a large and complex user request (an "epic") and create a detailed, high-level implementation plan.
@@ -255,11 +272,25 @@ Each checkbox item should be clear enough for another AI agent to understand wha
 ## Response Format
 
 ${createJsonResponseInstruction({
-  plan: 'The generated or updated plan in checklist format.',
-  question: 'The clarifying question to ask the user.',
+  plan: 'The generated or updated plan.',
+  question: {
+    question: 'The clarifying question to ask the user.',
+    defaultAnswer: 'The default answer to provide if the user does not provide an answer.',
+  },
   reason: 'If no plan is needed, provide a reason here.',
 })}
 `
+
+export const EpicPlanSchema = z.object({
+  plan: z.string().nullish(),
+  question: z
+    .object({
+      question: z.string(),
+      defaultAnswer: z.string().nullish(),
+    })
+    .nullish(),
+  reason: z.string().nullish(),
+})
 
 export function getPlanPrompt(task: string, planContent?: string): string {
   const planSection = planContent ? `\nThe content of an existing plan file:\n<plan_file>\n${planContent}\n</plan_file>\n` : ''
