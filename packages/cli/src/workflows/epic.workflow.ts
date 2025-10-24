@@ -37,7 +37,6 @@ export type EpicWorkflowInput = {
 const EpicSchema = z.object({
   overview: z.string().describe('A brief technical overview of the epic.'),
   tasks: z.array(z.string().describe('A detailed, self-contained, and implementable task description.')),
-  branchName: z.string().describe('A short, descriptive branch name in kebab-case. For example: `feat/new-feature`'),
 })
 
 type CreatePlanOutput = z.infer<typeof EpicPlanSchema>
@@ -106,7 +105,7 @@ async function createPlan(
     return { ...(planResult.object as CreatePlanOutput), type: planResult.type }
   }
 
-  return { plan: '', reason: 'Usage limit exceeded.', type: ToolResponseType.Exit }
+  return { plan: '', reason: 'Usage limit exceeded.', type: ToolResponseType.Exit, branchName: '' }
 }
 
 export const epicWorkflow: WorkflowFn<EpicWorkflowInput, void, CliToolRegistry> = async (input, context) => {
@@ -144,6 +143,7 @@ export const epicWorkflow: WorkflowFn<EpicWorkflowInput, void, CliToolRegistry> 
   logger.info('📝 Phase 2: Creating high-level plan...\n')
   let feedback: string | undefined
   let highLevelPlan: string | undefined | null
+  let branchName: string
 
   try {
     while (true) {
@@ -168,9 +168,13 @@ export const epicWorkflow: WorkflowFn<EpicWorkflowInput, void, CliToolRegistry> 
       }
 
       logger.info(`📝 Plan:\n${result.plan}`)
+      if (result.branchName) {
+        logger.info(`🌿 Suggested branch name: ${result.branchName}`)
+      }
       feedback = await tools.input({ message: 'Press Enter to approve the plan, or provide feedback to refine it.' })
       if (feedback.trim() === '') {
         highLevelPlan = result.plan
+        branchName = result.branchName
         break
       }
     }
@@ -188,12 +192,17 @@ export const epicWorkflow: WorkflowFn<EpicWorkflowInput, void, CliToolRegistry> 
   }
   logger.info('✅ High-level plan approved.\n')
 
+  if (!branchName) {
+    logger.error('❌ Error: No branch name was generated from the plan. Exiting.')
+    return
+  }
+
   // Phase 3: Task Breakdown
   logger.info('🔨 Phase 3: Breaking down plan into tasks...\n')
   const taskBreakdownResult = await step('taskBreakdown', async () => {
     const defaultContext = await getDefaultContext()
     const memoryContext = await tools.getMemoryContext()
-    const userMessage = `Based on the following high-level plan, break it down into a list of smaller, sequential, and implementable tasks. Also, provide a suitable git branch name for this epic and a brief technical overview of the epic.
+    const userMessage = `Based on the following high-level plan, break it down into a list of smaller, sequential, and implementable tasks and a brief technical overview of the epic.
 
 <plan>
 ${highLevelPlan}
@@ -201,7 +210,6 @@ ${highLevelPlan}
 
 The overview should be a short paragraph that summarizes the overall technical approach.
 Each task should be a self-contained unit of work that can be implemented and committed separately.
-The branch name should be short, descriptive, and in kebab-case. For example: \`feat/new-feature\`.
 
 ${defaultContext}\n${memoryContext}
 `
@@ -221,7 +229,7 @@ ${defaultContext}\n${memoryContext}
     return
   }
 
-  const { tasks, branchName, overview } = taskBreakdownResult.object as z.infer<typeof EpicSchema>
+  const { tasks, overview } = taskBreakdownResult.object as z.infer<typeof EpicSchema>
 
   if (!tasks || tasks.length === 0) {
     logger.error('❌ Error: No tasks were generated from the plan. Exiting.')

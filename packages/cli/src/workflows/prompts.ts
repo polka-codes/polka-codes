@@ -257,12 +257,21 @@ Your plan should be formatted as a list of checklists using markdown checkbox sy
 
 Each checkbox item should be clear enough for another AI agent to understand what needs to be accomplished, but high-level enough to avoid micro-task details.
 
+## Branch Naming Conventions
+
+Branch names should:
+- Use kebab-case (lowercase with hyphens)
+- Start with a prefix: feat/, fix/, refactor/, docs/, test/, chore/
+- Be descriptive but concise (2-4 words typically)
+- Describe what is being changed, not who or why
+
 ## Decision Logic
 
 1. Analyze the task and the existing plan (if any).
 2. If the requirements are clear and you can generate or update the plan:
    a. Provide the plan in the "plan" field using the checklist format described above
-   b. Include relevant file paths in the "files" array if applicable
+   b. Propose a suitable git branch name in the "branchName" field.
+   c. Include relevant file paths in the "files" array if applicable
 3. If the requirements are not clear:
    a. Ask a clarifying question in the "question" field
 4. If the task is already implemented or no action is needed:
@@ -273,6 +282,7 @@ Each checkbox item should be clear enough for another AI agent to understand wha
 
 ${createJsonResponseInstruction({
   plan: 'The generated or updated plan.',
+  branchName: 'feat/new-feature-name',
   question: {
     question: 'The clarifying question to ask the user.',
     defaultAnswer: 'The default answer to provide if the user does not provide an answer.',
@@ -283,6 +293,7 @@ ${createJsonResponseInstruction({
 
 export const EpicPlanSchema = z.object({
   plan: z.string().nullish(),
+  branchName: z.string(),
   question: z
     .object({
       question: z.string(),
@@ -367,14 +378,6 @@ A self-contained task should:
 - Group related changes together when possible
 - Consider: setup → core implementation → integrations → refinements
 
-## Branch Naming Conventions
-
-Branch names should:
-- Use kebab-case (lowercase with hyphens)
-- Start with a prefix: feat/, fix/, refactor/, docs/, test/, chore/
-- Be descriptive but concise (2-4 words typically)
-- Describe what is being changed, not who or why
-
 # Examples
 
 ## ✅ Good: User Authentication Feature
@@ -388,8 +391,7 @@ Branch names should:
     "Build POST /api/auth/register endpoint with Zod validation for email/password, check for duplicate emails, hash password with bcrypt, create user in database, and return access and refresh tokens",
     "Build POST /api/auth/login endpoint that validates credentials with Zod, retrieves user by email, verifies password with bcrypt.compare, generates both token types, and returns tokens with user data",
     "Build POST /api/auth/logout endpoint that invalidates refresh token in database and POST /api/auth/refresh endpoint that validates refresh token and issues new access token"
-  ],
-  "branchName": "feat/user-authentication"
+  ]
 }
 
 ## ✅ Good: Simple Bug Fix
@@ -398,8 +400,7 @@ Branch names should:
   "tasks": [
     "Update formatDate utility in src/utils/dateFormatter.ts to accept timezone parameter and use Intl.DateTimeFormat with user's timezone for conversion from UTC",
     "Modify UserProfile component in src/components/UserProfile.tsx to pass user.timezone preference to all formatDate calls for createdAt, updatedAt, and lastLogin fields"
-  ],
-  "branchName": "fix/profile-date-timezone"
+  ]
 }
 
 ## ❌ Poor: Too Vague
@@ -410,8 +411,7 @@ Branch names should:
     "Create APIs",
     "Add authentication",
     "Test everything"
-  ],
-  "branchName": "backend-updates"
+  ]
 }
 // Problems: Overview lacks technical details, tasks are too generic (which database? what kind of auth?),
 // no mention of specific technologies or patterns, tasks don't include implementation details
@@ -432,8 +432,7 @@ Branch names should:
     "Style search results",
     "Add loading spinner",
     "Handle errors"
-  ],
-  "branchName": "search"
+  ]
 }
 // Problems: Tasks are too granular (each is <5 minutes of work), overview lacks technical details about search implementation,
 // no mention of search backend/algorithm, missing context about what's being searched
@@ -477,7 +476,6 @@ ${createJsonResponseInstruction({
     "Add caching layer to user data endpoints in src/routes/users.ts: wrap getUserById and getUsers with cache-aside logic using 'user:id' and 'users:list' keys",
     'Create cache invalidation helpers in src/cache/invalidation.ts and integrate with user update/delete operations to invalidate affected cache entries by pattern matching',
   ],
-  branchName: 'feat/redis-caching-layer',
 })}
 `
 
