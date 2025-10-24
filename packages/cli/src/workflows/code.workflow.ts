@@ -41,9 +41,14 @@ export type JsonFilePart = {
   data: string // base64 encoded
 }
 
-const ImplementOutputSchema = z.object({
-  summary: z.string(),
-})
+const ImplementOutputSchema = z
+  .object({
+    summary: z.string().nullish(),
+    bailReason: z.string().nullish(),
+  })
+  .refine((data) => (data.summary != null) !== (data.bailReason != null), {
+    message: 'Either summary or bailReason must be provided, but not both',
+  })
 
 export type CodeWorkflowInput = {
   task: string
@@ -51,7 +56,11 @@ export type CodeWorkflowInput = {
   mode?: 'interactive' | 'noninteractive'
 }
 
-export const codeWorkflow: WorkflowFn<CodeWorkflowInput, { summaries: string[] } | void, CliToolRegistry> = async (input, context) => {
+export const codeWorkflow: WorkflowFn<
+  CodeWorkflowInput,
+  { success: true; summaries: string[] } | { success: false; reason: string; summaries: string[] },
+  CliToolRegistry
+> = async (input, context) => {
   const { logger, step, tools } = context
   const { task, files, mode = 'interactive' } = input
   const summaries: string[] = []
@@ -64,7 +73,7 @@ export const codeWorkflow: WorkflowFn<CodeWorkflowInput, { summaries: string[] }
 
   if (!planResult) {
     logger.info('Plan not approved. Exiting.')
-    return
+    return { success: false, reason: 'Plan not approved', summaries }
   }
 
   const { plan, files: planFiles } = planResult
@@ -142,16 +151,26 @@ export const codeWorkflow: WorkflowFn<CodeWorkflowInput, { summaries: string[] }
   })
 
   if (res.type === ToolResponseType.Exit && res.object) {
-    logger.info('\n✅ Implementation complete!\n')
-    const summary = res.object.summary
-    summaries.push(summary)
-    logger.info(`Summary: ${summary}`)
-    await step('summarize-implementation', async () => {
-      await tools.appendMemory({
-        topic: 'implementation-summary',
-        content: summary,
+    const { summary, bailReason } = res.object as z.infer<typeof ImplementOutputSchema>
+
+    if (bailReason) {
+      logger.error(`\n❌ Implementation failed: ${bailReason}\n`)
+      return { success: false, reason: bailReason, summaries }
+    }
+
+    if (summary) {
+      logger.info('\n✅ Implementation complete!\n')
+      summaries.push(summary)
+      logger.info(`Summary: ${summary}`)
+      await step('summarize-implementation', async () => {
+        await tools.appendMemory({
+          topic: 'implementation-summary',
+          content: summary,
+        })
       })
-    })
+    } else {
+      logger.info('\n✅ Implementation complete!\n')
+    }
   } else if (res.type === ToolResponseType.Exit) {
     logger.info('\n✅ Implementation complete!\n')
   } else {
@@ -164,11 +183,13 @@ export const codeWorkflow: WorkflowFn<CodeWorkflowInput, { summaries: string[] }
     return await fixWorkflow({ interactive: false, task: input.task }, context)
   })
 
-  if (fixResult?.summaries) {
+  if (fixResult.summaries) {
     summaries.push(...fixResult.summaries)
   }
 
-  if (summaries.length > 0) {
-    return { summaries }
+  if (!fixResult.success) {
+    return { success: false, reason: fixResult.reason, summaries }
   }
+
+  return { success: true, summaries }
 }

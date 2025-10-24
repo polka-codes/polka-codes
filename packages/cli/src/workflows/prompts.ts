@@ -412,6 +412,20 @@ Implement the plan above following these guidelines. Start by:
 3. Proceeding with implementation
 
 Please implement all the necessary code changes according to this plan.
+
+After making changes, you MUST return a JSON object in a markdown block with either a summary of the changes OR a bailReason if you cannot complete the task.
+
+Example for successful implementation:
+${createJsonResponseInstruction({
+  summary: 'Implemented user authentication with JWT tokens and password hashing.',
+  bailReason: null,
+})}
+
+Example if unable to implement:
+${createJsonResponseInstruction({
+  summary: null,
+  bailReason: 'The plan requires access to external services that are not available in the current environment.',
+})}
 `
 
 export function getImplementPrompt(plan: string): string {
@@ -430,12 +444,18 @@ You are an expert software developer. Your task is to fix a project that is fail
 
 ${MEMORY_USAGE_SECTION}
 
-After making changes, you MUST return a JSON object in a markdown block with a summary of the changes you made.
-The JSON object must contain a "summary" field, which is a string describing the changes made during the fix attempt.
+After making changes, you MUST return a JSON object in a markdown block with either a summary of the changes OR a bailReason if you cannot complete the task.
 
-Example:
+Example for successful fix:
 ${createJsonResponseInstruction({
   summary: "Fixed the 'add' function in 'math.ts' to correctly handle negative numbers.",
+  bailReason: null,
+})}
+
+Example if unable to fix:
+${createJsonResponseInstruction({
+  summary: null,
+  bailReason: 'Unable to identify the root cause of the error. The error message is ambiguous and requires human investigation.',
 })}
 `
 

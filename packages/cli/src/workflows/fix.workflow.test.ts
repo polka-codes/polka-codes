@@ -46,7 +46,7 @@ describe('fixWorkflow', () => {
     const result = await fixWorkflow({ command: 'bun test' }, context)
 
     expect(tools.executeCommand).toHaveBeenCalledWith({ command: 'bun test', shell: true, pipe: true })
-    expect(result).toStrictEqual({ summaries: [] })
+    expect(result).toStrictEqual({ success: true, summaries: [] })
   })
 
   test('should prompt for command when not provided', async () => {
@@ -114,7 +114,7 @@ describe('fixWorkflow', () => {
     tools.generateText.mockResolvedValue([
       {
         role: 'assistant',
-        content: '```json\n{"summary":"I did a fix"}\n```',
+        content: '```json\n{"summary":"I did a fix","bailReason":null}\n```',
       },
     ])
 
@@ -122,7 +122,7 @@ describe('fixWorkflow', () => {
 
     expect(tools.executeCommand).toHaveBeenCalledTimes(2)
     expect(tools.generateText).toHaveBeenCalledTimes(1)
-    expect(result).toStrictEqual({ summaries: ['I did a fix'] })
+    expect(result).toStrictEqual({ success: true, summaries: ['I did a fix'] })
   })
 
   test('should fail after exhausting all retries', async () => {
@@ -132,15 +132,52 @@ describe('fixWorkflow', () => {
     tools.generateText.mockResolvedValue([
       {
         role: 'assistant',
-        content: '```json\n{"summary":"I did a fix"}\n```',
+        content: '```json\n{"summary":"I did a fix","bailReason":null}\n```',
       },
     ])
 
-    const promise = fixWorkflow({ command: 'bun test' }, context)
+    const result = await fixWorkflow({ command: 'bun test' }, context)
 
-    await expect(promise).rejects.toThrow('Failed to fix the issue after 10 attempts.')
     expect(tools.executeCommand).toHaveBeenCalledTimes(10)
     expect(tools.generateText).toHaveBeenCalledTimes(10)
+    expect(result).toStrictEqual({
+      success: false,
+      reason: 'Failed to fix the issue after maximum attempts.',
+      summaries: [
+        'I did a fix',
+        'I did a fix',
+        'I did a fix',
+        'I did a fix',
+        'I did a fix',
+        'I did a fix',
+        'I did a fix',
+        'I did a fix',
+        'I did a fix',
+        'I did a fix',
+      ],
+    })
+  })
+
+  test('should return bailReason when agent cannot fix', async () => {
+    const { context, tools } = createMockContext()
+
+    tools.executeCommand.mockResolvedValue({ exitCode: 1, stdout: 'FAIL', stderr: 'Mysterious error' })
+    tools.generateText.mockResolvedValue([
+      {
+        role: 'assistant',
+        content: '```json\n{"summary":null,"bailReason":"Unable to identify the root cause of the error"}\n```',
+      },
+    ])
+
+    const result = await fixWorkflow({ command: 'bun test' }, context)
+
+    expect(tools.executeCommand).toHaveBeenCalledTimes(1)
+    expect(tools.generateText).toHaveBeenCalledTimes(1)
+    expect(result).toStrictEqual({
+      success: false,
+      summaries: [],
+      reason: 'Unable to identify the root cause of the error',
+    })
   })
 
   test('should pass task to agent prompt', async () => {
@@ -156,6 +193,13 @@ describe('fixWorkflow', () => {
       {
         role: 'assistant',
         content: '```json\n{"summary":"I did a fix"}\n```',
+      },
+    ])
+
+    tools.generateText.mockResolvedValue([
+      {
+        role: 'assistant',
+        content: '```json\n{"summary":"I did a fix","bailReason":null}\n```',
       },
     ])
 

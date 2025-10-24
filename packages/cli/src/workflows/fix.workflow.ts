@@ -30,11 +30,20 @@ export type FixWorkflowInput = {
   interactive?: boolean
 }
 
-const FixIterationSummarySchema = z.object({
-  summary: z.string(),
-})
+const FixIterationSummarySchema = z
+  .object({
+    summary: z.string().nullish(),
+    bailReason: z.string().nullish(),
+  })
+  .refine((data) => (data.summary != null) !== (data.bailReason != null), {
+    message: 'Either summary or bailReason must be provided, but not both',
+  })
 
-export const fixWorkflow: WorkflowFn<FixWorkflowInput, { summaries: string[] }, CliToolRegistry> = async (input, context) => {
+export const fixWorkflow: WorkflowFn<
+  FixWorkflowInput,
+  { success: true; summaries: string[] } | { success: false; reason: string; summaries: string[] },
+  CliToolRegistry
+> = async (input, context) => {
   const { tools, logger, step } = context
   const { command: inputCommand, task, interactive = true } = input
   let command = inputCommand
@@ -90,9 +99,8 @@ export const fixWorkflow: WorkflowFn<FixWorkflowInput, { summaries: string[] }, 
     }
 
     if (!command) {
-      // This can happen if interactive is false and no command is found
       logger.info('No command to run.')
-      return { summaries: [] }
+      return { success: true, summaries }
     }
   }
 
@@ -109,7 +117,7 @@ export const fixWorkflow: WorkflowFn<FixWorkflowInput, { summaries: string[] }, 
 
     if (exitCode === 0) {
       logger.info('Command succeeded!')
-      return { summaries }
+      return { success: true, summaries }
     }
 
     logger.info(`Command failed with exit code ${exitCode}. Asking agent to fix it...`)
@@ -150,15 +158,28 @@ export const fixWorkflow: WorkflowFn<FixWorkflowInput, { summaries: string[] }, 
       )
     })
 
-    await step(`fix-summary-${i}`, async () => {
+    const res = await step(`fix-summary-${i}`, async () => {
       if (result.type === ToolResponseType.Exit && result.object) {
-        const summary = (result.object as { summary: string }).summary
-        summaries.push(summary)
-        await tools.appendMemory({ content: `Summary of changes for fix attempt ${i + 1}: ${summary}` })
-        logger.info(`Summary of changes: ${summary}`)
+        const { summary, bailReason } = result.object as z.infer<typeof FixIterationSummarySchema>
+
+        if (bailReason) {
+          logger.warn(`Agent bailed: ${bailReason}`)
+          return { bailReason }
+        }
+
+        if (summary) {
+          summaries.push(summary)
+          await tools.appendMemory({ content: `Summary of changes for fix attempt ${i + 1}: ${summary}` })
+          logger.info(`Summary of changes: ${summary}`)
+        }
       }
     })
+
+    if (res?.bailReason) {
+      return { success: false, summaries, reason: res.bailReason }
+    }
   }
 
-  throw new Error('Failed to fix the issue after 10 attempts.')
+  logger.error('Failed to fix the issue after maximum attempts.')
+  return { success: false, summaries, reason: 'Failed to fix the issue after maximum attempts.' }
 }
