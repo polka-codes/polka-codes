@@ -1,5 +1,8 @@
 import {
   appendMemory,
+  askFollowupQuestion,
+  type FullToolInfo,
+  fetchUrl,
   listFiles,
   listMemoryTopics,
   readBinaryFile,
@@ -10,13 +13,20 @@ import {
   searchFiles,
   ToolResponseType,
 } from '@polka-codes/core'
-import { agentWorkflow, type WorkflowFn } from '@polka-codes/workflow'
+import { agentWorkflow, type JsonUserContent, type WorkflowContext, type WorkflowFn } from '@polka-codes/workflow'
 import { z } from 'zod'
+import { UserCancelledError } from '../errors'
 import { gitDiff } from '../tools'
 import type { CliToolRegistry } from '../workflow-tools'
-import { codeWorkflow } from './code.workflow'
-import { planWorkflow } from './plan.workflow'
-import { CODE_REVIEW_SYSTEM_PROMPT, EPIC_TASK_BREAKDOWN_SYSTEM_PROMPT, formatReviewToolInput, type ReviewToolInput } from './prompts'
+import { codeWorkflow, type JsonFilePart, type JsonImagePart } from './code.workflow'
+import {
+  CODE_REVIEW_SYSTEM_PROMPT,
+  EPIC_PLANNER_SYSTEM_PROMPT,
+  EPIC_TASK_BREAKDOWN_SYSTEM_PROMPT,
+  formatReviewToolInput,
+  getPlanPrompt,
+  type ReviewToolInput,
+} from './prompts'
 import { formatElapsedTime, getDefaultContext, parseGitDiffNameStatus, type ReviewResult, reviewOutputSchema } from './workflow.utils'
 
 export type EpicWorkflowInput = {
@@ -28,6 +38,81 @@ const epicSchema = z.object({
   tasks: z.array(z.string().describe('A detailed, self-contained, and implementable task description.')),
   branchName: z.string().describe('A short, descriptive branch name in kebab-case. For example: `feat/new-feature`'),
 })
+
+const PlanSchema = z.object({
+  plan: z.string().nullish().describe('The implementation plan. It should be concise and clear.'),
+  question: z.string().nullish().describe('A question to ask the user to clarify the task.'),
+  reason: z.string().nullish().describe('The reason why no plan is needed.'),
+})
+
+type CreatePlanOutput = z.infer<typeof PlanSchema>
+type CreatePlanInput = {
+  task: string
+  plan?: string
+  files?: (JsonFilePart | JsonImagePart)[]
+  feedback?: string
+}
+
+async function createPlan(
+  input: CreatePlanInput,
+  context: WorkflowContext<CliToolRegistry>,
+): Promise<CreatePlanOutput & { type: ToolResponseType }> {
+  const { task, plan, files, feedback } = input
+
+  const content: JsonUserContent = [{ type: 'text', text: getPlanPrompt(task, plan) }]
+  if (files) {
+    for (const file of files) {
+      if (file.type === 'file') {
+        content.push({
+          type: 'file',
+          mediaType: file.mediaType,
+          filename: file.filename,
+          data: { type: 'base64', value: file.data },
+        })
+      } else if (file.type === 'image') {
+        content.push({
+          type: 'image',
+          mediaType: file.mediaType,
+          image: { type: 'base64', value: file.image },
+        })
+      }
+    }
+  }
+  if (feedback) {
+    content.push({
+      type: 'text',
+      text: `The user has provided the following feedback on the plan, please adjust it:\n${feedback}`,
+    })
+  }
+
+  const planResult = await agentWorkflow(
+    {
+      systemPrompt: EPIC_PLANNER_SYSTEM_PROMPT,
+      userMessage: [{ role: 'user', content }],
+      tools: [
+        askFollowupQuestion,
+        fetchUrl,
+        listFiles,
+        readFile,
+        readBinaryFile,
+        searchFiles,
+        readMemory,
+        appendMemory,
+        replaceMemory,
+        removeMemory,
+        listMemoryTopics,
+      ] as FullToolInfo[],
+      outputSchema: PlanSchema,
+    },
+    context,
+  )
+
+  if (planResult.type === ToolResponseType.Exit) {
+    return { ...(planResult.object as CreatePlanOutput), type: planResult.type }
+  }
+
+  return { plan: '', reason: 'Usage limit exceeded.', type: ToolResponseType.Exit }
+}
 
 export const epicWorkflow: WorkflowFn<EpicWorkflowInput, void, CliToolRegistry> = async (input, context) => {
   const { logger, step, tools } = context
@@ -62,15 +147,47 @@ export const epicWorkflow: WorkflowFn<EpicWorkflowInput, void, CliToolRegistry> 
   logger.info('✅ Pre-flight checks passed.\n')
 
   logger.info('📝 Phase 2: Creating high-level plan...\n')
-  const planResult = await step('plan', async () => {
-    return await planWorkflow({ task, mode: 'confirm' }, context)
-  })
+  let feedback: string | undefined
+  let highLevelPlan: string | undefined | null
 
-  if (!planResult) {
+  try {
+    while (true) {
+      const result = await step('plan', () => createPlan({ task, feedback }, context))
+
+      if (result.question) {
+        const answer = await tools.input({ message: result.question })
+        feedback = `The user answered the question "${result.question}" with: "${answer}"`
+        continue
+      }
+
+      if (!result.plan) {
+        if (result.reason) {
+          logger.info(`No plan created. Reason: ${result.reason}`)
+        } else {
+          logger.info('No plan created.')
+        }
+        return
+      }
+
+      logger.info(`📝 Plan:\n${result.plan}`)
+      feedback = await tools.input({ message: 'Press Enter to approve the plan, or provide feedback to refine it.' })
+      if (feedback.trim() === '') {
+        highLevelPlan = result.plan
+        break
+      }
+    }
+  } catch (e) {
+    if (e instanceof UserCancelledError) {
+      logger.info('Plan creation cancelled by user.')
+      return
+    }
+    throw e
+  }
+
+  if (!highLevelPlan) {
     logger.info('Plan not approved. Exiting.')
     return
   }
-  const highLevelPlan = planResult.plan
   logger.info('✅ High-level plan approved.\n')
 
   // Phase 3: Task Breakdown
