@@ -83,10 +83,6 @@ export type ToolResponseExit = {
 export type ToolResponseError = {
   type: ToolResponseType.Error
   message: ToolResponseResult
-  // If true, the tool can be retried
-  // e.g. network request error are generally retryable
-  // but IO errors are not
-  canRetry?: boolean
 }
 
 export type ToolResponse = ToolResponseReply | ToolResponseExit | ToolResponseError

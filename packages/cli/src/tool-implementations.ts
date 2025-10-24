@@ -5,18 +5,23 @@ import { dirname } from 'node:path'
 import type { LanguageModelV2 } from '@ai-sdk/provider'
 import { confirm as inquirerConfirm, input as inquirerInput, select as inquirerSelect } from '@inquirer/prompts'
 import { readMultiline } from '@polka-codes/cli-shared'
-import type { MemoryProvider, UsageMeter } from '@polka-codes/core'
+import type { MemoryProvider, ToolResponse, UsageMeter } from '@polka-codes/core'
 import {
+  appendMemory as appendMemoryTool,
   askFollowupQuestion,
   computeRateLimitBackoffSeconds,
   executeCommand as executeCommandTool,
   fetchUrl,
   listFiles as listFilesTool,
+  listMemoryTopics as listMemoryTopicsTool,
   readBinaryFile,
   readFile as readFileTool,
+  readMemory as readMemoryTool,
   removeFile,
+  removeMemory as removeMemoryTool,
   renameFile,
   replaceInFile,
+  replaceMemory as replaceMemoryTool,
   searchFiles,
   ToolResponseType,
   writeToFile as writeToFileTool,
@@ -55,6 +60,11 @@ const allTools = [
   listFilesTool,
   readBinaryFile,
   readFileTool,
+  appendMemoryTool,
+  readMemoryTool,
+  replaceMemoryTool,
+  removeMemoryTool,
+  listMemoryTopicsTool,
   removeFile,
   renameFile,
   replaceInFile,
@@ -331,12 +341,15 @@ async function generateText(input: { messages: JsonModelMessage[]; tools: ToolSe
   throw new Error(`Failed to get a response from the model after ${retryCount} retries.`)
 }
 
-async function invokeTool(input: { toolName: string; input: any }, context: ToolCallContext) {
+async function invokeTool(input: { toolName: string; input: any }, context: ToolCallContext): Promise<ToolResponse> {
   const tool = toolHandlers.get(input.toolName as any)
   if (!tool) {
     return {
       type: ToolResponseType.Error,
-      error: `Tool not found: ${input.toolName}`,
+      message: {
+        type: 'error-text',
+        value: `Tool not found: ${input.toolName}`,
+      },
     }
   }
   try {
@@ -345,7 +358,10 @@ async function invokeTool(input: { toolName: string; input: any }, context: Tool
   } catch (error: any) {
     return {
       type: ToolResponseType.Error,
-      error: error.message ?? `${error}`,
+      message: {
+        type: 'error-text',
+        value: error?.message ?? `${error}`,
+      },
     }
   }
 }

@@ -159,7 +159,7 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
           await event(`event-tool-error-${toolCall.toolName}-${toolCall.toolCallId}`, {
             kind: TaskEventKind.ToolError,
             tool: toolCall.toolName,
-            error: toolResponse.message,
+            error: toolResponse.message ?? 'Unknown error',
           })
           toolResults.push({
             toolCallId: toolCall.toolCallId,
