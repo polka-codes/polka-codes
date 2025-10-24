@@ -50,7 +50,8 @@ async function createPlan(input: CreatePlanInput, context: WorkflowContext<CliTo
 
   const currentTask = userFeedback ? `${task}\n\nUser feedback: ${userFeedback}` : task
   const defaultContext = await getDefaultContext()
-  const prompt = `${getPlanPrompt(currentTask, inputPlan)}\n\n${defaultContext}`
+  const memoryContext = await tools.getMemoryContext()
+  const prompt = `${memoryContext}\n${getPlanPrompt(currentTask, inputPlan)}\n\n${defaultContext}`
 
   const userContent: JsonUserContent = [{ type: 'text', text: prompt }]
   if (files) {
@@ -142,7 +143,8 @@ export type PlanWorkflowOutput = {
 
 type State = 'Generating' | 'Reviewing' | 'Done'
 
-export const planWorkflow: WorkflowFn<PlanWorkflowInput, PlanWorkflowOutput, CliToolRegistry> = async (input, { tools, logger, step }) => {
+export const planWorkflow: WorkflowFn<PlanWorkflowInput, PlanWorkflowOutput, CliToolRegistry> = async (input, context) => {
+  const { tools, logger, step } = context
   const { fileContent, filePath, mode = 'interactive' } = input
   let currentTask = input.task
   let plan = fileContent || ''
@@ -176,7 +178,7 @@ export const planWorkflow: WorkflowFn<PlanWorkflowInput, PlanWorkflowOutput, Cli
               files: input.files,
               interactive: mode === 'interactive' || mode === 'confirm',
             },
-            { tools, logger, step },
+            context,
           )
 
           if (planResult.reason) {

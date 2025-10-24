@@ -77,7 +77,8 @@ export const epicWorkflow: WorkflowFn<EpicWorkflowInput, void, CliToolRegistry> 
   logger.info('🔨 Phase 3: Breaking down plan into tasks...\n')
   const taskBreakdownResult = await step('taskBreakdown', async () => {
     const defaultContext = await getDefaultContext()
-    const userMessage = `Based on the following high-level plan, break it down into a list of smaller, sequential, and implementable tasks. Also, provide a suitable git branch name for this epic and a brief technical overview of the epic\n\n${defaultContext}.
+    const memoryContext = await tools.getMemoryContext()
+    const userMessage = `Based on the following high-level plan, break it down into a list of smaller, sequential, and implementable tasks. Also, provide a suitable git branch name for this epic and a brief technical overview of the epic.
 
 <plan>
 ${highLevelPlan}
@@ -86,6 +87,8 @@ ${highLevelPlan}
 The overview should be a short paragraph that summarizes the overall technical approach.
 Each task should be a self-contained unit of work that can be implemented and committed separately.
 The branch name should be short, descriptive, and in kebab-case. For example: \`feat/new-feature\`.
+
+${defaultContext}\n${memoryContext}
 `
     return await agentWorkflow(
       {
@@ -219,7 +222,8 @@ The branch name should be short, descriptive, and in kebab-case. For example: \`
 
       const reviewAgentResult = await step(`review-${index}-${i}`, async () => {
         const defaultContext = await getDefaultContext()
-        const userMessage = `${defaultContext}\n\n${formatReviewToolInput(changeInfo)}`
+        const memoryContext = await tools.getMemoryContext()
+        const userMessage = `${defaultContext}\n${memoryContext}\n\n${formatReviewToolInput(changeInfo)}`
         return await agentWorkflow(
           {
             systemPrompt: CODE_REVIEW_SYSTEM_PROMPT,

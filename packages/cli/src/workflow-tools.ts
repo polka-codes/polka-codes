@@ -15,4 +15,5 @@ export type CliToolRegistry = {
     { command: string; pipe?: boolean } & ({ args: string[]; shell?: false } | { shell: true }),
     { exitCode: number; stdout: string; stderr: string }
   >
+  getMemoryContext: ToolSignature<void, string>
 } & AgentToolRegistry

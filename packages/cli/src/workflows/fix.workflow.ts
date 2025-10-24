@@ -116,6 +116,7 @@ export const fixWorkflow: WorkflowFn<FixWorkflowInput, { summaries: string[] }, 
 
     const result = await step(`fix-${i}`, async () => {
       const defaultContext = await getDefaultContext()
+      const memoryContext = await tools.getMemoryContext()
       const userPrompt = getFixUserPrompt(command, exitCode, stdout, stderr, task)
       return await agentWorkflow(
         {
@@ -123,7 +124,7 @@ export const fixWorkflow: WorkflowFn<FixWorkflowInput, { summaries: string[] }, 
           userMessage: [
             {
               role: 'user',
-              content: `${userPrompt}\n\n${defaultContext}`,
+              content: `${userPrompt}\n\n${defaultContext}\n${memoryContext}`,
             },
           ],
           tools: [

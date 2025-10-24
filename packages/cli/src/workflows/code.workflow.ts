@@ -47,7 +47,7 @@ export type CodeWorkflowInput = {
 }
 
 export const codeWorkflow: WorkflowFn<CodeWorkflowInput, void, CliToolRegistry> = async (input, context) => {
-  const { logger, step } = context
+  const { logger, step, tools } = context
   const { task, files, mode = 'interactive' } = input
 
   // Planning phase
@@ -114,13 +114,14 @@ export const codeWorkflow: WorkflowFn<CodeWorkflowInput, void, CliToolRegistry> 
 
   const res = await step('implement', async () => {
     const defaultContext = await getDefaultContext()
+    const memoryContext = await tools.getMemoryContext()
     const textContent = userContent.find((c) => c.type === 'text')
     if (textContent && textContent.type === 'text') {
-      textContent.text = `${textContent.text}\n\n${defaultContext}`
+      textContent.text = `${textContent.text}\n\n${defaultContext}\n${memoryContext}`
     } else {
       userContent.push({
         type: 'text',
-        text: defaultContext,
+        text: `${defaultContext}\n${memoryContext}`,
       })
     }
     return await agentWorkflow(

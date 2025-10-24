@@ -5,7 +5,7 @@ import { dirname } from 'node:path'
 import type { LanguageModelV2 } from '@ai-sdk/provider'
 import { confirm as inquirerConfirm, input as inquirerInput, select as inquirerSelect } from '@inquirer/prompts'
 import { readMultiline } from '@polka-codes/cli-shared'
-import type { UsageMeter } from '@polka-codes/core'
+import type { MemoryProvider, UsageMeter } from '@polka-codes/core'
 import {
   askFollowupQuestion,
   computeRateLimitBackoffSeconds,
@@ -354,6 +354,25 @@ async function taskEvent(input: TaskEvent, context: ToolCallContext) {
   await context.agentCallback?.(input)
 }
 
+async function getMemoryContext(_input: unknown, context: ToolCallContext) {
+  const provider: MemoryProvider = context.toolProvider
+  const topics = await provider?.listTopics()
+  const defaultContent = await provider?.read(':default:')
+
+  const contextParts: string[] = []
+
+  if (topics?.length > 0) {
+    const topicList = topics.map((topic: string) => `- ${topic}`).join('\n')
+    contextParts.push(`<memory_topics>\n${topicList}\n</memory_topics>`)
+  }
+
+  if (defaultContent) {
+    contextParts.push(`<memory topic=":default:">\n${defaultContent}\n</memory>`)
+  }
+
+  return contextParts.join('\n')
+}
+
 const localToolHandlers = {
   createPullRequest,
   createCommit,
@@ -367,6 +386,7 @@ const localToolHandlers = {
   generateText,
   invokeTool,
   taskEvent,
+  getMemoryContext,
 }
 
 export async function toolCall(toolCall: ToolCall<CliToolRegistry>, context: ToolCallContext) {
