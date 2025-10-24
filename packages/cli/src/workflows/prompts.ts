@@ -10,12 +10,6 @@ const MEMORY_USAGE_SECTION = `## Memory Usage
 
 You have access to a memory feature to store and retrieve information across tool calls.
 
-- \`listMemoryTopics()\`: Lists all topics in memory.
-- \`readMemory(topic?: string)\`: Reads content from a memory topic. Defaults to ":default:".
-- \`appendMemory(topic?: string, content: string)\`: Appends content to a memory topic. Defaults to ":default:".
-- \`replaceMemory(topic?: string, content: string)\`: Replaces content of a memory topic. Defaults to ":default:".
-- \`removeMemory(topic?: string)\`: Removes a topic from memory. Defaults to ":default:".
-
 Use memory to:
 - Store context between steps.
 - Keep track of important information like file paths or decisions made.

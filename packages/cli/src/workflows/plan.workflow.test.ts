@@ -12,6 +12,7 @@ const createMockContext = () => {
     select: mock<any>(),
     writeToFile: mock<any>(),
     readFile: mock<any>(),
+    getMemoryContext: mock<any>(async () => ''),
   }
   const step = mock(async (_name: string, fn: () => any) => fn())
   const logger = {

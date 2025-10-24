@@ -13,6 +13,8 @@ const createMockContext = () => {
     input: mock<any>(),
     generateText: mock<any>(),
     taskEvent: mock<any>(),
+    getMemoryContext: mock<any>(async () => ''),
+    appendMemory: mock<any>(),
     // Add other tool mocks if needed by the workflow
   }
   const step = mock(async (_name: string, fn: () => any) => fn())

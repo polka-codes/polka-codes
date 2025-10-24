@@ -9,7 +9,7 @@ export const toolInfo = {
 } as const satisfies ToolInfo
 
 export const handler: ToolHandler<typeof toolInfo, MemoryProvider> = async (provider, _args) => {
-  const topics = await provider.listTopics()
+  const topics = await provider.listMemoryTopics()
   if (!topics.length) {
     return { type: ToolResponseType.Reply, message: { type: 'text', value: 'No topics found.' } }
   }

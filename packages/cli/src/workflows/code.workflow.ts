@@ -21,6 +21,7 @@ import {
   writeToFile,
 } from '@polka-codes/core'
 import { agentWorkflow, type JsonUserContent, type WorkflowFn } from '@polka-codes/workflow'
+import { z } from 'zod'
 import type { CliToolRegistry } from '../workflow-tools'
 import { fixWorkflow } from './fix.workflow'
 import { planWorkflow } from './plan.workflow'
@@ -40,15 +41,20 @@ export type JsonFilePart = {
   data: string // base64 encoded
 }
 
+const ImplementOutputSchema = z.object({
+  summary: z.string(),
+})
+
 export type CodeWorkflowInput = {
   task: string
   files?: (JsonFilePart | JsonImagePart)[]
   mode?: 'interactive' | 'noninteractive'
 }
 
-export const codeWorkflow: WorkflowFn<CodeWorkflowInput, void, CliToolRegistry> = async (input, context) => {
+export const codeWorkflow: WorkflowFn<CodeWorkflowInput, { summaries: string[] } | void, CliToolRegistry> = async (input, context) => {
   const { logger, step, tools } = context
   const { task, files, mode = 'interactive' } = input
+  const summaries: string[] = []
 
   // Planning phase
   logger.info('\n📋 Phase 1: Creating implementation plan...\n')
@@ -129,12 +135,24 @@ export const codeWorkflow: WorkflowFn<CodeWorkflowInput, void, CliToolRegistry> 
         systemPrompt: CODER_SYSTEM_PROMPT,
         userMessage: [{ role: 'user', content: userContent }],
         tools: agentTools,
+        outputSchema: ImplementOutputSchema,
       },
       context,
     )
   })
 
-  if (res.type === ToolResponseType.Exit) {
+  if (res.type === ToolResponseType.Exit && res.object) {
+    logger.info('\n✅ Implementation complete!\n')
+    const summary = res.object.summary
+    summaries.push(summary)
+    logger.info(`Summary: ${summary}`)
+    await step('summarize-implementation', async () => {
+      await tools.appendMemory({
+        topic: 'implementation-summary',
+        content: summary,
+      })
+    })
+  } else if (res.type === ToolResponseType.Exit) {
     logger.info('\n✅ Implementation complete!\n')
   } else {
     logger.warn('\n⚠️ Implementation failed. Please check the output for errors.\n', res)
@@ -142,7 +160,15 @@ export const codeWorkflow: WorkflowFn<CodeWorkflowInput, void, CliToolRegistry> 
 
   // Fixing phase
   logger.info('\n🔧 Phase 3: Checking for errors...\n')
-  await step('fix', async () => {
-    await fixWorkflow({ interactive: false, task: input.task }, context)
+  const fixResult = await step('fix', async () => {
+    return await fixWorkflow({ interactive: false, task: input.task }, context)
   })
+
+  if (fixResult?.summaries) {
+    summaries.push(...fixResult.summaries)
+  }
+
+  if (summaries.length > 0) {
+    return { summaries }
+  }
 }
