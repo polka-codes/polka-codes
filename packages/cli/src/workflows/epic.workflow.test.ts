@@ -18,7 +18,7 @@ const createMockContext = () => {
     generateText: mock<any>(() => [{ role: 'assistant', content: '{}' }]),
     invokeTool: mock<any>(),
   }
-  const step = mock(async (_name: string, fn: () => any) => fn())
+  const step = mock((_name: string, fn: () => any) => fn())
   const logger = {
     info: mock(() => {}),
     error: mock(() => {}),
@@ -149,30 +149,51 @@ describe('epicWorkflow', () => {
     )
   })
 
-  test('should exit if branch already exists', async () => {
+  test('should create a branch with suffix if it already exists', async () => {
     const { context, tools, logger } = createMockContext()
 
     tools.executeCommand
       .mockResolvedValueOnce({ exitCode: 0, stdout: '.git', stderr: '' })
       .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' })
       .mockResolvedValueOnce({ exitCode: 0, stdout: 'abc123', stderr: '' })
+      .mockResolvedValueOnce({ exitCode: 1, stdout: '', stderr: 'not found' })
+      .mockResolvedValue({ exitCode: 0, stdout: '', stderr: '' })
 
-    agentWorkflowSpy.mockResolvedValue({
-      type: ToolResponseType.Exit,
-      object: {
-        plan: '- [ ] Create component',
-        branchName: 'feat/new-feature',
-      },
-    })
+    agentWorkflowSpy
+      .mockResolvedValueOnce({
+        type: ToolResponseType.Exit,
+        object: {
+          plan: '- [ ] Create component',
+          branchName: 'feat/new-feature',
+        },
+      })
+      .mockResolvedValueOnce({
+        type: ToolResponseType.Exit,
+        object: {
+          updatedPlan: '- [ ] Create component',
+          isComplete: false,
+          nextTask: 'Create component',
+        },
+      })
+      .mockResolvedValueOnce({
+        type: ToolResponseType.Exit,
+        object: {
+          updatedPlan: '- [x] Create component',
+          isComplete: true,
+          nextTask: null,
+        },
+      })
 
+    codeWorkflowSpy.mockResolvedValue({ summaries: ['Created component'] })
     tools.input.mockResolvedValue('')
 
     await epicWorkflow({ task: 'Create a new feature' }, context)
 
     expect(tools.executeCommand).toHaveBeenCalledWith({ command: 'git', args: ['rev-parse', '--verify', 'feat/new-feature'] })
-    expect(logger.error).toHaveBeenCalledWith(
-      "❌ Error: Branch 'feat/new-feature' already exists. Please use a different branch name or delete the existing branch.",
-    )
+    expect(tools.executeCommand).toHaveBeenCalledWith({ command: 'git', args: ['rev-parse', '--verify', 'feat/new-feature-2'] })
+    expect(logger.warn).toHaveBeenCalledWith("⚠️  Branch 'feat/new-feature' already exists. Trying to find an available name...")
+    expect(logger.info).toHaveBeenCalledWith("Branch name 'feat/new-feature' was taken. Using 'feat/new-feature-2' instead.")
+    expect(tools.executeCommand).toHaveBeenCalledWith({ command: 'git', args: ['checkout', '-b', 'feat/new-feature-2'] })
   })
 
   test('should successfully complete epic with single task', async () => {

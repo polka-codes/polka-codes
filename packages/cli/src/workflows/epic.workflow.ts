@@ -379,14 +379,15 @@ export const epicWorkflow: WorkflowFn<EpicWorkflowInput, void, CliToolRegistry> 
     return
   }
 
-  const { plan: highLevelPlan, branchName } = planResult
+  const highLevelPlan = planResult.plan
+  let branchName = planResult.branchName
 
   async function createFeatureBranch(
     branchName: string,
     task: string,
     plan: string,
     context: WorkflowContext<CliToolRegistry>,
-  ): Promise<{ success: boolean }> {
+  ): Promise<{ success: boolean; branchName: string | null }> {
     const { logger, step, tools } = context
 
     logger.info('🌿 Phase 3: Creating feature branch...\n')
@@ -394,34 +395,62 @@ export const epicWorkflow: WorkflowFn<EpicWorkflowInput, void, CliToolRegistry> 
     const branchValidation = validateBranchName(branchName)
     if (!branchValidation.valid) {
       logger.error(`❌ Error: ${branchValidation.error}`)
-      return { success: false }
+      return { success: false, branchName: null }
     }
 
-    const branchCheckResult = await step('checkBranch', async () =>
-      tools.executeCommand({ command: 'git', args: ['rev-parse', '--verify', branchName] }),
+    let finalBranchName = branchName
+
+    const initialCheckResult = await step('checkBranch-initial', async () =>
+      tools.executeCommand({ command: 'git', args: ['rev-parse', '--verify', finalBranchName] }),
     )
 
-    if (branchCheckResult.exitCode === 0) {
-      logger.error(`❌ Error: Branch '${branchName}' already exists. Please use a different branch name or delete the existing branch.`)
-      return { success: false }
+    if (initialCheckResult.exitCode === 0) {
+      // Branch exists, find a new name
+      logger.warn(`⚠️  Branch '${finalBranchName}' already exists. Trying to find an available name...`)
+
+      const suffixMatch = branchName.match(/-(\d+)$/)
+      let baseName = branchName
+      let counter = 2
+      if (suffixMatch) {
+        baseName = branchName.substring(0, suffixMatch.index)
+        counter = parseInt(suffixMatch[1], 10) + 1
+      }
+
+      while (true) {
+        finalBranchName = `${baseName}-${counter}`
+        const branchCheckResult = await step(`checkBranch-${counter}`, async () =>
+          tools.executeCommand({ command: 'git', args: ['rev-parse', '--verify', finalBranchName] }),
+        )
+
+        if (branchCheckResult.exitCode !== 0) {
+          // Branch doesn't exist, we can use this name
+          break
+        }
+        counter++
+      }
     }
 
-    await step('createBranch', async () => await tools.executeCommand({ command: 'git', args: ['checkout', '-b', branchName] }))
-    logger.info(`✅ Branch '${branchName}' created.\n`)
+    if (finalBranchName !== branchName) {
+      logger.info(`Branch name '${branchName}' was taken. Using '${finalBranchName}' instead.`)
+    }
+
+    await step('createBranch', async () => await tools.executeCommand({ command: 'git', args: ['checkout', '-b', finalBranchName] }))
+    logger.info(`✅ Branch '${finalBranchName}' created.\n`)
 
     await tools.appendMemory({
       topic: 'epic-context',
-      content: `Epic: ${task}\nBranch: ${branchName}\nStarted: ${new Date().toISOString()}`,
+      content: `Epic: ${task}\nBranch: ${finalBranchName}\nStarted: ${new Date().toISOString()}`,
     })
     await tools.appendMemory({ topic: 'epic-plan', content: plan })
 
-    return { success: true }
+    return { success: true, branchName: finalBranchName }
   }
 
   const branchResult = await createFeatureBranch(branchName, task, highLevelPlan, context)
-  if (!branchResult.success) {
+  if (!branchResult.success || !branchResult.branchName) {
     return
   }
+  branchName = branchResult.branchName
 
   logger.info('🚀 Phase 4: Iterative Implementation Loop...\n')
   logger.info(`${'='.repeat(80)}\n`)
