@@ -1,10 +1,8 @@
 import { readFileSync } from 'node:fs'
-import { input } from '@inquirer/prompts'
-import { readMultiline } from '@polka-codes/cli-shared'
-import chalk from 'chalk'
 import { Command } from 'commander'
 import { createLogger } from '../logger'
 import { runWorkflow } from '../runWorkflow'
+import { getUserInput } from '../utils/userInput'
 import { planWorkflow } from '../workflows/plan.workflow'
 
 export const planCommand = new Command('plan')
@@ -23,16 +21,9 @@ export const planCommand = new Command('plan')
     }
 
     if (!taskInput) {
-      try {
-        taskInput = await input({ message: `What is the task you want to plan?${chalk.gray(' (type .m for multiline)')}` })
-        if (taskInput === '.m') {
-          taskInput = await readMultiline('Enter multiline text (Ctrl+D to finish):')
-        }
-      } catch (error) {
-        if (error instanceof Error && error.name === 'ExitPromptError') {
-          return
-        }
-        throw error
+      taskInput = await getUserInput('What is the task you want to plan?')
+      if (taskInput === undefined) {
+        return
       }
 
       if (!taskInput.trim()) {

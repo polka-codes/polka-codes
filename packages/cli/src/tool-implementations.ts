@@ -3,8 +3,7 @@ import { spawn, spawnSync } from 'node:child_process'
 import fs, { mkdir } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import type { LanguageModelV2 } from '@ai-sdk/provider'
-import { confirm as inquirerConfirm, input as inquirerInput, select as inquirerSelect } from '@inquirer/prompts'
-import { readMultiline } from '@polka-codes/cli-shared'
+import { confirm as inquirerConfirm, select as inquirerSelect } from '@inquirer/prompts'
 import type { MemoryProvider, ToolResponse, UsageMeter } from '@polka-codes/core'
 import {
   appendMemory as appendMemoryTool,
@@ -35,7 +34,7 @@ import {
   type ToolRegistry,
 } from '@polka-codes/workflow'
 import { streamText, type ToolSet } from 'ai'
-import chalk from 'chalk'
+
 import type { Command } from 'commander'
 
 import { UserCancelledError } from './errors'
@@ -50,6 +49,7 @@ export type AgentContextParameters = {
 
 import { gitDiff } from './tools'
 import { applyCacheControl } from './utils/cacheControl'
+import { getUserInput } from './utils/userInput'
 import type { CliToolRegistry } from './workflow-tools'
 import { getLocalChanges } from './workflows/workflow.utils'
 
@@ -150,18 +150,14 @@ async function input(input: { message: string; default: string }, context: ToolC
 
   // to allow ora to fully stop the spinner so inquirer can takeover the cli window
   await new Promise((resolve) => setTimeout(resolve, 50))
-  try {
-    let result = await inquirerInput({
-      message: `${input.message}${chalk.gray(' (type .m for multiline)')}`,
-      default: input.default,
-    })
-    if (result === '.m') {
-      result = await readMultiline('Enter multiline text (Ctrl+D to finish):')
-    }
-    return result
-  } catch (_e) {
+  const result = await getUserInput(input.message, {
+    default: input.default,
+  })
+
+  if (result === undefined) {
     throw new UserCancelledError()
   }
+  return result
 }
 
 async function select(input: { message: string; choices: { name: string; value: string }[] }, context: ToolCallContext) {
