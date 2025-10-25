@@ -394,6 +394,16 @@ async function appendMemory(input: { topic?: string; content: string }, context:
   await provider.appendMemory(input.topic, input.content)
 }
 
+async function replaceMemory(input: { topic?: string; content: string }, context: ToolCallContext) {
+  const provider: MemoryProvider = context.toolProvider
+  await provider.replaceMemory(input.topic, input.content)
+}
+
+async function removeMemory(input: { topic?: string }, context: ToolCallContext) {
+  const provider: MemoryProvider = context.toolProvider
+  await provider.removeMemory(input.topic)
+}
+
 const localToolHandlers = {
   createPullRequest,
   createCommit,
@@ -409,6 +419,8 @@ const localToolHandlers = {
   taskEvent,
   getMemoryContext,
   appendMemory,
+  replaceMemory,
+  removeMemory,
 }
 
 export async function toolCall(toolCall: ToolCall<CliToolRegistry>, context: ToolCallContext) {

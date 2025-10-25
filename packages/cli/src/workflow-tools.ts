@@ -17,4 +17,6 @@ export type CliToolRegistry = {
   >
   getMemoryContext: ToolSignature<void, string>
   appendMemory: ToolSignature<{ topic?: string; content: string }, void>
+  replaceMemory: ToolSignature<{ topic?: string; content: string }, void>
+  removeMemory: ToolSignature<{ topic?: string }, void>
 } & AgentToolRegistry
