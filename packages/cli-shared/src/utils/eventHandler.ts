@@ -24,7 +24,9 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter, stream: Writ
         }
         break
       case TaskEventKind.StartRequest:
-        customConsole.log('\n\n======== New Request ========\n')
+        if (verbose > 0) {
+          customConsole.log('\n\n======== New Request ========\n')
+        }
 
         if (verbose > 1) {
           for (const message of event.userMessage) {
@@ -66,7 +68,9 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter, stream: Writ
         }
         break
       case TaskEventKind.EndRequest:
-        customConsole.log('\n\n======== Request Ended ========\n')
+        if (verbose > 0) {
+          customConsole.log('\n\n======== Request Ended ========\n')
+        }
 
         if (verbose > 1) {
           customConsole.log(usageMeter.getUsageText())
@@ -82,12 +86,16 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter, stream: Writ
         break
       }
       case TaskEventKind.Reasoning: {
-        write(chalk.dim(event.newText))
-        hadReasoning = true
+        if (verbose > 0) {
+          write(chalk.dim(event.newText))
+          hadReasoning = true
+        }
         break
       }
       case TaskEventKind.ToolUse: {
-        customConsole.log(chalk.yellow('\n\nTool use:', event.tool), event.params)
+        if (verbose > 0) {
+          customConsole.log(chalk.yellow('\n\nTool use:', event.tool), event.params)
+        }
         const stats = toolCallStats.get(event.tool) ?? { calls: 0, success: 0, errors: 0 }
         stats.calls++
         toolCallStats.set(event.tool, stats)
@@ -118,21 +126,23 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter, stream: Writ
             customConsole.log('Exit Message:', event.exitReason.message)
             break
         }
-        customConsole.log('\n\n======== Tool Call Stats ========')
-        if (toolCallStats.size > 0) {
-          const tableData = [...toolCallStats.entries()].map(([tool, stats]) => {
-            const successRate = stats.calls > 0 ? (stats.success / stats.calls) * 100 : 0
-            return {
-              'Tool Name': tool,
-              Calls: stats.calls,
-              Success: stats.success,
-              Errors: stats.errors,
-              'Success Rate': `${successRate.toFixed(2)}%`,
-            }
-          })
-          customConsole.table(tableData)
-        } else {
-          customConsole.log('No tools were called.')
+        if (verbose > 0) {
+          customConsole.log('\n\n======== Tool Call Stats ========')
+          if (toolCallStats.size > 0) {
+            const tableData = [...toolCallStats.entries()].map(([tool, stats]) => {
+              const successRate = stats.calls > 0 ? (stats.success / stats.calls) * 100 : 0
+              return {
+                'Tool Name': tool,
+                Calls: stats.calls,
+                Success: stats.success,
+                Errors: stats.errors,
+                'Success Rate': `${successRate.toFixed(2)}%`,
+              }
+            })
+            customConsole.table(tableData)
+          } else {
+            customConsole.log('No tools were called.')
+          }
         }
         break
     }
