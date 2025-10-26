@@ -5,22 +5,31 @@ import type { MemoryProvider } from './provider'
 export const toolInfo = {
   name: 'updateMemory',
   description: 'Appends, replaces, or removes content from a memory topic.',
-  parameters: z.discriminatedUnion('operation', [
-    z.object({
-      operation: z.literal('append'),
+  parameters: z
+    .object({
+      operation: z.enum(['append', 'replace', 'remove']).describe('The operation to perform.'),
       topic: z.string().nullish().describe('The topic to update in memory. Defaults to ":default:".'),
-      content: z.string().describe('The content to append.'),
+      content: z.string().optional().describe('The content for append or replace operations. Must be omitted for remove operation.'),
+    })
+    .superRefine((data, ctx) => {
+      if (data.operation === 'append' || data.operation === 'replace') {
+        if (data.content === undefined) {
+          ctx.addIssue({
+            code: 'custom',
+            message: 'Content is required for "append" and "replace" operations.',
+            path: ['content'],
+          })
+        }
+      } else if (data.operation === 'remove') {
+        if (data.content !== undefined) {
+          ctx.addIssue({
+            code: 'custom',
+            message: 'Content must not be provided for "remove" operation.',
+            path: ['content'],
+          })
+        }
+      }
     }),
-    z.object({
-      operation: z.literal('replace'),
-      topic: z.string().nullish().describe('The topic to update in memory. Defaults to ":default:".'),
-      content: z.string().describe('The content to replace with.'),
-    }),
-    z.object({
-      operation: z.literal('remove'),
-      topic: z.string().nullish().describe('The topic to update in memory. Defaults to ":default:".'),
-    }),
-  ]),
 } as const satisfies ToolInfo
 
 export const handler: ToolHandler<typeof toolInfo, MemoryProvider> = async (provider, args) => {

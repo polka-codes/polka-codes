@@ -15,7 +15,7 @@ export type ToolParameter = {
 export type ToolInfo = {
   name: string
   description: string
-  parameters: z.ZodType<any>
+  parameters: z.ZodObject<any>
 }
 
 export type FullToolInfo = ToolInfo & {

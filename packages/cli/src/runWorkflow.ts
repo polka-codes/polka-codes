@@ -101,7 +101,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
   try {
     logger.info('Running workflow...')
     const output = await workflow(workflowInput, context)
-    logger.info('Workflow completed successfully.')
+    logger.info('\n\nWorkflow completed successfully.')
     logger.info(usage.getUsageText())
     return output
   } catch (e) {

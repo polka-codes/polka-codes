@@ -69,4 +69,16 @@ export class MockProvider implements ToolProvider {
   async askFollowupQuestion(_question: string, _options?: string[]): Promise<string> {
     return 'mock answer'
   }
+
+  async listMemoryTopics(): Promise<string[]> {
+    return ['default']
+  }
+
+  async readMemory(_topic?: string): Promise<string | undefined> {
+    return 'mock memory content'
+  }
+
+  async updateMemory(_operation: 'append' | 'replace' | 'remove', _topic?: string, _content?: string): Promise<void> {
+    return
+  }
 }
