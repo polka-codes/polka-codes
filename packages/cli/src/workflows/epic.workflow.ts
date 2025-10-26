@@ -318,10 +318,12 @@ export const epicWorkflow: WorkflowFn<EpicWorkflowInput, void, CliToolRegistry> 
     let feedback: string | undefined
     let highLevelPlan: string | undefined | null
     let branchName: string
+    let planAttempt = 1
 
     try {
       while (true) {
-        const result = await step('plan', () => createPlan({ task, feedback }, context))
+        const result = await step(`plan-${planAttempt}`, () => createPlan({ task, feedback }, context))
+        planAttempt++
 
         if (result.question) {
           const answer = await tools.input({
