@@ -6,7 +6,6 @@ import type { LanguageModelV2 } from '@ai-sdk/provider'
 import { confirm as inquirerConfirm, select as inquirerSelect } from '@inquirer/prompts'
 import type { MemoryProvider, ToolResponse, UsageMeter } from '@polka-codes/core'
 import {
-  appendMemory as appendMemoryTool,
   askFollowupQuestion,
   computeRateLimitBackoffSeconds,
   executeCommand as executeCommandTool,
@@ -17,12 +16,11 @@ import {
   readFile as readFileTool,
   readMemory as readMemoryTool,
   removeFile,
-  removeMemory as removeMemoryTool,
   renameFile,
   replaceInFile,
-  replaceMemory as replaceMemoryTool,
   searchFiles,
   ToolResponseType,
+  updateMemory as updateMemoryTool,
   writeToFile as writeToFileTool,
 } from '@polka-codes/core'
 import {
@@ -60,11 +58,9 @@ const allTools = [
   listFilesTool,
   readBinaryFile,
   readFileTool,
-  appendMemoryTool,
   readMemoryTool,
-  replaceMemoryTool,
-  removeMemoryTool,
   listMemoryTopicsTool,
+  updateMemoryTool,
   removeFile,
   renameFile,
   replaceInFile,
@@ -385,19 +381,16 @@ async function getMemoryContext(_input: unknown, context: ToolCallContext) {
   return contextParts.join('\n')
 }
 
-async function appendMemory(input: { topic?: string; content: string }, context: ToolCallContext) {
+async function updateMemory(
+  input:
+    | { operation: 'append'; topic?: string; content: string }
+    | { operation: 'replace'; topic?: string; content: string }
+    | { operation: 'remove'; topic?: string },
+  context: ToolCallContext,
+) {
   const provider: MemoryProvider = context.toolProvider
-  await provider.appendMemory(input.topic, input.content)
-}
-
-async function replaceMemory(input: { topic?: string; content: string }, context: ToolCallContext) {
-  const provider: MemoryProvider = context.toolProvider
-  await provider.replaceMemory(input.topic, input.content)
-}
-
-async function removeMemory(input: { topic?: string }, context: ToolCallContext) {
-  const provider: MemoryProvider = context.toolProvider
-  await provider.removeMemory(input.topic)
+  const content = 'content' in input ? input.content : undefined
+  return provider.updateMemory(input.operation, input.topic, content)
 }
 
 const localToolHandlers = {
@@ -414,9 +407,7 @@ const localToolHandlers = {
   invokeTool,
   taskEvent,
   getMemoryContext,
-  appendMemory,
-  replaceMemory,
-  removeMemory,
+  updateMemory,
 }
 
 export async function toolCall(toolCall: ToolCall<CliToolRegistry>, context: ToolCallContext) {

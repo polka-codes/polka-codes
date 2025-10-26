@@ -1,5 +1,4 @@
 import {
-  appendMemory,
   askFollowupQuestion,
   type FullToolInfo,
   fetchUrl,
@@ -8,10 +7,9 @@ import {
   readBinaryFile,
   readFile,
   readMemory,
-  removeMemory,
-  replaceMemory,
   searchFiles,
   ToolResponseType,
+  updateMemory,
 } from '@polka-codes/core'
 import { agentWorkflow, type JsonUserContent, type WorkflowContext, type WorkflowFn } from '@polka-codes/workflow'
 import type { z } from 'zod'
@@ -84,18 +82,7 @@ async function performReviewAndFixCycle(
         {
           systemPrompt: CODE_REVIEW_SYSTEM_PROMPT,
           userMessage: [{ role: 'user', content: userMessage }],
-          tools: [
-            readFile,
-            readBinaryFile,
-            searchFiles,
-            listFiles,
-            gitDiff,
-            readMemory,
-            appendMemory,
-            replaceMemory,
-            removeMemory,
-            listMemoryTopics,
-          ],
+          tools: [readFile, readBinaryFile, searchFiles, listFiles, gitDiff, readMemory, updateMemory, listMemoryTopics],
           outputSchema: reviewOutputSchema,
         },
         context,
@@ -203,9 +190,7 @@ async function createPlan(
         readBinaryFile,
         searchFiles,
         readMemory,
-        appendMemory,
-        replaceMemory,
-        removeMemory,
+        updateMemory,
         listMemoryTopics,
       ] as FullToolInfo[],
       outputSchema: EpicPlanSchema,
@@ -439,11 +424,12 @@ export const epicWorkflow: WorkflowFn<EpicWorkflowInput, void, CliToolRegistry> 
     await step('createBranch', async () => await tools.executeCommand({ command: 'git', args: ['checkout', '-b', finalBranchName] }))
     logger.info(`✅ Branch '${finalBranchName}' created.\n`)
 
-    await tools.appendMemory({
+    await tools.updateMemory({
+      operation: 'append',
       topic: 'epic-context',
       content: `Epic: ${task}\nBranch: ${finalBranchName}\nStarted: ${new Date().toISOString()}`,
     })
-    await tools.appendMemory({ topic: 'epic-plan', content: plan })
+    await tools.updateMemory({ operation: 'append', topic: 'epic-plan', content: plan })
 
     return { success: true, branchName: finalBranchName }
   }
@@ -528,7 +514,7 @@ Focus only on this item, but use the plan for context.`
       isComplete = updateResult.isComplete
       nextTask = updateResult.nextTask
 
-      await tools.replaceMemory({ topic: 'epic-plan', content: currentPlan })
+      await tools.updateMemory({ operation: 'replace', topic: 'epic-plan', content: currentPlan })
 
       const checkboxCompleted = (currentPlan.match(/- \[x\]/g) || []).length
       const checkboxTotal = (currentPlan.match(/- \[[x ]\]/g) || []).length
@@ -560,8 +546,8 @@ Focus only on this item, but use the plan for context.`
     logger.error(`\n❌ Epic workflow failed: ${error instanceof Error ? error.message : String(error)}`)
     logger.info(`\nBranch '${branchName}' was created but work is incomplete.`)
     logger.info(`To cleanup: git checkout <previous-branch> && git branch -D ${branchName}\n`)
-    await tools.removeMemory({ topic: 'epic-context' })
-    await tools.removeMemory({ topic: 'epic-plan' })
+    await tools.updateMemory({ operation: 'remove', topic: 'epic-context' })
+    await tools.updateMemory({ operation: 'remove', topic: 'epic-plan' })
     throw error
   }
 
@@ -590,6 +576,6 @@ Focus only on this item, but use the plan for context.`
   logger.info(`   • Create a pull request on your Git platform\n`)
   logger.info(`${'='.repeat(80)}\n`)
 
-  await tools.removeMemory({ topic: 'epic-context' })
-  await tools.removeMemory({ topic: 'epic-plan' })
+  await tools.updateMemory({ operation: 'remove', topic: 'epic-context' })
+  await tools.updateMemory({ operation: 'remove', topic: 'epic-plan' })
 }

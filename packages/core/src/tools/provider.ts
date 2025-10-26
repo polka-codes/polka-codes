@@ -29,9 +29,7 @@ export type WebProvider = {
 export interface MemoryProvider {
   listMemoryTopics: () => Promise<string[]>
   readMemory: (topic?: string) => Promise<string | undefined>
-  appendMemory: (topic: string | undefined, content: string) => Promise<void>
-  replaceMemory: (topic: string | undefined, content: string) => Promise<void>
-  removeMemory: (topic: string | undefined) => Promise<void>
+  updateMemory: (operation: 'append' | 'replace' | 'remove', topic: string | undefined, content: string | undefined) => Promise<void>
 }
 
 export type ToolProvider = FilesystemProvider & CommandProvider & InteractionProvider & WebProvider & Partial<MemoryProvider>

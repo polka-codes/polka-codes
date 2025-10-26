@@ -11,9 +11,7 @@ const createMockContext = () => {
     input: mock<any>(),
     executeCommand: mock<any>(),
     getMemoryContext: mock<any>(async () => ''),
-    appendMemory: mock<any>(),
-    replaceMemory: mock<any>(),
-    removeMemory: mock<any>(),
+    updateMemory: mock<any>(),
     taskEvent: mock<any>(),
     generateText: mock<any>(() => [{ role: 'assistant', content: '{}' }]),
     invokeTool: mock<any>(),
@@ -234,22 +232,21 @@ describe('epicWorkflow', () => {
     codeWorkflowSpy.mockResolvedValue({ summaries: ['Created component'] })
 
     tools.input.mockResolvedValue('')
-    tools.appendMemory.mockResolvedValue(undefined)
-    tools.replaceMemory.mockResolvedValue(undefined)
-    tools.removeMemory.mockResolvedValue(undefined)
+    tools.updateMemory.mockResolvedValue(undefined)
 
     await epicWorkflow({ task: 'Create a new component' }, context)
 
     expect(tools.executeCommand).toHaveBeenCalledWith({ command: 'git', args: ['checkout', '-b', 'feat/new-component'] })
     expect(tools.executeCommand).toHaveBeenCalledWith({ command: 'git', args: ['add', '.'] })
     expect(tools.executeCommand).toHaveBeenCalledWith({ command: 'git', args: ['commit', '-m', 'feat: Create component'] })
-    expect(tools.appendMemory).toHaveBeenCalledWith(
+    expect(tools.updateMemory).toHaveBeenCalledWith(
       expect.objectContaining({
+        operation: 'append',
         topic: 'epic-context',
       }),
     )
-    expect(tools.removeMemory).toHaveBeenCalledWith({ topic: 'epic-context' })
-    expect(tools.removeMemory).toHaveBeenCalledWith({ topic: 'epic-plan' })
+    expect(tools.updateMemory).toHaveBeenCalledWith({ operation: 'remove', topic: 'epic-context' })
+    expect(tools.updateMemory).toHaveBeenCalledWith({ operation: 'remove', topic: 'epic-plan' })
     expect(logger.info).toHaveBeenCalledWith('✅ All tasks complete!\n')
   })
 
@@ -301,9 +298,7 @@ describe('epicWorkflow', () => {
     codeWorkflowSpy.mockResolvedValue({ summaries: ['Done'] })
 
     tools.input.mockResolvedValue('')
-    tools.appendMemory.mockResolvedValue(undefined)
-    tools.replaceMemory.mockResolvedValue(undefined)
-    tools.removeMemory.mockResolvedValue(undefined)
+    tools.updateMemory.mockResolvedValue(undefined)
 
     await epicWorkflow({ task: 'Create a new component with tests' }, context)
 
@@ -347,8 +342,8 @@ describe('epicWorkflow', () => {
     expect(logger.error).toHaveBeenCalledWith(expect.stringContaining('Epic workflow failed: Implementation failed'))
     expect(logger.info).toHaveBeenCalledWith("\nBranch 'feat/new-component' was created but work is incomplete.")
     expect(logger.info).toHaveBeenCalledWith('To cleanup: git checkout <previous-branch> && git branch -D feat/new-component\n')
-    expect(tools.removeMemory).toHaveBeenCalledWith({ topic: 'epic-context' })
-    expect(tools.removeMemory).toHaveBeenCalledWith({ topic: 'epic-plan' })
+    expect(tools.updateMemory).toHaveBeenCalledWith({ operation: 'remove', topic: 'epic-context' })
+    expect(tools.updateMemory).toHaveBeenCalledWith({ operation: 'remove', topic: 'epic-plan' })
   })
 
   test('should skip review when no files changed', async () => {
@@ -392,9 +387,7 @@ describe('epicWorkflow', () => {
     codeWorkflowSpy.mockResolvedValue({ summaries: ['Done'] })
 
     tools.input.mockResolvedValue('')
-    tools.appendMemory.mockResolvedValue(undefined)
-    tools.replaceMemory.mockResolvedValue(undefined)
-    tools.removeMemory.mockResolvedValue(undefined)
+    tools.updateMemory.mockResolvedValue(undefined)
 
     await epicWorkflow({ task: 'Create a new component' }, context)
 

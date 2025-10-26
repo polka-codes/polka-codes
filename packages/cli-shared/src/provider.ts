@@ -35,18 +35,29 @@ export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
     readMemory: async (topic: string = defaultMemoryTopic): Promise<string | undefined> => {
       return memoryStore[topic]
     },
-    appendMemory: async (topic: string = defaultMemoryTopic, content: string): Promise<void> => {
-      if (memoryStore[topic]) {
-        memoryStore[topic] += content
-      } else {
-        memoryStore[topic] = content
+    updateMemory: async (
+      operation: 'append' | 'replace' | 'remove',
+      topic: string | undefined,
+      content: string | undefined,
+    ): Promise<void> => {
+      const memoryTopic = topic ?? defaultMemoryTopic
+      switch (operation) {
+        case 'append':
+          if (content === undefined) {
+            throw new Error('Content is required for append operation.')
+          }
+          memoryStore[memoryTopic] = (memoryStore[memoryTopic] || '') + content
+          break
+        case 'replace':
+          if (content === undefined) {
+            throw new Error('Content is required for replace operation.')
+          }
+          memoryStore[memoryTopic] = content
+          break
+        case 'remove':
+          delete memoryStore[memoryTopic]
+          break
       }
-    },
-    replaceMemory: async (topic: string = defaultMemoryTopic, content: string): Promise<void> => {
-      memoryStore[topic] = content
-    },
-    removeMemory: async (topic: string = defaultMemoryTopic): Promise<void> => {
-      delete memoryStore[topic]
     },
     readFile: async (path: string, includeIgnored: boolean): Promise<string | undefined> => {
       if (!includeIgnored && ig.ignores(path)) {
