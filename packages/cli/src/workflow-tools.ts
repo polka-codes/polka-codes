@@ -1,3 +1,4 @@
+import type { TodoItem, UpdateTodoItemInput, UpdateTodoItemOutput } from '@polka-codes/core'
 import type { AgentToolRegistry, ToolSignature } from '@polka-codes/workflow'
 
 type FileChange = { path: string; status: string }
@@ -22,4 +23,7 @@ export type CliToolRegistry = {
     | { operation: 'remove'; topic?: string },
     void
   >
+  listTodoItems: ToolSignature<{ id?: string | null; status?: 'open' | 'completed' | 'closed' | null }, TodoItem[]>
+  getTodoItem: ToolSignature<{ id: string }, TodoItem | undefined>
+  updateTodoItem: ToolSignature<UpdateTodoItemInput, UpdateTodoItemOutput>
 } & AgentToolRegistry

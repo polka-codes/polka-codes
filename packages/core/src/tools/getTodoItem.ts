@@ -26,7 +26,7 @@ export const handler: ToolHandler<typeof toolInfo, TodoProvider> = async (provid
     type: ToolResponseType.Reply,
     message: {
       type: 'json',
-      value: item,
+      value: item ?? null,
     },
   }
 }

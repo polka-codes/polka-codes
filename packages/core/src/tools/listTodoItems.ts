@@ -23,24 +23,7 @@ export const handler: ToolHandler<typeof toolInfo, TodoProvider> = async (provid
     }
   }
   const { id, status } = toolInfo.parameters.parse(args)
-  let items = await provider.listTodoItems(id)
-
-  if (status) {
-    items = items.filter((item) => item.status === status)
-  }
-
-  items.sort((a, b) => {
-    const aParts = a.id.split('.')
-    const bParts = b.id.split('.')
-    const len = Math.min(aParts.length, bParts.length)
-    for (let i = 0; i < len; i++) {
-      const comparison = aParts[i].localeCompare(bParts[i], undefined, { numeric: true })
-      if (comparison !== 0) {
-        return comparison
-      }
-    }
-    return aParts.length - bParts.length
-  })
+  const items = await provider.listTodoItems(id, status)
 
   return {
     type: ToolResponseType.Reply,

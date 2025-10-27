@@ -4,7 +4,15 @@ import fs, { mkdir } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import type { LanguageModelV2 } from '@ai-sdk/provider'
 import { confirm as inquirerConfirm, select as inquirerSelect } from '@inquirer/prompts'
-import type { MemoryProvider, ToolResponse, UsageMeter } from '@polka-codes/core'
+import type {
+  MemoryProvider,
+  TodoItem,
+  TodoProvider,
+  ToolResponse,
+  UpdateTodoItemInput,
+  UpdateTodoItemOutput,
+  UsageMeter,
+} from '@polka-codes/core'
 import {
   askFollowupQuestion,
   computeRateLimitBackoffSeconds,
@@ -393,6 +401,24 @@ async function updateMemory(
   return provider.updateMemory(input.operation, input.topic, content)
 }
 
+async function listTodoItems(
+  input: { id?: string | null; status?: 'open' | 'completed' | 'closed' | null },
+  context: ToolCallContext,
+): Promise<TodoItem[]> {
+  const provider: TodoProvider = context.toolProvider
+  return provider.listTodoItems(input.id, input.status)
+}
+
+async function getTodoItem(input: { id: string }, context: ToolCallContext): Promise<TodoItem | undefined> {
+  const provider: TodoProvider = context.toolProvider
+  return provider.getTodoItem(input.id)
+}
+
+async function updateTodoItem(input: UpdateTodoItemInput, context: ToolCallContext): Promise<UpdateTodoItemOutput> {
+  const provider: TodoProvider = context.toolProvider
+  return provider.updateTodoItem(input)
+}
+
 const localToolHandlers = {
   createPullRequest,
   createCommit,
@@ -408,6 +434,9 @@ const localToolHandlers = {
   taskEvent,
   getMemoryContext,
   updateMemory,
+  listTodoItems,
+  getTodoItem,
+  updateTodoItem,
 }
 
 export async function toolCall(toolCall: ToolCall<CliToolRegistry>, context: ToolCallContext) {

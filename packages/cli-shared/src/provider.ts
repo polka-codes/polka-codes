@@ -30,15 +30,36 @@ export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
   const defaultMemoryTopic = ':default:'
 
   const provider: ToolProvider = {
-    listTodoItems: async (id?: string | null) => {
+    listTodoItems: async (id?: string | null, status?: string | null) => {
+      let items: TodoItem[]
       if (!id) {
-        return todoItems.filter((i) => !i.id.includes('.'))
+        items = todoItems.filter((i) => !i.id.includes('.'))
+      } else {
+        const parent = todoItems.find((i) => i.id === id)
+        if (!parent) {
+          throw new Error(`To-do item with id ${id} not found`)
+        }
+        items = todoItems.filter((i) => i.id.startsWith(`${id}.`) && i.id.split('.').length === id.split('.').length + 1)
       }
-      const parent = todoItems.find((i) => i.id === id)
-      if (!parent) {
-        throw new Error(`To-do item with id ${id} not found`)
+
+      if (status) {
+        items = items.filter((item) => item.status === status)
       }
-      return todoItems.filter((i) => i.id.startsWith(`${id}.`) && i.id.split('.').length === id.split('.').length + 1)
+
+      items.sort((a, b) => {
+        const aParts = a.id.split('.')
+        const bParts = b.id.split('.')
+        const len = Math.min(aParts.length, bParts.length)
+        for (let i = 0; i < len; i++) {
+          const comparison = aParts[i].localeCompare(bParts[i], undefined, { numeric: true })
+          if (comparison !== 0) {
+            return comparison
+          }
+        }
+        return aParts.length - bParts.length
+      })
+
+      return items
     },
     getTodoItem: async (id) => {
       const item = todoItems.find((i) => i.id === id)

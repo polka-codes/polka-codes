@@ -34,7 +34,7 @@ export interface MemoryProvider {
   updateMemory: (operation: 'append' | 'replace' | 'remove', topic: string | undefined, content: string | undefined) => Promise<void>
 }
 
-export type ListTodoItemsOutput = Pick<TodoItem, 'id' | 'title' | 'status'>[]
+export type ListTodoItemsOutput = TodoItem[]
 
 export type GetTodoItemOutput = TodoItem & {
   subItems: {
@@ -44,8 +44,8 @@ export type GetTodoItemOutput = TodoItem & {
 }
 
 export type TodoProvider = {
-  listTodoItems: (id?: string | null) => Promise<ListTodoItemsOutput>
-  getTodoItem: (id: string) => Promise<GetTodoItemOutput>
+  listTodoItems: (id?: string | null, status?: string | null) => Promise<ListTodoItemsOutput>
+  getTodoItem: (id: string) => Promise<GetTodoItemOutput | undefined>
   updateTodoItem: (input: UpdateTodoItemInput) => Promise<UpdateTodoItemOutput>
 }
 
@@ -57,14 +57,14 @@ export type ToolProvider = FilesystemProvider &
   Partial<TodoProvider>
 
 export class MockProvider implements ToolProvider {
-  async listTodoItems(id?: string | null) {
+  async listTodoItems(id?: string | null, _status?: string | null) {
     if (id) {
-      return [{ id: `${id}-1`, title: 'mock sub item', status: 'open' as const }]
+      return [{ id: `${id}-1`, title: 'mock sub item', status: 'open' as const, description: '', relevantFileList: [] }]
     }
-    return [{ id: '1', title: 'mock item', status: 'open' as const }]
+    return [{ id: '1', title: 'mock item', status: 'open' as const, description: '', relevantFileList: [] }]
   }
 
-  async getTodoItem(id: string) {
+  async getTodoItem(id: string): Promise<GetTodoItemOutput | undefined> {
     return {
       id,
       title: 'mock item',
