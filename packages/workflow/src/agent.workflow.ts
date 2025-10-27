@@ -38,11 +38,7 @@ export type AgentToolRegistry = {
 }
 
 export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentToolRegistry> = async (input, { step, tools }) => {
-  const event = async (name: string, event: TaskEvent) => {
-    await step(name, async () => {
-      await tools.taskEvent(event)
-    })
-  }
+  const event = (name: string, event: TaskEvent) => step(name, () => tools.taskEvent(event))
 
   const { tools: toolInfo, maxToolRoundTrips = 200 } = input
 
@@ -109,7 +105,9 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
 
     if (toolCalls.length === 0) {
       if (!input.outputSchema) {
-        return { type: ToolResponseType.Exit, message: textContent }
+        const exitReason: ExitReason = { type: ToolResponseType.Exit, message: textContent }
+        await event('end-task', { kind: TaskEventKind.EndTask, exitReason })
+        return exitReason
       }
 
       const parsed = parseJsonFromMarkdown(textContent)
@@ -125,7 +123,9 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
         nextMessage = [{ role: 'user', content: errorMessage }]
         continue
       }
-      return { type: ToolResponseType.Exit, message: textContent, object: validated.data }
+      const exitReason: ExitReason = { type: ToolResponseType.Exit, message: textContent, object: validated.data }
+      await event('end-task', { kind: TaskEventKind.EndTask, exitReason })
+      return exitReason
     }
 
     const toolResults: { toolCallId: string; toolName: string; output: any }[] = []
@@ -200,5 +200,6 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
     ]
   }
 
+  await event('end-task', { kind: TaskEventKind.EndTask, exitReason: { type: 'UsageExceeded' } as ExitReason })
   throw new Error('Maximum number of tool round trips reached.')
 }
