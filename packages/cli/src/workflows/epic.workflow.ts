@@ -2,14 +2,17 @@ import {
   askFollowupQuestion,
   type FullToolInfo,
   fetchUrl,
+  getTodoItem,
   listFiles,
   listMemoryTopics,
+  listTodoItems,
   readBinaryFile,
   readFile,
   readMemory,
   searchFiles,
   ToolResponseType,
   updateMemory,
+  updateTodoItem,
 } from '@polka-codes/core'
 import { agentWorkflow, type JsonUserContent, type WorkflowContext, type WorkflowFn } from '@polka-codes/workflow'
 import type { z } from 'zod'
@@ -19,13 +22,14 @@ import type { CliToolRegistry } from '../workflow-tools'
 import { codeWorkflow, type JsonFilePart, type JsonImagePart } from './code.workflow'
 import {
   CODE_REVIEW_SYSTEM_PROMPT,
-  EPIC_PLAN_UPDATE_SYSTEM_PROMPT,
+  EPIC_ADD_TODO_ITEMS_SYSTEM_PROMPT,
   EPIC_PLANNER_SYSTEM_PROMPT,
+  EPIC_TASK_UPDATE_SYSTEM_PROMPT,
   EpicPlanSchema,
   formatReviewToolInput,
   getPlanPrompt,
   type ReviewToolInput,
-  UpdatedPlanSchema,
+  UpdatedTaskSchema,
 } from './prompts'
 import { formatElapsedTime, getDefaultContext, parseGitDiffNameStatus, type ReviewResult, reviewOutputSchema } from './workflow.utils'
 
@@ -52,7 +56,7 @@ function validateBranchName(name: string): { valid: boolean; error?: string } {
 async function performReviewAndFixCycle(
   iterationCount: number,
   taskItem: string,
-  currentPlan: string,
+  highLevelPlan: string,
   context: WorkflowContext<CliToolRegistry>,
 ): Promise<{ passed: boolean }> {
   const { logger, step, tools } = context
@@ -113,7 +117,7 @@ async function performReviewAndFixCycle(
 
 Here is the full plan for context:
 <plan>
-${currentPlan}
+${highLevelPlan}
 </plan>
 
 After an initial implementation, a review found the following issues. Please fix them:
@@ -205,47 +209,52 @@ async function createPlan(
   return { plan: '', reason: 'Usage limit exceeded.', type: ToolResponseType.Exit, branchName: '' }
 }
 
-async function updatePlanAgent(
-  currentPlan: string,
-  implementationSummary: string,
-  completedTask: string,
+async function addTodoItemsFromPlan(context: WorkflowContext<CliToolRegistry>): Promise<void> {
+  const { logger, step, tools } = context
+
+  logger.info('📝 Phase 4: Creating todo items from plan...\n')
+
+  await step('add-todo-items', async () => {
+    await agentWorkflow(
+      {
+        systemPrompt: EPIC_ADD_TODO_ITEMS_SYSTEM_PROMPT,
+        userMessage: [{ role: 'user', content: 'Please create the todo items based on the plan in memory.' }],
+        tools: [readFile, searchFiles, listFiles, readMemory, getTodoItem, listTodoItems, updateTodoItem],
+      },
+      context,
+    )
+  })
+
+  const todos = await tools.listTodoItems({})
+  logger.info(`✅ Created ${todos.length} todo items.\n`)
+}
+
+async function updateTaskAgent(
+  completedTaskId: string,
+  completedTaskTitle: string,
   context: WorkflowContext<CliToolRegistry>,
-): Promise<{ updatedPlan: string; isComplete: boolean; nextTask: string | null }> {
-  const userMessage = `# Current Plan
-
-<plan>
-${currentPlan}
-</plan>
-
-# Implementation Summary
-
-${implementationSummary}
-
-# Completed Task
-
-${completedTask}
-
-Please update the plan by marking the completed task as [x] and identify the next incomplete task.`
+): Promise<{ isComplete: boolean; nextTask: string | null; nextTaskId: string | null }> {
+  const userMessage = `The task "${completedTaskTitle}" (id: ${completedTaskId}) has been completed. Please update its status and find the next task.`
 
   const result = await agentWorkflow(
     {
-      systemPrompt: EPIC_PLAN_UPDATE_SYSTEM_PROMPT,
+      systemPrompt: EPIC_TASK_UPDATE_SYSTEM_PROMPT,
       userMessage: [{ role: 'user', content: userMessage }],
-      tools: [] as FullToolInfo[],
-      outputSchema: UpdatedPlanSchema,
+      tools: [listTodoItems, updateTodoItem],
+      outputSchema: UpdatedTaskSchema,
     },
     context,
   )
 
   if (result.type !== ToolResponseType.Exit || !result.object) {
-    throw new Error('Plan update agent failed')
+    throw new Error('Task update agent failed')
   }
 
-  const updateResult = result.object as z.infer<typeof UpdatedPlanSchema>
+  const updateResult = result.object as z.infer<typeof UpdatedTaskSchema>
   return {
-    updatedPlan: updateResult.updatedPlan,
     isComplete: updateResult.isComplete,
     nextTask: updateResult.nextTask || null,
+    nextTaskId: updateResult.nextTaskId || null,
   }
 }
 
@@ -440,24 +449,30 @@ export const epicWorkflow: WorkflowFn<EpicWorkflowInput, void, CliToolRegistry> 
   }
   branchName = branchResult.branchName
 
-  logger.info('🚀 Phase 4: Iterative Implementation Loop...\n')
+  await addTodoItemsFromPlan(context)
+
+  logger.info('🚀 Phase 5: Iterative Implementation Loop...\n')
   logger.info(`${'='.repeat(80)}\n`)
 
-  let currentPlan = highLevelPlan
   let iterationCount = 0
   let isComplete = false
   let nextTask: string | null = null
+  let nextTaskId: string | null = null
 
   try {
-    const firstTaskResult = await step('extract-first-task', async () => {
-      return await updatePlanAgent(currentPlan, '', '', context)
+    const initialTasks = await step('get-initial-tasks', async () => {
+      return await tools.listTodoItems({ status: 'open' })
     })
 
-    currentPlan = firstTaskResult.updatedPlan
-    nextTask = firstTaskResult.nextTask
-    isComplete = firstTaskResult.isComplete
+    if (initialTasks.length > 0) {
+      const firstTask = initialTasks[0]
+      nextTask = firstTask.title
+      nextTaskId = firstTask.id
+    } else {
+      isComplete = true
+    }
 
-    while (!isComplete && nextTask) {
+    while (!isComplete && nextTask && nextTaskId) {
       iterationCount++
       const taskStartTime = Date.now()
 
@@ -466,13 +481,11 @@ export const epicWorkflow: WorkflowFn<EpicWorkflowInput, void, CliToolRegistry> 
       logger.info(`${'━'.repeat(80)}`)
       logger.info(`${nextTask}\n`)
 
-      let implementationSummary = ''
-
-      const codeResult = await step(`task-${iterationCount}`, async () => {
+      await step(`task-${iterationCount}`, async () => {
         const taskWithContext = `You are working on an epic. Here is the full plan:
 
 <plan>
-${currentPlan}
+${highLevelPlan}
 </plan>
 
 Your current task is to implement this specific item:
@@ -482,12 +495,6 @@ Focus only on this item, but use the plan for context.`
         return await codeWorkflow({ task: taskWithContext, mode: 'noninteractive' }, context)
       })
 
-      if (codeResult && 'summaries' in codeResult && codeResult.summaries.length > 0) {
-        implementationSummary = codeResult.summaries.join('\n')
-      } else {
-        implementationSummary = nextTask
-      }
-
       const commitMessage = `feat: ${nextTask}`
       await step(`commit-initial-${iterationCount}`, async () => {
         await tools.executeCommand({ command: 'git', args: ['add', '.'] })
@@ -495,7 +502,7 @@ Focus only on this item, but use the plan for context.`
       })
       commitMessages.push(commitMessage)
 
-      const { passed: reviewPassed } = await performReviewAndFixCycle(iterationCount, nextTask, currentPlan, context)
+      const { passed: reviewPassed } = await performReviewAndFixCycle(iterationCount, nextTask, highLevelPlan, context)
 
       const taskElapsed = Date.now() - taskStartTime
       const taskElapsedTime = formatElapsedTime(taskElapsed)
@@ -506,25 +513,24 @@ Focus only on this item, but use the plan for context.`
         logger.warn(`⚠️  Iteration ${iterationCount} completed with potential issues (${taskElapsedTime})`)
       }
 
-      const updateResult = await step(`update-plan-${iterationCount}`, async () => {
-        return await updatePlanAgent(currentPlan, implementationSummary, nextTask ?? '', context)
+      const updateResult = await step(`update-task-${iterationCount}`, async () => {
+        if (!nextTaskId || !nextTask) {
+          throw new Error('Invariant violation: nextTask or nextTaskId is null inside the implementation loop.')
+        }
+        return await updateTaskAgent(nextTaskId, nextTask, context)
       })
 
-      currentPlan = updateResult.updatedPlan
       isComplete = updateResult.isComplete
       nextTask = updateResult.nextTask
+      nextTaskId = updateResult.nextTaskId
 
-      await tools.updateMemory({ operation: 'replace', topic: 'epic-plan', content: currentPlan })
-
-      const checkboxCompleted = (currentPlan.match(/- \[x\]/g) || []).length
-      const checkboxTotal = (currentPlan.match(/- \[[x ]\]/g) || []).length
-      const checkmarkCompleted = (currentPlan.match(/^✅/gm) || []).length
+      const allTodos = await tools.listTodoItems({})
+      const completedTodos = allTodos.filter((t) => t.status === 'completed').length
+      const totalTodos = allTodos.length
 
       let progressMessage = ''
-      if (checkboxTotal > 0) {
-        progressMessage = `${checkboxCompleted}/${checkboxTotal} items completed`
-      } else if (checkmarkCompleted > 0) {
-        progressMessage = `${checkmarkCompleted} items completed`
+      if (totalTodos > 0) {
+        progressMessage = `${completedTodos}/${totalTodos} items completed`
       } else {
         progressMessage = `Iteration ${iterationCount} completed`
       }

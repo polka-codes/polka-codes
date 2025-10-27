@@ -15,6 +15,9 @@ const createMockContext = () => {
     taskEvent: mock<any>(),
     generateText: mock<any>(() => [{ role: 'assistant', content: '{}' }]),
     invokeTool: mock<any>(),
+    listTodoItems: mock<any>(async () => []),
+    getTodoItem: mock<any>(async () => undefined),
+    updateTodoItem: mock<any>(async () => ({ id: '1' })),
   }
   const step = mock((_name: string, fn: () => any) => fn())
   const logger = {
@@ -31,6 +34,19 @@ const createMockContext = () => {
   } as unknown as workflow.WorkflowContext<CliToolRegistry>
 
   return { context, tools, step, logger }
+}
+
+const mockResponseSequence = <T>(mockFn: any, responses: T[]) => {
+  let callCount = 0
+  mockFn.mockImplementation(async () => {
+    if (callCount < responses.length) {
+      return responses[callCount++]
+    }
+    if (responses.length > 0) {
+      return responses[responses.length - 1] // Keep returning the last response
+    }
+    return [] // Default to empty array if no responses provided
+  })
 }
 
 describe('epicWorkflow', () => {
@@ -139,6 +155,7 @@ describe('epicWorkflow', () => {
     })
 
     tools.input.mockResolvedValue('')
+    mockResponseSequence(tools.listTodoItems, [[], [{ id: '1', title: 'Create component', status: 'open' }]])
 
     await epicWorkflow({ task: 'Create a new feature' }, context)
 
@@ -184,6 +201,11 @@ describe('epicWorkflow', () => {
 
     codeWorkflowSpy.mockResolvedValue({ summaries: ['Created component'] })
     tools.input.mockResolvedValue('')
+    mockResponseSequence(tools.listTodoItems, [
+      [],
+      [{ id: '1', title: 'Create component', status: 'open' }],
+      [{ id: '1', title: 'Create component', status: 'completed' }],
+    ])
 
     await epicWorkflow({ task: 'Create a new feature' }, context)
 
@@ -233,6 +255,11 @@ describe('epicWorkflow', () => {
 
     tools.input.mockResolvedValue('')
     tools.updateMemory.mockResolvedValue(undefined)
+    mockResponseSequence(tools.listTodoItems, [
+      [],
+      [{ id: '1', title: 'Create component', status: 'open' }],
+      [{ id: '1', title: 'Create component', status: 'completed' }],
+    ])
 
     await epicWorkflow({ task: 'Create a new component' }, context)
 
@@ -284,6 +311,7 @@ describe('epicWorkflow', () => {
           updatedPlan: '- [x] Create component\n- [ ] Add tests',
           isComplete: false,
           nextTask: 'Add tests',
+          nextTaskId: '2',
         },
       })
       .mockResolvedValueOnce({
@@ -299,6 +327,21 @@ describe('epicWorkflow', () => {
 
     tools.input.mockResolvedValue('')
     tools.updateMemory.mockResolvedValue(undefined)
+    mockResponseSequence(tools.listTodoItems, [
+      [],
+      [
+        { id: '1', title: 'Create component', status: 'open' },
+        { id: '2', title: 'Add tests', status: 'open' },
+      ],
+      [
+        { id: '1', title: 'Create component', status: 'completed' },
+        { id: '2', title: 'Add tests', status: 'open' },
+      ],
+      [
+        { id: '1', title: 'Create component', status: 'completed' },
+        { id: '2', title: 'Add tests', status: 'completed' },
+      ],
+    ])
 
     await epicWorkflow({ task: 'Create a new component with tests' }, context)
 
@@ -336,6 +379,7 @@ describe('epicWorkflow', () => {
     codeWorkflowSpy.mockRejectedValue(new Error('Implementation failed'))
 
     tools.input.mockResolvedValue('')
+    mockResponseSequence(tools.listTodoItems, [[], [{ id: '1', title: 'Create component', status: 'open' }]])
 
     await expect(epicWorkflow({ task: 'Create a new component' }, context)).rejects.toThrow('Implementation failed')
 
@@ -388,6 +432,11 @@ describe('epicWorkflow', () => {
 
     tools.input.mockResolvedValue('')
     tools.updateMemory.mockResolvedValue(undefined)
+    mockResponseSequence(tools.listTodoItems, [
+      [],
+      [{ id: '1', title: 'Create component', status: 'open' }],
+      [{ id: '1', title: 'Create component', status: 'completed' }],
+    ])
 
     await epicWorkflow({ task: 'Create a new component' }, context)
 

@@ -356,57 +356,66 @@ ${task}
 ${planSection}`
 }
 
-export const EPIC_PLAN_UPDATE_SYSTEM_PROMPT = `Role: Plan update agent
-Goal: Update the epic plan by marking the completed item and determining if work is complete
+export const EPIC_ADD_TODO_ITEMS_SYSTEM_PROMPT = `Role: Task creation agent
+Goal: Read a high-level plan and create corresponding todo items.
 
-You are a plan update agent responsible for tracking progress on an epic by updating the plan.
-
-${MEMORY_USAGE_SECTION}
+You are a task creation agent. Your responsibility is to read a high-level plan for an epic and create a todo item for each task in the plan.
 
 ## Your Task
 
-You will receive:
-- **Current plan** (may use checkboxes \`- [ ]\`/\`- [x]\`, numbered lists, or other formats)
-- **Implementation summary** describing what was just completed
-- **The specific task** that was just implemented
+You will have access to the high-level plan stored in memory under the topic 'epic-plan'.
+Read the plan and for each task item in the plan, use the 'updateTodoItem' tool to create a new todo item.
 
 ## Process
 
-1. **Find the completed item**: Locate the item in the plan that matches the completed task
-2. **Mark it as complete**:
-   - If using checkboxes: Change \`- [ ]\` to \`- [x]\`
-   - If using numbered lists: Add a ✅ prefix (e.g., "1. Task" → "✅ 1. Task")
-   - If using narrative: Mark completion in context-appropriate way
-3. **Scan for next task**: Find the next incomplete item
-4. **Determine completion status**: Check if all items are complete
+1. Read the plan from memory using 'readMemory({ topic: "epic-plan" })'.
+2. Parse the plan to identify individual tasks. Tasks are usually checklist items like '- [ ] ...'.
+3. For each task, call 'updateTodoItem' with the task description as the 'title'.
+
+## Response Format
+
+You should not output any JSON. Just perform the tool calls.
+`
+
+export const EPIC_TASK_UPDATE_SYSTEM_PROMPT = `Role: Task update agent
+Goal: Update a todo item's status to 'done' and find the next task.
+
+You are a task update agent responsible for tracking progress on an epic by updating todo items.
+
+## Your Task
+
+You will receive the ID and title of the task that was just completed.
+
+## Process
+
+1. **Mark the completed task as done**: Use the 'updateTodoItem' tool with the provided 'completedTaskId' and set the 'status' to 'done'.
+2. **Find the next task**: Use the 'listTodoItems' tool with 'status: "open"' to find the next available task.
+3. **Determine completion status**: If there are no more tasks with status 'open', the epic is complete.
 
 ## Output Requirements
 
 Return:
-- **updatedPlan**: The full plan text with the completed item marked
-- **isComplete**: boolean - true if all items are done, false if incomplete items remain
-- **nextTask**: The text of the next incomplete item, or null if all items are complete
+- **isComplete**: boolean - true if all tasks are done, false otherwise.
+- **nextTask**: The title of the next task with status 'todo', or null if all tasks are complete.
+- **nextTaskId**: The ID of the next task, or null if all tasks are complete.
 
 ## Important Notes
 
-- Keep the plan structure and formatting intact
-- Adapt completion marking to match the plan's format
-- Extract the next task text without format prefixes (e.g., without "- [ ]" or "1.")
-- If multiple incomplete items remain, return the first one in document order
+- If multiple incomplete tasks remain, return the first one from the list.
 
 ## Response Format
 
 ${createJsonResponseInstruction({
-  updatedPlan: 'The full plan with completed item marked',
   isComplete: false,
-  nextTask: 'The text of the next incomplete item (or null if complete)',
+  nextTask: 'The title of the next task (or null if complete)',
+  nextTaskId: 'The ID of the next task (or null if complete)',
 })}
 `
 
-export const UpdatedPlanSchema = z.object({
-  updatedPlan: z.string().describe('The updated plan with completed item marked as [x]'),
-  isComplete: z.boolean().describe('True if all checklist items are completed, false if incomplete items remain'),
-  nextTask: z.string().nullish().describe('The next incomplete checklist item to implement, or null if complete'),
+export const UpdatedTaskSchema = z.object({
+  isComplete: z.boolean().describe('True if all tasks are completed, false if incomplete items remain'),
+  nextTask: z.string().nullish().describe('The title of the next task to implement, or null if complete'),
+  nextTaskId: z.string().nullish().describe('The ID of the next task to implement, or null if complete'),
 })
 
 export const CODER_SYSTEM_PROMPT = `Role: AI developer.
