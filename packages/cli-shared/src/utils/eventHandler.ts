@@ -151,14 +151,14 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter, stream: Writ
             customConsole.log('Exit Message:', event.exitReason.message)
             break
         }
+        for (const [tool, taskStats] of taskToolCallStats.entries()) {
+          const globalStats = globalToolCallStats.get(tool) ?? { calls: 0, success: 0, errors: 0 }
+          globalStats.calls += taskStats.calls
+          globalStats.success += taskStats.success
+          globalStats.errors += taskStats.errors
+          globalToolCallStats.set(tool, globalStats)
+        }
         if (verbose > 0) {
-          for (const [tool, taskStats] of taskToolCallStats.entries()) {
-            const globalStats = globalToolCallStats.get(tool) ?? { calls: 0, success: 0, errors: 0 }
-            globalStats.calls += taskStats.calls
-            globalStats.success += taskStats.success
-            globalStats.errors += taskStats.errors
-            globalToolCallStats.set(tool, globalStats)
-          }
           logToolCallStats(stream, taskToolCallStats, 'Task Tool Call Stats')
         }
         break
