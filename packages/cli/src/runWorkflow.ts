@@ -5,6 +5,7 @@ import { UsageMeter } from '@polka-codes/core'
 import {
   type Logger,
   makeStepFn,
+  TaskEventKind,
   type ToolRegistry,
   type WorkflowContext,
   type WorkflowFn,
@@ -106,11 +107,15 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
     return output
   } catch (e) {
     const error = e as any
+    onEvent({
+      kind: TaskEventKind.EndTask,
+      exitReason: {
+        type: 'Error',
+        error: { message: error.message, stack: error.stack },
+      },
+    })
     if (error instanceof UserCancelledError) {
       logger.warn('Workflow cancelled by user.')
-    } else {
-      logger.error(`Workflow failed: ${error.message}`)
-      logger.error(error)
     }
     logger.info(usage.getUsageText())
     return undefined

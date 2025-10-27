@@ -108,4 +108,9 @@ export type TaskEvent =
 
 export type TaskEventCallback = (event: TaskEvent) => void | Promise<void>
 
-export type ExitReason = { type: 'UsageExceeded' } | ToolResponseExit
+export type ExitReasonError = {
+  type: 'Error'
+  error: { message: string; stack?: string }
+}
+
+export type ExitReason = { type: 'UsageExceeded' } | ToolResponseExit | ExitReasonError

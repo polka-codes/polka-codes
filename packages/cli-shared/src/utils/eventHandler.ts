@@ -147,6 +147,14 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter, stream: Writ
         customConsole.log('\n\n======== Task Ended ========\n')
         customConsole.log('Reason:', event.exitReason.type)
         switch (event.exitReason.type) {
+          case 'Error': {
+            const { error } = event.exitReason
+            customConsole.error(chalk.red(`Workflow failed: ${error.message}`))
+            if (verbose > 0 && error.stack) {
+              customConsole.error(chalk.red(error.stack))
+            }
+            break
+          }
           case ToolResponseType.Exit:
             customConsole.log('Exit Message:', event.exitReason.message)
             break
