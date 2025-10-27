@@ -32,15 +32,13 @@ export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
   const provider: ToolProvider = {
     listTodoItems: async (id?: string | null) => {
       if (!id) {
-        return todoItems.filter((i) => !i.id.includes('.')).map(({ id, title }) => ({ id, title }))
+        return todoItems.filter((i) => !i.id.includes('.'))
       }
       const parent = todoItems.find((i) => i.id === id)
       if (!parent) {
         throw new Error(`To-do item with id ${id} not found`)
       }
-      return todoItems
-        .filter((i) => i.id.startsWith(`${id}.`) && i.id.split('.').length === id.split('.').length + 1)
-        .map(({ id, title }) => ({ id, title }))
+      return todoItems.filter((i) => i.id.startsWith(`${id}.`) && i.id.split('.').length === id.split('.').length + 1)
     },
     getTodoItem: async (id) => {
       const item = todoItems.find((i) => i.id === id)

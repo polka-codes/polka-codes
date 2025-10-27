@@ -34,10 +34,7 @@ export interface MemoryProvider {
   updateMemory: (operation: 'append' | 'replace' | 'remove', topic: string | undefined, content: string | undefined) => Promise<void>
 }
 
-export type ListTodoItemsOutput = {
-  id: string
-  title: string
-}[]
+export type ListTodoItemsOutput = Pick<TodoItem, 'id' | 'title' | 'status'>[]
 
 export type GetTodoItemOutput = TodoItem & {
   subItems: {
@@ -62,9 +59,9 @@ export type ToolProvider = FilesystemProvider &
 export class MockProvider implements ToolProvider {
   async listTodoItems(id?: string | null) {
     if (id) {
-      return [{ id: `${id}-1`, title: 'mock sub item' }]
+      return [{ id: `${id}-1`, title: 'mock sub item', status: 'open' as const }]
     }
-    return [{ id: '1', title: 'mock item' }]
+    return [{ id: '1', title: 'mock item', status: 'open' as const }]
   }
 
   async getTodoItem(id: string) {
