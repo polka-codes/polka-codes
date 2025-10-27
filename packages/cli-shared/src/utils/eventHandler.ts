@@ -5,7 +5,32 @@ import { type TaskEvent, TaskEventKind } from '@polka-codes/workflow'
 import chalk from 'chalk'
 
 type ToolStat = { calls: number; success: number; errors: number }
-const toolCallStats = new Map<string, ToolStat>()
+const taskToolCallStats = new Map<string, ToolStat>()
+const globalToolCallStats = new Map<string, ToolStat>()
+
+export function logToolCallStats(stream: Writable, statsMap: Map<string, ToolStat>, title: string) {
+  const customConsole = new Console(stream, stream)
+  customConsole.log(`\n\n======== ${title} ========`)
+  if (statsMap.size > 0) {
+    const tableData = [...statsMap.entries()].map(([tool, stats]) => {
+      const successRate = stats.calls > 0 ? (stats.success / stats.calls) * 100 : 0
+      return {
+        'Tool Name': tool,
+        Calls: stats.calls,
+        Success: stats.success,
+        Errors: stats.errors,
+        'Success Rate': `${successRate.toFixed(2)}%`,
+      }
+    })
+    customConsole.table(tableData)
+  } else {
+    customConsole.log('No tools were called.')
+  }
+}
+
+export function logGlobalToolCallStats(stream: Writable) {
+  logToolCallStats(stream, globalToolCallStats, 'Global Tool Call Stats')
+}
 
 export const printEvent = (verbose: number, usageMeter: UsageMeter, stream: Writable = process.stdout) => {
   if (verbose < 0) {
@@ -17,7 +42,7 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter, stream: Writ
   return (event: TaskEvent) => {
     switch (event.kind) {
       case TaskEventKind.StartTask:
-        toolCallStats.clear()
+        taskToolCallStats.clear()
         if (verbose > 2) {
           customConsole.log(`\n====== System Prompt ======\n${event.systemPrompt}`)
           customConsole.log('\n\n================\n')
@@ -96,23 +121,23 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter, stream: Writ
         if (verbose > 0) {
           customConsole.log(chalk.yellow('\n\nTool use:', event.tool), event.params)
         }
-        const stats = toolCallStats.get(event.tool) ?? { calls: 0, success: 0, errors: 0 }
+        const stats = taskToolCallStats.get(event.tool) ?? { calls: 0, success: 0, errors: 0 }
         stats.calls++
-        toolCallStats.set(event.tool, stats)
+        taskToolCallStats.set(event.tool, stats)
         break
       }
       case TaskEventKind.ToolReply: {
-        const stats = toolCallStats.get(event.tool) ?? { calls: 0, success: 0, errors: 0 }
+        const stats = taskToolCallStats.get(event.tool) ?? { calls: 0, success: 0, errors: 0 }
         stats.success++
-        toolCallStats.set(event.tool, stats)
+        taskToolCallStats.set(event.tool, stats)
         break
       }
       case TaskEventKind.ToolError: {
         customConsole.error(chalk.red('\n\nTool error:', event.tool))
         customConsole.error(event.error)
-        const stats = toolCallStats.get(event.tool) ?? { calls: 0, success: 0, errors: 0 }
+        const stats = taskToolCallStats.get(event.tool) ?? { calls: 0, success: 0, errors: 0 }
         stats.errors++
-        toolCallStats.set(event.tool, stats)
+        taskToolCallStats.set(event.tool, stats)
         break
       }
       case TaskEventKind.UsageExceeded:
@@ -127,22 +152,14 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter, stream: Writ
             break
         }
         if (verbose > 0) {
-          customConsole.log('\n\n======== Tool Call Stats ========')
-          if (toolCallStats.size > 0) {
-            const tableData = [...toolCallStats.entries()].map(([tool, stats]) => {
-              const successRate = stats.calls > 0 ? (stats.success / stats.calls) * 100 : 0
-              return {
-                'Tool Name': tool,
-                Calls: stats.calls,
-                Success: stats.success,
-                Errors: stats.errors,
-                'Success Rate': `${successRate.toFixed(2)}%`,
-              }
-            })
-            customConsole.table(tableData)
-          } else {
-            customConsole.log('No tools were called.')
+          for (const [tool, taskStats] of taskToolCallStats.entries()) {
+            const globalStats = globalToolCallStats.get(tool) ?? { calls: 0, success: 0, errors: 0 }
+            globalStats.calls += taskStats.calls
+            globalStats.success += taskStats.success
+            globalStats.errors += taskStats.errors
+            globalToolCallStats.set(tool, globalStats)
           }
+          logToolCallStats(stream, taskToolCallStats, 'Task Tool Call Stats')
         }
         break
     }
