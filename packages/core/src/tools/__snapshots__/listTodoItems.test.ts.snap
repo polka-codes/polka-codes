@@ -1,0 +1,97 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`listTodoItems should list all todo items sorted correctly 1`] = `
+{
+  "message": {
+    "type": "json",
+    "value": [
+      {
+        "description": "",
+        "id": "1",
+        "relevantFileList": [],
+        "status": "open",
+        "title": "item 1",
+      },
+      {
+        "description": "",
+        "id": "1.1",
+        "relevantFileList": [],
+        "status": "open",
+        "title": "sub-item 1.1",
+      },
+      {
+        "description": "",
+        "id": "1.2",
+        "relevantFileList": [],
+        "status": "completed",
+        "title": "sub-item 1.2",
+      },
+      {
+        "description": "",
+        "id": "2",
+        "relevantFileList": [],
+        "status": "completed",
+        "title": "item 2",
+      },
+      {
+        "description": "",
+        "id": "10",
+        "relevantFileList": [],
+        "status": "open",
+        "title": "item 10",
+      },
+    ],
+  },
+  "type": "Reply",
+}
+`;
+
+exports[`listTodoItems should filter items by status 1`] = `
+{
+  "message": {
+    "type": "json",
+    "value": [
+      {
+        "description": "",
+        "id": "1.2",
+        "relevantFileList": [],
+        "status": "completed",
+        "title": "sub-item 1.2",
+      },
+      {
+        "description": "",
+        "id": "2",
+        "relevantFileList": [],
+        "status": "completed",
+        "title": "item 2",
+      },
+    ],
+  },
+  "type": "Reply",
+}
+`;
+
+exports[`listTodoItems should list sub-items for a given id 1`] = `
+{
+  "message": {
+    "type": "json",
+    "value": [
+      {
+        "description": "",
+        "id": "1.1",
+        "relevantFileList": [],
+        "status": "open",
+        "title": "sub-item 1.1",
+      },
+      {
+        "description": "",
+        "id": "1.2",
+        "relevantFileList": [],
+        "status": "completed",
+        "title": "sub-item 1.2",
+      },
+    ],
+  },
+  "type": "Reply",
+}
+`;
