@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process'
 import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises'
 import { dirname, normalize, resolve } from 'node:path'
 import { input, select } from '@inquirer/prompts'
-import type { ToolProvider } from '@polka-codes/core'
+import type { TodoItem, ToolProvider } from '@polka-codes/core'
 import ignore from 'ignore'
 import { lookup } from 'mime-types'
 import { checkRipgrep } from './utils/checkRipgrep'
@@ -25,10 +25,88 @@ export type ProviderOptions = {
 export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
   const ig = ignore().add(options.excludeFiles ?? [])
   const memoryStore: Record<string, string> = {}
+  const todoItems: TodoItem[] = []
 
   const defaultMemoryTopic = ':default:'
 
   const provider: ToolProvider = {
+    listTodoItems: async (id?: string | null) => {
+      if (!id) {
+        return todoItems.filter((i) => !i.id.includes('.')).map(({ id, title }) => ({ id, title }))
+      }
+      const parent = todoItems.find((i) => i.id === id)
+      if (!parent) {
+        throw new Error(`To-do item with id ${id} not found`)
+      }
+      return todoItems
+        .filter((i) => i.id.startsWith(`${id}.`) && i.id.split('.').length === id.split('.').length + 1)
+        .map(({ id, title }) => ({ id, title }))
+    },
+    getTodoItem: async (id) => {
+      const item = todoItems.find((i) => i.id === id)
+      if (!item) {
+        throw new Error(`To-do item with id ${id} not found`)
+      }
+      const subItems = todoItems
+        .filter((i) => i.id.startsWith(`${id}.`) && i.id.split('.').length === id.split('.').length + 1)
+        .map(({ id, title }) => ({ id, title }))
+
+      return { ...item, subItems }
+    },
+    updateTodoItem: async (input) => {
+      if (input.operation === 'add') {
+        const { parentId, title, description, relevantFileList } = input
+        if (!title) {
+          throw new Error('Title is required for add operation')
+        }
+        let newId: string
+        if (parentId) {
+          const parent = todoItems.find((i) => i.id === parentId)
+          if (!parent) {
+            throw new Error(`Parent to-do item with id ${parentId} not found`)
+          }
+          const childItems = todoItems.filter(
+            (i) => i.id.startsWith(`${parentId}.`) && i.id.split('.').length === parentId.split('.').length + 1,
+          )
+          newId = `${parentId}.${childItems.length + 1}`
+        } else {
+          const rootItems = todoItems.filter((i) => !i.id.includes('.'))
+          newId = `${rootItems.length + 1}`
+        }
+        const newItem: TodoItem = {
+          id: newId,
+          title,
+          description: description ?? '',
+          relevantFileList: relevantFileList ?? [],
+          status: 'open',
+        }
+        todoItems.push(newItem)
+        return { id: newId }
+      } else {
+        // update
+        const { id } = input
+        if (!id) {
+          throw new Error('ID is required for update operation')
+        }
+        const item = todoItems.find((i) => i.id === id)
+        if (!item) {
+          throw new Error(`To-do item with id ${id} not found`)
+        }
+        if (input.title != null) {
+          item.title = input.title
+        }
+        if (input.description != null) {
+          item.description = input.description ?? ''
+        }
+        if (input.relevantFileList != null) {
+          item.relevantFileList = input.relevantFileList
+        }
+        if (input.status != null) {
+          item.status = input.status
+        }
+        return { id }
+      }
+    },
     listMemoryTopics: async (): Promise<string[]> => {
       return Object.keys(memoryStore)
     },

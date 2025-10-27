@@ -22,3 +22,4 @@ rules: |
   Use '.nullish()' instead of '.optional()' in zod schema unless there is a specific reason to use optional.
   DO NOT use global variables unless absolutely necessary. Add justification as comment.
   biome is used for linting and formatting. DO NOT use prettier or eslint
+  ToolInfo parameters MUST be z.object reqired by AI providers
