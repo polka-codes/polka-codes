@@ -16,7 +16,6 @@ describe('executeCommand', () => {
       requiresApproval: 'false',
     })
 
-    console.log('Result:', result)
     expect(result).toMatchSnapshot()
     expect(mockProvider.executeCommand).toHaveBeenCalledWith('echo test', false)
   })
