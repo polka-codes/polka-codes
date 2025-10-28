@@ -29,8 +29,29 @@ export function logToolCallStats(stream: Writable, statsMap: Map<string, ToolSta
   }
 }
 
+const mergeToolCallStats = (a: Map<string, ToolStat>, b: Map<string, ToolStat>) => {
+  const merged = new Map<string, ToolStat>()
+  for (const [tool, stat] of a) {
+    merged.set(tool, { ...stat })
+  }
+
+  for (const [tool, stat] of b) {
+    const existing = merged.get(tool)
+    if (existing) {
+      existing.calls += stat.calls
+      existing.success += stat.success
+      existing.errors += stat.errors
+    } else {
+      merged.set(tool, { ...stat })
+    }
+  }
+  return merged
+}
+
 export function logGlobalToolCallStats(stream: Writable) {
-  logToolCallStats(stream, globalToolCallStats, 'Global Tool Call Stats')
+  const merged = mergeToolCallStats(globalToolCallStats, taskToolCallStats)
+
+  logToolCallStats(stream, merged, 'Global Tool Call Stats')
 }
 
 export const printEvent = (verbose: number, usageMeter: UsageMeter, stream: Writable = process.stdout) => {
