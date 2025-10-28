@@ -3,6 +3,7 @@ import type { Writable } from 'node:stream'
 import { ToolResponseType, type UsageMeter } from '@polka-codes/core'
 import { type TaskEvent, TaskEventKind } from '@polka-codes/workflow'
 import chalk from 'chalk'
+import { simplifyToolParameters } from './parameterSimplifier'
 
 type ToolStat = { calls: number; success: number; errors: number }
 const taskToolCallStats = new Map<string, ToolStat>()
@@ -128,7 +129,10 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter, stream: Writ
       }
       case TaskEventKind.ToolUse: {
         if (verbose > 0) {
-          customConsole.log(chalk.yellow('\n\nTool use:', event.tool), event.params)
+          customConsole.log(
+            chalk.yellow('\n\nTool use:', event.tool),
+            simplifyToolParameters(event.tool, event.params as Record<string, unknown>),
+          )
         }
         const stats = taskToolCallStats.get(event.tool) ?? { calls: 0, success: 0, errors: 0 }
         stats.calls++
