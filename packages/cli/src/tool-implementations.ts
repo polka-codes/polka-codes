@@ -140,6 +140,7 @@ async function confirm(input: { message: string }, context: ToolCallContext) {
   // to allow ora to fully stop the spinner so inquirer can takeover the cli window
   await new Promise((resolve) => setTimeout(resolve, 50))
   try {
+    process.stderr.write('\u0007')
     const result = await inquirerConfirm({ message: input.message })
     return result
   } catch (_e) {
@@ -154,6 +155,7 @@ async function input(input: { message: string; default: string }, context: ToolC
 
   // to allow ora to fully stop the spinner so inquirer can takeover the cli window
   await new Promise((resolve) => setTimeout(resolve, 50))
+  process.stderr.write('\u0007')
   const result = await getUserInput(input.message, {
     default: input.default,
   })
@@ -172,6 +174,7 @@ async function select(input: { message: string; choices: { name: string; value: 
   // to allow ora to fully stop the spinner so inquirer can takeover the cli window
   await new Promise((resolve) => setTimeout(resolve, 50))
   try {
+    process.stderr.write('\u0007')
     const result = await inquirerSelect({ message: input.message, choices: input.choices })
     return result
   } catch (_e) {
