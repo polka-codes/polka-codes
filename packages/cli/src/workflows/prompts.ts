@@ -14,10 +14,18 @@ const MEMORY_USAGE_SECTION = `## Memory Usage
 
 You have access to a memory feature to store and retrieve information across tool calls.
 
-Use memory to:
-- Store context between steps.
-- Keep track of important information like file paths or decisions made.
-- Avoid re-running expensive discovery tools.
+### Topic Organization
+
+Memory is organized using topics, which are like named containers for different types of information:
+- **Default topic** (\`:default:\`): Used when no topic is specified. Good for general context.
+- **Named topics**: Create meaningful topic names to organize different types of information
+
+### Best Practices
+
+- Store decisions and context that inform subsequent steps
+- Use named topics to organize different types of information
+- Use the default topic for simple, single-context scenarios
+- Memory persists across all tool calls within the current workflow
 `
 
 export const PLANNER_SYSTEM_PROMPT = `Role: Expert software architect and planner.

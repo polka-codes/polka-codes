@@ -4,7 +4,7 @@ import type { MemoryProvider } from './provider'
 
 export const toolInfo = {
   name: 'listMemoryTopics',
-  description: 'Lists all topics in memory.',
+  description: 'Lists all topics in memory. Use this to see what information has been stored and which topics are available to read from.',
   parameters: z.object({}),
 } as const satisfies ToolInfo
 

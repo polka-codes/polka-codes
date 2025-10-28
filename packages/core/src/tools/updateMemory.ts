@@ -4,7 +4,8 @@ import type { MemoryProvider } from './provider'
 
 export const toolInfo = {
   name: 'updateMemory',
-  description: 'Appends, replaces, or removes content from a memory topic.',
+  description:
+    'Appends, replaces, or removes content from a memory topic. Use "append" to add to existing content, "replace" to overwrite entirely, or "remove" to delete a topic. Memory persists across tool calls within a workflow.',
   parameters: z
     .object({
       operation: z.enum(['append', 'replace', 'remove']).describe('The operation to perform.'),
