@@ -154,4 +154,121 @@ new line3
       totalCount: 2,
     })
   })
+
+  it('should handle block with no space before SEARCH', () => {
+    const content = `line1
+line2
+line3`
+    const diff = `<<<<<<<SEARCH
+line2
+=======
+new line2
+>>>>>>>REPLACE`
+
+    const result = replaceInFile(content, diff)
+    expect(result).toEqual({
+      content: `line1
+new line2
+line3`,
+      status: 'all_diff_applied',
+      appliedCount: 1,
+      totalCount: 1,
+    })
+  })
+
+  it('should handle block with multiple spaces before SEARCH', () => {
+    const content = `line1
+line2
+line3`
+    const diff = `<<<<<<<  SEARCH
+line2
+=======
+new line2
+>>>>>>>  REPLACE`
+
+    const result = replaceInFile(content, diff)
+    expect(result).toEqual({
+      content: `line1
+new line2
+line3`,
+      status: 'all_diff_applied',
+      appliedCount: 1,
+      totalCount: 1,
+    })
+  })
+
+  it('should handle block with tab before SEARCH', () => {
+    const content = `line1
+line2
+line3`
+    const diff = `<<<<<<<	SEARCH
+line2
+=======
+new line2
+>>>>>>>	REPLACE`
+
+    const result = replaceInFile(content, diff)
+    expect(result).toEqual({
+      content: `line1
+new line2
+line3`,
+      status: 'all_diff_applied',
+      appliedCount: 1,
+      totalCount: 1,
+    })
+  })
+
+  it('should handle block with mixed whitespace before SEARCH', () => {
+    const content = `line1
+line2
+line3`
+    const diff = `<<<<<< 	 SEARCH
+line2
+=======
+new line2
+>>>>>> 	 REPLACE`
+
+    const result = replaceInFile(content, diff)
+    expect(result).toEqual({
+      content: `line1
+new line2
+line3`,
+      status: 'all_diff_applied',
+      appliedCount: 1,
+      totalCount: 1,
+    })
+  })
+
+  it('should handle multiple blocks with varying whitespace patterns', () => {
+    const content = `line1
+line2
+line3
+line4`
+    const diff = `<<<<<<<SEARCH
+line2
+=======
+new line2
+>>>>>>>REPLACE
+<<<<<<< SEARCH
+line3
+=======
+new line3
+>>>>>>> REPLACE
+<<<<<<<  SEARCH
+line4
+=======
+new line4
+>>>>>>>  REPLACE`
+
+    const result = replaceInFile(content, diff)
+    expect(result).toEqual({
+      content: `line1
+new line2
+new line3
+new line4`,
+      status: 'all_diff_applied',
+      appliedCount: 3,
+      totalCount: 3,
+    })
+  })
 })

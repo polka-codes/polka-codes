@@ -20,7 +20,7 @@ export const replaceInFile = (fileContent: string, diff: string): ReplaceResult 
   // =======
   // (some lines)
   // >>>>>>> REPLACE
-  const blockPattern = /<<<<<+ SEARCH>?\s*\r?\n([\s\S]*?)\r?\n=======[ \t]*\r?\n([\s\S]*?)\r?\n?>>>>>+ REPLACE/g
+  const blockPattern = /^\s*<<<<<+\s*SEARCH>?\s*\r?\n([\s\S]*?)\r?\n=======[ \t]*\r?\n([\s\S]*?)\r?\n?>>>>>+\s*REPLACE\s*$/gm
 
   // Parse diff blocks
   const blocks: { search: string; replace: string }[] = []
