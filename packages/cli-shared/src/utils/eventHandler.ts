@@ -150,10 +150,8 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter, stream: Writ
       }
       case TaskEventKind.ToolUse: {
         if (verbose > 0) {
-          customConsole.log(
-            chalk.yellow('\n\nTool use:', event.tool),
-            simplifyToolParameters(event.tool, event.params as Record<string, unknown>),
-          )
+          const params = verbose > 1 ? event.params : simplifyToolParameters(event.tool, event.params)
+          customConsole.log(chalk.yellow('\n\nTool use:', event.tool), params)
         }
         const stats = taskToolCallStats.get(event.tool) ?? { calls: 0, success: 0, errors: 0 }
         stats.calls++
