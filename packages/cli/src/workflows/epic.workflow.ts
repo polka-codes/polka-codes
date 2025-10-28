@@ -32,7 +32,6 @@ import {
 import { formatElapsedTime, getDefaultContext, parseGitDiffNameStatus, type ReviewResult, reviewOutputSchema } from './workflow.utils'
 
 const MAX_REVIEW_RETRIES = 5
-const BRANCH_NAME_PATTERN = /^[a-zA-Z0-9/_-]+$/
 
 export type EpicWorkflowInput = {
   task: string
@@ -44,19 +43,6 @@ type CreatePlanInput = {
   plan?: string
   files?: (JsonFilePart | JsonImagePart)[]
   feedback?: string
-}
-
-function validateBranchName(name: string): { valid: boolean; error?: string } {
-  if (!BRANCH_NAME_PATTERN.test(name)) {
-    return {
-      valid: false,
-      error: `Invalid branch name format: "${name}". Branch names should contain only letters, numbers, hyphens, underscores, and forward slashes.`,
-    }
-  }
-  if (name.length > 255) {
-    return { valid: false, error: 'Branch name is too long (max 255 characters).' }
-  }
-  return { valid: true }
 }
 
 async function createPlan(
@@ -193,12 +179,6 @@ async function createFeatureBranch(
   const { logger, step, tools } = context
 
   logger.info('🌿 Phase 3: Creating feature branch...\n')
-
-  const branchValidation = validateBranchName(branchName)
-  if (!branchValidation.valid) {
-    logger.error(`❌ Error: ${branchValidation.error}`)
-    return { success: false, branchName: null }
-  }
 
   let finalBranchName = branchName
 

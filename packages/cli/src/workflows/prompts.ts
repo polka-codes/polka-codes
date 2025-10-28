@@ -346,9 +346,17 @@ ${createJsonResponseInstruction({
 })}
 `
 
+const BRANCH_NAME_PATTERN = /^[a-zA-Z0-9/_-]+$/
+
 export const EpicPlanSchema = z.object({
   plan: z.string().nullish(),
-  branchName: z.string(),
+  branchName: z
+    .string()
+    .refine((name) => name.length >= 3, { message: 'Branch name is too short (min 3 characters).' })
+    .refine((name) => name.length <= 255, { message: 'Branch name is too long (max 255 characters).' })
+    .refine((name) => BRANCH_NAME_PATTERN.test(name), {
+      message: 'Invalid branch name format. Branch names should contain only letters, numbers, hyphens, underscores, and forward slashes.',
+    }),
   question: z
     .object({
       question: z.string(),
