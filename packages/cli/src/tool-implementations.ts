@@ -18,8 +18,10 @@ import {
   computeRateLimitBackoffSeconds,
   executeCommand as executeCommandTool,
   fetchUrl,
+  getTodoItem as getTodoItemTool,
   listFiles as listFilesTool,
   listMemoryTopics as listMemoryTopicsTool,
+  listTodoItems as listTodoItemsTool,
   readBinaryFile,
   readFile as readFileTool,
   readMemory as readMemoryTool,
@@ -29,6 +31,7 @@ import {
   searchFiles,
   ToolResponseType,
   updateMemory as updateMemoryTool,
+  updateTodoItem as updateTodoItemTool,
   writeToFile as writeToFileTool,
 } from '@polka-codes/core'
 import {
@@ -75,6 +78,9 @@ const allTools = [
   searchFiles,
   writeToFileTool,
   gitDiff,
+  getTodoItemTool,
+  listTodoItemsTool,
+  updateTodoItemTool,
 ] as const
 const toolHandlers = new Map(allTools.map((t) => [t.name, t]))
 
