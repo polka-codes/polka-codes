@@ -398,6 +398,16 @@ async function getMemoryContext(_input: unknown, context: ToolCallContext) {
   return contextParts.join('\n')
 }
 
+async function readMemory(input: { topic?: string }, context: ToolCallContext): Promise<string> {
+  const provider: MemoryProvider = context.toolProvider
+  return (await provider.readMemory(input.topic)) ?? ''
+}
+
+async function listMemoryTopics(_input: unknown, context: ToolCallContext): Promise<string[]> {
+  const provider: MemoryProvider = context.toolProvider
+  return provider.listMemoryTopics()
+}
+
 async function updateMemory(
   input:
     | { operation: 'append'; topic?: string; content: string }
@@ -442,6 +452,8 @@ const localToolHandlers = {
   invokeTool,
   taskEvent,
   getMemoryContext,
+  readMemory,
+  listMemoryTopics,
   updateMemory,
   listTodoItems,
   getTodoItem,

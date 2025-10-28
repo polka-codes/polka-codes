@@ -17,6 +17,8 @@ export type CliToolRegistry = {
     { exitCode: number; stdout: string; stderr: string }
   >
   getMemoryContext: ToolSignature<void, string>
+  readMemory: ToolSignature<{ topic?: string }, string>
+  listMemoryTopics: ToolSignature<void, string[]>
   updateMemory: ToolSignature<
     | { operation: 'append'; topic?: string; content: string }
     | { operation: 'replace'; topic?: string; content: string }
