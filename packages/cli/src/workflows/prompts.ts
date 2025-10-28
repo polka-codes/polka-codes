@@ -8,6 +8,8 @@ ${JSON.stringify(schema, null, 2)}
 `
 }
 
+const TOOL_USAGE_INSTRUCTION = `When you use a tool, you MUST first provide a short summary of what you are doing and why you are using that tool. This summary will be shown to the user to explain your actions.`
+
 const MEMORY_USAGE_SECTION = `## Memory Usage
 
 You have access to a memory feature to store and retrieve information across tool calls.
@@ -24,6 +26,8 @@ Goal: Analyze user requests and create detailed, actionable implementation plans
 You are an expert software architect and planner with deep experience in breaking down complex requirements into actionable implementation plans.
 
 ${MEMORY_USAGE_SECTION}
+
+${TOOL_USAGE_INSTRUCTION}
 
 ## Your Role
 
@@ -214,6 +218,8 @@ You are an expert software architect specializing in creating high-level plans f
 
 ${MEMORY_USAGE_SECTION}
 
+${TOOL_USAGE_INSTRUCTION}
+
 ## Your Role
 
 As a high-level planner for epics, your expertise lies in:
@@ -359,6 +365,8 @@ ${planSection}`
 export const EPIC_ADD_TODO_ITEMS_SYSTEM_PROMPT = `Role: Task creation agent
 Goal: Read a high-level plan and create corresponding todo items.
 
+${TOOL_USAGE_INSTRUCTION}
+
 You are a task creation agent. Your responsibility is to read a high-level plan for an epic and create a todo item for each task in the plan.
 
 ## Your Task
@@ -379,6 +387,8 @@ Goal: Implement the provided plan by writing and modifying code.
 Your task is to implement the plan created and approved in Phase 1.
 
 ${MEMORY_USAGE_SECTION}
+
+${TOOL_USAGE_INSTRUCTION}
 
 ## Implementation Guidelines
 
@@ -455,6 +465,8 @@ You are an expert software developer. Your task is to fix a project that is fail
 
 ${MEMORY_USAGE_SECTION}
 
+${TOOL_USAGE_INSTRUCTION}
+
 After making changes, you MUST return a JSON object in a markdown block with either a summary of the changes OR a bailReason if you cannot complete the task.
 
 Example for successful fix:
@@ -490,6 +502,8 @@ ${stderr || '(empty)'}
 
 export const CODE_REVIEW_SYSTEM_PROMPT = `Role: Senior software engineer.
 Goal: Review code changes and provide specific, actionable feedback on any issues found.
+
+${TOOL_USAGE_INSTRUCTION}
 
 # Code Review Prompt
 
@@ -610,6 +624,8 @@ export function formatReviewToolInput(params: ReviewToolInput): string {
 export const COMMIT_MESSAGE_SYSTEM_PROMPT = `Role: Expert git user.
 Goal: Generate a concise and descriptive commit message in conventional commit format based on staged changes.
 
+${TOOL_USAGE_INSTRUCTION}
+
 You are an expert at writing git commit messages.
 Based on the provided list of staged files in <file_status>, the diff in <diff> and optional user context in <tool_input_context>, generate a concise and descriptive commit message.
 
@@ -623,6 +639,8 @@ ${createJsonResponseInstruction({
 export const GET_PR_DETAILS_SYSTEM_PROMPT = `Role: Expert developer.
 Goal: Generate a pull request title and description based on the branch name, commits, and diff.
 
+${TOOL_USAGE_INSTRUCTION}
+
 You are an expert at creating pull requests.
 Based on the provided branch name, commit messages, and diff, generate a title and description for the pull request.
 
@@ -635,6 +653,8 @@ ${createJsonResponseInstruction({
 export const INIT_WORKFLOW_ANALYZE_SYSTEM_PROMPT = `
 Role: Analyzer agent
 Goal: Produce a valid polkacodes YAML configuration for the project.
+
+${TOOL_USAGE_INSTRUCTION}
 
 Workflow
 1. Scan project files to identify the project's characteristics. Start using the "readFile" tool to understand the project's dependencies, scripts, and basic configuration.
