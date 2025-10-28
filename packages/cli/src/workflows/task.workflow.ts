@@ -29,7 +29,7 @@ export const taskWorkflow: WorkflowFn<TaskWorkflowInput, { success: boolean }, C
   const { task } = input
 
   logger.info(`
-🤖 Running generic agent...
+Running generic agent...
 `)
 
   await step('agent', async () => {
@@ -57,7 +57,7 @@ export const taskWorkflow: WorkflowFn<TaskWorkflowInput, { success: boolean }, C
   })
 
   logger.info(`
-✅ Agent finished!
+Agent finished!
 `)
 
   return { success: true }

@@ -110,7 +110,7 @@ async function createAndApprovePlan(
 ): Promise<{ plan: string; branchName: string } | null> {
   const { logger, step, tools } = context
 
-  logger.info('📝 Phase 2: Creating high-level plan...\n')
+  logger.info('Phase 2: Creating high-level plan...\n')
   let feedback: string | undefined
   let highLevelPlan: string | undefined | null
   let branchName: string
@@ -139,9 +139,9 @@ async function createAndApprovePlan(
         return null
       }
 
-      logger.info(`📝 Plan:\n${result.plan}`)
+      logger.info(`Plan:\n${result.plan}`)
       if (result.branchName) {
-        logger.info(`🌿 Suggested branch name: ${result.branchName}`)
+        logger.info(`Suggested branch name: ${result.branchName}`)
       }
       feedback = await tools.input({ message: 'Press Enter to approve the plan, or provide feedback to refine it.' })
       if (feedback.trim() === '') {
@@ -164,11 +164,11 @@ async function createAndApprovePlan(
   }
 
   if (!branchName) {
-    logger.error('❌ Error: No branch name was generated from the plan. Exiting.')
+    logger.error('Error: No branch name was generated from the plan. Exiting.')
     return null
   }
 
-  logger.info('✅ High-level plan approved.\n')
+  logger.info('High-level plan approved.\n')
   return { plan: highLevelPlan, branchName }
 }
 
@@ -178,7 +178,7 @@ async function createFeatureBranch(
 ): Promise<{ success: boolean; branchName: string | null }> {
   const { logger, step, tools } = context
 
-  logger.info('🌿 Phase 3: Creating feature branch...\n')
+  logger.info('Phase 3: Creating feature branch...\n')
 
   let finalBranchName = branchName
 
@@ -189,7 +189,7 @@ async function createFeatureBranch(
 
   if (initialCheckResult.exitCode === 0) {
     // Branch exists, find a new name
-    logger.warn(`⚠️  Branch '${finalBranchName}' already exists. Trying to find an available name...`)
+    logger.warn(`Warning: Branch '${finalBranchName}' already exists. Trying to find an available name...`)
 
     const suffixMatch = branchName.match(/-(\d+)$/)
     let baseName = branchName
@@ -219,7 +219,7 @@ async function createFeatureBranch(
   }
 
   await step('createBranch', async () => await tools.executeCommand({ command: 'git', args: ['checkout', '-b', finalBranchName] }))
-  logger.info(`✅ Branch '${finalBranchName}' created.\n`)
+  logger.info(`Branch '${finalBranchName}' created.\n`)
 
   return { success: true, branchName: finalBranchName }
 }
@@ -227,7 +227,7 @@ async function createFeatureBranch(
 async function addTodoItemsFromPlan(plan: string, context: WorkflowContext<CliToolRegistry>): Promise<void> {
   const { logger, step, tools } = context
 
-  logger.info('📝 Phase 4: Creating todo items from plan...\n')
+  logger.info('Phase 4: Creating todo items from plan...\n')
 
   await step('add-todo-items', async () => {
     await agentWorkflow(
@@ -241,33 +241,33 @@ async function addTodoItemsFromPlan(plan: string, context: WorkflowContext<CliTo
   })
 
   const todos = await tools.listTodoItems({})
-  logger.info(`✅ Created ${todos.length} todo items.\n`)
+  logger.info(`Created ${todos.length} todo items.\n`)
 }
 
 async function runPreflightChecks(context: WorkflowContext<CliToolRegistry>): Promise<{ success: boolean }> {
   const { logger, step, tools } = context
 
-  logger.info('📋 Phase 1: Running pre-flight checks...\n')
+  logger.info('Phase 1: Running pre-flight checks...\n')
 
   const gitCheckResult = await step('gitCheck', async () => tools.executeCommand({ command: 'git', args: ['rev-parse', '--git-dir'] }))
 
   if (gitCheckResult.exitCode !== 0) {
-    logger.error('❌ Error: Git is not initialized in this directory. Please run `git init` first.')
-    logger.info('💡 Suggestion: Run `git init` to initialize a git repository.\n')
+    logger.error('Error: Git is not initialized in this directory. Please run `git init` first.')
+    logger.info('Suggestion: Run `git init` to initialize a git repository.\n')
     return { success: false }
   }
 
   const gitStatusResult = await step('gitStatus', async () => tools.executeCommand({ command: 'git status --porcelain', shell: true }))
 
   if (gitStatusResult.stdout.trim() !== '') {
-    logger.error('❌ Error: Your working directory is not clean. Please stash or commit your changes before running the epic workflow.')
+    logger.error('Error: Your working directory is not clean. Please stash or commit your changes before running the epic workflow.')
     logger.info(
-      '💡 Suggestion: Run `git add .` and `git commit` to clean your working directory, or `git stash` to temporarily save changes.\n',
+      'Suggestion: Run `git add .` and `git commit` to clean your working directory, or `git stash` to temporarily save changes.\n',
     )
     return { success: false }
   }
 
-  logger.info('✅ Pre-flight checks passed.\n')
+  logger.info('Pre-flight checks passed.\n')
   return { success: true }
 }
 
@@ -284,11 +284,11 @@ async function performReviewAndFixCycle(
     const changedFiles = parseGitDiffNameStatus(diffResult.stdout)
 
     if (changedFiles.length === 0) {
-      logger.info('ℹ️  No files were changed. Skipping review.\n')
+      logger.info('No files were changed. Skipping review.\n')
       return { passed: true }
     }
 
-    logger.info(`\n🔎 Review iteration ${i + 1}/${MAX_REVIEW_RETRIES}`)
+    logger.info(`\nReview iteration ${i + 1}/${MAX_REVIEW_RETRIES}`)
     logger.info(`   Changed files: ${changedFiles.length}`)
 
     const changeInfo: ReviewToolInput = {
@@ -312,18 +312,18 @@ async function performReviewAndFixCycle(
     })
 
     if (reviewAgentResult.type !== ToolResponseType.Exit) {
-      logger.error(`🚫 Review agent failed with status: ${reviewAgentResult.type}.`)
+      logger.error(`Review agent failed with status: ${reviewAgentResult.type}.`)
       break
     }
 
     const reviewResult = reviewAgentResult.object as ReviewResult
 
     if (!reviewResult || !reviewResult.specificReviews || reviewResult.specificReviews.length === 0) {
-      logger.info('✅ Review passed. No issues found.\n')
+      logger.info('Review passed. No issues found.\n')
       return { passed: true }
     }
 
-    logger.warn(`⚠️  Review found ${reviewResult.specificReviews.length} issue(s). Attempting to fix...\n`)
+    logger.warn(`Warning: Review found ${reviewResult.specificReviews.length} issue(s). Attempting to fix...\n`)
     for (const [idx, review] of reviewResult.specificReviews.entries()) {
       logger.warn(`   ${idx + 1}. ${review.file}:${review.lines}`)
     }
@@ -352,7 +352,7 @@ ${reviewSummary}`
     })
 
     if (i === MAX_REVIEW_RETRIES - 1) {
-      logger.error(`\n🚫 Max retries (${MAX_REVIEW_RETRIES}) reached. Moving to the next task, but issues might remain.\n`)
+      logger.error(`\nMax retries (${MAX_REVIEW_RETRIES}) reached. Moving to the next task, but issues might remain.\n`)
       return { passed: false }
     }
   }
@@ -364,7 +364,7 @@ async function runImplementationLoop(context: WorkflowContext<CliToolRegistry>, 
   const { logger, step, tools } = context
   const commitMessages: string[] = []
 
-  logger.info('🚀 Phase 5: Iterative Implementation Loop...\n')
+  logger.info('Phase 5: Iterative Implementation Loop...\n')
   logger.info(`${'='.repeat(80)}\n`)
 
   let iterationCount = 0
@@ -388,9 +388,9 @@ async function runImplementationLoop(context: WorkflowContext<CliToolRegistry>, 
     iterationCount++
     const taskStartTime = Date.now()
 
-    logger.info(`\n${'━'.repeat(80)}`)
-    logger.info(`📌 Iteration ${iterationCount}`)
-    logger.info(`${'━'.repeat(80)}`)
+    logger.info(`\n${'-'.repeat(80)}`)
+    logger.info(`Iteration ${iterationCount}`)
+    logger.info(`${'-'.repeat(80)}`)
     logger.info(`${nextTask}\n`)
 
     await step(`task-${iterationCount}`, async () => {
@@ -420,9 +420,9 @@ Focus only on this item, but use the plan for context.`
     const taskElapsedTime = formatElapsedTime(taskElapsed)
 
     if (reviewPassed) {
-      logger.info(`✅ Iteration ${iterationCount} completed successfully (${taskElapsedTime})`)
+      logger.info(`Iteration ${iterationCount} completed successfully (${taskElapsedTime})`)
     } else {
-      logger.warn(`⚠️  Iteration ${iterationCount} completed with potential issues (${taskElapsedTime})`)
+      logger.warn(`Warning: Iteration ${iterationCount} completed with potential issues (${taskElapsedTime})`)
     }
 
     // Mark the current task as completed
@@ -461,18 +461,18 @@ Focus only on this item, but use the plan for context.`
       progressMessage = `Iteration ${iterationCount} completed`
     }
 
-    logger.info(`\n📊 Progress: ${progressMessage}`)
+    logger.info(`\nProgress: ${progressMessage}`)
 
     if (isComplete) {
-      logger.info('✅ All tasks complete!\n')
+      logger.info('All tasks complete!\n')
       break
     }
 
     if (nextTask) {
-      logger.info(`📌 Next task: ${nextTask}\n`)
+      logger.info(`Next task: ${nextTask}\n`)
     }
 
-    logger.info(`${'━'.repeat(80)}\n`)
+    logger.info(`${'-'.repeat(80)}\n`)
   }
   return commitMessages
 }
@@ -485,7 +485,7 @@ async function performFinalReviewAndFix(context: WorkflowContext<CliToolRegistry
   const ghCheckResult = await tools.executeCommand({ command: 'gh', args: ['--version'] })
   if (ghCheckResult.exitCode !== 0) {
     logger.warn(
-      '⚠️  GitHub CLI (gh) is not installed. Skipping final review step. Please install it from https://cli.github.com/ to enable final reviews.',
+      'Warning: GitHub CLI (gh) is not installed. Skipping final review step. Please install it from https://cli.github.com/ to enable final reviews.',
     )
     return { passed: true }
   }
@@ -500,7 +500,7 @@ async function performFinalReviewAndFix(context: WorkflowContext<CliToolRegistry
   const currentBranch = currentBranchResult.stdout.trim()
 
   if (currentBranch === defaultBranch) {
-    logger.info(`✅ You are on the default branch ('${defaultBranch}'). No final review needed.`)
+    logger.info(`You are on the default branch ('${defaultBranch}'). No final review needed.`)
     return { passed: true }
   }
 
@@ -511,11 +511,11 @@ async function performFinalReviewAndFix(context: WorkflowContext<CliToolRegistry
     const changedFiles = parseGitDiffNameStatus(diffResult.stdout)
 
     if (changedFiles.length === 0) {
-      logger.info('ℹ️  No files have been changed in this branch. Skipping final review.\n')
+      logger.info('No files have been changed in this branch. Skipping final review.\n')
       return { passed: true }
     }
 
-    logger.info(`\n🔎 Final review iteration ${i + 1}/${MAX_REVIEW_RETRIES}`)
+    logger.info(`\nFinal review iteration ${i + 1}/${MAX_REVIEW_RETRIES}`)
     logger.info(`   Changed files: ${changedFiles.length}`)
 
     const changeInfo: ReviewToolInput = {
@@ -539,18 +539,18 @@ async function performFinalReviewAndFix(context: WorkflowContext<CliToolRegistry
     })
 
     if (reviewAgentResult.type !== ToolResponseType.Exit) {
-      logger.error(`🚫 Review agent failed with status: ${reviewAgentResult.type}.`)
+      logger.error(`Review agent failed with status: ${reviewAgentResult.type}.`)
       break
     }
 
     const reviewResult = reviewAgentResult.object as ReviewResult
 
     if (!reviewResult || !reviewResult.specificReviews || reviewResult.specificReviews.length === 0) {
-      logger.info('✅ Final review passed. No issues found.\n')
+      logger.info('Final review passed. No issues found.\n')
       return { passed: true }
     }
 
-    logger.warn(`⚠️  Final review found ${reviewResult.specificReviews.length} issue(s). Attempting to fix...\n`)
+    logger.warn(`Warning: Final review found ${reviewResult.specificReviews.length} issue(s). Attempting to fix...\n`)
     for (const [idx, review] of reviewResult.specificReviews.entries()) {
       logger.warn(`   ${idx + 1}. ${review.file}:${review.lines}`)
     }
@@ -570,7 +570,7 @@ async function performFinalReviewAndFix(context: WorkflowContext<CliToolRegistry
     })
 
     if (i === MAX_REVIEW_RETRIES - 1) {
-      logger.error(`\n🚫 Max retries (${MAX_REVIEW_RETRIES}) reached for final review. Issues might remain.\n`)
+      logger.error(`\nMax retries (${MAX_REVIEW_RETRIES}) reached for final review. Issues might remain.\n`)
       return { passed: false }
     }
   }
@@ -586,7 +586,7 @@ export const epicWorkflow: WorkflowFn<EpicWorkflowInput, void, CliToolRegistry> 
   let branchName = ''
 
   if (!task || task.trim() === '') {
-    logger.error('❌ Error: Task cannot be empty. Please provide a valid task description.')
+    logger.error('Error: Task cannot be empty. Please provide a valid task description.')
     return
   }
 
@@ -621,20 +621,20 @@ export const epicWorkflow: WorkflowFn<EpicWorkflowInput, void, CliToolRegistry> 
     const iterationCount = commitMessages.length
 
     logger.info(`\n${'='.repeat(80)}`)
-    logger.info('🎉 Epic Workflow Complete!')
+    logger.info('Epic Workflow Complete!')
     logger.info(`${'='.repeat(80)}`)
-    logger.info('\n📊 Summary:')
+    logger.info('\nSummary:')
     logger.info(`   Total iterations: ${iterationCount}`)
     logger.info(`   Total commits: ${commitMessages.length}`)
     logger.info(`   Branch: ${branchName}`)
     logger.info(`   Total time: ${totalElapsedTime}`)
 
-    logger.info('📝 Commits created:')
+    logger.info('Commits created:')
     for (const [idx, msg] of commitMessages.entries()) {
       logger.info(`   ${idx + 1}. ${msg}`)
     }
   } catch (error) {
-    logger.error(`\n❌ Epic workflow failed: ${error instanceof Error ? error.message : String(error)}`)
+    logger.error(`\nEpic workflow failed: ${error instanceof Error ? error.message : String(error)}`)
     if (branchName) {
       logger.info(`\nBranch '${branchName}' was created but work is incomplete.`)
       logger.info(`To cleanup: git checkout <previous-branch> && git branch -D ${branchName}\n`)

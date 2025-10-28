@@ -64,7 +64,7 @@ export const codeWorkflow: WorkflowFn<
   const summaries: string[] = []
 
   // Planning phase
-  logger.info('\n📋 Phase 1: Creating implementation plan...\n')
+  logger.info('\nPhase 1: Creating implementation plan...\n')
   const planResult = await step('plan', async () => {
     return await planWorkflow({ task, files, mode: mode === 'interactive' ? 'confirm' : 'noninteractive' }, context)
   })
@@ -77,7 +77,7 @@ export const codeWorkflow: WorkflowFn<
   const { plan, files: planFiles } = planResult
 
   // Implementation phase
-  logger.info('\n⚙️  Phase 2: Implementing the plan...\n')
+  logger.info('\nPhase 2: Implementing the plan...\n')
 
   let implementPrompt = getImplementPrompt(plan)
   if (planFiles && planFiles.length > 0) {
@@ -150,12 +150,12 @@ export const codeWorkflow: WorkflowFn<
     const { summary, bailReason } = res.object as z.infer<typeof ImplementOutputSchema>
 
     if (bailReason) {
-      logger.error(`\n❌ Implementation failed: ${bailReason}\n`)
+      logger.error(`\nImplementation failed: ${bailReason}\n`)
       return { success: false, reason: bailReason, summaries }
     }
 
     if (summary) {
-      logger.info('\n✅ Implementation complete!\n')
+      logger.info('\nImplementation complete!\n')
       summaries.push(summary)
       logger.info(`Summary: ${summary}`)
       await step('summarize-implementation', async () => {
@@ -166,16 +166,16 @@ export const codeWorkflow: WorkflowFn<
         })
       })
     } else {
-      logger.info('\n✅ Implementation complete!\n')
+      logger.info('\nImplementation complete!\n')
     }
   } else if (res.type === ToolResponseType.Exit) {
-    logger.info('\n✅ Implementation complete!\n')
+    logger.info('\nImplementation complete!\n')
   } else {
-    logger.warn('\n⚠️ Implementation failed. Please check the output for errors.\n', res)
+    logger.warn('\nWarning: Implementation failed. Please check the output for errors.\n', res)
   }
 
   // Fixing phase
-  logger.info('\n🔧 Phase 3: Checking for errors...\n')
+  logger.info('\nPhase 3: Checking for errors...\n')
   const fixResult = await step('fix', async () => {
     return await fixWorkflow({ interactive: false, task: input.task }, context)
   })

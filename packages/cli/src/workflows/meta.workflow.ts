@@ -21,7 +21,7 @@ export const metaWorkflow: WorkflowFn<MetaWorkflowInput, void, CliToolRegistry> 
   const { task } = input
   const { logger } = context
 
-  logger.info(`\n🤔 Deciding which workflow to use for task...\n`)
+  logger.info(`\nDeciding which workflow to use for task...\n`)
 
   const result = await agentWorkflow(
     {
@@ -48,7 +48,7 @@ export const metaWorkflow: WorkflowFn<MetaWorkflowInput, void, CliToolRegistry> 
     throw new Error('Could not decide which workflow to run.')
   }
 
-  logger.info(`\n✅ Decision: Using '${decision.workflow}' workflow.`)
+  logger.info(`\nDecision: Using '${decision.workflow}' workflow.`)
 
   switch (decision.workflow) {
     case 'code':

@@ -184,7 +184,7 @@ describe('epicWorkflow', () => {
     // Assertions
     expect(mockContext.logger.error).not.toHaveBeenCalled()
     const infoLogs = (mockContext.logger.info as any).mock.calls.map((c: any) => c[0])
-    expect(infoLogs).toContain('🎉 Epic Workflow Complete!')
+    expect(infoLogs).toContain('Epic Workflow Complete!')
     expect(infoLogs).toContain('   Branch: feature/test-branch')
     expect(infoLogs).toContain('   1. feat: Implement feature A')
     expect(infoLogs).toContain('   2. feat: Implement feature B')
@@ -199,7 +199,7 @@ describe('epicWorkflow', () => {
     await epicWorkflow({ task: 'My new epic' }, mockContext)
 
     expect(mockContext.logger.error).toHaveBeenCalledWith(
-      '❌ Error: Your working directory is not clean. Please stash or commit your changes before running the epic workflow.',
+      'Error: Your working directory is not clean. Please stash or commit your changes before running the epic workflow.',
     )
     expect(agentWorkflowSpy).not.toHaveBeenCalled()
   })
