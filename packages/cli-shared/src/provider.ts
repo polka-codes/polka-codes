@@ -9,6 +9,27 @@ import { checkRipgrep } from './utils/checkRipgrep'
 import { listFiles } from './utils/listFiles'
 import { searchFiles } from './utils/searchFiles'
 
+export interface ProviderDataStore<T> {
+  read(): Promise<T | undefined>
+  write(data: T): Promise<void>
+}
+
+export interface TodoItemStore {
+  read(): Promise<TodoItem[]>
+  write(data: TodoItem[]): Promise<void>
+}
+
+export class InMemoryStore<T> implements ProviderDataStore<T> {
+  #data: T | undefined
+
+  async read() {
+    return this.#data
+  }
+
+  async write(data: T) {
+    this.#data = data
+  }
+}
 export type ProviderOptions = {
   command?: {
     onStarted(command: string): void
@@ -20,17 +41,20 @@ export type ProviderOptions = {
   excludeFiles?: string[]
   summarizeOutput?: (stdout: string, stderr: string) => Promise<string | undefined>
   summaryThreshold?: number
+  memoryStore?: ProviderDataStore<Record<string, string>>
+  todoItemStore?: ProviderDataStore<TodoItem[]>
 }
 
 export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
   const ig = ignore().add(options.excludeFiles ?? [])
-  const memoryStore: Record<string, string> = {}
-  const todoItems: TodoItem[] = []
+  const memoryStore = options.memoryStore ?? new InMemoryStore()
+  const todoItemStore = options.todoItemStore ?? new InMemoryStore()
 
   const defaultMemoryTopic = ':default:'
 
   const provider: ToolProvider = {
     listTodoItems: async (id?: string | null, status?: string | null) => {
+      const todoItems = (await todoItemStore.read()) ?? []
       let items: TodoItem[]
       if (!id) {
         items = todoItems.filter((i) => !i.id.includes('.'))
@@ -62,6 +86,7 @@ export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
       return items
     },
     getTodoItem: async (id) => {
+      const todoItems = (await todoItemStore.read()) ?? []
       const item = todoItems.find((i) => i.id === id)
       if (!item) {
         throw new Error(`To-do item with id ${id} not found`)
@@ -73,8 +98,9 @@ export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
       return { ...item, subItems }
     },
     updateTodoItem: async (input) => {
+      const todoItems = (await todoItemStore.read()) ?? []
       if (input.operation === 'add') {
-        const { parentId, title, description, relevantFileList } = input
+        const { parentId, title, description, relevantFileList, status } = input as any
         if (!title) {
           throw new Error('Title is required for add operation')
         }
@@ -87,19 +113,28 @@ export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
           const childItems = todoItems.filter(
             (i) => i.id.startsWith(`${parentId}.`) && i.id.split('.').length === parentId.split('.').length + 1,
           )
-          newId = `${parentId}.${childItems.length + 1}`
+          const maxId = childItems.reduce((max, item) => {
+            const parts = item.id.split('.')
+            const lastPart = parseInt(parts[parts.length - 1], 10)
+            return Math.max(max, lastPart)
+          }, 0)
+          newId = `${parentId}.${maxId + 1}`
         } else {
           const rootItems = todoItems.filter((i) => !i.id.includes('.'))
-          newId = `${rootItems.length + 1}`
+          const maxId = rootItems.reduce((max, item) => {
+            const idNum = parseInt(item.id, 10)
+            return Math.max(max, idNum)
+          }, 0)
+          newId = `${maxId + 1}`
         }
         const newItem: TodoItem = {
           id: newId,
           title,
           description: description ?? '',
           relevantFileList: relevantFileList ?? [],
-          status: 'open',
+          status: status ?? 'open',
         }
-        todoItems.push(newItem)
+        await todoItemStore.write([...todoItems, newItem])
         return { id: newId }
       } else {
         // update
@@ -123,14 +158,17 @@ export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
         if (input.status != null) {
           item.status = input.status
         }
+        await todoItemStore.write(todoItems)
         return { id }
       }
     },
     listMemoryTopics: async (): Promise<string[]> => {
-      return Object.keys(memoryStore)
+      const memory = (await memoryStore.read()) ?? {}
+      return Object.keys(memory)
     },
     readMemory: async (topic: string = defaultMemoryTopic): Promise<string | undefined> => {
-      return memoryStore[topic]
+      const memory = (await memoryStore.read()) ?? {}
+      return memory[topic]
     },
     updateMemory: async (
       operation: 'append' | 'replace' | 'remove',
@@ -138,23 +176,25 @@ export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
       content: string | undefined,
     ): Promise<void> => {
       const memoryTopic = topic ?? defaultMemoryTopic
+      const memory = (await memoryStore.read()) ?? {}
       switch (operation) {
         case 'append':
           if (content === undefined) {
             throw new Error('Content is required for append operation.')
           }
-          memoryStore[memoryTopic] = (memoryStore[memoryTopic] || '') + content
+          memory[memoryTopic] = (memory[memoryTopic] || '') + content
           break
         case 'replace':
           if (content === undefined) {
             throw new Error('Content is required for replace operation.')
           }
-          memoryStore[memoryTopic] = content
+          memory[memoryTopic] = content
           break
         case 'remove':
-          delete memoryStore[memoryTopic]
+          delete memory[memoryTopic]
           break
       }
+      await memoryStore.write(memory)
     },
     readFile: async (path: string, includeIgnored: boolean): Promise<string | undefined> => {
       if (!includeIgnored && ig.ignores(path)) {
