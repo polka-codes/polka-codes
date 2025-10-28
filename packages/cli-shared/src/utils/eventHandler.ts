@@ -38,6 +38,7 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter, stream: Writ
   }
   const customConsole = new Console(stream, stream)
   let hadReasoning = false
+  let hasText = false
   const write = stream.write.bind(stream)
   return (event: TaskEvent) => {
     switch (event.kind) {
@@ -49,6 +50,7 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter, stream: Writ
         }
         break
       case TaskEventKind.StartRequest:
+        hasText = false
         if (verbose > 0) {
           customConsole.log('\n\n======== New Request ========\n')
         }
@@ -97,6 +99,10 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter, stream: Writ
           customConsole.log('\n\n======== Request Ended ========\n')
         }
 
+        if (verbose === 0 && hasText) {
+          write('\n\n')
+        }
+
         if (verbose > 1) {
           customConsole.log(usageMeter.getUsageText())
         }
@@ -106,6 +112,9 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter, stream: Writ
         if (hadReasoning) {
           write('\n\n')
           hadReasoning = false
+        }
+        if (event.newText.trim().length > 0) {
+          hasText = true
         }
         write(event.newText)
         break
