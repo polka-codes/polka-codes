@@ -1,0 +1,121 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`simplifyToolParameters replaceInFile should simplify replaceInFile parameters 1`] = `
+{
+  "path": "src/main.ts",
+}
+`;
+
+exports[`simplifyToolParameters writeToFile should simplify writeToFile parameters 1`] = `
+{
+  "path": "src/app.ts",
+}
+`;
+
+exports[`simplifyToolParameters readFile should simplify readFile parameters 1`] = `
+{
+  "includeIgnored": false,
+  "path": [
+    "src/main.ts",
+    "src/utils.ts",
+  ],
+}
+`;
+
+exports[`simplifyToolParameters readFile should handle includeIgnored true 1`] = `
+{
+  "includeIgnored": true,
+  "path": [
+    "src/main.ts",
+  ],
+}
+`;
+
+exports[`simplifyToolParameters listFiles should simplify listFiles parameters with default maxCount 1`] = `
+{
+  "path": "src",
+  "recursive": true,
+}
+`;
+
+exports[`simplifyToolParameters listFiles should include maxCount when non-default 1`] = `
+{
+  "maxCount": 100,
+  "path": "src",
+  "recursive": false,
+}
+`;
+
+exports[`simplifyToolParameters searchFiles should return all searchFiles parameters 1`] = `
+{
+  "filePattern": "*.ts",
+  "path": "src",
+  "regex": "^import",
+}
+`;
+
+exports[`simplifyToolParameters executeCommand should simplify executeCommand parameters 1`] = `
+{
+  "command": "npm run build",
+  "requiresApproval": false,
+}
+`;
+
+exports[`simplifyToolParameters executeCommand should handle requiresApproval true 1`] = `
+{
+  "command": "rm -rf node_modules",
+  "requiresApproval": true,
+}
+`;
+
+exports[`simplifyToolParameters updateMemory should omit content from updateMemory parameters 1`] = `
+{
+  "operation": "append",
+  "topic": "context",
+}
+`;
+
+exports[`simplifyToolParameters updateMemory should handle replace operation 1`] = `
+{
+  "operation": "replace",
+  "topic": "notes",
+}
+`;
+
+exports[`simplifyToolParameters default fallback should use default fallback for unknown tools 1`] = `
+{
+  "anotherParam": 123,
+  "someParam": "value",
+}
+`;
+
+exports[`simplifyToolParameters default fallback should return all parameters for unregistered tool 1`] = `
+{
+  "config": {
+    "option1": true,
+    "option2": "test",
+  },
+  "data": [
+    1,
+    2,
+    3,
+  ],
+}
+`;
+
+exports[`simplifyToolParameters edge cases should handle undefined params 1`] = `{}`;
+
+exports[`simplifyToolParameters edge cases should handle null params 1`] = `{}`;
+
+exports[`simplifyToolParameters edge cases should handle empty params object 1`] = `
+{
+  "includeIgnored": undefined,
+  "path": undefined,
+}
+`;
+
+exports[`simplifyToolParameters edge cases should handle params with missing expected fields 1`] = `
+{
+  "path": undefined,
+}
+`;

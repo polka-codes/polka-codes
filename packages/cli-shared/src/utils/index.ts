@@ -1,5 +1,6 @@
 export * from './checkRipgrep'
 export * from './eventHandler'
 export * from './listFiles'
+export * from './parameterSimplifier'
 export * from './readMultiline'
 export * from './searchFiles'

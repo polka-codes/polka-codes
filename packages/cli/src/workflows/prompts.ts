@@ -384,9 +384,8 @@ Read the plan and for each task item in the plan, use the 'updateTodoItem' tool 
 
 ## Process
 
-1. Read the plan from memory using 'readMemory({ topic: "epic-plan" })'.
-2. Parse the plan to identify individual tasks. Tasks are usually checklist items like '- [ ] ...'.
-3. For each task, call 'updateTodoItem' with the task description as the 'title'.
+1. Parse the plan to identify individual tasks.
+2. For each task, call 'updateTodoItem' with the task description as the 'title'.
 `
 
 export const CODER_SYSTEM_PROMPT = `Role: AI developer.
