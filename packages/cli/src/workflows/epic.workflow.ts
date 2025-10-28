@@ -477,6 +477,107 @@ Focus only on this item, but use the plan for context.`
   return commitMessages
 }
 
+async function performFinalReviewAndFix(context: WorkflowContext<CliToolRegistry>, highLevelPlan: string): Promise<{ passed: boolean }> {
+  const { logger, step, tools } = context
+
+  logger.info('\nPhase 6: Final Review and Fixup...\n')
+
+  const ghCheckResult = await tools.executeCommand({ command: 'gh', args: ['--version'] })
+  if (ghCheckResult.exitCode !== 0) {
+    logger.warn(
+      '⚠️  GitHub CLI (gh) is not installed. Skipping final review step. Please install it from https://cli.github.com/ to enable final reviews.',
+    )
+    return { passed: true }
+  }
+
+  const defaultBranchResult = await tools.executeCommand({
+    command: 'gh',
+    args: ['repo', 'view', '--json', 'defaultBranchRef', '--jq', '.defaultBranchRef.name'],
+  })
+  const defaultBranch = defaultBranchResult.stdout.trim()
+
+  const currentBranchResult = await tools.executeCommand({ command: 'git', args: ['rev-parse', '--abbrev-ref', 'HEAD'] })
+  const currentBranch = currentBranchResult.stdout.trim()
+
+  if (currentBranch === defaultBranch) {
+    logger.info(`✅ You are on the default branch ('${defaultBranch}'). No final review needed.`)
+    return { passed: true }
+  }
+
+  const commitRange = `${defaultBranch}...${currentBranch}`
+
+  for (let i = 0; i < MAX_REVIEW_RETRIES; i++) {
+    const diffResult = await tools.executeCommand({ command: 'git', args: ['diff', '--name-status', commitRange] })
+    const changedFiles = parseGitDiffNameStatus(diffResult.stdout)
+
+    if (changedFiles.length === 0) {
+      logger.info('ℹ️  No files have been changed in this branch. Skipping final review.\n')
+      return { passed: true }
+    }
+
+    logger.info(`\n🔎 Final review iteration ${i + 1}/${MAX_REVIEW_RETRIES}`)
+    logger.info(`   Changed files: ${changedFiles.length}`)
+
+    const changeInfo: ReviewToolInput = {
+      commitRange,
+      changedFiles,
+    }
+
+    const reviewAgentResult = await step(`final-review-${i}`, async () => {
+      const defaultContext = await getDefaultContext()
+      const memoryContext = await tools.getMemoryContext()
+      const userMessage = `${defaultContext}\n${memoryContext}\n\n${formatReviewToolInput(changeInfo)}`
+      return await agentWorkflow(
+        {
+          systemPrompt: CODE_REVIEW_SYSTEM_PROMPT,
+          userMessage: [{ role: 'user', content: userMessage }],
+          tools: [readFile, readBinaryFile, searchFiles, listFiles, gitDiff, readMemory, updateMemory, listMemoryTopics],
+          outputSchema: reviewOutputSchema,
+        },
+        context,
+      )
+    })
+
+    if (reviewAgentResult.type !== ToolResponseType.Exit) {
+      logger.error(`🚫 Review agent failed with status: ${reviewAgentResult.type}.`)
+      break
+    }
+
+    const reviewResult = reviewAgentResult.object as ReviewResult
+
+    if (!reviewResult || !reviewResult.specificReviews || reviewResult.specificReviews.length === 0) {
+      logger.info('✅ Final review passed. No issues found.\n')
+      return { passed: true }
+    }
+
+    logger.warn(`⚠️  Final review found ${reviewResult.specificReviews.length} issue(s). Attempting to fix...\n`)
+    for (const [idx, review] of reviewResult.specificReviews.entries()) {
+      logger.warn(`   ${idx + 1}. ${review.file}:${review.lines}`)
+    }
+    logger.warn('')
+
+    const reviewSummary = reviewResult.specificReviews.map((r) => `File: ${r.file} (lines: ${r.lines})\nReview: ${r.review}`).join('\n\n')
+
+    const fixTask = `You are working on an epic. The original task was to implement a feature based on this plan:\n\n<plan>\n${highLevelPlan}\n</plan>\n\nA final review of all the changes in the branch found the following issues. Please fix them:\n\n${reviewSummary}`
+
+    await step(`final-fix-${i}`, async () => {
+      await codeWorkflow({ task: fixTask, mode: 'noninteractive' }, context)
+    })
+
+    await step(`commit-final-fix-${i}`, async () => {
+      await tools.executeCommand({ command: 'git', args: ['add', '.'] })
+      await tools.executeCommand({ command: 'git', args: ['commit', '-m', 'chore: apply automated review feedback'] })
+    })
+
+    if (i === MAX_REVIEW_RETRIES - 1) {
+      logger.error(`\n🚫 Max retries (${MAX_REVIEW_RETRIES}) reached for final review. Issues might remain.\n`)
+      return { passed: false }
+    }
+  }
+
+  return { passed: false }
+}
+
 export const epicWorkflow: WorkflowFn<EpicWorkflowInput, void, CliToolRegistry> = async (input, context) => {
   const { logger } = context
   const { task } = input
@@ -512,6 +613,8 @@ export const epicWorkflow: WorkflowFn<EpicWorkflowInput, void, CliToolRegistry> 
     await addTodoItemsFromPlan(highLevelPlan, context)
 
     const commitMessages = await runImplementationLoop(context, highLevelPlan)
+
+    await performFinalReviewAndFix(context, highLevelPlan)
 
     const totalElapsed = Date.now() - workflowStartTime
     const totalElapsedTime = formatElapsedTime(totalElapsed)
