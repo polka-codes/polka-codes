@@ -10,6 +10,7 @@ import {
   readFile,
   readMemory,
   searchFiles,
+  type TodoItem,
   ToolResponseType,
   updateMemory,
   updateTodoItem,
@@ -20,6 +21,7 @@ import { UserCancelledError } from '../errors'
 import { gitDiff } from '../tools'
 import type { CliToolRegistry } from '../workflow-tools'
 import { codeWorkflow, type JsonFilePart, type JsonImagePart } from './code.workflow'
+import { type EpicContext, saveEpicContext } from './epic-context'
 import {
   CODE_REVIEW_SYSTEM_PROMPT,
   EPIC_ADD_TODO_ITEMS_SYSTEM_PROMPT,
@@ -35,6 +37,7 @@ const MAX_REVIEW_RETRIES = 5
 
 export type EpicWorkflowInput = {
   task: string
+  epicContext?: EpicContext
 }
 
 type CreatePlanOutput = z.infer<typeof EpicPlanSchema>
@@ -178,50 +181,48 @@ async function createFeatureBranch(
 ): Promise<{ success: boolean; branchName: string | null }> {
   const { logger, step, tools } = context
 
-  logger.info('Phase 3: Creating feature branch...\n')
+  logger.info('Phase 3: Creating/switching to feature branch...\n')
 
-  let finalBranchName = branchName
-
-  const initialCheckResult = await step(
-    'checkBranch-initial',
-    async () => await tools.executeCommand({ command: 'git', args: ['rev-parse', '--verify', finalBranchName] }),
+  const branchExistsResult = await step(
+    'checkBranchExists',
+    async () => await tools.executeCommand({ command: 'git', args: ['rev-parse', '--verify', branchName] }),
   )
 
-  if (initialCheckResult.exitCode === 0) {
-    // Branch exists, find a new name
-    logger.warn(`Warning: Branch '${finalBranchName}' already exists. Trying to find an available name...`)
+  if (branchExistsResult.exitCode === 0) {
+    // Branch exists
+    const currentBranchResult = await step('getCurrentBranch', async () =>
+      tools.executeCommand({ command: 'git', args: ['rev-parse', '--abbrev-ref', 'HEAD'] }),
+    )
+    const currentBranch = currentBranchResult.stdout.trim()
 
-    const suffixMatch = branchName.match(/-(\d+)$/)
-    let baseName = branchName
-    let counter = 2
-    if (suffixMatch) {
-      baseName = branchName.substring(0, suffixMatch.index)
-      counter = parseInt(suffixMatch[1], 10) + 1
-    }
-
-    while (true) {
-      finalBranchName = `${baseName}-${counter}`
-      const branchCheckResult = await step(
-        `checkBranch-${counter}`,
-        async () => await tools.executeCommand({ command: 'git', args: ['rev-parse', '--verify', finalBranchName] }),
+    if (currentBranch !== branchName) {
+      logger.info(`Branch '${branchName}' already exists. Switching to it...`)
+      const checkoutResult = await step(
+        'checkoutBranch',
+        async () => await tools.executeCommand({ command: 'git', args: ['checkout', branchName] }),
       )
-
-      if (branchCheckResult.exitCode !== 0) {
-        // Branch doesn't exist, we can use this name
-        break
+      if (checkoutResult.exitCode !== 0) {
+        logger.error(`Error: Failed to switch to branch '${branchName}'. Git command failed.`)
+        return { success: false, branchName: null }
       }
-      counter++
+    } else {
+      logger.info(`Already on branch '${branchName}'.`)
+    }
+  } else {
+    // Branch does not exist, create it
+    logger.info(`Creating new branch '${branchName}'...`)
+    const createBranchResult = await step(
+      'createBranch',
+      async () => await tools.executeCommand({ command: 'git', args: ['checkout', '-b', branchName] }),
+    )
+    if (createBranchResult.exitCode !== 0) {
+      logger.error(`Error: Failed to create branch '${branchName}'. Git command failed.`)
+      return { success: false, branchName: null }
     }
   }
 
-  if (finalBranchName !== branchName) {
-    logger.info(`Branch name '${branchName}' was taken. Using '${finalBranchName}' instead.`)
-  }
-
-  await step('createBranch', async () => await tools.executeCommand({ command: 'git', args: ['checkout', '-b', finalBranchName] }))
-  logger.info(`Branch '${finalBranchName}' created.\n`)
-
-  return { success: true, branchName: finalBranchName }
+  logger.info(`Successfully on branch '${branchName}'.\n`)
+  return { success: true, branchName: branchName }
 }
 
 async function addTodoItemsFromPlan(plan: string, context: WorkflowContext<CliToolRegistry>): Promise<void> {
@@ -244,7 +245,7 @@ async function addTodoItemsFromPlan(plan: string, context: WorkflowContext<CliTo
   logger.info(`Created ${todos.length} todo items.\n`)
 }
 
-async function runPreflightChecks(context: WorkflowContext<CliToolRegistry>): Promise<{ success: boolean }> {
+async function runPreflightChecks(epicContext: EpicContext, context: WorkflowContext<CliToolRegistry>) {
   const { logger, step, tools } = context
 
   logger.info('Phase 1: Running pre-flight checks...\n')
@@ -254,7 +255,26 @@ async function runPreflightChecks(context: WorkflowContext<CliToolRegistry>): Pr
   if (gitCheckResult.exitCode !== 0) {
     logger.error('Error: Git is not initialized in this directory. Please run `git init` first.')
     logger.info('Suggestion: Run `git init` to initialize a git repository.\n')
-    return { success: false }
+    return false
+  }
+
+  if (epicContext.plan) {
+    logger.info('Found an existing `.epic.yml` file.')
+
+    if (epicContext.branchName) {
+      const currentBranchResult = await step('getCurrentBranch', async () =>
+        tools.executeCommand({ command: 'git', args: ['rev-parse', '--abbrev-ref', 'HEAD'] }),
+      )
+      const currentBranch = currentBranchResult.stdout.trim()
+      if (currentBranch !== epicContext.branchName) {
+        throw new Error(
+          `You are on branch '${currentBranch}' but the epic was started on branch '${epicContext.branchName}'. Please switch to the correct branch to resume.`,
+        )
+      }
+    }
+
+    logger.info('Resuming previous epic session.')
+    return true
   }
 
   const gitStatusResult = await step('gitStatus', async () => tools.executeCommand({ command: 'git status --porcelain', shell: true }))
@@ -264,11 +284,11 @@ async function runPreflightChecks(context: WorkflowContext<CliToolRegistry>): Pr
     logger.info(
       'Suggestion: Run `git add .` and `git commit` to clean your working directory, or `git stash` to temporarily save changes.\n',
     )
-    return { success: false }
+    return false
   }
 
   logger.info('Pre-flight checks passed.\n')
-  return { success: true }
+  return true
 }
 
 async function performReviewAndFixCycle(
@@ -451,7 +471,7 @@ Focus only on this item, but use the plan for context.`
     }
 
     const allTodos = await tools.listTodoItems({})
-    const completedTodos = allTodos.filter((t) => t.status === 'completed').length
+    const completedTodos = allTodos.filter((t: TodoItem) => t.status === 'completed').length
     const totalTodos = allTodos.length
 
     let progressMessage = ''
@@ -579,65 +599,98 @@ async function performFinalReviewAndFix(context: WorkflowContext<CliToolRegistry
 }
 
 export const epicWorkflow: WorkflowFn<EpicWorkflowInput, void, CliToolRegistry> = async (input, context) => {
-  const { logger } = context
-  const { task } = input
+  const { logger, tools } = context
+  const { task, epicContext = {} } = input
 
   const workflowStartTime = Date.now()
-  let branchName = ''
 
   if (!task || task.trim() === '') {
     logger.error('Error: Task cannot be empty. Please provide a valid task description.')
     return
   }
 
+  if (!epicContext.task) {
+    epicContext.task = task
+  }
+
   try {
-    const preflightResult = await runPreflightChecks(context)
-    if (!preflightResult.success) {
+    const preflightResult = await runPreflightChecks(epicContext, context)
+    if (!preflightResult) {
       return
     }
 
-    const planResult = await createAndApprovePlan(task, context)
-    if (!planResult) {
+    if (!epicContext.plan) {
+      if (!epicContext.task) {
+        // Should not happen based on logic above, but for type safety
+        logger.error('Error: Task is missing in epic context. Exiting.')
+        return
+      }
+      const planResult = await createAndApprovePlan(epicContext.task, context)
+      if (!planResult) return
+      epicContext.plan = planResult.plan
+      epicContext.branchName = planResult.branchName
+      await saveEpicContext(epicContext)
+    }
+
+    if (!epicContext.plan) {
+      // This should not happen if plan was created successfully, but as a safeguard:
+      logger.error('Error: Plan is missing after planning phase. Exiting.')
       return
     }
 
-    const { plan: highLevelPlan } = planResult
-    branchName = planResult.branchName
-
-    const branchResult = await createFeatureBranch(branchName, context)
-    if (!branchResult.success || !branchResult.branchName) {
+    if (!epicContext.branchName) {
+      // This should not happen if plan was created successfully, but as a safeguard:
+      logger.error('Error: Branch name is missing after planning phase. Exiting.')
       return
     }
-    branchName = branchResult.branchName
 
-    await addTodoItemsFromPlan(highLevelPlan, context)
+    const branchResult = await createFeatureBranch(epicContext.branchName, context)
+    if (!branchResult.success || !branchResult.branchName) return
+    if (epicContext.branchName !== branchResult.branchName) {
+      epicContext.branchName = branchResult.branchName
+      await saveEpicContext(epicContext)
+    }
 
-    const commitMessages = await runImplementationLoop(context, highLevelPlan)
+    const todos = await tools.listTodoItems({})
+    if (todos.length === 0) {
+      await addTodoItemsFromPlan(epicContext.plan, context)
+    }
 
-    await performFinalReviewAndFix(context, highLevelPlan)
+    const commitMessages = await runImplementationLoop(context, epicContext.plan)
+
+    await performFinalReviewAndFix(context, epicContext.plan)
+
+    // Cleanup .epic.yml
+    await tools.executeCommand({ command: 'git', args: ['rm', '-f', '.epic.yml'] })
+    const statusResult = await tools.executeCommand({
+      command: 'git',
+      args: ['status', '--porcelain', '--', '.epic.yml'],
+    })
+    if (statusResult.stdout.trim() !== '') {
+      await tools.executeCommand({ command: 'git', args: ['commit', '-m', 'chore: remove .epic.yml', '--', '.epic.yml'] })
+      logger.info('Cleaned up .epic.yml file.')
+    }
 
     const totalElapsed = Date.now() - workflowStartTime
     const totalElapsedTime = formatElapsedTime(totalElapsed)
-    const iterationCount = commitMessages.length
 
     logger.info(`\n${'='.repeat(80)}`)
     logger.info('Epic Workflow Complete!')
     logger.info(`${'='.repeat(80)}`)
     logger.info('\nSummary:')
-    logger.info(`   Total iterations: ${iterationCount}`)
-    logger.info(`   Total commits: ${commitMessages.length}`)
-    logger.info(`   Branch: ${branchName}`)
+    logger.info(`   Branch: ${epicContext.branchName}`)
     logger.info(`   Total time: ${totalElapsedTime}`)
-
+    logger.info(`   Total commits: ${commitMessages.length}`)
     logger.info('Commits created:')
     for (const [idx, msg] of commitMessages.entries()) {
       logger.info(`   ${idx + 1}. ${msg}`)
     }
   } catch (error) {
     logger.error(`\nEpic workflow failed: ${error instanceof Error ? error.message : String(error)}`)
-    if (branchName) {
-      logger.info(`\nBranch '${branchName}' was created but work is incomplete.`)
-      logger.info(`To cleanup: git checkout <previous-branch> && git branch -D ${branchName}\n`)
+    // Avoid cleanup instructions if we don't have a branch name
+    if (epicContext?.branchName) {
+      logger.info(`\nBranch '${epicContext.branchName}' was created but work is incomplete.`)
+      logger.info(`To cleanup: git checkout <previous-branch> && git branch -D ${epicContext.branchName}\n`)
     }
     throw error
   }

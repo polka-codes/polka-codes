@@ -8,7 +8,14 @@ ${JSON.stringify(schema, null, 2)}
 `
 }
 
-const TOOL_USAGE_INSTRUCTION = `When you use a tool, you MUST first provide a short summary of what you are doing and why you are using that tool. This summary will be shown to the user to explain your actions.`
+const TOOL_USAGE_INSTRUCTION = `Before any tool call, emit a single high-level action line.
+
+STYLE CONSTRAINTS:
+- NO filler or preambles.
+- DO NOT use "ok", "okay", "alright".
+- DO NOT use first person ("I", "I'm", "I will", "I'll", etc.).
+- NO apologies, hedging, or promises about later work.
+`
 
 const MEMORY_USAGE_SECTION = `## Memory Usage
 
