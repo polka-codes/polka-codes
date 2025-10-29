@@ -100,7 +100,7 @@ export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
     updateTodoItem: async (input) => {
       const todoItems = (await todoItemStore.read()) ?? []
       if (input.operation === 'add') {
-        const { parentId, title, description, relevantFileList, status } = input as any
+        const { parentId, title, description, status } = input
         if (!title) {
           throw new Error('Title is required for add operation')
         }
@@ -131,7 +131,6 @@ export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
           id: newId,
           title,
           description: description ?? '',
-          relevantFileList: relevantFileList ?? [],
           status: status ?? 'open',
         }
         await todoItemStore.write([...todoItems, newItem])
@@ -151,9 +150,6 @@ export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
         }
         if (input.description != null) {
           item.description = input.description ?? ''
-        }
-        if (input.relevantFileList != null) {
-          item.relevantFileList = input.relevantFileList
         }
         if (input.status != null) {
           item.status = input.status

@@ -5,11 +5,11 @@ import type { TodoItem } from './todo'
 
 describe('listTodoItems', () => {
   const mockTodos: TodoItem[] = [
-    { id: '10', title: 'item 10', description: '', relevantFileList: [], status: 'open' },
-    { id: '2', title: 'item 2', description: '', relevantFileList: [], status: 'completed' },
-    { id: '1.2', title: 'sub-item 1.2', description: '', relevantFileList: [], status: 'completed' },
-    { id: '1.1', title: 'sub-item 1.1', description: '', relevantFileList: [], status: 'open' },
-    { id: '1', title: 'item 1', description: '', relevantFileList: [], status: 'open' },
+    { id: '10', title: 'item 10', description: '', status: 'open' },
+    { id: '2', title: 'item 2', description: '', status: 'completed' },
+    { id: '1.2', title: 'sub-item 1.2', description: '', status: 'completed' },
+    { id: '1.1', title: 'sub-item 1.1', description: '', status: 'open' },
+    { id: '1', title: 'item 1', description: '', status: 'open' },
   ]
 
   const createMockProvider = (items: TodoItem[]): TodoProvider => ({

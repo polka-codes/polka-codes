@@ -6,7 +6,6 @@ export const TodoItemSchema = z.object({
   id: z.string(),
   title: z.string(),
   description: z.string(),
-  relevantFileList: z.array(z.string()),
   status: TodoStatus,
 })
 
@@ -19,7 +18,6 @@ export const UpdateTodoItemInputSchema = z
     parentId: z.string().nullish(),
     title: z.string().nullish(),
     description: z.string().nullish(),
-    relevantFileList: z.array(z.string()).nullish(),
     status: TodoStatus.nullish(),
   })
   .superRefine((data, ctx) => {

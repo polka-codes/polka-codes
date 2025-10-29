@@ -59,9 +59,9 @@ export type ToolProvider = FilesystemProvider &
 export class MockProvider implements ToolProvider {
   async listTodoItems(id?: string | null, _status?: string | null) {
     if (id) {
-      return [{ id: `${id}-1`, title: 'mock sub item', status: 'open' as const, description: '', relevantFileList: [] }]
+      return [{ id: `${id}-1`, title: 'mock sub item', status: 'open' as const, description: '' }]
     }
-    return [{ id: '1', title: 'mock item', status: 'open' as const, description: '', relevantFileList: [] }]
+    return [{ id: '1', title: 'mock item', status: 'open' as const, description: '' }]
   }
 
   async getTodoItem(id: string): Promise<GetTodoItemOutput | undefined> {
@@ -69,7 +69,6 @@ export class MockProvider implements ToolProvider {
       id,
       title: 'mock item',
       description: 'mock desc',
-      relevantFileList: [],
       status: 'open' as const,
       subItems: [],
     }
