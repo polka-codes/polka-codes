@@ -35,6 +35,8 @@ import { formatElapsedTime, getDefaultContext, parseGitDiffNameStatus, type Revi
 
 const MAX_REVIEW_RETRIES = 5
 
+const TODO_HANDLING_INSTRUCTIONS = `If you discover that a task is larger than you thought, or that a new task is required, you can add a // TODO comment in the code and create a todo item for it. This will allow you to continue with the current task and address the larger issue later.`
+
 export type EpicWorkflowInput = {
   task: string
   epicContext?: EpicContext
@@ -363,7 +365,15 @@ After an initial implementation, a review found the following issues. Please fix
 ${reviewSummary}`
 
     await step(`fix-${iterationCount}-${i}`, async () => {
-      await codeWorkflow({ task: fixTask, mode: 'noninteractive' }, context)
+      await codeWorkflow(
+        {
+          task: fixTask,
+          mode: 'noninteractive',
+          additionalInstructions: TODO_HANDLING_INSTRUCTIONS,
+          additionalTools: [getTodoItem, listTodoItems, updateTodoItem],
+        },
+        context,
+      )
     })
 
     await step(`commit-fix-${iterationCount}-${i}`, async () => {
@@ -424,7 +434,15 @@ Your current task is to implement this specific item:
 ${nextTask}
 
 Focus only on this item, but use the plan for context.`
-      return await codeWorkflow({ task: taskWithContext, mode: 'noninteractive' }, context)
+      return await codeWorkflow(
+        {
+          task: taskWithContext,
+          mode: 'noninteractive',
+          additionalInstructions: TODO_HANDLING_INSTRUCTIONS,
+          additionalTools: [getTodoItem, listTodoItems, updateTodoItem],
+        },
+        context,
+      )
     })
 
     const commitMessage = `feat: ${nextTask}`
@@ -581,7 +599,15 @@ async function performFinalReviewAndFix(context: WorkflowContext<CliToolRegistry
     const fixTask = `You are working on an epic. The original task was to implement a feature based on this plan:\n\n<plan>\n${highLevelPlan}\n</plan>\n\nA final review of all the changes in the branch found the following issues. Please fix them:\n\n${reviewSummary}`
 
     await step(`final-fix-${i}`, async () => {
-      await codeWorkflow({ task: fixTask, mode: 'noninteractive' }, context)
+      await codeWorkflow(
+        {
+          task: fixTask,
+          mode: 'noninteractive',
+          additionalInstructions: TODO_HANDLING_INSTRUCTIONS,
+          additionalTools: [getTodoItem, listTodoItems, updateTodoItem],
+        },
+        context,
+      )
     })
 
     await step(`commit-final-fix-${i}`, async () => {

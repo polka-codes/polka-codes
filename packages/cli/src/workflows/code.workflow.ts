@@ -52,6 +52,8 @@ export type CodeWorkflowInput = {
   task: string
   files?: (JsonFilePart | JsonImagePart)[]
   mode?: 'interactive' | 'noninteractive'
+  additionalTools?: FullToolInfo[]
+  additionalInstructions?: string
 }
 
 export const codeWorkflow: WorkflowFn<
@@ -60,7 +62,7 @@ export const codeWorkflow: WorkflowFn<
   CliToolRegistry
 > = async (input, context) => {
   const { logger, step, tools } = context
-  const { task, files, mode = 'interactive' } = input
+  const { task, files, mode = 'interactive', additionalTools, additionalInstructions } = input
   const summaries: string[] = []
 
   // Planning phase
@@ -122,6 +124,9 @@ export const codeWorkflow: WorkflowFn<
   if (mode === 'interactive') {
     agentTools.push(askFollowupQuestion)
   }
+  if (additionalTools) {
+    agentTools.push(...additionalTools)
+  }
 
   const res = await step('implement', async () => {
     const defaultContext = await getDefaultContext()
@@ -135,9 +140,10 @@ export const codeWorkflow: WorkflowFn<
         text: `${defaultContext}\n${memoryContext}`,
       })
     }
+    const systemPrompt = additionalInstructions ? `${CODER_SYSTEM_PROMPT}\n\n${additionalInstructions}` : CODER_SYSTEM_PROMPT
     return await agentWorkflow(
       {
-        systemPrompt: CODER_SYSTEM_PROMPT,
+        systemPrompt,
         userMessage: [{ role: 'user', content: userContent }],
         tools: agentTools,
         outputSchema: ImplementOutputSchema,
