@@ -151,7 +151,7 @@ Reviews a GitHub pull request or local changes, providing feedback and optionall
 -   `--pr <pr>`: The pull request number or URL to review.
 -   `--json`: Outputs the review in JSON format.
 -   `-y, --yes`: Automatically applies review feedback without prompting.
--   `--loop [count]`: Specifies the total number of review runs, applying feedback between each. Defaults to 3 if `[count]` is omitted.
+-   `--loop [count]`: Run review in a loop, applying feedback between runs. Defaults to 3 loops if `[count]` is omitted. Runs once without the flag.
 
 **Examples:**
 -   `polka review`
