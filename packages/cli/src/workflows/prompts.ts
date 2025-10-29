@@ -8,9 +8,12 @@ ${JSON.stringify(schema, null, 2)}
 `
 }
 
-const TOOL_USAGE_INSTRUCTION = `Before any tool call, emit a single high-level action line.
+const TOOL_USAGE_INSTRUCTION = `
+## Action Line
 
-STYLE CONSTRAINTS:
+Before any tool call, emit a single high-level action line.
+
+You MUST follow these style constraints for the action line:
 - NO filler or preambles.
 - DO NOT use "ok", "okay", "alright".
 - DO NOT use first person ("I", "I'm", "I will", "I'll", etc.).
