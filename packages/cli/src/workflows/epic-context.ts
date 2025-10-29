@@ -10,6 +10,7 @@ export const EpicContextSchema = z.object({
   task: z.string().nullish(),
   plan: z.string().nullish(),
   branchName: z.string().nullish(),
+  baseBranch: z.string().nullish(),
   todos: z.array(TodoItemSchema).nullish(),
   memory: z.record(z.string(), z.string()).nullish(),
 })

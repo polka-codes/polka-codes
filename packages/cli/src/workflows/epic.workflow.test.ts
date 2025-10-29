@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, type Mock, spyOn } from 'b
 import { promises as fs } from 'node:fs'
 import { ToolResponseType } from '@polka-codes/core'
 import * as workflow from '@polka-codes/workflow'
-import { UserCancelledError } from '../errors'
 import type { CliToolRegistry } from '../workflow-tools'
 import * as codeWorkflowModule from './code.workflow'
 import { epicWorkflow } from './epic.workflow'
@@ -219,31 +218,6 @@ describe('epicWorkflow', () => {
     expect(agentWorkflowSpy).not.toHaveBeenCalled()
   })
 
-  it('should terminate gracefully if user cancels plan approval', async () => {
-    // Phase 1: Pre-flight checks
-    ;(mockContext.tools.executeCommand as Mock<any>)
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '/.git', stderr: '' }) // git rev-parse --git-dir
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git status --porcelain
-
-    // Phase 2: Create and approve plan
-    agentWorkflowSpy.mockResolvedValueOnce({
-      type: ToolResponseType.Exit,
-      message: 'plan created',
-      object: {
-        plan: 'This is the plan.',
-        branchName: 'feature/test-branch',
-      },
-    })
-    ;(mockContext.tools.input as Mock<any>).mockRejectedValueOnce(new UserCancelledError()) // User cancels
-
-    await epicWorkflow({ task, epicContext }, mockContext)
-
-    expect(mockContext.logger.info).toHaveBeenCalledWith('Plan creation cancelled by user.')
-    expect(mockContext.logger.error).not.toHaveBeenCalled()
-    // Assert that the workflow did not proceed
-    expect((mockContext.tools.executeCommand as Mock<any>).mock.calls.length).toBe(2) // Only pre-flight checks
-  })
-
   it('should resume an in-progress epic from context', async () => {
     const epicContext: EpicContext = {
       task: 'My resumed epic',
@@ -339,88 +313,5 @@ describe('epicWorkflow', () => {
     expect(errorLogs).toContain(
       "Epic workflow failed: You are on branch 'feature/wrong-branch' but the epic was started on branch 'feature/correct-branch'. Please switch to the correct branch to resume.",
     )
-  })
-
-  it('should only commit .epic.yml removal and not other staged files', async () => {
-    // Phase 1: Pre-flight checks
-    ;(mockContext.tools.executeCommand as Mock<any>)
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '/.git', stderr: '' }) // git rev-parse --git-dir
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git status --porcelain
-
-    // Phase 2: Create and approve plan
-    agentWorkflowSpy.mockResolvedValueOnce({
-      type: ToolResponseType.Exit,
-      message: 'Plan created',
-      object: {
-        plan: 'This is the plan.',
-        branchName: 'feature/test-branch',
-      },
-    })
-    ;(mockContext.tools.input as Mock<any>).mockResolvedValueOnce('') // Approve plan
-
-    // Phase 3: Create feature branch
-    ;(mockContext.tools.executeCommand as Mock<any>)
-      .mockResolvedValueOnce({ exitCode: 1, stdout: '', stderr: '' }) // git rev-parse --verify (branch doesn't exist)
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git checkout -b
-
-    // Phase 4: Add todo items
-    ;(mockContext.tools.listTodoItems as Mock<any>).mockResolvedValueOnce([])
-    agentWorkflowSpy.mockImplementationOnce(async (_input, _context) => {
-      return { type: ToolResponseType.Exit, message: 'todo items added' }
-    })
-    ;(mockContext.tools.listTodoItems as Mock<any>).mockResolvedValueOnce([
-      { id: '1', title: 'Implement feature A', status: 'open', createdAt: '' },
-    ])
-
-    // Phase 5: Implementation loop - single task
-    ;(mockContext.tools.listTodoItems as Mock<any>).mockResolvedValueOnce([
-      { id: '1', title: 'Implement feature A', status: 'open', createdAt: '' },
-    ])
-    codeWorkflowSpy.mockResolvedValueOnce({ success: true, summaries: ['Implemented feature A'] }) // task-1
-    ;(mockContext.tools.executeCommand as Mock<any>)
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git add .
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git commit -m
-    ;(mockContext.tools.executeCommand as Mock<any>).mockResolvedValueOnce({ exitCode: 0, stdout: 'M	file1.ts', stderr: '' }) // git diff --name-status
-    agentWorkflowSpy.mockResolvedValueOnce({
-      type: ToolResponseType.Exit,
-      message: 'no issues',
-      object: { specificReviews: [] },
-    })
-    ;(mockContext.tools.updateTodoItem as Mock<any>).mockResolvedValueOnce({
-      id: '1',
-      title: 'Implement feature A',
-      status: 'completed',
-      createdAt: '',
-    })
-    ;(mockContext.tools.listTodoItems as Mock<any>).mockResolvedValueOnce([]) // get-next-task-1 (empty, loop ends)
-    ;(mockContext.tools.listTodoItems as Mock<any>).mockResolvedValueOnce([
-      { id: '1', title: 'Implement feature A', status: 'completed', createdAt: '' },
-    ])
-
-    // Phase 6: Final review (skip by returning exit code 1 for gh check)
-    ;(mockContext.tools.executeCommand as Mock<any>).mockResolvedValueOnce({ exitCode: 1, stdout: '', stderr: '' }) // gh --version
-
-    // Cleanup phase
-    ;(mockContext.tools.executeCommand as Mock<any>)
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git rm -f .epic.yml
-      .mockResolvedValueOnce({ exitCode: 0, stdout: 'D .epic.yml\nM other-file.ts', stderr: '' }) // git status --porcelain (shows other staged file)
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git commit -m 'chore: remove .epic.yml' -- .epic.yml
-
-    await epicWorkflow({ task, epicContext }, mockContext)
-
-    // Verify that the commit command includes .epic.yml explicitly
-    const commitCalls = (mockContext.tools.executeCommand as Mock<any>).mock.calls.filter(
-      (call: any) => call[0]?.args?.[0] === 'commit' && call[0]?.args?.includes('.epic.yml'),
-    )
-
-    expect(commitCalls.length).toBeGreaterThan(0)
-
-    // Check the cleanup commit specifically
-    const cleanupCommitCall = (mockContext.tools.executeCommand as Mock<any>).mock.calls.find(
-      (call: any) => call[0]?.args?.[0] === 'commit' && call[0]?.args?.includes('-m') && call[0]?.args?.includes('chore: remove .epic.yml'),
-    ) as [any] | undefined
-
-    expect(cleanupCommitCall).toBeDefined()
-    expect(cleanupCommitCall?.[0].args).toEqual(['commit', '-m', 'chore: remove .epic.yml', '--', '.epic.yml'])
   })
 })

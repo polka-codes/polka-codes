@@ -179,6 +179,7 @@ async function createAndApprovePlan(
 
 async function createFeatureBranch(
   branchName: string,
+  baseBranch: string | undefined,
   context: WorkflowContext<CliToolRegistry>,
 ): Promise<{ success: boolean; branchName: string | null }> {
   const { logger, step, tools } = context
@@ -215,7 +216,11 @@ async function createFeatureBranch(
     logger.info(`Creating new branch '${branchName}'...`)
     const createBranchResult = await step(
       'createBranch',
-      async () => await tools.executeCommand({ command: 'git', args: ['checkout', '-b', branchName] }),
+      async () =>
+        await tools.executeCommand({
+          command: 'git',
+          args: baseBranch ? ['checkout', '-b', branchName, baseBranch] : ['checkout', '-b', branchName],
+        }),
     )
     if (createBranchResult.exitCode !== 0) {
       logger.error(`Error: Failed to create branch '${branchName}'. Git command failed.`)
@@ -287,6 +292,14 @@ async function runPreflightChecks(epicContext: EpicContext, context: WorkflowCon
       'Suggestion: Run `git add .` and `git commit` to clean your working directory, or `git stash` to temporarily save changes.\n',
     )
     return false
+  }
+
+  const baseBranchResult = await step('getBaseBranch', async () =>
+    tools.executeCommand({ command: 'git', args: ['rev-parse', '--abbrev-ref', 'HEAD'] }),
+  )
+  if (baseBranchResult.exitCode === 0 && baseBranchResult.stdout.trim()) {
+    epicContext.baseBranch = baseBranchResult.stdout.trim()
+    logger.info(`Using current branch '${epicContext.baseBranch}' as the base for this epic.`)
   }
 
   logger.info('Pre-flight checks passed.\n')
@@ -515,34 +528,29 @@ Focus only on this item, but use the plan for context.`
   return commitMessages
 }
 
-async function performFinalReviewAndFix(context: WorkflowContext<CliToolRegistry>, highLevelPlan: string): Promise<{ passed: boolean }> {
+async function performFinalReviewAndFix(
+  context: WorkflowContext<CliToolRegistry>,
+  highLevelPlan: string,
+  baseBranch: string | undefined,
+): Promise<{ passed: boolean }> {
   const { logger, step, tools } = context
 
   logger.info('\nPhase 6: Final Review and Fixup...\n')
 
-  const ghCheckResult = await tools.executeCommand({ command: 'gh', args: ['--version'] })
-  if (ghCheckResult.exitCode !== 0) {
-    logger.warn(
-      'Warning: GitHub CLI (gh) is not installed. Skipping final review step. Please install it from https://cli.github.com/ to enable final reviews.',
-    )
+  if (!baseBranch) {
+    logger.warn('Warning: Base branch is not defined. Skipping final review step.')
     return { passed: true }
   }
-
-  const defaultBranchResult = await tools.executeCommand({
-    command: 'gh',
-    args: ['repo', 'view', '--json', 'defaultBranchRef', '--jq', '.defaultBranchRef.name'],
-  })
-  const defaultBranch = defaultBranchResult.stdout.trim()
 
   const currentBranchResult = await tools.executeCommand({ command: 'git', args: ['rev-parse', '--abbrev-ref', 'HEAD'] })
   const currentBranch = currentBranchResult.stdout.trim()
 
-  if (currentBranch === defaultBranch) {
-    logger.info(`You are on the default branch ('${defaultBranch}'). No final review needed.`)
+  if (currentBranch === baseBranch) {
+    logger.info(`You are on the base branch ('${baseBranch}'). No final review needed.`)
     return { passed: true }
   }
 
-  const commitRange = `${defaultBranch}...${currentBranch}`
+  const commitRange = `${baseBranch}...${currentBranch}`
 
   for (let i = 0; i < MAX_REVIEW_RETRIES; i++) {
     const diffResult = await tools.executeCommand({ command: 'git', args: ['diff', '--name-status', commitRange] })
@@ -670,7 +678,7 @@ export const epicWorkflow: WorkflowFn<EpicWorkflowInput, void, CliToolRegistry> 
       return
     }
 
-    const branchResult = await createFeatureBranch(epicContext.branchName, context)
+    const branchResult = await createFeatureBranch(epicContext.branchName, epicContext.baseBranch ?? undefined, context)
     if (!branchResult.success || !branchResult.branchName) return
     if (epicContext.branchName !== branchResult.branchName) {
       epicContext.branchName = branchResult.branchName
@@ -684,7 +692,7 @@ export const epicWorkflow: WorkflowFn<EpicWorkflowInput, void, CliToolRegistry> 
 
     const commitMessages = await runImplementationLoop(context, epicContext.plan)
 
-    await performFinalReviewAndFix(context, epicContext.plan)
+    await performFinalReviewAndFix(context, epicContext.plan, epicContext.baseBranch ?? undefined)
 
     // Cleanup .epic.yml
     await tools.executeCommand({ command: 'git', args: ['rm', '-f', '.epic.yml'] })
