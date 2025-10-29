@@ -15,10 +15,11 @@ export const reviewCommand = new Command('review')
   .option('-y, --yes', 'Automatically apply review feedback', false)
   .option(
     '--loop [count]',
-    'Re-review after changes are applied.',
+    'Re-review after changes are applied. Specifies total number of runs. Defaults to 3 runs if flag is present without a value.',
     (value) => {
-      if (value === undefined || value === null) {
-        return 1
+      if (typeof value === 'boolean' && value) {
+        // --loop without value
+        return 3
       }
       const parsedValue = parseInt(value, 10)
       if (Number.isNaN(parsedValue) || parsedValue < 1) {
@@ -26,7 +27,7 @@ export const reviewCommand = new Command('review')
       }
       return parsedValue
     },
-    1,
+    1, // default if --loop is not present
   )
   .action(async (options: { pr?: string; json: boolean; yes: boolean; loop: number }, command: Command) => {
     const { json, pr, loop: maxIterations, yes: yesOption } = options
