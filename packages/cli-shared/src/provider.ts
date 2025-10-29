@@ -182,7 +182,7 @@ export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
           if (content === undefined) {
             throw new Error('Content is required for append operation.')
           }
-          memory[memoryTopic] = (memory[memoryTopic] || '') + content
+          memory[memoryTopic] = `${memory[memoryTopic] || ''}\n${content}`
           break
         case 'replace':
           if (content === undefined) {
