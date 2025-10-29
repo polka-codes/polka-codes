@@ -50,10 +50,7 @@ type CreatePlanInput = {
   feedback?: string
 }
 
-async function createPlan(
-  input: CreatePlanInput,
-  context: WorkflowContext<CliToolRegistry>,
-): Promise<CreatePlanOutput & { type: ToolResponseType }> {
+async function createPlan(input: CreatePlanInput, context: WorkflowContext<CliToolRegistry>): Promise<CreatePlanOutput> {
   const { task, plan, files, feedback } = input
 
   const content: JsonUserContent = [{ type: 'text', text: getPlanPrompt(task, plan) }]
@@ -103,10 +100,10 @@ async function createPlan(
   )
 
   if (planResult.type === ToolResponseType.Exit) {
-    return { ...(planResult.object as CreatePlanOutput), type: planResult.type }
+    return planResult.object as CreatePlanOutput
   }
 
-  return { plan: '', reason: 'Usage limit exceeded.', type: ToolResponseType.Exit, branchName: '' }
+  return { type: 'error', reason: 'Usage limit exceeded.' }
 }
 
 async function createAndApprovePlan(
@@ -117,8 +114,6 @@ async function createAndApprovePlan(
 
   logger.info('Phase 2: Creating high-level plan...\n')
   let feedback: string | undefined
-  let highLevelPlan: string | undefined | null
-  let branchName: string
   let planAttempt = 1
 
   try {
@@ -126,33 +121,42 @@ async function createAndApprovePlan(
       const result = await step(`plan-${planAttempt}`, () => createPlan({ task, feedback }, context))
       planAttempt++
 
-      if (result.question) {
-        const answer = await tools.input({
-          message: result.question.question,
-          default: result.question.defaultAnswer || undefined,
-        })
-        feedback = `The user answered the question "${result.question.question}" with: "${answer}"`
-        continue
-      }
-
-      if (!result.plan) {
-        if (result.reason) {
-          logger.info(`No plan created. Reason: ${result.reason}`)
-        } else {
-          logger.info('No plan created.')
+      switch (result.type) {
+        case 'plan-generated': {
+          if (!result.plan || !result.branchName) {
+            // This should not happen due to schema validation, but as a safeguard
+            logger.error('Invalid plan-generated response. Missing plan or branchName.')
+            return null
+          }
+          logger.info(`Plan:\n${result.plan}`)
+          logger.info(`Suggested branch name: ${result.branchName}`)
+          feedback = await tools.input({ message: 'Press Enter to approve the plan, or provide feedback to refine it.' })
+          if (feedback.trim() === '') {
+            logger.info('High-level plan approved.\n')
+            return { plan: result.plan, branchName: result.branchName }
+          }
+          break // Continues the while loop for refinement
         }
-        return null
-      }
-
-      logger.info(`Plan:\n${result.plan}`)
-      if (result.branchName) {
-        logger.info(`Suggested branch name: ${result.branchName}`)
-      }
-      feedback = await tools.input({ message: 'Press Enter to approve the plan, or provide feedback to refine it.' })
-      if (feedback.trim() === '') {
-        highLevelPlan = result.plan
-        branchName = result.branchName
-        break
+        case 'question': {
+          if (!result.question) {
+            logger.error('Invalid question response. Missing question object.')
+            return null
+          }
+          const answer = await tools.input({
+            message: result.question.question,
+            default: result.question.defaultAnswer || undefined,
+          })
+          feedback = `The user answered the question "${result.question.question}" with: "${answer}"`
+          break // Continues the while loop to re-plan with the answer
+        }
+        case 'error': {
+          logger.info(`Plan creation failed. Reason: ${result.reason || 'Unknown error'}`)
+          return null
+        }
+        default: {
+          logger.error(`Unknown response type from planner: ${(result as any).type}`)
+          return null
+        }
       }
     }
   } catch (e) {
@@ -162,19 +166,6 @@ async function createAndApprovePlan(
     }
     throw e
   }
-
-  if (!highLevelPlan) {
-    logger.info('Plan not approved. Exiting.')
-    return null
-  }
-
-  if (!branchName) {
-    logger.error('Error: No branch name was generated from the plan. Exiting.')
-    return null
-  }
-
-  logger.info('High-level plan approved.\n')
-  return { plan: highLevelPlan, branchName }
 }
 
 async function createFeatureBranch(
@@ -268,16 +259,18 @@ async function runPreflightChecks(epicContext: EpicContext, context: WorkflowCon
   if (epicContext.plan) {
     logger.info('Found an existing `.epic.yml` file.')
 
-    if (epicContext.branchName) {
-      const currentBranchResult = await step('getCurrentBranch', async () =>
-        tools.executeCommand({ command: 'git', args: ['rev-parse', '--abbrev-ref', 'HEAD'] }),
+    if (!epicContext.branchName) {
+      throw new Error('Invalid epic context loaded from .epic.yml: branchName is required.')
+    }
+
+    const currentBranchResult = await step('getCurrentBranch', async () =>
+      tools.executeCommand({ command: 'git', args: ['rev-parse', '--abbrev-ref', 'HEAD'] }),
+    )
+    const currentBranch = currentBranchResult.stdout.trim()
+    if (currentBranch !== epicContext.branchName) {
+      throw new Error(
+        `You are on branch '${currentBranch}' but the epic was started on branch '${epicContext.branchName}'. Please switch to the correct branch to resume.`,
       )
-      const currentBranch = currentBranchResult.stdout.trim()
-      if (currentBranch !== epicContext.branchName) {
-        throw new Error(
-          `You are on branch '${currentBranch}' but the epic was started on branch '${epicContext.branchName}'. Please switch to the correct branch to resume.`,
-        )
-      }
     }
 
     logger.info('Resuming previous epic session.')

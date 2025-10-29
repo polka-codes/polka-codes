@@ -381,36 +381,91 @@ Branch names should:
 
 ## Response Format
 
-${createJsonResponseInstruction({
-  plan: 'The generated or updated plan.',
-  branchName: 'feat/new-feature-name',
-  question: {
-    question: 'The clarifying question to ask the user.',
-    defaultAnswer: 'The default answer to provide if the user does not provide an answer.',
-  },
-  reason: 'If no plan is needed, provide a reason here.',
-})}
+Respond with a JSON object in a markdown code block. The JSON object should have a "type" field that determines the structure of the rest of the object.
+
+### 1. When you generate a plan (type: 'plan-generated')
+- **type**: Must be "plan-generated".
+- **plan**: The generated or updated plan.
+- **branchName**: A suitable git branch name for the work.
+
+Example:
+\`\`\`json
+{
+  "type": "plan-generated",
+  "plan": "1. Phase 1: Backend API Development\\n   - [ ] Design and implement user authentication endpoints...",
+  "branchName": "feat/user-authentication"
+}
+\`\`\`
+
+### 2. When you need to ask a question (type: 'question')
+- **type**: Must be "question".
+- **question**: An object containing the question and an optional default answer.
+
+Example:
+\`\`\`json
+{
+  "type": "question",
+  "question": {
+    "question": "What database are you using?",
+    "defaultAnswer": "PostgreSQL"
+  }
+}
+\`\`\`
+
+### 3. When no plan is needed or an error occurs (type: 'error')
+- **type**: Must be "error".
+- **reason**: A string explaining why no plan is generated (e.g., task already complete, unclear requirements after questioning).
+
+Example:
+\`\`\`json
+{
+  "type": "error",
+  "reason": "The requested feature is already implemented in 'src/features/existing-feature.ts'."
+}
+\`\`\`
 `
 
 const BRANCH_NAME_PATTERN = /^[a-zA-Z0-9/_-]+$/
 
-export const EpicPlanSchema = z.object({
-  plan: z.string().nullish(),
-  branchName: z
-    .string()
-    .refine((name) => name.length >= 3, { message: 'Branch name is too short (min 3 characters).' })
-    .refine((name) => name.length <= 255, { message: 'Branch name is too long (max 255 characters).' })
-    .refine((name) => BRANCH_NAME_PATTERN.test(name), {
-      message: 'Invalid branch name format. Branch names should contain only letters, numbers, hyphens, underscores, and forward slashes.',
-    }),
-  question: z
-    .object({
-      question: z.string(),
-      defaultAnswer: z.string().nullish(),
-    })
-    .nullish(),
-  reason: z.string().nullish(),
-})
+export const EpicPlanSchema = z
+  .object({
+    type: z.enum(['plan-generated', 'question', 'error']),
+    plan: z.string().nullish(),
+    branchName: z
+      .string()
+      .refine((name) => name.length >= 3, { message: 'Branch name is too short (min 3 characters).' })
+      .refine((name) => name.length <= 255, { message: 'Branch name is too long (max 255 characters).' })
+      .refine((name) => BRANCH_NAME_PATTERN.test(name), {
+        message:
+          'Invalid branch name format. Branch names should contain only letters, numbers, hyphens, underscores, and forward slashes.',
+      })
+      .nullish(),
+    question: z
+      .object({
+        question: z.string(),
+        defaultAnswer: z.string().nullish(),
+      })
+      .nullish(),
+    reason: z.string().nullish(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.type === 'plan-generated') {
+      if (!data.plan || data.plan.trim() === '') {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'Plan is required when type is "plan-generated".',
+          path: ['plan'],
+        })
+      }
+      if (!data.branchName || data.branchName.trim() === '') {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'Branch name is required when type is "plan-generated".',
+          path: ['branchName'],
+        })
+      }
+    }
+  })
 
 export function getPlanPrompt(task: string, planContent?: string): string {
   const planSection = planContent ? `\nThe content of an existing plan file:\n<plan_file>\n${planContent}\n</plan_file>\n` : ''

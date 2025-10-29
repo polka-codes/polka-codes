@@ -119,6 +119,7 @@ describe('epicWorkflow', () => {
       type: ToolResponseType.Exit,
       message: 'Plan created',
       object: {
+        type: 'plan-generated',
         plan: 'This is the plan.',
         branchName: 'feature/test-branch',
       },
@@ -313,5 +314,65 @@ describe('epicWorkflow', () => {
     expect(errorLogs).toContain(
       "Epic workflow failed: You are on branch 'feature/wrong-branch' but the epic was started on branch 'feature/correct-branch'. Please switch to the correct branch to resume.",
     )
+  })
+
+  describe('epic context management', () => {
+    it('should resume workflow when epicContext is provided with plan and branchName', async () => {
+      const resumedContext: EpicContext = {
+        task: 'My resumed epic',
+        plan: 'This is the resumed plan.',
+        branchName: 'feature/resume-branch',
+      }
+
+      // Phase 1: Pre-flight checks
+      ;(mockContext.tools.executeCommand as Mock<any>)
+        .mockResolvedValueOnce({ exitCode: 0, stdout: '/.git', stderr: '' }) // git rev-parse --git-dir
+        .mockResolvedValueOnce({ exitCode: 0, stdout: resumedContext.branchName, stderr: '' }) // git rev-parse --abbrev-ref HEAD
+
+      // Phase 3: Create/switch to feature branch
+      ;(mockContext.tools.executeCommand as Mock<any>)
+        .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git rev-parse --verify (branch exists)
+        .mockResolvedValueOnce({ exitCode: 0, stdout: resumedContext.branchName, stderr: '' }) // git rev-parse --abbrev-ref HEAD (already on branch)
+
+      // Phase 4: Skip adding todos as they exist
+      ;(mockContext.tools.listTodoItems as Mock<any>).mockResolvedValueOnce([{ id: '1', title: 'Existing Task', status: 'open' }])
+
+      // Phase 5: get-initial-tasks returns one open task
+      ;(mockContext.tools.listTodoItems as Mock<any>).mockResolvedValueOnce([{ id: '1', title: 'Existing Task', status: 'open' }])
+
+      // To prevent the test from running the whole workflow, we can throw an error.
+      codeWorkflowSpy.mockImplementation(() => {
+        throw new Error('Stop test execution')
+      })
+
+      await expect(epicWorkflow({ task: resumedContext.task!, epicContext: resumedContext }, mockContext)).rejects.toThrow(
+        'Stop test execution',
+      )
+
+      expect(mockContext.logger.error).toHaveBeenCalledWith('\nEpic workflow failed: Stop test execution')
+      const infoLogs = (mockContext.logger.info as any).mock.calls.map((c: any) => c[0]).join('\n')
+      expect(infoLogs).toContain('Resuming previous epic session.')
+      // Planning agent should not be called
+      expect(agentWorkflowSpy).not.toHaveBeenCalled()
+    })
+
+    it('should exit gracefully if resuming context is missing branchName', async () => {
+      // Phase 1: Pre-flight checks
+      ;(mockContext.tools.executeCommand as Mock<any>).mockResolvedValueOnce({
+        exitCode: 0,
+        stdout: '/.git',
+        stderr: '',
+      }) // git rev-parse --git-dir
+
+      await expect(
+        epicWorkflow({ task, epicContext: { plan: 'This is the resumed plan.', task: 'My resumed epic' } }, mockContext),
+      ).rejects.toThrow('Invalid epic context loaded from .epic.yml: branchName is required.')
+
+      expect(mockContext.logger.error).toHaveBeenCalledWith(
+        '\nEpic workflow failed: Invalid epic context loaded from .epic.yml: branchName is required.',
+      )
+      // No agent calls should be made
+      expect(agentWorkflowSpy).not.toHaveBeenCalled()
+    })
   })
 })
