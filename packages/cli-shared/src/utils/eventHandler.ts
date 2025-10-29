@@ -188,7 +188,9 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter, stream: Writ
             break
           }
           case ToolResponseType.Exit:
-            customConsole.log('Exit Message:', event.exitReason.message)
+            if (verbose > 0) {
+              customConsole.log('Exit Message:', event.exitReason.message)
+            }
             break
         }
         for (const [tool, taskStats] of taskToolCallStats.entries()) {
