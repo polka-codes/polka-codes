@@ -43,6 +43,43 @@ describe('commitWorkflow', () => {
     mock.restore()
   })
 
+  test('should generate commit message with staged files', async () => {
+    const { context, tools, logger } = createMockContext()
+
+    tools.printChangeFile.mockResolvedValue({
+      stagedFiles: [{ path: 'src/file.ts', status: 'M' }],
+      unstagedFiles: [],
+    })
+    tools.executeCommand.mockResolvedValueOnce({ exitCode: 0, stdout: 'M\tsrc/file.ts' }).mockResolvedValueOnce({
+      exitCode: 0,
+      stdout: '--- a/src/file.ts\n+++ b/src/file.ts\n@@ -1,3 +1,4 @@\n+export const newFunc = () => {}\n',
+    })
+    tools.createCommit.mockResolvedValue({})
+    tools.generateText.mockResolvedValue([
+      {
+        role: 'assistant',
+        content: JSON.stringify({ commitMessage: 'feat: add newFunc' }),
+      },
+    ])
+
+    await commitWorkflow({}, context)
+
+    expect(tools.printChangeFile).toHaveBeenCalled()
+    expect(tools.executeCommand).toHaveBeenCalledWith({
+      command: 'git',
+      args: ['diff', '--name-status', '--no-color', '--staged'],
+    })
+    expect(tools.executeCommand).toHaveBeenCalledWith({
+      command: 'git',
+      args: ['diff', '--staged'],
+    })
+    expect(tools.generateText).toHaveBeenCalled()
+    expect(logger.info).toHaveBeenCalledWith('\nCommit message:\nfeat: add newFunc')
+    expect(tools.createCommit).toHaveBeenCalledWith({
+      message: 'feat: add newFunc',
+    })
+  })
+
   test('should auto-stage all files when all=true', async () => {
     const { context, tools } = createMockContext()
 
