@@ -1,5 +1,5 @@
 // packages/cli/src/utils/userInput.ts
-import { input } from '@inquirer/prompts'
+import { confirm, input } from '@inquirer/prompts'
 import { readMultiline } from '@polka-codes/cli-shared'
 import chalk from 'chalk'
 import { UserCancelledError } from '../errors'
@@ -24,6 +24,25 @@ export async function getUserInput(
         throw new UserCancelledError()
       }
       return undefined
+    }
+    throw error
+  }
+}
+
+export async function getConfirmation(message: string, options: { default?: boolean; throwOnCancel?: boolean } = {}): Promise<boolean> {
+  const { default: defaultValue = true, throwOnCancel = false } = options
+  try {
+    const result = await confirm({
+      message,
+      default: defaultValue,
+    })
+    return result
+  } catch (error) {
+    if (error instanceof Error && error.name === 'ExitPromptError') {
+      if (throwOnCancel) {
+        throw new UserCancelledError()
+      }
+      return false
     }
     throw error
   }

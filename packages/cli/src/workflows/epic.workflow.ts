@@ -37,11 +37,6 @@ const MAX_REVIEW_RETRIES = 5
 
 const TODO_HANDLING_INSTRUCTIONS = `If you discover that a task is larger than you thought, or that a new task is required, you can add a // TODO comment in the code and create a todo item for it. This will allow you to continue with the current task and address the larger issue later.`
 
-export type EpicWorkflowInput = {
-  task: string
-  epicContext?: EpicContext
-}
-
 type CreatePlanOutput = z.infer<typeof EpicPlanSchema>
 type CreatePlanInput = {
   task: string
@@ -625,9 +620,9 @@ async function performFinalReviewAndFix(
   return { passed: false }
 }
 
-export const epicWorkflow: WorkflowFn<EpicWorkflowInput, void, CliToolRegistry> = async (input, context) => {
+export const epicWorkflow: WorkflowFn<EpicContext, void, CliToolRegistry> = async (epicContext, context) => {
   const { logger, tools } = context
-  const { task, epicContext = {} } = input
+  const { task } = epicContext
 
   const workflowStartTime = Date.now()
 
