@@ -120,7 +120,6 @@ The project is organized as a monorepo with the following packages:
 | [`cli-shared`](/packages/cli-shared) | Shared utilities and types for CLI packages. |
 | [`github`](/packages/github) | GitHub integration, including the GitHub Action. |
 | [`runner`](/packages/runner) | Service for running agents and managing tasks. |
-| [`workflow`](/packages/workflow) | Defines the core workflow engine and agent orchestration logic. |
 
 ## Getting Started
 
