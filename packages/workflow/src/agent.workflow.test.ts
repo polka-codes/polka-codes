@@ -88,7 +88,7 @@ test('should run agent workflow with a tool call and reply', async () => {
     createContext(tools),
   )
 
-  expect(result).toEqual({
+  expect(result).toMatchObject({
     type: ToolResponseType.Exit,
     message: 'The files are index.ts and agent.workflow.ts',
   })
@@ -138,7 +138,7 @@ test('should exit when a tool returns an Exit response', async () => {
     createContext(tools),
   )
 
-  expect(result).toEqual({
+  expect(result).toMatchObject({
     type: ToolResponseType.Exit,
     message: 'Workflow exited',
   })

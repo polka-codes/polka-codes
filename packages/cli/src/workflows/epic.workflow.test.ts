@@ -139,6 +139,7 @@ describe('epicWorkflow', () => {
         plan: 'This is the plan.',
         branchName: 'feature/test-branch',
       },
+      messages: [],
     })
     ;(mockContext.tools.input as Mock<any>).mockResolvedValueOnce('') // Approve plan
 
@@ -146,7 +147,7 @@ describe('epicWorkflow', () => {
     ;(mockContext.tools.listTodoItems as Mock<any>).mockResolvedValueOnce([]) // initial check in epicWorkflow is empty
     agentWorkflowSpy.mockImplementationOnce(async (_input, _context) => {
       // This agent is responsible for creating todos. We don't need to mock its internal calls.
-      return { type: ToolResponseType.Exit, message: 'todo items added' }
+      return { type: ToolResponseType.Exit, message: 'todo items added', messages: [] }
     })
     const todosAfterAdd = [
       { id: '1', title: 'Implement feature A', status: 'open', createdAt: new Date().toISOString() },
@@ -165,6 +166,7 @@ describe('epicWorkflow', () => {
       type: ToolResponseType.Exit,
       message: 'no issues',
       object: { specificReviews: [] }, // No issues found
+      messages: [],
     })
     ;(mockContext.tools.updateTodoItem as Mock<any>).mockResolvedValueOnce({ ...todosAfterAdd[0], status: 'completed' })
     // get-next-task-1
@@ -180,6 +182,7 @@ describe('epicWorkflow', () => {
       type: ToolResponseType.Exit,
       message: 'no issues',
       object: { specificReviews: [] }, // No issues found
+      messages: [],
     })
     ;(mockContext.tools.updateTodoItem as Mock<any>).mockResolvedValueOnce({ ...todosAfterAdd[1], status: 'completed' })
     // get-next-task-2
@@ -196,6 +199,7 @@ describe('epicWorkflow', () => {
       type: ToolResponseType.Exit,
       message: 'no issues',
       object: { specificReviews: [] }, // No issues found
+      messages: [],
     })
 
     await epicWorkflow({ task }, mockContext)
@@ -243,13 +247,14 @@ describe('epicWorkflow', () => {
         plan: 'This is the plan.',
         branchName: 'feature/test-branch',
       },
+      messages: [],
     })
     ;(mockContext.tools.input as Mock<any>).mockResolvedValueOnce('') // Approve plan
 
     // Phase 4: Add todo items
     ;(mockContext.tools.listTodoItems as Mock<any>).mockResolvedValueOnce([]) // initial check in epicWorkflow is empty
     agentWorkflowSpy.mockImplementationOnce(async (_input, _context) => {
-      return { type: ToolResponseType.Exit, message: 'todo items added' }
+      return { type: ToolResponseType.Exit, message: 'todo items added', messages: [] }
     })
     const todosAfterAdd = [{ id: '1', title: 'Implement feature A', status: 'open', createdAt: new Date().toISOString() }]
     ;(mockContext.tools.listTodoItems as Mock<any>).mockResolvedValueOnce(todosAfterAdd)
@@ -265,6 +270,7 @@ describe('epicWorkflow', () => {
       type: ToolResponseType.Exit,
       message: 'found an issue',
       object: { specificReviews: [{ file: 'file1.ts', lines: '1-10', review: 'Needs a fix' }] },
+      messages: [],
     })
 
     // Fix cycle
@@ -275,6 +281,7 @@ describe('epicWorkflow', () => {
       type: ToolResponseType.Exit,
       message: 'no issues',
       object: { specificReviews: [] },
+      messages: [],
     })
 
     ;(mockContext.tools.updateTodoItem as Mock<any>).mockResolvedValueOnce({ ...todosAfterAdd[0], status: 'completed' })
@@ -348,6 +355,7 @@ describe('epicWorkflow', () => {
       type: ToolResponseType.Exit,
       message: 'no issues',
       object: { specificReviews: [] }, // No issues found
+      messages: [],
     })
     ;(mockContext.tools.updateTodoItem as Mock<any>).mockResolvedValueOnce({ ...existingTodos[1], status: 'completed' })
     // get-next-task
@@ -444,6 +452,7 @@ describe('epicWorkflow', () => {
         type: ToolResponseType.Exit,
         message: 'no issues',
         object: { specificReviews: [] },
+        messages: [],
       })
       ;(mockContext.tools.updateTodoItem as Mock<any>).mockResolvedValueOnce({ id: '1', title: 'Existing Task', status: 'completed' })
       ;(mockContext.tools.listTodoItems as Mock<any>).mockResolvedValueOnce([]) // get-next-task

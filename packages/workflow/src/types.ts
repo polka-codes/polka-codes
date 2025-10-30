@@ -1,4 +1,4 @@
-import type { ToolResponseError, ToolResponseExit, ToolResponseResult } from '@polka-codes/core'
+import type { ToolResponseError, ToolResponseResult } from '@polka-codes/core'
 import type { JsonModelMessage } from './json-ai-types'
 
 /**
@@ -108,9 +108,11 @@ export type TaskEvent =
 
 export type TaskEventCallback = (event: TaskEvent) => void | Promise<void>
 
-export type ExitReasonError = {
-  type: 'Error'
-  error: { message: string; stack?: string }
-}
-
-export type ExitReason = { type: 'UsageExceeded' } | ToolResponseExit | ExitReasonError
+export type ExitReason =
+  | { type: 'UsageExceeded'; messages: JsonModelMessage[] }
+  | { type: 'Exit'; message: string; object?: any; messages: JsonModelMessage[] }
+  | {
+      type: 'Error'
+      error: { message: string; stack?: string }
+      messages: JsonModelMessage[]
+    }

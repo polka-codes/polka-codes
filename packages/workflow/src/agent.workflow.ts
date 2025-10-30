@@ -13,6 +13,7 @@ export type AgentWorkflowInput = {
   maxToolRoundTrips?: number
   userMessage: JsonUserModelMessage[]
   outputSchema?: z.ZodSchema
+  model?: string
 } & (
   | {
       messages: JsonModelMessage[]
@@ -24,7 +25,7 @@ export type AgentWorkflowInput = {
 
 export type AgentToolRegistry = {
   generateText: {
-    input: { messages: JsonModelMessage[]; tools: ToolSet }
+    input: { messages: JsonModelMessage[]; tools: ToolSet; model?: string }
     output: JsonResponseMessage[]
   }
   taskEvent: {
@@ -64,6 +65,7 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
       return await tools.generateText({
         messages,
         tools: toolSet,
+        model: input.model,
       })
     })
 
@@ -105,7 +107,7 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
 
     if (toolCalls.length === 0) {
       if (!input.outputSchema) {
-        const exitReason: ExitReason = { type: ToolResponseType.Exit, message: textContent }
+        const exitReason: ExitReason = { type: 'Exit', message: textContent, messages }
         await event('end-task', { kind: TaskEventKind.EndTask, exitReason })
         return exitReason
       }
@@ -123,7 +125,7 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
         nextMessage = [{ role: 'user', content: errorMessage }]
         continue
       }
-      const exitReason: ExitReason = { type: ToolResponseType.Exit, message: textContent, object: validated.data }
+      const exitReason: ExitReason = { type: 'Exit', message: textContent, object: validated.data, messages }
       await event('end-task', { kind: TaskEventKind.EndTask, exitReason })
       return exitReason
     }
@@ -167,7 +169,7 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
             output: toolResponse.message,
           })
           break
-        case ToolResponseType.Exit:
+        case 'Exit': {
           if (toolCalls.length > 1) {
             toolResults.push({
               toolCallId: toolCall.toolCallId,
@@ -184,8 +186,10 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
             break
           }
           // Otherwise, it's a clean exit.
-          await event('end-task', { kind: TaskEventKind.EndTask, exitReason: toolResponse })
-          return toolResponse
+          const exitReason: ExitReason = { ...toolResponse, messages }
+          await event('end-task', { kind: TaskEventKind.EndTask, exitReason })
+          return exitReason
+        }
       }
     }
 
@@ -200,6 +204,6 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
     ]
   }
 
-  await event('end-task', { kind: TaskEventKind.EndTask, exitReason: { type: 'UsageExceeded' } as ExitReason })
+  await event('end-task', { kind: TaskEventKind.EndTask, exitReason: { type: 'UsageExceeded', messages } as ExitReason })
   throw new Error('Maximum number of tool round trips reached.')
 }

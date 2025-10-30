@@ -113,6 +113,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
       exitReason: {
         type: 'Error',
         error: { message: error.message, stack: error.stack },
+        messages: [],
       },
     })
     if (error instanceof UserCancelledError) {
