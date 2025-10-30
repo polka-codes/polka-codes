@@ -41,7 +41,7 @@ describe('searchFiles with mocks', () => {
   })
 
   // TODO: investigate why this test is failing on CI but passes locally
-  describe.skip('searchFiles with real files', () => {
+  describe.skipIf(!!process.env.CI)('searchFiles with real files', () => {
     const testDir = join(__dirname, 'search-test-fixtures')
 
     // Create files with searchable content
