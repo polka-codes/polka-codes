@@ -27,7 +27,6 @@
     "@openrouter/ai-sdk-provider": "^1.2.0",
     "@polka-codes/cli-shared": "workspace:*",
     "@polka-codes/core": "workspace:*",
-    "@polka-codes/workflow": "workspace:*",
     "ai": "^5.0.68",
     "chalk": "^5.6.2",
     "commander": "^14.0.1",

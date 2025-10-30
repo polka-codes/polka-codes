@@ -1,5 +1,4 @@
-import type { TodoItem, UpdateTodoItemInput, UpdateTodoItemOutput } from '@polka-codes/core'
-import type { AgentToolRegistry, ToolSignature } from '@polka-codes/workflow'
+import type { AgentToolRegistry, TodoItem, ToolSignature, UpdateTodoItemInput, UpdateTodoItemOutput } from '@polka-codes/core'
 
 type FileChange = { path: string; status: string }
 

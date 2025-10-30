@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, type Mock, spyOn } from 'bun:test'
 import { promises as fs } from 'node:fs'
+import * as workflow from '@polka-codes/core'
 import { ToolResponseType } from '@polka-codes/core'
-import * as workflow from '@polka-codes/workflow'
 import type { CliToolRegistry } from '../workflow-tools'
 import * as codeWorkflowModule from './code.workflow'
 import { epicWorkflow } from './epic.workflow'

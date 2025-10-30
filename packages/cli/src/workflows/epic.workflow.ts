@@ -1,8 +1,10 @@
 import {
+  agentWorkflow,
   askFollowupQuestion,
   type FullToolInfo,
   fetchUrl,
   getTodoItem,
+  type JsonUserContent,
   listFiles,
   listMemoryTopics,
   listTodoItems,
@@ -14,8 +16,9 @@ import {
   ToolResponseType,
   updateMemory,
   updateTodoItem,
+  type WorkflowContext,
+  type WorkflowFn,
 } from '@polka-codes/core'
-import { agentWorkflow, type JsonUserContent, type WorkflowContext, type WorkflowFn } from '@polka-codes/workflow'
 import type { z } from 'zod'
 import { UserCancelledError } from '../errors'
 import { gitDiff } from '../tools'

@@ -1,4 +1,4 @@
-import type { ToolResponseError, ToolResponseResult } from '@polka-codes/core'
+import type { ToolResponseError, ToolResponseResult } from '../tool'
 import type { JsonModelMessage } from './json-ai-types'
 
 /**

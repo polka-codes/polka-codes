@@ -1,7 +1,6 @@
 import { Console } from 'node:console'
 import type { Writable } from 'node:stream'
-import { ToolResponseType, type UsageMeter } from '@polka-codes/core'
-import { type TaskEvent, TaskEventKind } from '@polka-codes/workflow'
+import { type TaskEvent, TaskEventKind, ToolResponseType, type UsageMeter } from '@polka-codes/core'
 import chalk from 'chalk'
 import { simplifyToolParameters } from './parameterSimplifier'
 
