@@ -169,53 +169,69 @@ async function createFeatureBranch(
   context: WorkflowContext<CliToolRegistry>,
 ): Promise<{ success: boolean; branchName: string | null }> {
   const { logger, step, tools } = context
+  const MAX_ATTEMPTS = 10
+  let currentBranchName = branchName
 
   logger.info('Phase 3: Creating/switching to feature branch...\n')
 
-  const branchExistsResult = await step(
-    'checkBranchExists',
-    async () => await tools.executeCommand({ command: 'git', args: ['rev-parse', '--verify', branchName] }),
-  )
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    if (attempt > 0) {
+      currentBranchName = `${branchName}-${attempt}`
+    }
+    logger.info(`Attempting to use branch name: '${currentBranchName}' (Attempt ${attempt + 1}/${MAX_ATTEMPTS})`)
 
-  if (branchExistsResult.exitCode === 0) {
-    // Branch exists
-    const currentBranchResult = await step('getCurrentBranch', async () =>
+    // 1. Check if we are already on the target branch
+    const currentBranchResult = await step(`getCurrentBranch-${attempt}`, async () =>
       tools.executeCommand({ command: 'git', args: ['rev-parse', '--abbrev-ref', 'HEAD'] }),
     )
-    const currentBranch = currentBranchResult.stdout.trim()
-
-    if (currentBranch !== branchName) {
-      logger.info(`Branch '${branchName}' already exists. Switching to it...`)
-      const checkoutResult = await step(
-        'checkoutBranch',
-        async () => await tools.executeCommand({ command: 'git', args: ['checkout', branchName] }),
-      )
-      if (checkoutResult.exitCode !== 0) {
-        logger.error(`Error: Failed to switch to branch '${branchName}'. Git command failed.`)
-        return { success: false, branchName: null }
-      }
-    } else {
-      logger.info(`Already on branch '${branchName}'.`)
+    const onBranch = currentBranchResult.stdout.trim()
+    if (onBranch === currentBranchName) {
+      logger.info(`Already on branch '${currentBranchName}'.`)
+      logger.info(`Successfully on branch '${currentBranchName}'.\n`)
+      return { success: true, branchName: currentBranchName }
     }
-  } else {
-    // Branch does not exist, create it
-    logger.info(`Creating new branch '${branchName}'...`)
-    const createBranchResult = await step(
-      'createBranch',
-      async () =>
-        await tools.executeCommand({
-          command: 'git',
-          args: baseBranch ? ['checkout', '-b', branchName, baseBranch] : ['checkout', '-b', branchName],
-        }),
+
+    // 2. Check if the target branch exists locally
+    const branchExistsResult = await step(
+      `checkBranchExists-${attempt}`,
+      async () => await tools.executeCommand({ command: 'git', args: ['rev-parse', '--verify', currentBranchName] }),
     )
-    if (createBranchResult.exitCode !== 0) {
-      logger.error(`Error: Failed to create branch '${branchName}'. Git command failed.`)
-      return { success: false, branchName: null }
+
+    if (branchExistsResult.exitCode === 0) {
+      // Branch exists, try to check it out
+      logger.info(`Branch '${currentBranchName}' already exists. Switching to it...`)
+      const checkoutResult = await step(
+        `checkoutBranch-${attempt}`,
+        async () => await tools.executeCommand({ command: 'git', args: ['checkout', currentBranchName] }),
+      )
+      if (checkoutResult.exitCode === 0) {
+        logger.info(`Successfully switched to branch '${currentBranchName}'.\n`)
+        return { success: true, branchName: currentBranchName }
+      }
+      // Checkout failed, log and retry with a new name in the next iteration
+      logger.warn(`Warning: Failed to switch to existing branch '${currentBranchName}'. Git command failed.`)
+    } else {
+      // Branch does not exist, try to create it
+      logger.info(`Creating new branch '${currentBranchName}'...`)
+      const createBranchResult = await step(
+        `createBranch-${attempt}`,
+        async () =>
+          await tools.executeCommand({
+            command: 'git',
+            args: baseBranch ? ['checkout', '-b', currentBranchName, baseBranch] : ['checkout', '-b', currentBranchName],
+          }),
+      )
+      if (createBranchResult.exitCode === 0) {
+        logger.info(`Successfully created and switched to branch '${currentBranchName}'.\n`)
+        return { success: true, branchName: currentBranchName }
+      }
+      // Creation failed, log and retry with a new name in the next iteration
+      logger.warn(`Warning: Failed to create branch '${currentBranchName}'. Git command failed.`)
     }
   }
 
-  logger.info(`Successfully on branch '${branchName}'.\n`)
-  return { success: true, branchName: branchName }
+  logger.error(`Error: Failed to create or switch to a feature branch after ${MAX_ATTEMPTS} attempts.`)
+  return { success: false, branchName: null }
 }
 
 async function addTodoItemsFromPlan(plan: string, context: WorkflowContext<CliToolRegistry>): Promise<void> {
