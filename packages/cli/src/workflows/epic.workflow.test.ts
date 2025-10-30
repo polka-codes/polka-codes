@@ -91,11 +91,9 @@ const createMockContext = (): workflow.WorkflowContext<CliToolRegistry> => {
 describe('epicWorkflow', () => {
   let mockContext: workflow.WorkflowContext<CliToolRegistry>
   const task = 'My new epic'
-  let epicContext: EpicContext
 
   beforeEach(() => {
     mockContext = createMockContext()
-    epicContext = {}
   })
 
   afterEach(async () => {
@@ -200,7 +198,7 @@ describe('epicWorkflow', () => {
       object: { specificReviews: [] }, // No issues found
     })
 
-    await epicWorkflow({ task, epicContext }, mockContext)
+    await epicWorkflow({ task }, mockContext)
 
     // Assertions
     expect(mockContext.logger.error).not.toHaveBeenCalled()
@@ -283,7 +281,7 @@ describe('epicWorkflow', () => {
     ;(mockContext.tools.listTodoItems as Mock<any>).mockResolvedValueOnce([]) // No more open tasks
     ;(mockContext.tools.listTodoItems as Mock<any>).mockResolvedValueOnce([{ ...todosAfterAdd[0], status: 'completed' }])
 
-    await epicWorkflow({ task, epicContext }, mockContext)
+    await epicWorkflow({ task }, mockContext)
 
     // Assertions
     expect(mockContext.logger.error).not.toHaveBeenCalled()
@@ -304,7 +302,7 @@ describe('epicWorkflow', () => {
       .mockResolvedValueOnce({ exitCode: 0, stdout: '/.git', stderr: '' }) // git rev-parse --git-dir
       .mockResolvedValueOnce({ command: 'git status --porcelain', shell: true, stdout: 'M dirty-file.ts', exitCode: 0, stderr: '' }) // git status --porcelain (dirty)
 
-    await epicWorkflow({ task, epicContext }, mockContext)
+    await epicWorkflow({ task }, mockContext)
 
     expect(mockContext.logger.error).toHaveBeenCalledWith(
       'Error: Your working directory is not clean. Please stash or commit your changes before running the epic workflow.',
@@ -369,7 +367,7 @@ describe('epicWorkflow', () => {
       .mockResolvedValueOnce({ exitCode: 0, stdout: 'D .epic.yml', stderr: '' }) // git status --porcelain
       .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git commit .epic.yml
 
-    await epicWorkflow({ task: epicContext.task!, epicContext }, mockContext)
+    await epicWorkflow(epicContext, mockContext)
 
     // Assertions
     expect(mockContext.logger.error).not.toHaveBeenCalled()
@@ -401,7 +399,7 @@ describe('epicWorkflow', () => {
       .mockResolvedValueOnce({ exitCode: 0, stdout: '/.git', stderr: '' }) // git rev-parse --git-dir
       .mockResolvedValueOnce({ exitCode: 0, stdout: 'feature/wrong-branch', stderr: '' }) // git rev-parse --abbrev-ref HEAD (branch check)
 
-    await expect(epicWorkflow({ task: epicContext.task!, epicContext }, mockContext)).rejects.toThrow(
+    await expect(epicWorkflow(epicContext, mockContext)).rejects.toThrow(
       "You are on branch 'feature/wrong-branch' but the epic was started on branch 'feature/correct-branch'. Please switch to the correct branch to resume.",
     )
 
@@ -462,7 +460,7 @@ describe('epicWorkflow', () => {
         .mockResolvedValueOnce({ exitCode: 0, stdout: 'D .epic.yml', stderr: '' }) // git status --porcelain
         .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git commit
 
-      await epicWorkflow({ task: resumedContext.task!, epicContext: resumedContext }, mockContext)
+      await epicWorkflow(resumedContext, mockContext)
 
       expect(mockContext.logger.error).not.toHaveBeenCalled()
       const infoLogs = (mockContext.logger.info as any).mock.calls.map((c: any) => c[0]).join('\n')
@@ -479,9 +477,9 @@ describe('epicWorkflow', () => {
         stderr: '',
       }) // git rev-parse --git-dir
 
-      await expect(
-        epicWorkflow({ task, epicContext: { plan: 'This is the resumed plan.', task: 'My resumed epic' } }, mockContext),
-      ).rejects.toThrow('Invalid epic context loaded from .epic.yml: branchName is required.')
+      await expect(epicWorkflow({ plan: 'This is the resumed plan.', task: 'My resumed epic' }, mockContext)).rejects.toThrow(
+        'Invalid epic context loaded from .epic.yml: branchName is required.',
+      )
 
       expect(mockContext.logger.error).toHaveBeenCalledWith(
         '\nEpic workflow failed: Invalid epic context loaded from .epic.yml: branchName is required.',
