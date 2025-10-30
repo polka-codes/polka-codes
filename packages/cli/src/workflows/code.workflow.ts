@@ -41,8 +41,8 @@ export type JsonFilePart = {
 
 const ImplementOutputSchema = z
   .object({
-    summary: z.string().nullish(),
-    bailReason: z.string().nullish(),
+    summary: z.string().nullish().describe('Short summary of the changes made'),
+    bailReason: z.string().nullish().describe('Reason for bailing out of the implementation loop'),
   })
   .refine((data) => (data.summary != null) !== (data.bailReason != null), {
     message: 'Either summary or bailReason must be provided, but not both',
