@@ -8,7 +8,7 @@ Core AI services and agent implementations for Polka Codes framework.
 
 ## Features
 
-- Multiple AI provider support (Ollama, Anthropic, DeepSeek)
+- Multiple AI provider support (Anthropic, DeepSeek, GoogleVertex, Ollama, OpenAI, and OpenRouter)
 - Extensible agent architecture
 - Tool integration system
 - Type-safe API
@@ -22,81 +22,79 @@ bun add @polka-codes/core
 
 ## Usage
 
-### Basic Setup
-
-```typescript
-import { AgentBase } from '@polka-codes/core';
-
-class MyAgent extends AgentBase {
-  // Implement your agent logic
-}
-
-const agent = new MyAgent();
-await agent.runTask('your-task');
-```
-
-### Available Services
-
-- `AnthropicService`: Integration with Anthropic API
-- `DeepSeekService`: Integration with DeepSeek API
-- `OllamaService`: Integration with Ollama API
-
-### Tools
-
-The core package provides a tool system for extending functionality:
-
-```typescript
-import { ToolBase } from '@polka-codes/core';
-
-class MyTool extends ToolBase {
-  // Implement your tool logic
-}
-```
-
-### Nested workflows
-
-You can reuse existing workflows inside other workflows with the `workflow` step. This is helpful when you want to repeat a
-common CLI pattern such as `custom → agent → custom`.
+The core of `@polka-codes/core` is the `agentWorkflow`. You can use it to create a workflow that interacts with an AI model.
 
 ```typescript
 import {
-  builder,
-  combineHandlers,
-  customStepSpecHandler,
-  makeAgentStepSpecHandler,
-  sequentialStepSpecHandler,
-  workflowStepSpecHandler,
-} from '@polka-codes/core/workflow';
+  agentWorkflow,
+  createContext,
+  makeStepFn,
+  type ToolResponse,
+  ToolResponseType,
+} from '@polka-codes/core';
+import { z } from 'zod';
 
-const reviewWorkflow = builder<{ code: string }>()
-  .custom('prepare', async ({ code }) => ({ prompt: `Review this snippet:\n${code}` }))
-  .agent('agent', {
-    messages: [{ type: 'function', fn: (input) => input.prompt }],
-    systemPrompt: 'You are a careful reviewer.',
-    parseOutput: (raw) => ({ success: true, data: { review: raw } }),
-  })
-  .custom('summarize', async (input) => ({ summary: input.review }))
-  .build();
+// Define a tool
+const getCurrentWeather = {
+  name: 'getCurrentWeather',
+  description: 'Get the current weather in a given location',
+  parameters: z.object({
+    location: z.string().describe("The city and state, e.g. San Francisco, CA"),
+  }),
+};
 
-const mainWorkflow = builder<{ code: string; notify: boolean }>()
-  .workflow('review', {
-    workflow: reviewWorkflow,
-    mapInput: (input) => ({ code: input.code }),
-    mapOutput: ({ workflowOutput, input }) => ({ summary: workflowOutput.summary, notify: input.notify }),
-  })
-  .custom('finalize', async ({ summary, notify }) => ({ summary, notified: notify }))
-  .build();
+async function main() {
+  // Create a context for the workflow
+  const context = createContext({
+    // Implement the tool
+    invokeTool: async ({ toolName, input }) => {
+      if (toolName === 'getCurrentWeather') {
+        const { location } = input as z.infer<typeof getCurrentWeather.parameters>;
+        // In a real app, you would call a weather API here
+        const weather = `The weather in ${location} is 70°F and sunny.`;
+        const response: ToolResponse = { type: ToolResponseType.Reply, message: weather };
+        return response;
+      }
+      const response: ToolResponse = { type: ToolResponseType.Error, message: 'Tool not found' };
+      return response;
+    },
+    // A simple text generation function
+    generateText: async ({ messages }) => {
+        // In a real app, you would call an AI provider here (e.g. Anthropic, OpenAI)
+        console.log('--- Assistant Turn ---');
+        console.log(messages);
+        // This is a mock response for demonstration purposes
+        return [{
+          role: 'assistant',
+          content: [{
+            type: 'tool-call',
+            toolName: 'getCurrentWeather',
+            toolCallId: '123',
+            input: { location: 'San Francisco, CA' }
+          }]
+        }];
+    },
+    taskEvent: async (event) => {
+      console.log('Task Event:', event.kind);
+    }
+  }, makeStepFn());
 
-const handlers = combineHandlers(
-  sequentialStepSpecHandler,
-  customStepSpecHandler,
-  workflowStepSpecHandler,
-  makeAgentStepSpecHandler(async () => /* return a LanguageModelV2 */ throw new Error('model not configured')),
-);
+  // Run the agent workflow
+  const result = await agentWorkflow(
+    {
+      tools: [getCurrentWeather],
+      systemPrompt: "You are a helpful assistant.",
+      userMessage: [{ role: 'user', content: "What's the weather in San Francisco, CA?" }],
+    },
+    context
+  );
+
+  console.log('--- Workflow Result ---');
+  console.log(result);
+}
+
+main();
 ```
-
-The optional `mapInput` and `mapOutput` helpers let you shape data for the child workflow and massage the result before the
-next parent step runs.
 
 ## Development
 
