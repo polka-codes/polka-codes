@@ -2,7 +2,7 @@
 
 import { afterEach, describe, expect, mock, spyOn, test } from 'bun:test'
 import * as cliShared from '@polka-codes/cli-shared'
-import type { WorkflowContext } from '@polka-codes/workflow'
+import type { WorkflowContext } from '@polka-codes/core'
 import type { CliToolRegistry } from '../workflow-tools'
 import { fixWorkflow } from './fix.workflow'
 import * as prompts from './prompts'
