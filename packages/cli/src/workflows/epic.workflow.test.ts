@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, type Mock, spyOn } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, it, type Mock, mock, spyOn } from 'bun:test'
 import { promises as fs } from 'node:fs'
 import * as workflow from '@polka-codes/core'
 import { ToolResponseType } from '@polka-codes/core'
@@ -99,6 +99,7 @@ describe('epicWorkflow', () => {
   afterEach(async () => {
     agentWorkflowSpy.mockClear()
     codeWorkflowSpy.mockClear()
+    mock.clearAllMocks()
     try {
       await fs.unlink(EPIC_CONTEXT_FILE)
     } catch (e: any) {

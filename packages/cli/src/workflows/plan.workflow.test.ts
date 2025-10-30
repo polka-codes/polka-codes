@@ -41,6 +41,7 @@ describe('planWorkflow', () => {
 
   afterEach(() => {
     agentWorkflowSpy.mockRestore()
+    mock.clearAllMocks()
   })
 
   test('should generate a plan and save it', async () => {
