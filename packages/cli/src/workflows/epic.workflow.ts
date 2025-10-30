@@ -94,7 +94,7 @@ async function createPlan(input: CreatePlanInput, context: WorkflowContext<CliTo
     context,
   )
 
-  if (planResult.type === ToolResponseType.Exit) {
+  if (planResult.type === 'Exit') {
     return planResult.object as CreatePlanOutput
   }
 

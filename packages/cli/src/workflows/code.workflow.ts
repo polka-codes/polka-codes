@@ -14,7 +14,6 @@ import {
   renameFile,
   replaceInFile,
   searchFiles,
-  ToolResponseType,
   updateMemory,
   writeToFile,
 } from '@polka-codes/core'
@@ -152,7 +151,7 @@ export const codeWorkflow: WorkflowFn<
     )
   })
 
-  if (res.type === ToolResponseType.Exit && res.object) {
+  if (res.type === 'Exit' && res.object) {
     const { summary, bailReason } = res.object as z.infer<typeof ImplementOutputSchema>
 
     if (bailReason) {
@@ -174,7 +173,7 @@ export const codeWorkflow: WorkflowFn<
     } else {
       logger.info('\nImplementation complete!\n')
     }
-  } else if (res.type === ToolResponseType.Exit) {
+  } else if (res.type === 'Exit') {
     logger.info('\nImplementation complete!\n')
   } else {
     logger.warn('\nWarning: Implementation failed. Please check the output for errors.\n', res)

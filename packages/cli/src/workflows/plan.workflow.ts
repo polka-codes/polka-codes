@@ -9,7 +9,6 @@ import {
   readFile,
   readMemory,
   searchFiles,
-  ToolResponseType,
   updateMemory,
 } from '@polka-codes/core'
 import { agentWorkflow, type JsonUserContent, type WorkflowContext, type WorkflowFn } from '@polka-codes/workflow'
@@ -89,7 +88,7 @@ async function createPlan(input: CreatePlanInput, context: WorkflowContext<CliTo
     )
   })
 
-  if (result.type === ToolResponseType.Exit && result.object) {
+  if (result.type === 'Exit' && result.object) {
     const { plan, question, reason, files: filePaths } = result.object
 
     if (reason) {

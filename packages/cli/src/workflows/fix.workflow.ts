@@ -12,7 +12,6 @@ import {
   renameFile,
   replaceInFile,
   searchFiles,
-  ToolResponseType,
   updateMemory,
   writeToFile,
 } from '@polka-codes/core'
@@ -155,7 +154,7 @@ export const fixWorkflow: WorkflowFn<
     })
 
     const res = await step(`fix-summary-${i}`, async () => {
-      if (result.type === ToolResponseType.Exit && result.object) {
+      if (result.type === 'Exit' && result.object) {
         const { summary, bailReason } = result.object as z.infer<typeof FixIterationSummarySchema>
 
         if (bailReason) {
