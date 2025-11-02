@@ -18,7 +18,14 @@ export const EpicContextSchema = z.object({
 export type EpicContext = z.infer<typeof EpicContextSchema>
 
 export const saveEpicContext = async (context: EpicContext): Promise<void> => {
-  const yamlString = stringify(context)
+  const yamlString = stringify({
+    task: context.task,
+    plan: context.plan,
+    branchName: context.branchName,
+    baseBranch: context.baseBranch,
+    todos: context.todos,
+    memory: context.memory,
+  })
   await fs.writeFile(EPIC_CONTEXT_FILE, yamlString, 'utf-8')
 }
 
