@@ -4,13 +4,11 @@ import { agentWorkflow, ToolResponseType, type WorkflowFn } from '@polka-codes/c
 import { z } from 'zod'
 import type { CliToolRegistry } from '../workflow-tools'
 import { codeWorkflow } from './code.workflow'
-import { epicWorkflow } from './epic.workflow'
+import { type EpicWorkflowInput, epicWorkflow } from './epic.workflow'
 import { META_SYSTEM_PROMPT } from './prompts'
 import { taskWorkflow } from './task.workflow'
 
-export type MetaWorkflowInput = {
-  task: string
-}
+export type MetaWorkflowInput = EpicWorkflowInput
 
 const DecisionSchema = z.object({
   workflow: z.enum(['code', 'task', 'epic']),
@@ -19,6 +17,11 @@ const DecisionSchema = z.object({
 export const metaWorkflow: WorkflowFn<MetaWorkflowInput, void, CliToolRegistry> = async (input, context) => {
   const { task } = input
   const { logger } = context
+
+  if (!task) {
+    logger.error('Task is not defined in the input for metaWorkflow.')
+    return
+  }
 
   logger.info(`\nDeciding which workflow to use for task...\n`)
 
@@ -62,12 +65,7 @@ export const metaWorkflow: WorkflowFn<MetaWorkflowInput, void, CliToolRegistry> 
       )
       break
     case 'epic':
-      await epicWorkflow(
-        {
-          task,
-        },
-        context,
-      )
+      await epicWorkflow(input, context)
       break
     default:
       throw new Error(`Unknown workflow: ${decision.workflow}`)

@@ -4,7 +4,7 @@ import { createLogger } from '../logger'
 import { runWorkflow } from '../runWorkflow'
 import { getUserInput } from '../utils/userInput'
 import { epicWorkflow } from '../workflows/epic.workflow'
-import { EpicMemoryStore, EpicTodoItemStore, loadEpicContext } from '../workflows/epic-context'
+import { EpicMemoryStore, EpicTodoItemStore, loadEpicContext, saveEpicContext } from '../workflows/epic-context'
 
 export async function runEpic(task: string | undefined, _options: any, command: Command) {
   const globalOpts = (command.parent ?? command).opts()
@@ -35,7 +35,12 @@ export async function runEpic(task: string | undefined, _options: any, command: 
     epicContext.task = taskInput
   }
 
-  await runWorkflow(epicWorkflow, epicContext, {
+  const workflowInput = {
+    ...epicContext,
+    saveEpicContext,
+  }
+
+  await runWorkflow(epicWorkflow, workflowInput, {
     commandName: 'epic',
     command,
     logger,
@@ -43,8 +48,8 @@ export async function runEpic(task: string | undefined, _options: any, command: 
     getProvider: (opt) =>
       getProvider({
         ...opt,
-        todoItemStore: new EpicTodoItemStore(epicContext),
-        memoryStore: new EpicMemoryStore(epicContext),
+        todoItemStore: new EpicTodoItemStore(workflowInput),
+        memoryStore: new EpicMemoryStore(workflowInput),
       }),
   })
 }

@@ -12,10 +12,9 @@ rules: |
   Use `bun` as the package manager
   When adding new dependencies, cd to the package directory and run `bun add <dependency>`
   Use `bun:test` to write tests. DO NOT use jest or mocha or vi
-  DO NOT use mock in tests. Use spyOn imported bun 'bun:test' if needed
+  DO NOT mock existing functions in unit test. DO NOT mock modules.
   When writing unit tests, use `.toMatchSnapshot()` if suitable.
   In tests, ensure no redundant assertions. i.e. if `.toMatchSnapshot()` is used, then there is no need to have other assertions.
-  NEVER mock modules
   Avoid unnecessary comments. Doc comments are not required when the code is self-explanatory.
   DO NOT use comment as section separators
   DO NOT add comment to explain changes

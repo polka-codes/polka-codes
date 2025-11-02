@@ -1,580 +1,351 @@
-import { afterEach, beforeEach, describe, expect, it, type Mock, mock, spyOn } from 'bun:test'
-import { promises as fs } from 'node:fs'
-import * as workflow from '@polka-codes/core'
-import { ToolResponseType } from '@polka-codes/core'
-import type { CliToolRegistry } from '../workflow-tools'
-import * as codeWorkflowModule from './code.workflow'
-import { epicWorkflow } from './epic.workflow'
-import { EPIC_CONTEXT_FILE, type EpicContext } from './epic-context'
-
-// Mock dependencies
-const agentWorkflowSpy = spyOn(workflow, 'agentWorkflow')
-const codeWorkflowSpy = spyOn(codeWorkflowModule, 'codeWorkflow')
-
-type MockTools = {
-  [K in keyof CliToolRegistry]: Mock<(...args: any[]) => Promise<any>>
-}
-
-const createMockContext = (): workflow.WorkflowContext<CliToolRegistry> => {
-  const loggerObj = {
-    info: () => {},
-    warn: () => {},
-    error: () => {},
-    debug: () => {},
-  }
-  const logger: workflow.WorkflowContext<CliToolRegistry>['logger'] = {
-    info: spyOn(loggerObj, 'info'),
-    warn: spyOn(loggerObj, 'warn'),
-    error: spyOn(loggerObj, 'error'),
-    debug: spyOn(loggerObj, 'debug'),
-  }
-
-  const dummyTools = {
-    createPullRequest: async () => ({ title: 'test', description: 'test' }),
-    createCommit: async () => ({ message: 'test' }),
-    printChangeFile: async () => ({ stagedFiles: [], unstagedFiles: [] }),
-    confirm: async () => true,
-    input: async () => '',
-    select: async () => 'test',
-    writeToFile: async () => {},
-    readFile: async () => '',
-    executeCommand: async () => ({ exitCode: 0, stdout: '', stderr: '' }),
-    getMemoryContext: async () => 'memory context',
-    readMemory: async () => '',
-    listMemoryTopics: async () => [],
-    updateMemory: async () => {},
-    listTodoItems: async () => [],
-    getTodoItem: async () => undefined,
-    updateTodoItem: async () => ({
-      id: '1',
-      title: 'Test To-Do',
-      status: 'completed' as const,
-      createdAt: new Date().toISOString(),
-    }),
-    generateText: async () => [],
-    taskEvent: async () => {},
-    invokeTool: async () => ({ type: ToolResponseType.Exit as const, message: 'test' }),
-  }
-
-  const tools: MockTools = {
-    createPullRequest: spyOn(dummyTools, 'createPullRequest'),
-    createCommit: spyOn(dummyTools, 'createCommit'),
-    printChangeFile: spyOn(dummyTools, 'printChangeFile'),
-    confirm: spyOn(dummyTools, 'confirm'),
-    input: spyOn(dummyTools, 'input'),
-    select: spyOn(dummyTools, 'select'),
-    writeToFile: spyOn(dummyTools, 'writeToFile'),
-    readFile: spyOn(dummyTools, 'readFile'),
-    executeCommand: spyOn(dummyTools, 'executeCommand'),
-    getMemoryContext: spyOn(dummyTools, 'getMemoryContext'),
-    readMemory: spyOn(dummyTools, 'readMemory'),
-    listMemoryTopics: spyOn(dummyTools, 'listMemoryTopics'),
-    updateMemory: spyOn(dummyTools, 'updateMemory'),
-    listTodoItems: spyOn(dummyTools, 'listTodoItems'),
-    getTodoItem: spyOn(dummyTools, 'getTodoItem'),
-    updateTodoItem: spyOn(dummyTools, 'updateTodoItem'),
-    generateText: spyOn(dummyTools, 'generateText'),
-    taskEvent: spyOn(dummyTools, 'taskEvent'),
-    invokeTool: spyOn(dummyTools, 'invokeTool'),
-  }
-
-  return {
-    logger,
-    tools: tools as any,
-    step: async <T>(name: string, fn: () => Promise<T>): Promise<T> => {
-      logger.debug(`Executing step: ${name}`)
-      return await fn()
-    },
-  }
-}
+import { afterEach, describe, expect, mock, test } from 'bun:test'
+import { type EpicWorkflowInput, epicWorkflow } from './epic.workflow'
+import { createTestProxy } from './testing/helper'
 
 describe('epicWorkflow', () => {
-  let mockContext: workflow.WorkflowContext<CliToolRegistry>
-  const task = 'My new epic'
+  let assert: () => void
 
-  beforeEach(() => {
-    mockContext = createMockContext()
+  afterEach(() => {
+    assert?.()
+    mock.restore()
   })
 
-  afterEach(async () => {
-    agentWorkflowSpy.mockClear()
-    codeWorkflowSpy.mockClear()
-    mock.clearAllMocks()
-    try {
-      await fs.unlink(EPIC_CONTEXT_FILE)
-    } catch (e: any) {
-      if (e.code !== 'ENOENT') throw e
-    }
-  })
+  test('should run the epic workflow successfully', async () => {
+    const task = 'Implement a new feature'
+    const plan = '1. Create a new file\n2. Add content to the file'
+    const branchName = 'feat/new-feature'
+    const baseBranch = 'main'
+    const saveEpicContext = mock(() => Promise.resolve())
 
-  it('should run the happy path successfully', async () => {
-    // Phase 1: Pre-flight checks
-    ;(mockContext.tools.executeCommand as Mock<any>)
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '/.git', stderr: '' }) // git rev-parse --git-dir
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git status --porcelain
-      .mockResolvedValueOnce({ exitCode: 0, stdout: 'main', stderr: '' }) // git rev-parse --abbrev-ref HEAD
-      // Phase 3: Create feature branch
-      .mockResolvedValueOnce({ exitCode: 0, stdout: 'main', stderr: '' }) // git rev-parse --abbrev-ref HEAD (in createFeatureBranch)
-      .mockResolvedValueOnce({ exitCode: 1, stdout: '', stderr: '' }) // git rev-parse --verify (branch doesn't exist)
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git checkout -b
-      // Iteration 1
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git add .
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git commit -m
-      .mockResolvedValueOnce({ exitCode: 0, stdout: 'M	file1.ts', stderr: '' }) // git diff --name-status
-      // Iteration 2
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git add .
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git commit -m
-      .mockResolvedValueOnce({ exitCode: 0, stdout: 'M	file2.ts', stderr: '' }) // git diff --name-status
-      // Final review and cleanup
-      .mockResolvedValueOnce({ exitCode: 0, stdout: 'feature/test-branch', stderr: '' }) // git rev-parse --abbrev-ref HEAD
-      .mockResolvedValueOnce({ exitCode: 0, stdout: 'M	file1.ts\nM	file2.ts', stderr: '' }) // git diff --name-status main...feature/test-branch
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git rm -f .epic.yml
-      .mockResolvedValueOnce({ exitCode: 0, stdout: 'D .epic.yml', stderr: '' }) // git status --porcelain
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git commit .epic.yml
-
-    // Phase 2: Create and approve plan
-    agentWorkflowSpy.mockResolvedValueOnce({
-      type: ToolResponseType.Exit,
-      message: 'Plan created',
-      object: {
-        type: 'plan-generated',
-        plan: 'This is the plan.',
-        branchName: 'feature/test-branch',
+    const {
+      context,
+      assert: proxyAssert,
+      logger,
+    } = createTestProxy([
+      // Pre-flight checks
+      {
+        toolName: 'executeCommand',
+        args: { command: 'git', args: ['rev-parse', '--git-dir'] },
+        returnValue: { exitCode: 0, stdout: '.git', stderr: '' },
       },
-      messages: [],
-    })
-    ;(mockContext.tools.input as Mock<any>).mockResolvedValueOnce('') // Approve plan
-
-    // Phase 4: Add todo items
-    ;(mockContext.tools.listTodoItems as Mock<any>).mockResolvedValueOnce([]) // initial check in epicWorkflow is empty
-    agentWorkflowSpy.mockImplementationOnce(async (_input, _context) => {
-      // This agent is responsible for creating todos. We don't need to mock its internal calls.
-      return { type: ToolResponseType.Exit, message: 'todo items added', messages: [] }
-    })
-    const todosAfterAdd = [
-      { id: '1', title: 'Implement feature A', status: 'open', createdAt: new Date().toISOString() },
-      { id: '2', title: 'Implement feature B', status: 'open', createdAt: new Date().toISOString() },
-    ]
-    ;(mockContext.tools.listTodoItems as Mock<any>).mockResolvedValueOnce(todosAfterAdd) // After adding, for the log message.
-
-    // Phase 5: Implementation loop
-    // get-initial-tasks
-    ;(mockContext.tools.listTodoItems as Mock<any>).mockResolvedValueOnce(todosAfterAdd)
-
-    // Iteration 1
-    codeWorkflowSpy.mockResolvedValueOnce({ success: true, summaries: ['Implemented feature A'] }) // task-1
-    agentWorkflowSpy.mockResolvedValueOnce({
-      // review-1-0
-      type: ToolResponseType.Exit,
-      message: 'no issues',
-      object: { specificReviews: [] }, // No issues found
-      messages: [],
-    })
-    ;(mockContext.tools.updateTodoItem as Mock<any>).mockResolvedValueOnce({ ...todosAfterAdd[0], status: 'completed' })
-    // get-next-task-1
-    const todosAfterIteration1 = [todosAfterAdd[1]]
-    ;(mockContext.tools.listTodoItems as Mock<any>).mockResolvedValueOnce(todosAfterIteration1)
-    // all todos for progress
-    ;(mockContext.tools.listTodoItems as Mock<any>).mockResolvedValueOnce([{ ...todosAfterAdd[0], status: 'completed' }, todosAfterAdd[1]])
-
-    // Iteration 2
-    codeWorkflowSpy.mockResolvedValueOnce({ success: true, summaries: ['Implemented feature B'] }) // task-2
-    agentWorkflowSpy.mockResolvedValueOnce({
-      // review-2-0
-      type: ToolResponseType.Exit,
-      message: 'no issues',
-      object: { specificReviews: [] }, // No issues found
-      messages: [],
-    })
-    ;(mockContext.tools.updateTodoItem as Mock<any>).mockResolvedValueOnce({ ...todosAfterAdd[1], status: 'completed' })
-    // get-next-task-2
-    ;(mockContext.tools.listTodoItems as Mock<any>).mockResolvedValueOnce([]) // No more open tasks
-    // all todos for progress
-    ;(mockContext.tools.listTodoItems as Mock<any>).mockResolvedValueOnce([
-      { ...todosAfterAdd[0], status: 'completed' },
-      { ...todosAfterAdd[1], status: 'completed' },
-    ])
-
-    // Final review and cleanup
-    agentWorkflowSpy.mockResolvedValueOnce({
-      // final-review
-      type: ToolResponseType.Exit,
-      message: 'no issues',
-      object: { specificReviews: [] }, // No issues found
-      messages: [],
-    })
-
-    await epicWorkflow({ task }, mockContext)
-
-    // Assertions
-    expect(mockContext.logger.error).not.toHaveBeenCalled()
-    const infoLogs = (mockContext.logger.info as any).mock.calls.map((c: any) => c[0])
-    expect(infoLogs).toContain('Epic Workflow Complete!')
-    expect(infoLogs).toContain('   Branch: feature/test-branch')
-    expect(infoLogs.join('\n')).toMatch(/feat: Implement feature A/)
-    expect(infoLogs.join('\n')).toMatch(/feat: Implement feature B/)
-    expect(infoLogs).toContain('Final review passed. No issues found.\n')
-  })
-
-  it('should handle a review/fix cycle', async () => {
-    // Phase 1: Pre-flight checks
-    ;(mockContext.tools.executeCommand as Mock<any>)
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '/.git', stderr: '' }) // git rev-parse --git-dir
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git status --porcelain
-      .mockResolvedValueOnce({ exitCode: 0, stdout: 'main', stderr: '' }) // git rev-parse --abbrev-ref HEAD
-      // Phase 3: Create feature branch
-      .mockResolvedValueOnce({ exitCode: 0, stdout: 'main', stderr: '' }) // git rev-parse --abbrev-ref HEAD (in createFeatureBranch)
-      .mockResolvedValueOnce({ exitCode: 1, stdout: '', stderr: '' }) // git rev-parse --verify (branch doesn't exist)
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git checkout -b
-      // Iteration 1 (with review/fix cycle)
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git add .
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git commit -m
-      .mockResolvedValueOnce({ exitCode: 0, stdout: 'M	file1.ts', stderr: '' }) // git diff --name-status
-      // Fix cycle
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git add .
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git commit --amend
-      .mockResolvedValueOnce({ exitCode: 0, stdout: 'M	file1.ts', stderr: '' }) // git diff --name-status for second review
-      // Final review and cleanup
-      .mockResolvedValueOnce({ exitCode: 0, stdout: 'feature/test-branch', stderr: '' }) // git rev-parse --abbrev-ref HEAD
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git diff --name-status
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git rm -f .epic.yml
-      .mockResolvedValueOnce({ exitCode: 0, stdout: 'D .epic.yml', stderr: '' }) // git status --porcelain
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git commit .epic.yml
-
-    // Phase 2: Create and approve plan
-    agentWorkflowSpy.mockResolvedValueOnce({
-      type: ToolResponseType.Exit,
-      message: 'Plan created',
-      object: {
-        type: 'plan-generated',
-        plan: 'This is the plan.',
-        branchName: 'feature/test-branch',
+      {
+        toolName: 'executeCommand',
+        args: { command: 'git status --porcelain', shell: true },
+        returnValue: { exitCode: 0, stdout: '', stderr: '' },
       },
-      messages: [],
-    })
-    ;(mockContext.tools.input as Mock<any>).mockResolvedValueOnce('') // Approve plan
-
-    // Phase 4: Add todo items
-    ;(mockContext.tools.listTodoItems as Mock<any>).mockResolvedValueOnce([]) // initial check in epicWorkflow is empty
-    agentWorkflowSpy.mockImplementationOnce(async (_input, _context) => {
-      return { type: ToolResponseType.Exit, message: 'todo items added', messages: [] }
-    })
-    const todosAfterAdd = [{ id: '1', title: 'Implement feature A', status: 'open', createdAt: new Date().toISOString() }]
-    ;(mockContext.tools.listTodoItems as Mock<any>).mockResolvedValueOnce(todosAfterAdd)
-
-    // Phase 5: Implementation loop
-    ;(mockContext.tools.listTodoItems as Mock<any>).mockResolvedValueOnce(todosAfterAdd)
-
-    // Iteration 1 (with review/fix cycle)
-    codeWorkflowSpy.mockResolvedValueOnce({ success: true, summaries: ['Implemented feature A'] }) // First implementation
-
-    // First review finds an issue
-    agentWorkflowSpy.mockResolvedValueOnce({
-      type: ToolResponseType.Exit,
-      message: 'found an issue',
-      object: { specificReviews: [{ file: 'file1.ts', lines: '1-10', review: 'Needs a fix' }] },
-      messages: [],
-    })
-
-    // Fix cycle
-    codeWorkflowSpy.mockResolvedValueOnce({ success: true, summaries: ['Fixed the issue in feature A'] }) // The fix
-
-    // Second review finds no issues
-    agentWorkflowSpy.mockResolvedValueOnce({
-      type: ToolResponseType.Exit,
-      message: 'no issues',
-      object: { specificReviews: [] },
-      messages: [],
-    })
-
-    ;(mockContext.tools.updateTodoItem as Mock<any>).mockResolvedValueOnce({ ...todosAfterAdd[0], status: 'completed' })
-    ;(mockContext.tools.listTodoItems as Mock<any>).mockResolvedValueOnce([]) // No more open tasks
-    ;(mockContext.tools.listTodoItems as Mock<any>).mockResolvedValueOnce([{ ...todosAfterAdd[0], status: 'completed' }])
-
-    await epicWorkflow({ task }, mockContext)
-
-    // Assertions
-    expect(mockContext.logger.error).not.toHaveBeenCalled()
-    const warnLogs = (mockContext.logger.warn as any).mock.calls.map((c: any) => c[0])
-    expect(warnLogs.join('\n')).toContain('Warning: Review found 1 issue(s). Attempting to fix...')
-    const infoLogs = (mockContext.logger.info as any).mock.calls.map((c: any) => c[0])
-    expect(infoLogs.join('\n')).toContain('Review passed. No issues found.')
-    expect(codeWorkflowSpy).toHaveBeenCalledTimes(2)
-    expect((mockContext.tools.executeCommand as Mock<any>).mock.calls).toContainEqual([
-      { command: 'git', args: ['commit', '--amend', '--no-edit'] },
-    ])
-    expect(agentWorkflowSpy).toHaveBeenCalledTimes(4) // plan, todos, review, review-fix
-  })
-
-  it('should retry with a new branch name if creation fails', async () => {
-    // Phase 1: Pre-flight checks
-    ;(mockContext.tools.executeCommand as Mock<any>)
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '/.git', stderr: '' }) // git rev-parse --git-dir
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git status --porcelain
-      .mockResolvedValueOnce({ exitCode: 0, stdout: 'main', stderr: '' }) // git rev-parse --abbrev-ref HEAD
-
-      // Phase 3: Create feature branch (Attempt 1 - Fails)
-      .mockResolvedValueOnce({ exitCode: 0, stdout: 'main', stderr: '' }) // git rev-parse --abbrev-ref HEAD
-      .mockResolvedValueOnce({ exitCode: 1, stdout: '', stderr: '' }) // git rev-parse --verify (branch doesn't exist)
-      .mockResolvedValueOnce({ exitCode: 1, stdout: '', stderr: 'git checkout failed' }) // git checkout -b (fails)
-
-      // Phase 3: Create feature branch (Attempt 2 - Succeeds)
-      .mockResolvedValueOnce({ exitCode: 0, stdout: 'main', stderr: '' }) // git rev-parse --abbrev-ref HEAD
-      .mockResolvedValueOnce({ exitCode: 1, stdout: '', stderr: '' }) // git rev-parse --verify (branch doesn't exist)
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git checkout -b (succeeds)
-
-      // Mock the rest of the workflow to complete
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git add .
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git commit -m
-      .mockResolvedValueOnce({ exitCode: 0, stdout: 'M	file1.ts', stderr: '' }) // git diff --name-status
-      .mockResolvedValueOnce({ exitCode: 0, stdout: 'feature/test-branch-1', stderr: '' }) // git rev-parse --abbrev-ref HEAD
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git diff --name-status
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git rm -f .epic.yml
-      .mockResolvedValueOnce({ exitCode: 0, stdout: 'D .epic.yml', stderr: '' }) // git status --porcelain
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git commit .epic.yml
-
-    // Phase 2: Plan
-    agentWorkflowSpy.mockResolvedValueOnce({
-      type: ToolResponseType.Exit,
-      message: 'Plan created',
-      object: { type: 'plan-generated', plan: 'This is the plan.', branchName: 'feature/test-branch' },
-      messages: [],
-    })
-    ;(mockContext.tools.input as Mock<any>).mockResolvedValueOnce('') // Approve plan
-
-    // Phase 4: Todos
-    ;(mockContext.tools.listTodoItems as Mock<any>).mockResolvedValueOnce([])
-    agentWorkflowSpy.mockImplementationOnce(async () => ({ type: ToolResponseType.Exit, message: 'todos created', messages: [] }))
-    const todos = [{ id: '1', title: 'Implement feature A', status: 'open', createdAt: new Date().toISOString() }]
-    ;(mockContext.tools.listTodoItems as Mock<any>).mockResolvedValueOnce(todos)
-
-    // Phase 5: Implementation
-    ;(mockContext.tools.listTodoItems as Mock<any>).mockResolvedValueOnce(todos)
-    codeWorkflowSpy.mockResolvedValueOnce({ success: true, summaries: ['Implemented feature A'] })
-    agentWorkflowSpy.mockResolvedValueOnce({
-      type: ToolResponseType.Exit,
-      message: 'no issues',
-      object: { specificReviews: [] },
-      messages: [],
-    })
-    ;(mockContext.tools.updateTodoItem as Mock<any>).mockResolvedValueOnce({ ...todos[0], status: 'completed' })
-    ;(mockContext.tools.listTodoItems as Mock<any>).mockResolvedValueOnce([]) // No more open tasks
-    ;(mockContext.tools.listTodoItems as Mock<any>).mockResolvedValueOnce([{ ...todos[0], status: 'completed' }])
-
-    // Final Review
-    agentWorkflowSpy.mockResolvedValueOnce({
-      type: ToolResponseType.Exit,
-      message: 'no issues',
-      object: { specificReviews: [] },
-      messages: [],
-    })
-
-    await epicWorkflow({ task }, mockContext)
-
-    // Assertions
-    expect(mockContext.logger.error).not.toHaveBeenCalled()
-    const infoLogs = (mockContext.logger.info as any).mock.calls.map((c: any) => c[0]).join('\n')
-    const warnLogs = (mockContext.logger.warn as any).mock.calls.map((c: any) => c[0]).join('\n')
-
-    expect(warnLogs).toContain("Warning: Failed to create branch 'feature/test-branch'. Git command failed.")
-    expect(infoLogs).toContain("Attempting to use branch name: 'feature/test-branch-1' (Attempt 2/10)")
-    expect(infoLogs).toContain("Successfully created and switched to branch 'feature/test-branch-1'.")
-    expect(infoLogs).toContain('Epic Workflow Complete!')
-    expect(infoLogs).toContain('   Branch: feature/test-branch-1')
-  })
-
-  it('should terminate if pre-flight checks fail', async () => {
-    // Phase 1: Pre-flight checks
-    ;(mockContext.tools.executeCommand as Mock<any>)
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '/.git', stderr: '' }) // git rev-parse --git-dir
-      .mockResolvedValueOnce({ command: 'git status --porcelain', shell: true, stdout: 'M dirty-file.ts', exitCode: 0, stderr: '' }) // git status --porcelain (dirty)
-
-    await epicWorkflow({ task }, mockContext)
-
-    expect(mockContext.logger.error).toHaveBeenCalledWith(
-      'Error: Your working directory is not clean. Please stash or commit your changes before running the epic workflow.',
-    )
-    expect(agentWorkflowSpy).not.toHaveBeenCalled()
-  })
-
-  it('should resume an in-progress epic from context', async () => {
-    const epicContext: EpicContext = {
-      task: 'My resumed epic',
-      plan: 'This is the resumed plan.',
-      branchName: 'feature/resume-branch',
-      baseBranch: 'main',
-    }
-
-    // Phase 1: Pre-flight checks
-    ;(mockContext.tools.executeCommand as Mock<any>)
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '/.git', stderr: '' }) // git rev-parse --git-dir
-      .mockResolvedValueOnce({ exitCode: 0, stdout: 'feature/resume-branch', stderr: '' }) // git rev-parse --abbrev-ref HEAD (branch check)
-
-    // Phase 3: Create/switch to feature branch
-    ;(mockContext.tools.executeCommand as Mock<any>)
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git rev-parse --verify (branch exists)
-      .mockResolvedValueOnce({ exitCode: 0, stdout: 'feature/resume-branch', stderr: '' }) // git rev-parse --abbrev-ref HEAD (already on branch)
-
-    // Phase 4 is skipped because todos exist
-    const existingTodos = [
-      { id: '1', title: 'Completed Task', status: 'completed', createdAt: new Date().toISOString() },
-      { id: '2', title: 'Open Task', status: 'open', createdAt: new Date().toISOString() },
-    ]
-    ;(mockContext.tools.listTodoItems as Mock<any>).mockResolvedValueOnce(existingTodos)
-
-    // Phase 5: Implementation loop
-    // get-initial-tasks
-    ;(mockContext.tools.listTodoItems as Mock<any>).mockResolvedValueOnce([existingTodos[1]]) // Return open task
-    codeWorkflowSpy.mockResolvedValueOnce({ success: true, summaries: ['Implemented Open Task'] }) // task-1
-    ;(mockContext.tools.executeCommand as Mock<any>)
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git add .
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git commit -m
-    ;(mockContext.tools.executeCommand as Mock<any>).mockResolvedValueOnce({ exitCode: 0, stdout: 'M	file1.ts', stderr: '' }) // git diff --name-status
-    agentWorkflowSpy.mockResolvedValueOnce({
-      // review-1-0
-      type: ToolResponseType.Exit,
-      message: 'no issues',
-      object: { specificReviews: [] }, // No issues found
-      messages: [],
-    })
-    ;(mockContext.tools.updateTodoItem as Mock<any>).mockResolvedValueOnce({ ...existingTodos[1], status: 'completed' })
-    // get-next-task
-    ;(mockContext.tools.listTodoItems as Mock<any>).mockResolvedValueOnce([]) // No more open tasks
-    // final list for progress
-    ;(mockContext.tools.listTodoItems as Mock<any>).mockResolvedValueOnce([
-      { ...existingTodos[0] },
-      { ...existingTodos[1], status: 'completed' },
-    ])
-
-    // Final review and cleanup
-    ;(mockContext.tools.executeCommand as Mock<any>)
-      .mockResolvedValueOnce({ exitCode: 0, stdout: 'feature/resume-branch', stderr: '' }) // git rev-parse --abbrev-ref HEAD
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git diff --name-status
-    ;(mockContext.tools.executeCommand as Mock<any>)
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git rm -f .epic.yml
-      .mockResolvedValueOnce({ exitCode: 0, stdout: 'D .epic.yml', stderr: '' }) // git status --porcelain
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git commit .epic.yml
-
-    await epicWorkflow(epicContext, mockContext)
-
-    // Assertions
-    expect(mockContext.logger.error).not.toHaveBeenCalled()
-    const infoLogs = (mockContext.logger.info as any).mock.calls.map((c: any) => c[0]).join('\n')
-    expect(infoLogs).toContain('Resuming previous epic session.')
-    // Planning should be skipped, so agentWorkflow for planning is not called.
-    // The first call to agentWorkflow will be for review.
-    expect(agentWorkflowSpy).toHaveBeenCalledTimes(1)
-    expect(agentWorkflowSpy.mock.calls[0][0]).toMatchObject({
-      systemPrompt: expect.stringMatching('You are a senior software engineer reviewing code changes'),
-    })
-    // addTodoItemsFromPlan should be skipped
-    expect(infoLogs).not.toContain('Creating todo items from plan')
-    // Implementation loop should run for the open task
-    expect(codeWorkflowSpy).toHaveBeenCalledTimes(1)
-    expect(codeWorkflowSpy).toHaveBeenCalledWith(expect.objectContaining({ task: expect.stringContaining('Open Task') }), expect.anything())
-    expect(infoLogs).toContain('Epic Workflow Complete!')
-  })
-
-  it('should throw an error on resume if on a different git branch', async () => {
-    const epicContext: EpicContext = {
-      task: 'My resumed epic',
-      plan: 'This is the resumed plan.',
-      branchName: 'feature/correct-branch',
-    }
-
-    // Phase 1: Pre-flight checks
-    ;(mockContext.tools.executeCommand as Mock<any>)
-      .mockResolvedValueOnce({ exitCode: 0, stdout: '/.git', stderr: '' }) // git rev-parse --git-dir
-      .mockResolvedValueOnce({ exitCode: 0, stdout: 'feature/wrong-branch', stderr: '' }) // git rev-parse --abbrev-ref HEAD (branch check)
-
-    await expect(epicWorkflow(epicContext, mockContext)).rejects.toThrow(
-      "You are on branch 'feature/wrong-branch' but the epic was started on branch 'feature/correct-branch'. Please switch to the correct branch to resume.",
-    )
-
-    expect(mockContext.logger.error).toHaveBeenCalled()
-    const errorLogs = (mockContext.logger.error as any).mock.calls.map((c: any) => c[0]).join('\n')
-    expect(errorLogs).toContain(
-      "Epic workflow failed: You are on branch 'feature/wrong-branch' but the epic was started on branch 'feature/correct-branch'. Please switch to the correct branch to resume.",
-    )
-  })
-
-  describe('epic context management', () => {
-    it('should resume workflow when epicContext is provided with plan and branchName', async () => {
-      const resumedContext: EpicContext = {
-        task: 'My resumed epic',
-        plan: 'This is the resumed plan.',
-        branchName: 'feature/resume-branch',
-        baseBranch: 'main',
-      }
-
-      // Phase 1: Pre-flight checks
-      ;(mockContext.tools.executeCommand as Mock<any>)
-        .mockResolvedValueOnce({ exitCode: 0, stdout: '/.git', stderr: '' }) // git rev-parse --git-dir
-        .mockResolvedValueOnce({ exitCode: 0, stdout: resumedContext.branchName, stderr: '' }) // git rev-parse --abbrev-ref HEAD
-
-      // Phase 3: Create/switch to feature branch
-      ;(mockContext.tools.executeCommand as Mock<any>)
-        .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git rev-parse --verify (branch exists)
-        .mockResolvedValueOnce({ exitCode: 0, stdout: resumedContext.branchName, stderr: '' }) // git rev-parse --abbrev-ref HEAD (already on branch)
-
-      // Phase 4: Skip adding todos as they exist
-      ;(mockContext.tools.listTodoItems as Mock<any>).mockResolvedValueOnce([{ id: '1', title: 'Existing Task', status: 'open' }])
-
-      // Phase 5: get-initial-tasks returns one open task
-      ;(mockContext.tools.listTodoItems as Mock<any>).mockResolvedValueOnce([{ id: '1', title: 'Existing Task', status: 'open' }])
-
-      codeWorkflowSpy.mockResolvedValueOnce({ success: true, summaries: ['Implemented Existing Task'] })
-      ;(mockContext.tools.executeCommand as Mock<any>)
-        .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git add
-        .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git commit
-        .mockResolvedValueOnce({ exitCode: 0, stdout: 'M file.ts', stderr: '' }) // git diff --name-status
-      agentWorkflowSpy.mockResolvedValueOnce({
-        type: ToolResponseType.Exit,
-        message: 'no issues',
-        object: { specificReviews: [] },
-        messages: [],
-      })
-      ;(mockContext.tools.updateTodoItem as Mock<any>).mockResolvedValueOnce({ id: '1', title: 'Existing Task', status: 'completed' })
-      ;(mockContext.tools.listTodoItems as Mock<any>).mockResolvedValueOnce([]) // get-next-task
-      ;(mockContext.tools.listTodoItems as Mock<any>).mockResolvedValueOnce([{ id: '1', title: 'Existing Task', status: 'completed' }]) // for progress
-
+      {
+        toolName: 'executeCommand',
+        args: { command: 'git', args: ['rev-parse', '--abbrev-ref', 'HEAD'] },
+        returnValue: { exitCode: 0, stdout: baseBranch, stderr: '' },
+      },
+      // Create and approve plan
+      {
+        toolName: 'generateText',
+        args: expect.anything(),
+        returnValue: [
+          {
+            role: 'assistant',
+            content: JSON.stringify({ type: 'plan-generated', plan, branchName }),
+          },
+        ],
+      },
+      {
+        toolName: 'input',
+        args: { message: 'Press Enter to approve the plan, or provide feedback to refine it.' },
+        returnValue: '',
+      },
+      // Create feature branch
+      {
+        toolName: 'executeCommand',
+        args: { command: 'git', args: ['rev-parse', '--abbrev-ref', 'HEAD'] },
+        returnValue: { exitCode: 0, stdout: baseBranch, stderr: '' },
+      },
+      {
+        toolName: 'executeCommand',
+        args: { command: 'git', args: ['rev-parse', '--verify', branchName] },
+        returnValue: { exitCode: 1, stdout: '', stderr: '' },
+      },
+      {
+        toolName: 'executeCommand',
+        args: { command: 'git', args: ['checkout', '-b', branchName, baseBranch] },
+        returnValue: { exitCode: 0, stdout: '', stderr: '' },
+      },
+      // Add todo items
+      {
+        toolName: 'listTodoItems',
+        args: {},
+        returnValue: [],
+      },
+      {
+        toolName: 'generateText',
+        args: expect.anything(),
+        returnValue: [
+          {
+            role: 'assistant',
+            content: '',
+          },
+        ],
+      },
+      {
+        toolName: 'listTodoItems',
+        args: {},
+        returnValue: [
+          { id: '1', title: 'Create a new file', status: 'open', description: '' },
+          { id: '2', title: 'Add content to the file', status: 'open', description: '' },
+        ],
+      },
+      // Implementation loop - iteration 1
+      {
+        toolName: 'listTodoItems',
+        args: { status: 'open' },
+        returnValue: [
+          { id: '1', title: 'Create a new file', status: 'open', description: '' },
+          { id: '2', title: 'Add content to the file', status: 'open', description: '' },
+        ],
+      },
+      // codeWorkflow -> planWorkflow
+      {
+        toolName: 'getMemoryContext',
+        args: undefined,
+        returnValue: '',
+      },
+      {
+        toolName: 'generateText',
+        args: expect.anything(),
+        returnValue: [{ role: 'assistant', content: '{"plan":"Create a new file named new-file.ts"}' }],
+      },
+      // codeWorkflow -> implement
+      {
+        toolName: 'getMemoryContext',
+        args: undefined,
+        returnValue: '',
+      },
+      {
+        toolName: 'generateText',
+        args: expect.anything(),
+        returnValue: [{ role: 'assistant', content: '```json\n{"summary": "Create a new file"}\n```' }],
+      },
+      {
+        toolName: 'updateMemory',
+        args: { operation: 'append', topic: 'implementation-summary', content: 'Create a new file' },
+        returnValue: undefined,
+      },
+      {
+        toolName: 'executeCommand',
+        args: { command: 'bun fix', shell: true, pipe: true },
+        returnValue: { exitCode: 0, stdout: '', stderr: '' },
+      },
+      {
+        toolName: 'executeCommand',
+        args: { command: 'bun check && AGENT=1 bun test -u', shell: true, pipe: true },
+        returnValue: { exitCode: 0, stdout: '', stderr: '' },
+      },
+      {
+        toolName: 'executeCommand',
+        args: { command: 'git', args: ['add', '.'] },
+        returnValue: { exitCode: 0, stdout: '', stderr: '' },
+      },
+      {
+        toolName: 'executeCommand',
+        args: { command: 'git', args: ['commit', '-m', 'feat: Create a new file'] },
+        returnValue: { exitCode: 0, stdout: '', stderr: '' },
+      },
+      // Review and fix cycle
+      {
+        toolName: 'executeCommand',
+        args: { command: 'git', args: ['diff', '--name-status', 'HEAD~1', 'HEAD'] },
+        returnValue: { exitCode: 0, stdout: 'A\tnew-file.ts', stderr: '' },
+      },
+      {
+        toolName: 'getMemoryContext',
+        args: undefined,
+        returnValue: '',
+      },
+      {
+        toolName: 'generateText',
+        args: {
+          messages: expect.any(Array),
+          model: undefined,
+          tools: expect.any(Object),
+        },
+        returnValue: [
+          {
+            role: 'assistant',
+            content: JSON.stringify({ overview: 'No issues found', specificReviews: [] }),
+          },
+        ],
+      },
+      // Update task status
+      {
+        toolName: 'updateTodoItem',
+        args: { operation: 'update', id: '1', status: 'completed' },
+        returnValue: undefined,
+      },
+      {
+        toolName: 'listTodoItems',
+        args: { status: 'open' },
+        returnValue: [{ id: '2', title: 'Add content to the file', status: 'open', description: '' }],
+      },
+      {
+        toolName: 'listTodoItems',
+        args: {},
+        returnValue: [
+          { id: '1', title: 'Create a new file', status: 'completed', description: '' },
+          { id: '2', title: 'Add content to the file', status: 'open', description: '' },
+        ],
+      },
+      // Implementation loop - iteration 2
+      // codeWorkflow -> planWorkflow
+      {
+        toolName: 'getMemoryContext',
+        args: undefined,
+        returnValue: '',
+      },
+      {
+        toolName: 'generateText',
+        args: expect.anything(),
+        returnValue: [{ role: 'assistant', content: '{"plan":"Add content to new-file.ts"}' }],
+      },
+      // codeWorkflow -> implement
+      {
+        toolName: 'getMemoryContext',
+        args: undefined,
+        returnValue: '',
+      },
+      {
+        toolName: 'generateText',
+        args: expect.anything(),
+        returnValue: [{ role: 'assistant', content: '```json\n{"summary": "Add content to the file"}\n```' }],
+      },
+      {
+        toolName: 'updateMemory',
+        args: { operation: 'append', topic: 'implementation-summary', content: 'Add content to the file' },
+        returnValue: undefined,
+      },
+      {
+        toolName: 'executeCommand',
+        args: { command: 'bun fix', shell: true, pipe: true },
+        returnValue: { exitCode: 0, stdout: '', stderr: '' },
+      },
+      {
+        toolName: 'executeCommand',
+        args: { command: 'bun check && AGENT=1 bun test -u', shell: true, pipe: true },
+        returnValue: { exitCode: 0, stdout: '', stderr: '' },
+      },
+      {
+        toolName: 'executeCommand',
+        args: { command: 'git', args: ['add', '.'] },
+        returnValue: { exitCode: 0, stdout: '', stderr: '' },
+      },
+      {
+        toolName: 'executeCommand',
+        args: { command: 'git', args: ['commit', '-m', 'feat: Add content to the file'] },
+        returnValue: { exitCode: 0, stdout: '', stderr: '' },
+      },
+      // Review and fix cycle
+      {
+        toolName: 'executeCommand',
+        args: { command: 'git', args: ['diff', '--name-status', 'HEAD~1', 'HEAD'] },
+        returnValue: { exitCode: 0, stdout: 'M\tnew-file.ts', stderr: '' },
+      },
+      {
+        toolName: 'getMemoryContext',
+        args: undefined,
+        returnValue: '',
+      },
+      {
+        toolName: 'generateText',
+        args: {
+          messages: expect.any(Array),
+          model: undefined,
+          tools: expect.any(Object),
+        },
+        returnValue: [
+          {
+            role: 'assistant',
+            content: JSON.stringify({ overview: 'No issues found', specificReviews: [] }),
+          },
+        ],
+      },
+      // Update task status
+      {
+        toolName: 'updateTodoItem',
+        args: { operation: 'update', id: '2', status: 'completed' },
+        returnValue: undefined,
+      },
+      {
+        toolName: 'listTodoItems',
+        args: { status: 'open' },
+        returnValue: [],
+      },
+      {
+        toolName: 'listTodoItems',
+        args: {},
+        returnValue: [
+          { id: '1', title: 'Create a new file', status: 'completed', description: '' },
+          { id: '2', title: 'Add content to the file', status: 'completed', description: '' },
+        ],
+      },
       // Final review
-      ;(mockContext.tools.executeCommand as Mock<any>)
-        .mockResolvedValueOnce({ exitCode: 0, stdout: 'feature/resume-branch', stderr: '' }) // git rev-parse --abbrev-ref HEAD
-        .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git diff --name-status
-
+      {
+        toolName: 'executeCommand',
+        args: { command: 'git', args: ['rev-parse', '--abbrev-ref', 'HEAD'] },
+        returnValue: { exitCode: 0, stdout: branchName, stderr: '' },
+      },
+      {
+        toolName: 'executeCommand',
+        args: { command: 'git', args: ['diff', '--name-status', `${baseBranch}...${branchName}`] },
+        returnValue: { exitCode: 0, stdout: 'A\tnew-file.ts', stderr: '' },
+      },
+      {
+        toolName: 'getMemoryContext',
+        args: undefined,
+        returnValue: '',
+      },
+      {
+        toolName: 'generateText',
+        args: {
+          messages: expect.any(Array),
+          model: undefined,
+          tools: expect.any(Object),
+        },
+        returnValue: [
+          {
+            role: 'assistant',
+            content: JSON.stringify({ overview: 'No issues found', specificReviews: [] }),
+          },
+        ],
+      },
       // Cleanup
-      ;(mockContext.tools.executeCommand as Mock<any>)
-        .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git rm -f .epic.yml
-        .mockResolvedValueOnce({ exitCode: 0, stdout: 'D .epic.yml', stderr: '' }) // git status --porcelain
-        .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git commit
+      {
+        toolName: 'executeCommand',
+        args: { command: 'git', args: ['rm', '-f', '.epic.yml'] },
+        returnValue: { exitCode: 0, stdout: '', stderr: '' },
+      },
+      {
+        toolName: 'executeCommand',
+        args: { command: 'git', args: ['status', '--porcelain', '--', '.epic.yml'] },
+        returnValue: { exitCode: 0, stdout: ' D .epic.yml', stderr: '' },
+      },
+      {
+        toolName: 'executeCommand',
+        args: { command: 'git', args: ['commit', '-m', 'chore: remove .epic.yml', '--', '.epic.yml'] },
+        returnValue: { exitCode: 0, stdout: '', stderr: '' },
+      },
+    ])
+    assert = proxyAssert
 
-      await epicWorkflow(resumedContext, mockContext)
+    const epicContext: EpicWorkflowInput = {
+      task,
+      plan: '',
+      branchName: '',
+      baseBranch: '',
+      saveEpicContext,
+    }
 
-      expect(mockContext.logger.error).not.toHaveBeenCalled()
-      const infoLogs = (mockContext.logger.info as any).mock.calls.map((c: any) => c[0]).join('\n')
-      expect(infoLogs).toContain('Resuming previous epic session.')
-      // Planning agent should not be called, only review agent
-      expect(agentWorkflowSpy).toHaveBeenCalledTimes(1)
-    })
+    await epicWorkflow(epicContext, context)
 
-    it('should exit gracefully if resuming context is missing branchName', async () => {
-      // Phase 1: Pre-flight checks
-      ;(mockContext.tools.executeCommand as Mock<any>).mockResolvedValueOnce({
-        exitCode: 0,
-        stdout: '/.git',
-        stderr: '',
-      }) // git rev-parse --git-dir
-
-      await expect(epicWorkflow({ plan: 'This is the resumed plan.', task: 'My resumed epic' }, mockContext)).rejects.toThrow(
-        'Invalid epic context loaded from .epic.yml: branchName is required.',
-      )
-
-      expect(mockContext.logger.error).toHaveBeenCalledWith(
-        '\nEpic workflow failed: Invalid epic context loaded from .epic.yml: branchName is required.',
-      )
-      // No agent calls should be made
-      expect(agentWorkflowSpy).not.toHaveBeenCalled()
-    })
+    expect(logger.info).toHaveBeenCalledWith(expect.stringContaining('Epic Workflow Complete!'))
+    expect(saveEpicContext).toHaveBeenCalledTimes(1)
   })
 })

@@ -24,7 +24,7 @@ import { UserCancelledError } from '../errors'
 import { gitDiff } from '../tools'
 import type { CliToolRegistry } from '../workflow-tools'
 import { codeWorkflow, type JsonFilePart, type JsonImagePart } from './code.workflow'
-import { type EpicContext, saveEpicContext } from './epic-context'
+import type { EpicContext } from './epic-context'
 import {
   CODE_REVIEW_SYSTEM_PROMPT,
   EPIC_ADD_TODO_ITEMS_SYSTEM_PROMPT,
@@ -35,6 +35,10 @@ import {
   type ReviewToolInput,
 } from './prompts'
 import { formatElapsedTime, getDefaultContext, parseGitDiffNameStatus, type ReviewResult, reviewOutputSchema } from './workflow.utils'
+
+export type EpicWorkflowInput = EpicContext & {
+  saveEpicContext: (context: EpicContext) => Promise<void>
+}
 
 const MAX_REVIEW_RETRIES = 5
 
@@ -639,9 +643,9 @@ async function performFinalReviewAndFix(
   return { passed: false }
 }
 
-export const epicWorkflow: WorkflowFn<EpicContext, void, CliToolRegistry> = async (epicContext, context) => {
+export const epicWorkflow: WorkflowFn<EpicWorkflowInput, void, CliToolRegistry> = async (input, context) => {
   const { logger, tools } = context
-  const { task } = epicContext
+  const { task, saveEpicContext } = input
 
   const workflowStartTime = Date.now()
 
@@ -650,56 +654,56 @@ export const epicWorkflow: WorkflowFn<EpicContext, void, CliToolRegistry> = asyn
     return
   }
 
-  if (!epicContext.task) {
-    epicContext.task = task
+  if (!input.task) {
+    input.task = task
   }
 
   try {
-    const preflightResult = await runPreflightChecks(epicContext, context)
+    const preflightResult = await runPreflightChecks(input, context)
     if (!preflightResult) {
       return
     }
 
-    if (!epicContext.plan) {
-      if (!epicContext.task) {
+    if (!input.plan) {
+      if (!input.task) {
         // Should not happen based on logic above, but for type safety
         logger.error('Error: Task is missing in epic context. Exiting.')
         return
       }
-      const planResult = await createAndApprovePlan(epicContext.task, context)
+      const planResult = await createAndApprovePlan(input.task, context)
       if (!planResult) return
-      epicContext.plan = planResult.plan
-      epicContext.branchName = planResult.branchName
-      await saveEpicContext(epicContext)
+      input.plan = planResult.plan
+      input.branchName = planResult.branchName
+      await saveEpicContext(input)
     }
 
-    if (!epicContext.plan) {
+    if (!input.plan) {
       // This should not happen if plan was created successfully, but as a safeguard:
       logger.error('Error: Plan is missing after planning phase. Exiting.')
       return
     }
 
-    if (!epicContext.branchName) {
+    if (!input.branchName) {
       // This should not happen if plan was created successfully, but as a safeguard:
       logger.error('Error: Branch name is missing after planning phase. Exiting.')
       return
     }
 
-    const branchResult = await createFeatureBranch(epicContext.branchName, epicContext.baseBranch ?? undefined, context)
+    const branchResult = await createFeatureBranch(input.branchName, input.baseBranch ?? undefined, context)
     if (!branchResult.success || !branchResult.branchName) return
-    if (epicContext.branchName !== branchResult.branchName) {
-      epicContext.branchName = branchResult.branchName
-      await saveEpicContext(epicContext)
+    if (input.branchName !== branchResult.branchName) {
+      input.branchName = branchResult.branchName
+      await saveEpicContext(input)
     }
 
     const todos = await tools.listTodoItems({})
     if (todos.length === 0) {
-      await addTodoItemsFromPlan(epicContext.plan, context)
+      await addTodoItemsFromPlan(input.plan, context)
     }
 
-    const commitMessages = await runImplementationLoop(context, epicContext.plan)
+    const commitMessages = await runImplementationLoop(context, input.plan)
 
-    await performFinalReviewAndFix(context, epicContext.plan, epicContext.baseBranch ?? undefined)
+    await performFinalReviewAndFix(context, input.plan, input.baseBranch ?? undefined)
 
     // Cleanup .epic.yml
     await tools.executeCommand({ command: 'git', args: ['rm', '-f', '.epic.yml'] })
@@ -719,7 +723,7 @@ export const epicWorkflow: WorkflowFn<EpicContext, void, CliToolRegistry> = asyn
     logger.info('Epic Workflow Complete!')
     logger.info(`${'='.repeat(80)}`)
     logger.info('\nSummary:')
-    logger.info(`   Branch: ${epicContext.branchName}`)
+    logger.info(`   Branch: ${input.branchName}`)
     logger.info(`   Total time: ${totalElapsedTime}`)
     logger.info(`   Total commits: ${commitMessages.length}`)
     logger.info('Commits created:')
@@ -729,9 +733,9 @@ export const epicWorkflow: WorkflowFn<EpicContext, void, CliToolRegistry> = asyn
   } catch (error) {
     logger.error(`\nEpic workflow failed: ${error instanceof Error ? error.message : String(error)}`)
     // Avoid cleanup instructions if we don't have a branch name
-    if (epicContext?.branchName) {
-      logger.info(`\nBranch '${epicContext.branchName}' was created but work is incomplete.`)
-      logger.info(`To cleanup: git checkout <previous-branch> && git branch -D ${epicContext.branchName}\n`)
+    if (input?.branchName) {
+      logger.info(`\nBranch '${input.branchName}' was created but work is incomplete.`)
+      logger.info(`To cleanup: git checkout <previous-branch> && git branch -D ${input.branchName}\n`)
     }
     throw error
   }
