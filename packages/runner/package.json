@@ -20,7 +20,7 @@
     "@ai-sdk/provider": "^2.0.0",
     "@polka-codes/cli-shared": "workspace:*",
     "@polka-codes/core": "workspace:*",
-    "commander": "^14.0.1",
+    "commander": "^14.0.2",
     "dotenv": "^17.2.3",
     "ignore": "^7.0.5",
     "ws": "^8.18.3",
