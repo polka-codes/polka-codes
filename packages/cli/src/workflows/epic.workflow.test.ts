@@ -103,23 +103,12 @@ describe('epicWorkflow', () => {
           { id: '2', title: 'Add content to the file', status: 'open', description: '' },
         ],
       },
-      // codeWorkflow -> planWorkflow
-      {
-        toolName: 'getMemoryContext',
-        args: undefined,
-        returnValue: '',
-      },
       {
         toolName: 'generateText',
         args: expect.anything(),
         returnValue: [{ role: 'assistant', content: '{"plan":"Create a new file named new-file.ts"}' }],
       },
       // codeWorkflow -> implement
-      {
-        toolName: 'getMemoryContext',
-        args: undefined,
-        returnValue: '',
-      },
       {
         toolName: 'generateText',
         args: expect.anything(),
@@ -157,11 +146,6 @@ describe('epicWorkflow', () => {
         returnValue: { exitCode: 0, stdout: 'A\tnew-file.ts', stderr: '' },
       },
       {
-        toolName: 'getMemoryContext',
-        args: undefined,
-        returnValue: '',
-      },
-      {
         toolName: 'generateText',
         args: {
           messages: expect.any(Array),
@@ -197,21 +181,11 @@ describe('epicWorkflow', () => {
       // Implementation loop - iteration 2
       // codeWorkflow -> planWorkflow
       {
-        toolName: 'getMemoryContext',
-        args: undefined,
-        returnValue: '',
-      },
-      {
         toolName: 'generateText',
         args: expect.anything(),
         returnValue: [{ role: 'assistant', content: '{"plan":"Add content to new-file.ts"}' }],
       },
       // codeWorkflow -> implement
-      {
-        toolName: 'getMemoryContext',
-        args: undefined,
-        returnValue: '',
-      },
       {
         toolName: 'generateText',
         args: expect.anything(),
@@ -247,11 +221,6 @@ describe('epicWorkflow', () => {
         toolName: 'executeCommand',
         args: { command: 'git', args: ['diff', '--name-status', 'HEAD~1', 'HEAD'] },
         returnValue: { exitCode: 0, stdout: 'M\tnew-file.ts', stderr: '' },
-      },
-      {
-        toolName: 'getMemoryContext',
-        args: undefined,
-        returnValue: '',
       },
       {
         toolName: 'generateText',
@@ -296,11 +265,6 @@ describe('epicWorkflow', () => {
         toolName: 'executeCommand',
         args: { command: 'git', args: ['diff', '--name-status', `${baseBranch}...${branchName}`] },
         returnValue: { exitCode: 0, stdout: 'A\tnew-file.ts', stderr: '' },
-      },
-      {
-        toolName: 'getMemoryContext',
-        args: undefined,
-        returnValue: '',
       },
       {
         toolName: 'generateText',

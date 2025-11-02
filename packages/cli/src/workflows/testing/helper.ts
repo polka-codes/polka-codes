@@ -18,8 +18,11 @@ export function createTestProxy(expectedCalls: ExpectedToolCall<keyof CliToolReg
   const proxy = new Proxy({} as any, {
     get(_target, prop: string | symbol) {
       return async (args: any) => {
-        if (prop === 'taskEvent') {
-          return undefined
+        switch (prop) {
+          case 'taskEvent':
+            return undefined
+          case 'getMemoryContext':
+            return ''
         }
         const expectedCall = remainingCalls.shift()
         if (!expectedCall) {

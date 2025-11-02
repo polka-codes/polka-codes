@@ -23,11 +23,6 @@ describe('planWorkflow', () => {
       logger,
     } = createTestProxy([
       {
-        toolName: 'getMemoryContext',
-        args: undefined,
-        returnValue: '',
-      },
-      {
         toolName: 'generateText',
         args: expect.anything(),
         returnValue: [
@@ -75,11 +70,6 @@ describe('planWorkflow', () => {
 
     const { context, assert: proxyAssert } = createTestProxy([
       {
-        toolName: 'getMemoryContext',
-        args: undefined,
-        returnValue: '',
-      },
-      {
         toolName: 'generateText',
         args: expect.anything(),
         returnValue: [
@@ -105,11 +95,6 @@ ${JSON.stringify({ plan: initialPlan })}
           message: 'What changes do you want to make?',
         },
         returnValue: feedback,
-      },
-      {
-        toolName: 'getMemoryContext',
-        args: undefined,
-        returnValue: '',
       },
       {
         toolName: 'generateText',
@@ -145,11 +130,6 @@ ${JSON.stringify({ plan: regeneratedPlan })}
 
     const { context, assert: proxyAssert } = createTestProxy([
       {
-        toolName: 'getMemoryContext',
-        args: undefined,
-        returnValue: '',
-      },
-      {
         toolName: 'generateText',
         args: expect.anything(),
         returnValue: [
@@ -182,11 +162,6 @@ ${JSON.stringify({ plan: generatedPlan })}
 
     const { context, assert: proxyAssert } = createTestProxy([
       {
-        toolName: 'getMemoryContext',
-        args: undefined,
-        returnValue: '',
-      },
-      {
         toolName: 'generateText',
         args: expect.any(Object),
         returnValue: [
@@ -211,11 +186,6 @@ ${JSON.stringify({ plan: generatedPlan })}
     const generatedPlan = '1. Create the component file.'
 
     const { context, assert: proxyAssert } = createTestProxy([
-      {
-        toolName: 'getMemoryContext',
-        args: undefined,
-        returnValue: '',
-      },
       {
         toolName: 'generateText',
         args: expect.any(Object),
@@ -248,11 +218,6 @@ ${JSON.stringify({ plan: generatedPlan })}
     const generatedPlan = '1. Create the component file.'
 
     const { context, assert: proxyAssert } = createTestProxy([
-      {
-        toolName: 'getMemoryContext',
-        args: undefined,
-        returnValue: '',
-      },
       {
         toolName: 'generateText',
         args: expect.any(Object),
@@ -287,11 +252,6 @@ ${JSON.stringify({ plan: generatedPlan })}
 
     const { context, assert: proxyAssert } = createTestProxy([
       {
-        toolName: 'getMemoryContext',
-        args: undefined,
-        returnValue: '',
-      },
-      {
         toolName: 'generateText',
         args: expect.any(Object),
         returnValue: [
@@ -305,11 +265,6 @@ ${JSON.stringify({ plan: generatedPlan })}
         toolName: 'input',
         args: { message: question, default: undefined },
         returnValue: answer,
-      },
-      {
-        toolName: 'getMemoryContext',
-        args: undefined,
-        returnValue: '',
       },
       {
         toolName: 'generateText',
@@ -346,11 +301,6 @@ ${JSON.stringify({ plan: generatedPlan })}
 
     const { context, assert: proxyAssert } = createTestProxy([
       {
-        toolName: 'getMemoryContext',
-        args: undefined,
-        returnValue: '',
-      },
-      {
         toolName: 'generateText',
         args: expect.anything(),
         returnValue: [
@@ -369,11 +319,6 @@ ${JSON.stringify({ plan: initialPlan })}
           choices: expect.anything(),
         },
         returnValue: 'regenerate',
-      },
-      {
-        toolName: 'getMemoryContext',
-        args: undefined,
-        returnValue: '',
       },
       {
         toolName: 'generateText',
@@ -412,11 +357,6 @@ ${JSON.stringify({ plan: regeneratedPlan })}
     const fileContent = 'export {}'
 
     const expectedCalls: ExpectedToolCall<keyof CliToolRegistry>[] = [
-      {
-        toolName: 'getMemoryContext',
-        args: undefined,
-        returnValue: '',
-      },
       {
         toolName: 'generateText',
         args: expect.anything(),
