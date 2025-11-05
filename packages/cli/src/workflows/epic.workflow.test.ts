@@ -104,6 +104,11 @@ describe('epicWorkflow', () => {
         ],
       },
       {
+        toolName: 'listTodoItems',
+        args: { status: 'open', id: '1' },
+        returnValue: [],
+      },
+      {
         toolName: 'generateText',
         args: expect.anything(),
         returnValue: [{ role: 'assistant', content: '{"plan":"Create a new file named new-file.ts"}' }],
@@ -169,6 +174,11 @@ describe('epicWorkflow', () => {
         toolName: 'listTodoItems',
         args: { status: 'open' },
         returnValue: [{ id: '2', title: 'Add content to the file', status: 'open', description: '' }],
+      },
+      {
+        toolName: 'listTodoItems',
+        args: { status: 'open', id: '2' },
+        returnValue: [],
       },
       {
         toolName: 'listTodoItems',
