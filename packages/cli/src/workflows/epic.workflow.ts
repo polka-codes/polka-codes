@@ -20,6 +20,7 @@ import {
   type WorkflowFn,
 } from '@polka-codes/core'
 import type { z } from 'zod'
+import type { WorkflowTools } from './../../../core/src/workflow/workflow'
 import { UserCancelledError } from '../errors'
 import { gitDiff } from '../tools'
 import type { CliToolRegistry } from '../workflow-tools'
@@ -414,6 +415,26 @@ ${reviewSummary}`
   return { passed: false }
 }
 
+async function findNextTask(tools: WorkflowTools<CliToolRegistry>): Promise<TodoItem | null> {
+  const openRootTasks = await tools.listTodoItems({ status: 'open' })
+
+  if (openRootTasks.length === 0) {
+    return null
+  }
+
+  let currentTask = openRootTasks[0]
+
+  while (true) {
+    const subTasks = await tools.listTodoItems({ status: 'open', id: currentTask.id })
+    if (subTasks.length === 0) {
+      // This is the innermost open task
+      return currentTask
+    }
+    // Go one level deeper
+    currentTask = subTasks[0]
+  }
+}
+
 async function runImplementationLoop(context: WorkflowContext<CliToolRegistry>, highLevelPlan: string): Promise<string[]> {
   const { logger, step, tools } = context
   const commitMessages: string[] = []
@@ -422,25 +443,12 @@ async function runImplementationLoop(context: WorkflowContext<CliToolRegistry>, 
   logger.info(`${'='.repeat(80)}\n`)
 
   let iterationCount = 0
-  let isComplete = false
-  let nextTask: string | null = null
-  let nextTaskId: string | null = null
+  let nextTaskItem = await step('get-initial-task', () => findNextTask(tools))
 
-  const initialTasks = await step('get-initial-tasks', async () => {
-    return await tools.listTodoItems({ status: 'open' })
-  })
-
-  if (initialTasks.length > 0) {
-    const firstTask = initialTasks[0]
-    nextTask = firstTask.title
-    nextTaskId = firstTask.id
-  } else {
-    isComplete = true
-  }
-
-  while (!isComplete && nextTask && nextTaskId) {
+  while (nextTaskItem) {
     iterationCount++
     const taskStartTime = Date.now()
+    const { title: nextTask, id: nextTaskId } = nextTaskItem
 
     logger.info(`\n${'-'.repeat(80)}`)
     logger.info(`Iteration ${iterationCount}`)
@@ -489,28 +497,11 @@ Focus only on this item, but use the plan for context.`
 
     // Mark the current task as completed
     await step(`update-task-status-${iterationCount}`, async () => {
-      if (!nextTaskId) {
-        throw new Error('Invariant violation: nextTaskId is null inside the implementation loop.')
-      }
       await tools.updateTodoItem({ operation: 'update', id: nextTaskId, status: 'completed' })
     })
 
     // Find the next open task
-    const openTasks = await step(`get-next-task-${iterationCount}`, async () => {
-      return await tools.listTodoItems({ status: 'open' })
-    })
-
-    // Update state for the next iteration or complete the workflow
-    if (openTasks.length > 0) {
-      const nextTodo = openTasks[0]
-      nextTask = nextTodo.title
-      nextTaskId = nextTodo.id
-      isComplete = false
-    } else {
-      nextTask = null
-      nextTaskId = null
-      isComplete = true
-    }
+    nextTaskItem = await step(`get-next-task-${iterationCount}`, () => findNextTask(tools))
 
     const allTodos = await tools.listTodoItems({})
     const completedTodos = allTodos.filter((t: TodoItem) => t.status === 'completed').length
@@ -525,13 +516,13 @@ Focus only on this item, but use the plan for context.`
 
     logger.info(`\nProgress: ${progressMessage}`)
 
-    if (isComplete) {
+    if (!nextTaskItem) {
       logger.info('All tasks complete!\n')
       break
     }
 
-    if (nextTask) {
-      logger.info(`Next task: ${nextTask}\n`)
+    if (nextTaskItem) {
+      logger.info(`Next task: ${nextTaskItem.title}\n`)
     }
 
     logger.info(`${'-'.repeat(80)}\n`)
