@@ -37,7 +37,7 @@ export interface TaskEventStartTask extends TaskEventBase {
  */
 export interface TaskEventStartRequest extends TaskEventBase {
   kind: TaskEventKind.StartRequest
-  userMessage: JsonModelMessage[]
+  userMessage: readonly JsonModelMessage[]
 }
 
 /**

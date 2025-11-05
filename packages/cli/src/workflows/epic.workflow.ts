@@ -4,7 +4,9 @@ import {
   type FullToolInfo,
   fetchUrl,
   getTodoItem,
+  type JsonModelMessage,
   type JsonUserContent,
+  type JsonUserModelMessage,
   listFiles,
   listMemoryTopics,
   listTodoItems,
@@ -45,17 +47,45 @@ const MAX_REVIEW_RETRIES = 5
 
 const TODO_HANDLING_INSTRUCTIONS = `If you discover that a task is larger than you thought, or that a new task is required, you can add a // TODO comment in the code and create a todo item for it. This will allow you to continue with the current task and address the larger issue later.`
 
-type CreatePlanOutput = z.infer<typeof EpicPlanSchema>
-type CreatePlanInput = {
-  task: string
-  plan?: string
-  files?: (JsonFilePart | JsonImagePart)[]
-  feedback?: string
-}
+async function createPlan(
+  input: {
+    task: string
+    plan?: string
+    files?: (JsonFilePart | JsonImagePart)[]
+    feedback?: string
+    messages?: JsonModelMessage[]
+  },
+  context: WorkflowContext<CliToolRegistry>,
+) {
+  const { task, plan, files, feedback, messages } = input
 
-async function createPlan(input: CreatePlanInput, context: WorkflowContext<CliToolRegistry>): Promise<CreatePlanOutput> {
-  const { task, plan, files, feedback } = input
+  const agentTools = [
+    askFollowupQuestion,
+    fetchUrl,
+    listFiles,
+    readFile,
+    readBinaryFile,
+    searchFiles,
+    readMemory,
+    updateMemory,
+    listMemoryTopics,
+  ] as FullToolInfo[]
 
+  if (messages) {
+    // Continuing a conversation
+    const userMessage: JsonUserModelMessage[] = feedback ? [{ role: 'user', content: feedback }] : []
+    return await agentWorkflow(
+      {
+        messages,
+        userMessage,
+        tools: agentTools,
+        outputSchema: EpicPlanSchema,
+      },
+      context,
+    )
+  }
+
+  // Starting a new conversation
   const content: JsonUserContent = [{ type: 'text', text: getPlanPrompt(task, plan) }]
   if (files) {
     for (const file of files) {
@@ -75,38 +105,17 @@ async function createPlan(input: CreatePlanInput, context: WorkflowContext<CliTo
       }
     }
   }
-  if (feedback) {
-    content.push({
-      type: 'text',
-      text: `The user has provided the following feedback on the plan, please adjust it:\n${feedback}`,
-    })
-  }
+  const userMessage: JsonUserModelMessage[] = [{ role: 'user', content }]
 
-  const planResult = await agentWorkflow(
+  return await agentWorkflow(
     {
       systemPrompt: EPIC_PLANNER_SYSTEM_PROMPT,
-      userMessage: [{ role: 'user', content }],
-      tools: [
-        askFollowupQuestion,
-        fetchUrl,
-        listFiles,
-        readFile,
-        readBinaryFile,
-        searchFiles,
-        readMemory,
-        updateMemory,
-        listMemoryTopics,
-      ] as FullToolInfo[],
+      userMessage,
+      tools: agentTools,
       outputSchema: EpicPlanSchema,
     },
     context,
   )
-
-  if (planResult.type === 'Exit') {
-    return planResult.object as CreatePlanOutput
-  }
-
-  return { type: 'error', reason: 'Usage limit exceeded.' }
 }
 
 async function createAndApprovePlan(
@@ -118,11 +127,20 @@ async function createAndApprovePlan(
   logger.info('Phase 2: Creating high-level plan...\n')
   let feedback: string | undefined
   let planAttempt = 1
+  let messages: JsonModelMessage[] | undefined
 
   try {
     while (true) {
-      const result = await step(`plan-${planAttempt}`, () => createPlan({ task, feedback }, context))
+      const planAgentResult = await step(`plan-${planAttempt}`, () => createPlan({ task, feedback, messages }, context))
+      messages = planAgentResult.messages
       planAttempt++
+
+      if (planAgentResult.type !== ToolResponseType.Exit) {
+        logger.error(`Plan creation failed. Agent exited with status: ${planAgentResult.type}`)
+        return null
+      }
+
+      const result = planAgentResult.object as z.infer<typeof EpicPlanSchema>
 
       switch (result.type) {
         case 'plan-generated': {

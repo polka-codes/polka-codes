@@ -11,7 +11,7 @@ import type { WorkflowFn } from './workflow'
 export type AgentWorkflowInput = {
   tools: Readonly<FullToolInfo[]>
   maxToolRoundTrips?: number
-  userMessage: JsonUserModelMessage[]
+  userMessage: readonly JsonUserModelMessage[]
   outputSchema?: z.ZodSchema
   model?: string
 } & (
@@ -55,7 +55,7 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
     }
   }
 
-  let nextMessage: JsonModelMessage[] = input.userMessage
+  let nextMessage: readonly JsonModelMessage[] = input.userMessage
 
   for (let i = 0; i < maxToolRoundTrips; i++) {
     messages.push(...nextMessage)

@@ -4,6 +4,7 @@ import {
   askFollowupQuestion,
   type FullToolInfo,
   fetchUrl,
+  type JsonModelMessage,
   type JsonUserContent,
   listFiles,
   listMemoryTopics,
@@ -27,34 +28,51 @@ type CreatePlanInput = {
   userFeedback?: string
   files?: (JsonFilePart | JsonImagePart)[]
   interactive: boolean
+  messages?: JsonModelMessage[]
 }
 
 async function createPlan(input: CreatePlanInput, context: WorkflowContext<CliToolRegistry>) {
   const { tools, step } = context
-  const { task, files, plan: inputPlan, userFeedback, interactive } = input
+  const { task, files, plan: inputPlan, userFeedback, interactive, messages } = input
 
-  const currentTask = userFeedback ? `${task}\n\nUser feedback: ${userFeedback}` : task
-  const defaultContext = await getDefaultContext()
-  const memoryContext = await tools.getMemoryContext()
-  const prompt = `${memoryContext}\n${getPlanPrompt(currentTask, inputPlan)}\n\n${defaultContext}`
+  const getMessages = async () => {
+    if (messages) {
+      // continue the thread
 
-  const userContent: JsonUserContent = [{ type: 'text', text: prompt }]
-  if (files) {
-    for (const file of files) {
-      if (file.type === 'file') {
-        userContent.push({
-          type: 'file',
-          mediaType: file.mediaType,
-          filename: file.filename,
-          data: { type: 'base64', value: file.data },
-        })
-      } else if (file.type === 'image') {
-        userContent.push({
-          type: 'image',
-          mediaType: file.mediaType,
-          image: { type: 'base64', value: file.image },
-        })
+      return {
+        messages,
+        userMessage: [{ role: 'user', content: userFeedback ?? task }],
+      } as const
+    } else {
+      // start a new thread
+
+      const defaultContext = await getDefaultContext()
+      const memoryContext = await tools.getMemoryContext()
+      const prompt = `${memoryContext}\n${getPlanPrompt(task, inputPlan)}\n\n${defaultContext}`
+      const userContent: JsonUserContent = [{ type: 'text', text: prompt }]
+      if (files) {
+        for (const file of files) {
+          if (file.type === 'file') {
+            userContent.push({
+              type: 'file',
+              mediaType: file.mediaType,
+              filename: file.filename,
+              data: { type: 'base64', value: file.data },
+            })
+          } else if (file.type === 'image') {
+            userContent.push({
+              type: 'image',
+              mediaType: file.mediaType,
+              image: { type: 'base64', value: file.image },
+            })
+          }
+        }
       }
+
+      return {
+        systemPrompt: PLANNER_SYSTEM_PROMPT,
+        userMessage: [{ role: 'user', content: userContent }],
+      } as const
     }
   }
 
@@ -72,11 +90,12 @@ async function createPlan(input: CreatePlanInput, context: WorkflowContext<CliTo
     agentTools.push(askFollowupQuestion)
   }
 
+  const inputMessages = await getMessages()
+
   const result = await step('plan', async () => {
     return await agentWorkflow(
       {
-        systemPrompt: PLANNER_SYSTEM_PROMPT,
-        userMessage: [{ role: 'user', content: userContent }],
+        ...inputMessages,
         tools: agentTools,
         outputSchema: PlanSchema,
       },
@@ -88,11 +107,11 @@ async function createPlan(input: CreatePlanInput, context: WorkflowContext<CliTo
     const { plan, question, reason, files: filePaths } = result.object
 
     if (reason) {
-      return { reason }
+      return { reason, messages: result.messages }
     }
 
     if (question) {
-      return { plan: plan || inputPlan, question }
+      return { plan: plan || inputPlan, question, messages: result.messages }
     }
 
     const outputFiles: { path: string; content: string }[] = []
@@ -104,7 +123,7 @@ async function createPlan(input: CreatePlanInput, context: WorkflowContext<CliTo
         }
       }
     }
-    return { plan: plan || undefined, files: outputFiles }
+    return { plan: plan || undefined, files: outputFiles, messages: result.messages }
   }
 
   context.logger.warn('Failed to generate plan.', result)
@@ -132,7 +151,8 @@ export const planWorkflow: WorkflowFn<PlanWorkflowInput, PlanWorkflowOutput, Cli
   let currentTask = input.task
   let plan = fileContent || ''
   let files: { path: string; content: string }[] = []
-  let userFeedback = ''
+  let userFeedback: string | undefined
+  let messages: JsonModelMessage[] | undefined
   let state: State = 'Generating'
   let count = 0
 
@@ -160,9 +180,11 @@ export const planWorkflow: WorkflowFn<PlanWorkflowInput, PlanWorkflowOutput, Cli
               userFeedback,
               files: input.files,
               interactive: mode === 'interactive' || mode === 'confirm',
+              messages,
             },
             context,
           )
+          messages = planResult.messages
 
           if (planResult.reason) {
             logger.info(planResult.reason)
@@ -266,6 +288,7 @@ export const planWorkflow: WorkflowFn<PlanWorkflowInput, PlanWorkflowOutput, Cli
               // Regenerate Plan
               plan = ''
               userFeedback = ''
+              messages = undefined
               return 'Generating'
             }
             case 'exit': {
