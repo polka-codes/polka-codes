@@ -21,13 +21,6 @@ import type { JsonFilePart, JsonImagePart } from './code.workflow'
 import { getPlanPrompt, PLANNER_SYSTEM_PROMPT, PlanSchema } from './prompts'
 import { getDefaultContext } from './workflow.utils'
 
-export type CreatePlanOutput = {
-  plan?: string
-  reason?: string
-  files?: { path: string; content: string }[]
-  question?: { question: string; defaultAnswer?: string | null }
-}
-
 type CreatePlanInput = {
   task: string
   plan?: string
@@ -36,7 +29,7 @@ type CreatePlanInput = {
   interactive: boolean
 }
 
-async function createPlan(input: CreatePlanInput, context: WorkflowContext<CliToolRegistry>): Promise<CreatePlanOutput> {
+async function createPlan(input: CreatePlanInput, context: WorkflowContext<CliToolRegistry>) {
   const { tools, step } = context
   const { task, files, plan: inputPlan, userFeedback, interactive } = input
 
@@ -128,7 +121,7 @@ export type PlanWorkflowInput = {
 
 export type PlanWorkflowOutput = {
   plan: string
-  files: CreatePlanOutput['files']
+  files: { path: string; content: string }[]
 }
 
 type State = 'Generating' | 'Reviewing' | 'Done'
