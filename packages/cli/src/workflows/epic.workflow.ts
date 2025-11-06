@@ -59,6 +59,7 @@ async function createPlan(
   context: WorkflowContext<CliToolRegistry>,
 ) {
   const { task, plan, files, feedback, messages } = input
+  const { tools } = context
 
   const agentTools = [
     askFollowupQuestion,
@@ -87,7 +88,11 @@ async function createPlan(
   }
 
   // Starting a new conversation
-  const content: JsonUserContent = [{ type: 'text', text: getPlanPrompt(task, plan) }]
+  const defaultContext = await getDefaultContext()
+  const memoryContext = await tools.getMemoryContext()
+  const prompt = `${memoryContext}\n${getPlanPrompt(task, plan)}\n\n${defaultContext}`
+  const content: JsonUserContent = [{ type: 'text', text: prompt }]
+
   if (files) {
     for (const file of files) {
       if (file.type === 'file') {
