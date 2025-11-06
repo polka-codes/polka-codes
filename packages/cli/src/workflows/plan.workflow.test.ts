@@ -66,7 +66,7 @@ describe('planWorkflow', () => {
     const task = 'Create a new component'
     const initialPlan = '1. Create the component file.'
     const feedback = 'Add a test file.'
-    const regeneratedPlan = '1. Create the component file.\\n2. Create a test file.'
+    const regeneratedPlan = '1. Create the component file.\n2. Create a test file.'
 
     const { context, assert: proxyAssert } = createTestProxy([
       {
