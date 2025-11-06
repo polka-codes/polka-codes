@@ -16,6 +16,7 @@ import {
   searchFiles,
   type TodoItem,
   ToolResponseType,
+  UsageMeter,
   updateMemory,
   updateTodoItem,
   type WorkflowContext,
@@ -738,6 +739,38 @@ export const epicWorkflow: WorkflowFn<EpicWorkflowInput, void, CliToolRegistry> 
     logger.info('Commits created:')
     for (const [idx, msg] of commitMessages.entries()) {
       logger.info(`   ${idx + 1}. ${msg}`)
+    }
+
+    if (input.usages && input.usages.length > 0) {
+      const sortedUsages = [...input.usages].sort((a, b) => a.timestamp - b.timestamp)
+      let lastUsage = {
+        input: 0,
+        output: 0,
+        cachedRead: 0,
+        cost: 0,
+        messageCount: 0,
+      }
+      logger.info('\nUsage Breakdown:')
+      sortedUsages.forEach((usage, index) => {
+        const delta = {
+          input: usage.input - lastUsage.input,
+          output: usage.output - lastUsage.output,
+          cachedRead: usage.cachedRead - lastUsage.cachedRead,
+          cost: usage.cost - lastUsage.cost,
+          messageCount: usage.messageCount - lastUsage.messageCount,
+        }
+        const tempMeter = new UsageMeter()
+        tempMeter.setUsage(delta)
+        logger.info(`   Step ${index + 1}: ${tempMeter.getUsageText()}`)
+        lastUsage = usage
+      })
+
+      const last = sortedUsages.at(-1)
+      if (last) {
+        const totalMeter = new UsageMeter()
+        totalMeter.setUsage(last)
+        logger.info(`   Total: ${totalMeter.getUsageText()}`)
+      }
     }
   } catch (error) {
     logger.error(`\nEpic workflow failed: ${error instanceof Error ? error.message : String(error)}`)

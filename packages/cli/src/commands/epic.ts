@@ -1,10 +1,11 @@
 import { getProvider } from '@polka-codes/cli-shared'
+import type { UsageMeter } from '@polka-codes/core'
 import { Command } from 'commander'
 import { createLogger } from '../logger'
 import { runWorkflow } from '../runWorkflow'
 import { getUserInput } from '../utils/userInput'
 import { epicWorkflow } from '../workflows/epic.workflow'
-import { EpicMemoryStore, EpicTodoItemStore, loadEpicContext, saveEpicContext } from '../workflows/epic-context'
+import { type EpicContext, EpicMemoryStore, EpicTodoItemStore, loadEpicContext, saveEpicContext } from '../workflows/epic-context'
 
 export async function runEpic(task: string | undefined, _options: any, command: Command) {
   const globalOpts = (command.parent ?? command).opts()
@@ -35,10 +36,28 @@ export async function runEpic(task: string | undefined, _options: any, command: 
     epicContext.task = taskInput
   }
 
+  let usageAppended = false
+
   const workflowInput = {
     ...epicContext,
-    saveEpicContext,
+    async saveEpicContext(context: EpicContext) {
+      if (usageMeter) {
+        const currentUsage = usageMeter.usage
+        if (!context.usages) {
+          context.usages = []
+        }
+        if (!usageAppended) {
+          context.usages.push({ ...currentUsage, timestamp: Date.now() })
+          usageAppended = true
+        } else {
+          context.usages[context.usages.length - 1] = { ...currentUsage, timestamp: Date.now() }
+        }
+      }
+      await saveEpicContext(context)
+    },
   }
+
+  let usageMeter: UsageMeter | undefined
 
   await runWorkflow(epicWorkflow, workflowInput, {
     commandName: 'epic',
@@ -51,6 +70,9 @@ export async function runEpic(task: string | undefined, _options: any, command: 
         todoItemStore: new EpicTodoItemStore(workflowInput),
         memoryStore: new EpicMemoryStore(workflowInput),
       }),
+    onUsageMeterCreated: (meter) => {
+      usageMeter = meter
+    },
   })
 }
 

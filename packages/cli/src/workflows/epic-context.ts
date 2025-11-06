@@ -6,6 +6,17 @@ import { z } from 'zod'
 
 export const EPIC_CONTEXT_FILE = '.epic.yml'
 
+export const EpicUsageSchema = z.object({
+  timestamp: z.number(),
+  input: z.number(),
+  output: z.number(),
+  cachedRead: z.number(),
+  cost: z.number(),
+  messageCount: z.number(),
+})
+
+export type EpicUsage = z.infer<typeof EpicUsageSchema>
+
 export const EpicContextSchema = z.object({
   task: z.string().nullish(),
   plan: z.string().nullish(),
@@ -13,6 +24,7 @@ export const EpicContextSchema = z.object({
   baseBranch: z.string().nullish(),
   todos: z.array(TodoItemSchema).nullish(),
   memory: z.record(z.string(), z.string()).nullish(),
+  usages: z.array(EpicUsageSchema).nullish(),
 })
 
 export type EpicContext = z.infer<typeof EpicContextSchema>
@@ -25,6 +37,7 @@ export const saveEpicContext = async (context: EpicContext): Promise<void> => {
     baseBranch: context.baseBranch,
     todos: context.todos,
     memory: context.memory,
+    usages: context.usages,
   })
   await fs.writeFile(EPIC_CONTEXT_FILE, yamlString, 'utf-8')
 }

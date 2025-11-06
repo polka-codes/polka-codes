@@ -28,6 +28,7 @@ type RunWorkflowOptions = {
   requiresProvider?: boolean
   yes?: boolean
   getProvider?: (args: { excludeFiles?: string[] }) => ToolProvider
+  onUsageMeterCreated?: (meter: UsageMeter) => void
 }
 
 export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
@@ -53,6 +54,9 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
     maxMessages: config.maxMessageCount,
     maxCost: config.budget,
   })
+
+  options.onUsageMeterCreated?.(usage)
+
   const onEvent = printEvent(verbose, usage, process.stderr)
   const excludeFiles = ['.epic.yml', ...(config.excludeFiles ?? [])]
   const toolProvider = (options.getProvider ?? getProvider)({ excludeFiles })
