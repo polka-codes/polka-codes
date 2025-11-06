@@ -65,7 +65,7 @@ When planning an epic:
 Your plan must have two parts: task description and implementation plan.
 
 ### 1. Task Description
-Include the verbatim user request to provide context for the implementation plan.
+Start by providing a detailed description of the task and its expected outcome. This description should be a comprehensive summary based on the user's request, setting the stage for the detailed implementation plan that follows. It should clearly articulate the "what" and "why" of the epic before breaking it down into "how".
 
 ### 2. Implementation Plan
 
@@ -96,7 +96,14 @@ For epic-scale work, **use markdown checkboxes** to track progress through multi
 \`\`\`
 ### 1. Task Description
 
-Implement user authentication with JWT tokens.
+This epic is to implement a complete user authentication system using JSON Web Tokens (JWT). The primary goal is to allow users to register for a new account and log in to receive a token that can be used to access protected resources. The system should handle password hashing for security and provide a way to manage user sessions on the frontend.
+
+**Expected Outcome:**
+- A backend with registration and login endpoints.
+- Secure password storage using bcrypt.
+- JWT generation upon successful login.
+- Middleware to protect specific routes.
+- A frontend with a login form, registration form, and context for managing authentication state.
 
 ### 2. Implementation Plan
 
