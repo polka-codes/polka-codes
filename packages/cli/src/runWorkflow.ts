@@ -54,7 +54,8 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
     maxCost: config.budget,
   })
   const onEvent = printEvent(verbose, usage, process.stderr)
-  const toolProvider = (options.getProvider ?? getProvider)({ excludeFiles: config.excludeFiles })
+  const excludeFiles = ['.epic.yml', ...(config.excludeFiles ?? [])]
+  const toolProvider = (options.getProvider ?? getProvider)({ excludeFiles })
 
   const commandConfig = providerConfig.getConfigForCommand(commandName)
   if (!commandConfig) {
