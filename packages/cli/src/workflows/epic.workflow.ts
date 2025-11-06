@@ -346,7 +346,7 @@ async function performReviewAndFixCycle(
 
   for (let i = 0; i < MAX_REVIEW_RETRIES; i++) {
     const diffResult = await tools.executeCommand({ command: 'git', args: ['diff', '--name-status', 'HEAD~1', 'HEAD'] })
-    const changedFiles = parseGitDiffNameStatus(diffResult.stdout)
+    const changedFiles = parseGitDiffNameStatus(diffResult.stdout).filter(({ path }) => path !== '.epic.yml')
 
     if (changedFiles.length === 0) {
       logger.info('No files were changed. Skipping review.\n')
@@ -574,7 +574,7 @@ async function performFinalReviewAndFix(
 
   for (let i = 0; i < MAX_REVIEW_RETRIES; i++) {
     const diffResult = await tools.executeCommand({ command: 'git', args: ['diff', '--name-status', commitRange] })
-    const changedFiles = parseGitDiffNameStatus(diffResult.stdout)
+    const changedFiles = parseGitDiffNameStatus(diffResult.stdout).filter(({ path }) => path !== '.epic.yml')
 
     if (changedFiles.length === 0) {
       logger.info('No files have been changed in this branch. Skipping final review.\n')
