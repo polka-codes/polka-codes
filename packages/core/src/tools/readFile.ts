@@ -24,7 +24,7 @@ export const toolInfo = {
             if (lower === 'true') return true
           }
           return val
-        }, z.boolean().optional().default(false))
+        }, z.boolean().nullish().default(false))
         .describe('Whether to include ignored files. Use true to include files ignored by .gitignore.')
         .meta({ usageValue: 'true or false (optional)' }),
     })
@@ -61,7 +61,7 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
 
   const resp = []
   for (const path of paths) {
-    const fileContent = await provider.readFile(path, includeIgnored)
+    const fileContent = await provider.readFile(path, includeIgnored ?? false)
     if (!fileContent) {
       resp.push(`<read_file_file_content path="${path}" file_not_found="true" />`)
     } else {

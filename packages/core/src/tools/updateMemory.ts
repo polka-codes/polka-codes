@@ -10,7 +10,7 @@ export const toolInfo = {
     .object({
       operation: z.enum(['append', 'replace', 'remove']).describe('The operation to perform.'),
       topic: z.string().nullish().describe('The topic to update in memory. Defaults to ":default:".'),
-      content: z.string().optional().describe('The content for append or replace operations. Must be omitted for remove operation.'),
+      content: z.string().nullish().describe('The content for append or replace operations. Must be omitted for remove operation.'),
     })
     .superRefine((data, ctx) => {
       if (data.operation === 'append' || data.operation === 'replace') {
@@ -45,7 +45,7 @@ export const handler: ToolHandler<typeof toolInfo, MemoryProvider> = async (prov
   }
   const params = toolInfo.parameters.parse(args)
 
-  await provider.updateMemory(params.operation, params.topic ?? undefined, 'content' in params ? params.content : undefined)
+  await provider.updateMemory(params.operation, params.topic ?? undefined, params.content ?? undefined)
 
   switch (params.operation) {
     case 'append':
