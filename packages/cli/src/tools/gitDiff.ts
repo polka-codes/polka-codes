@@ -31,7 +31,7 @@ export const toolInfo = {
           if (lower === 'true') return true
         }
         return val
-      }, z.boolean().optional().default(false))
+      }, z.boolean().optional().default(true))
       .describe('Annotate the diff with line numbers for additions and deletions.'),
   }),
 } as const satisfies ToolInfo
