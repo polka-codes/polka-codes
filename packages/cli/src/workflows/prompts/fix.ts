@@ -24,10 +24,18 @@ ${createJsonResponseInstruction({
 })}
 `
 
-export function getFixUserPrompt(command: string, exitCode: number, stdout: string, stderr: string, task?: string): string {
+export function getFixUserPrompt(
+  command: string,
+  exitCode: number,
+  stdout: string,
+  stderr: string,
+  task?: string,
+  context?: string,
+): string {
   const taskContext = task ? `\n## Original Task\n\n${task}\n` : ''
+  const contextSection = context ? `\n## User Context\n\n${context}\n` : ''
 
-  return `## Context${taskContext}
+  return `## Context${taskContext}${contextSection}
 
 The following command failed with exit code ${exitCode}:
 \`${command}\`

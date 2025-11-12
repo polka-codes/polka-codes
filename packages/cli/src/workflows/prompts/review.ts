@@ -38,6 +38,7 @@ Exclude (do NOT run gitDiff; do not review):
   - <pr_title>
   - <pr_description>
   - <commit_messages>
+  - <user_context> - additional context provided by the user for review focus
 - A <review_instructions> tag tells you the focus of the review.
 - Use <file_status> to understand which files were modified, added, deleted, or renamed and to apply the inclusion/exclusion rules above.
 
@@ -87,6 +88,7 @@ export type ReviewToolInput = {
   commitRange?: string
   staged?: boolean
   changedFiles?: { path: string; status: string }[]
+  context?: string
 }
 
 export function formatReviewToolInput(params: ReviewToolInput): string {
@@ -99,6 +101,10 @@ export function formatReviewToolInput(params: ReviewToolInput): string {
   }
   if (params.commitMessages) {
     parts.push(`<commit_messages>\n${params.commitMessages}\n</commit_messages>`)
+  }
+
+  if (params.context) {
+    parts.push(`<user_context>\n${params.context}\n</user_context>`)
   }
 
   if (params.changedFiles && params.changedFiles.length > 0) {

@@ -10,6 +10,7 @@ import { formatReviewForConsole, type ReviewResult } from '../workflows/workflow
 
 export const reviewCommand = new Command('review')
   .description('Review a GitHub pull request or local changes')
+  .argument('[context]', 'Additional context for the review')
   .option('--pr <pr>', 'The pull request number or URL to review')
   .option('--json', 'Output the review in JSON format', false)
   .option('-y, --yes', 'Automatically apply review feedback', false)
@@ -28,7 +29,7 @@ export const reviewCommand = new Command('review')
     },
     1,
   )
-  .action(async (options: { pr?: string; json: boolean; yes: boolean; loop: number }, command: Command) => {
+  .action(async (context: string | undefined, options: { pr?: string; json: boolean; yes: boolean; loop: number }, command: Command) => {
     const { json, pr, loop: maxIterations, yes: yesOption } = options
     const yes = maxIterations > 1 || yesOption
     let changesAppliedInThisIteration = false
@@ -41,7 +42,7 @@ export const reviewCommand = new Command('review')
 
     for (let i = 0; i < maxIterations; i++) {
       changesAppliedInThisIteration = false
-      const input = { pr }
+      const input = { pr, context }
 
       if (i > 0) {
         logger.debug(`Re-running review (iteration ${i + 1} of ${maxIterations})...`)

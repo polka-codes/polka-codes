@@ -218,4 +218,37 @@ describe('fixWorkflow', () => {
 
     getFixUserPromptSpy.mockRestore()
   })
+
+  test('should pass context to agent prompt', async () => {
+    const { context, tools } = createMockContext()
+    const getFixUserPromptSpy = spyOn(prompts, 'getFixUserPrompt')
+
+    tools.executeCommand.mockResolvedValue({
+      exitCode: 1,
+      stdout: 'FAIL src/test.ts',
+      stderr: 'TypeError: undefined is not a function',
+    })
+
+    tools.generateText.mockResolvedValue([
+      {
+        role: 'assistant',
+        content: '```json\n{"summary":"I did a fix","bailReason":null}\n```',
+      },
+    ])
+
+    tools.executeCommand
+      .mockResolvedValueOnce({ exitCode: 1, stdout: 'FAIL', stderr: 'Error' })
+      .mockResolvedValueOnce({ exitCode: 0, stdout: 'PASS', stderr: '' })
+
+    await fixWorkflow({ command: 'bun test', context: 'Focus on the authentication tests' }, context)
+
+    expect(getFixUserPromptSpy).toHaveBeenCalledTimes(1)
+    expect(tools.generateText).toHaveBeenCalledTimes(1)
+
+    const generateTextCall = tools.generateText.mock.calls[0][0] as { messages: { role: string; content: string }[] }
+    const userMessage = generateTextCall.messages.find((m: { role: string }) => m.role === 'user')
+    expect(userMessage?.content).toContain('Focus on the authentication tests')
+
+    getFixUserPromptSpy.mockRestore()
+  })
 })

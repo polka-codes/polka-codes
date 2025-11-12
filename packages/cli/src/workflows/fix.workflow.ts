@@ -25,6 +25,7 @@ import { getDefaultContext } from './workflow.utils'
 export type FixWorkflowInput = {
   command?: string
   task?: string
+  context?: string
   interactive?: boolean
 }
 
@@ -43,7 +44,7 @@ export const fixWorkflow: WorkflowFn<
   CliToolRegistry
 > = async (input, context) => {
   const { tools, logger, step } = context
-  const { command: inputCommand, task, interactive = true } = input
+  const { command: inputCommand, task, context: userContext, interactive = true } = input
   let command = inputCommand
   const summaries: string[] = []
   let formatCommand: string | undefined
@@ -123,7 +124,7 @@ export const fixWorkflow: WorkflowFn<
     const result = await step(`fix-${i}`, async () => {
       const defaultContext = await getDefaultContext()
       const memoryContext = await tools.getMemoryContext()
-      const userPrompt = getFixUserPrompt(command, exitCode, stdout, stderr, task)
+      const userPrompt = getFixUserPrompt(command, exitCode, stdout, stderr, task, userContext)
       return await agentWorkflow(
         {
           systemPrompt: FIX_SYSTEM_PROMPT,

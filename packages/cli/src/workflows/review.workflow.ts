@@ -13,11 +13,12 @@ type FileChange = {
 
 export type ReviewWorkflowInput = {
   pr?: string
+  context?: string
 }
 
 export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput, ReviewResult, CliToolRegistry> = async (input, context) => {
   const { step, tools, logger } = context
-  const { pr } = input
+  const { pr, context: userContext } = input
   let changeInfo: ReviewToolInput | undefined
 
   if (pr) {
@@ -71,6 +72,7 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput, ReviewResult, CliTo
       pullRequestDescription: prDetails.body,
       commitMessages,
       changedFiles,
+      context: userContext,
     }
   } else {
     const statusResult = await tools.executeCommand({ command: 'git', args: ['status', '--porcelain=v1'] })
@@ -87,6 +89,7 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput, ReviewResult, CliTo
       changeInfo = {
         staged: hasStagedChanges,
         changedFiles,
+        context: userContext,
       }
     } else {
       await step('No local changes detected. Falling back to branch diff...', async () => {})
@@ -133,6 +136,7 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput, ReviewResult, CliTo
       changeInfo = {
         commitRange: `${defaultBranch}...${currentBranch}`,
         changedFiles: branchChangedFiles,
+        context: userContext,
       }
     }
   }
