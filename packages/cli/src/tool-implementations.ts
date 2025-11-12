@@ -286,7 +286,7 @@ async function generateText(input: { messages: JsonModelMessage[]; tools: ToolSe
 
   for (let i = 0; i < retryCount; i++) {
     const abortController = new AbortController()
-    const timeout = setTimeout(() => abortController.abort(), requestTimeoutSeconds * 1000)
+    let timeout = setTimeout(() => abortController.abort(), requestTimeoutSeconds * 1000)
 
     const usageMeterOnFinishHandler = context.parameters.usageMeter.onFinishHandler(model)
 
@@ -297,6 +297,8 @@ async function generateText(input: { messages: JsonModelMessage[]; tools: ToolSe
         messages,
         tools: input.tools,
         async onChunk({ chunk }) {
+          clearTimeout(timeout)
+          timeout = setTimeout(() => abortController.abort(), requestTimeoutSeconds * 1000)
           switch (chunk.type) {
             case 'text-delta':
               agentCallback?.({
