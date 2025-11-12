@@ -100,38 +100,37 @@ export type ReviewToolInput = {
   context?: string
 }
 
-export function formatReviewToolInput(params: ReviewToolInput): string {
-  const parts = []
-  if (params.pullRequestTitle) {
-    parts.push(`<pr_title>\n${params.pullRequestTitle}\n</pr_title>`)
+function formatContext(tag: string, value: string | undefined): string | undefined {
+  if (!value) {
+    return undefined
   }
-  if (params.pullRequestDescription) {
-    parts.push(`<pr_description>\n${params.pullRequestDescription}\n</pr_description>`)
-  }
-  if (params.commitMessages) {
-    parts.push(`<commit_messages>\n${params.commitMessages}\n</commit_messages>`)
-  }
+  return `<${tag}>\n${value}\n</${tag}>`
+}
 
-  if (params.context) {
-    parts.push(`<user_context>\n${params.context}\n</user_context>`)
-  }
-
-  if (params.changedFiles && params.changedFiles.length > 0) {
-    const fileList = params.changedFiles.map((file) => `${file.status}: ${file.path}`).join('\n')
-    parts.push(`<file_status>\n${fileList}\n</file_status>`)
-  }
-
-  let instructions = ''
+function getReviewInstructions(params: ReviewToolInput): string {
   if (params.commitRange) {
-    instructions = `Review the pull request. Use the gitDiff tool with commit range '${params.commitRange}', contextLines: 5, and includeLineNumbers: true to inspect the actual code changes. The diff will include line number annotations to help you report accurate line numbers. File status information is already provided above.`
-  } else if (params.staged) {
-    instructions =
-      'Review the staged changes. Use the gitDiff tool with staged: true, contextLines: 5, and includeLineNumbers: true to inspect the actual code changes. The diff will include line number annotations to help you report accurate line numbers. File status information is already provided above.'
-  } else {
-    instructions =
-      'Review the unstaged changes. Use the gitDiff tool with contextLines: 5, and includeLineNumbers: true to inspect the actual code changes. The diff will include line number annotations to help you report accurate line numbers. File status information is already provided above.'
+    return `Review the pull request. Use the gitDiff tool with commit range '${params.commitRange}' to inspect the actual code changes.`
   }
-  parts.push(`<review_instructions>\n${instructions}\n</review_instructions>`)
+  if (params.staged) {
+    return 'Review the staged changes. Use the gitDiff tool with staged: true to inspect the actual code changes.'
+  }
+  return 'Review the unstaged changes. Use the gitDiff tool to inspect the actual code changes.'
+}
 
-  return parts.join('\n')
+export function formatReviewToolInput(params: ReviewToolInput): string {
+  const fileList =
+    params.changedFiles && params.changedFiles.length > 0
+      ? params.changedFiles.map((file) => `${file.status}: ${file.path}`).join('\n')
+      : undefined
+
+  const parts = [
+    formatContext('pr_title', params.pullRequestTitle),
+    formatContext('pr_description', params.pullRequestDescription),
+    formatContext('commit_messages', params.commitMessages),
+    formatContext('user_context', params.context),
+    formatContext('file_status', fileList),
+    formatContext('review_instructions', getReviewInstructions(params)),
+  ]
+
+  return parts.filter(Boolean).join('\n')
 }
