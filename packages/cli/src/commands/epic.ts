@@ -57,7 +57,10 @@ export async function runEpic(task: string | undefined, _options: any, command: 
   const workflowInput = {
     ...epicContext,
     async saveEpicContext(context: EpicContext) {
-      await persistEpicContext(context)
+      await persistEpicContext({
+        ...epicContext,
+        ...context,
+      })
     },
     saveUsageSnapshot,
   }
