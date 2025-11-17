@@ -42,6 +42,7 @@ import { formatElapsedTime, getDefaultContext, parseGitDiffNameStatus, type Revi
 
 export type EpicWorkflowInput = EpicContext & {
   saveEpicContext: (context: EpicContext) => Promise<void>
+  saveUsageSnapshot: () => Promise<void>
 }
 
 const MAX_REVIEW_RETRIES = 5
@@ -127,6 +128,7 @@ async function createPlan(
 async function createAndApprovePlan(
   task: string,
   context: WorkflowContext<CliToolRegistry>,
+  saveUsageSnapshot: () => Promise<void>,
 ): Promise<{ plan: string; branchName: string } | null> {
   const { logger, step, tools } = context
 
@@ -160,6 +162,7 @@ async function createAndApprovePlan(
           feedback = await tools.input({ message: 'Press Enter to approve the plan, or provide feedback to refine it.' })
           if (feedback.trim() === '') {
             logger.info('High-level plan approved.\n')
+            await saveUsageSnapshot()
             return { plan: result.plan, branchName: result.branchName }
           }
           break // Continues the while loop for refinement
@@ -459,7 +462,11 @@ async function findNextTask(tools: WorkflowTools<CliToolRegistry>): Promise<Todo
   }
 }
 
-async function runImplementationLoop(context: WorkflowContext<CliToolRegistry>, highLevelPlan: string): Promise<string[]> {
+async function runImplementationLoop(
+  context: WorkflowContext<CliToolRegistry>,
+  highLevelPlan: string,
+  saveUsageSnapshot: () => Promise<void>,
+): Promise<string[]> {
   const { logger, step, tools } = context
   const commitMessages: string[] = []
 
@@ -539,6 +546,8 @@ Focus only on this item, but use the plan for context.`
     }
 
     logger.info(`\nProgress: ${progressMessage}`)
+
+    await saveUsageSnapshot()
 
     if (!nextTaskItem) {
       logger.info('All tasks complete!\n')
@@ -660,7 +669,7 @@ async function performFinalReviewAndFix(
 
 export const epicWorkflow: WorkflowFn<EpicWorkflowInput, void, CliToolRegistry> = async (input, context) => {
   const { logger, tools } = context
-  const { task, saveEpicContext } = input
+  const { task, saveEpicContext, saveUsageSnapshot } = input
 
   const workflowStartTime = Date.now()
 
@@ -685,7 +694,7 @@ export const epicWorkflow: WorkflowFn<EpicWorkflowInput, void, CliToolRegistry> 
         logger.error('Error: Task is missing in epic context. Exiting.')
         return
       }
-      const planResult = await createAndApprovePlan(input.task, context)
+      const planResult = await createAndApprovePlan(input.task, context, saveUsageSnapshot)
       if (!planResult) return
       input.plan = planResult.plan
       input.branchName = planResult.branchName
@@ -716,9 +725,11 @@ export const epicWorkflow: WorkflowFn<EpicWorkflowInput, void, CliToolRegistry> 
       await addTodoItemsFromPlan(input.plan, context)
     }
 
-    const commitMessages = await runImplementationLoop(context, input.plan)
+    const commitMessages = await runImplementationLoop(context, input.plan, saveUsageSnapshot)
 
     await performFinalReviewAndFix(context, input.plan, input.baseBranch ?? undefined)
+
+    await saveUsageSnapshot()
 
     // Cleanup .epic.yml
     await tools.executeCommand({ command: 'git', args: ['rm', '-f', '.epic.yml'] })

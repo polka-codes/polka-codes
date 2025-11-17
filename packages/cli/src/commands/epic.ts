@@ -5,7 +5,13 @@ import { createLogger } from '../logger'
 import { runWorkflow } from '../runWorkflow'
 import { getUserInput } from '../utils/userInput'
 import { epicWorkflow } from '../workflows/epic.workflow'
-import { type EpicContext, EpicMemoryStore, EpicTodoItemStore, loadEpicContext, saveEpicContext } from '../workflows/epic-context'
+import {
+  type EpicContext,
+  EpicMemoryStore,
+  EpicTodoItemStore,
+  loadEpicContext,
+  saveEpicContext as persistEpicContext,
+} from '../workflows/epic-context'
 
 export async function runEpic(task: string | undefined, _options: any, command: Command) {
   const globalOpts = (command.parent ?? command).opts()
@@ -36,28 +42,25 @@ export async function runEpic(task: string | undefined, _options: any, command: 
     epicContext.task = taskInput
   }
 
-  let usageAppended = false
+  let usageMeter: UsageMeter | undefined
+
+  const saveUsageSnapshot = async () => {
+    if (usageMeter) {
+      const currentUsage = usageMeter.usage
+      if (!epicContext.usages) {
+        epicContext.usages = []
+      }
+      epicContext.usages.push({ ...currentUsage, timestamp: Date.now() })
+    }
+  }
 
   const workflowInput = {
     ...epicContext,
     async saveEpicContext(context: EpicContext) {
-      if (usageMeter) {
-        const currentUsage = usageMeter.usage
-        if (!context.usages) {
-          context.usages = []
-        }
-        if (!usageAppended) {
-          context.usages.push({ ...currentUsage, timestamp: Date.now() })
-          usageAppended = true
-        } else {
-          context.usages[context.usages.length - 1] = { ...currentUsage, timestamp: Date.now() }
-        }
-      }
-      await saveEpicContext(context)
+      await persistEpicContext(context)
     },
+    saveUsageSnapshot,
   }
-
-  let usageMeter: UsageMeter | undefined
 
   await runWorkflow(epicWorkflow, workflowInput, {
     commandName: 'epic',

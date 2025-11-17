@@ -16,6 +16,7 @@ describe('epicWorkflow', () => {
     const branchName = 'feat/new-feature'
     const baseBranch = 'main'
     const saveEpicContext = mock(() => Promise.resolve())
+    const saveUsageSnapshot = mock(() => Promise.resolve())
 
     const {
       context,
@@ -315,6 +316,7 @@ describe('epicWorkflow', () => {
       branchName: '',
       baseBranch: '',
       saveEpicContext,
+      saveUsageSnapshot,
     }
 
     await epicWorkflow(epicContext, context)
