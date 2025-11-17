@@ -63,8 +63,9 @@ describe.skipIf(!!process.env.CI)('commitWorkflow', () => {
       },
     ])
 
-    await commitWorkflow({}, context)
+    const result = await commitWorkflow({}, context)
 
+    expect(result).toBe('feat: add newFunc')
     expect(tools.printChangeFile).toHaveBeenCalled()
     expect(tools.executeCommand).toHaveBeenCalledWith({
       command: 'git',
@@ -96,8 +97,9 @@ describe.skipIf(!!process.env.CI)('commitWorkflow', () => {
       },
     ])
 
-    await commitWorkflow({ all: true }, context)
+    const result = await commitWorkflow({ all: true }, context)
 
+    expect(result).toBe('feat: stage file')
     expect(tools.executeCommand).toHaveBeenCalledWith({
       command: 'git',
       args: ['add', '.'],
@@ -124,8 +126,9 @@ describe.skipIf(!!process.env.CI)('commitWorkflow', () => {
       },
     ])
 
-    await commitWorkflow({}, context)
+    const result = await commitWorkflow({}, context)
 
+    expect(result).toBe('feat: stage file')
     expect(tools.confirm).toHaveBeenCalledWith({
       message: 'No staged files found. Stage all files?',
       default: false,

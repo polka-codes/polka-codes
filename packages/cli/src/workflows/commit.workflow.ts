@@ -18,7 +18,7 @@ type FileChange = {
   status: string
 }
 
-export const commitWorkflow: WorkflowFn<CommitWorkflowInput, void, CliToolRegistry> = async (input, context) => {
+export const commitWorkflow: WorkflowFn<CommitWorkflowInput, string | void, CliToolRegistry> = async (input, context) => {
   const { step, tools, logger } = context
   const { stagedFiles, unstagedFiles } = await tools.printChangeFile()
 
@@ -103,7 +103,7 @@ export const commitWorkflow: WorkflowFn<CommitWorkflowInput, void, CliToolRegist
     if (commitMessage) {
       logger.info(`\nCommit message:\n${commitMessage}`)
       await tools.createCommit({ message: commitMessage })
-      return
+      return commitMessage
     }
   }
 

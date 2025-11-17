@@ -28,6 +28,7 @@ import { UserCancelledError } from '../errors'
 import { gitDiff } from '../tools'
 import type { CliToolRegistry } from '../workflow-tools'
 import { codeWorkflow, type JsonFilePart, type JsonImagePart } from './code.workflow'
+import { commitWorkflow } from './commit.workflow'
 import type { EpicContext } from './epic-context'
 import {
   CODE_REVIEW_SYSTEM_PROMPT,
@@ -350,8 +351,9 @@ async function performReviewAndFixCycle(
   taskItem: string,
   highLevelPlan: string,
   context: WorkflowContext<CliToolRegistry>,
-): Promise<{ passed: boolean }> {
+): Promise<{ passed: boolean; commitMessages: string[] }> {
   const { logger, step, tools } = context
+  const commitMessages: string[] = []
 
   for (let i = 0; i < MAX_REVIEW_RETRIES; i++) {
     const diffResult = await tools.executeCommand({ command: 'git', args: ['diff', '--name-status', 'HEAD~1', 'HEAD'] })
@@ -359,7 +361,7 @@ async function performReviewAndFixCycle(
 
     if (changedFiles.length === 0) {
       logger.info('No files were changed. Skipping review.\n')
-      return { passed: true }
+      return { passed: true, commitMessages: [] }
     }
 
     logger.info(`\nReview iteration ${i + 1}/${MAX_REVIEW_RETRIES}`)
@@ -394,7 +396,7 @@ async function performReviewAndFixCycle(
 
     if (!reviewResult || !reviewResult.specificReviews || reviewResult.specificReviews.length === 0) {
       logger.info('Review passed. No issues found.\n')
-      return { passed: true }
+      return { passed: true, commitMessages }
     }
 
     logger.warn(`Warning: Review found ${reviewResult.specificReviews.length} issue(s). Attempting to fix...\n`)
@@ -429,17 +431,25 @@ ${reviewSummary}`
     })
 
     await step(`commit-fix-${iterationCount}-${i}`, async () => {
-      await tools.executeCommand({ command: 'git', args: ['add', '.'] })
-      await tools.executeCommand({ command: 'git', args: ['commit', '--amend', '--no-edit'] })
+      const commitMessage = await commitWorkflow(
+        {
+          all: true,
+          context: reviewSummary,
+        },
+        context,
+      )
+      if (commitMessage) {
+        commitMessages.push(commitMessage)
+      }
     })
 
     if (i === MAX_REVIEW_RETRIES - 1) {
       logger.error(`\nMax retries (${MAX_REVIEW_RETRIES}) reached. Moving to the next task, but issues might remain.\n`)
-      return { passed: false }
+      return { passed: false, commitMessages }
     }
   }
 
-  return { passed: false }
+  return { passed: false, commitMessages }
 }
 
 async function findNextTask(tools: WorkflowTools<CliToolRegistry>): Promise<TodoItem | null> {
@@ -515,7 +525,13 @@ Focus only on this item, but use the plan for context.`
     })
     commitMessages.push(commitMessage)
 
-    const { passed: reviewPassed } = await performReviewAndFixCycle(iterationCount, nextTask, highLevelPlan, context)
+    const { passed: reviewPassed, commitMessages: fixCommitMessages } = await performReviewAndFixCycle(
+      iterationCount,
+      nextTask,
+      highLevelPlan,
+      context,
+    )
+    commitMessages.push(...fixCommitMessages)
 
     const taskElapsed = Date.now() - taskStartTime
     const taskElapsedTime = formatElapsedTime(taskElapsed)
