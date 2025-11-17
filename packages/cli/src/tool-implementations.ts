@@ -288,6 +288,9 @@ async function generateText(input: { messages: JsonModelMessage[]; tools: ToolSe
     const abortController = new AbortController()
     let timeout = setTimeout(() => abortController.abort(), requestTimeoutSeconds * 1000)
 
+    const lastOutputs: string[] = []
+    let repetitionDetected = false
+
     const usageMeterOnFinishHandler = context.parameters.usageMeter.onFinishHandler(model)
 
     try {
@@ -301,6 +304,20 @@ async function generateText(input: { messages: JsonModelMessage[]; tools: ToolSe
           timeout = setTimeout(() => abortController.abort(), requestTimeoutSeconds * 1000)
           switch (chunk.type) {
             case 'text-delta':
+              lastOutputs.push(chunk.text)
+              if (lastOutputs.length > 20) {
+                lastOutputs.shift()
+              }
+              if (lastOutputs.length === 20) {
+                const firstHalf = lastOutputs.slice(0, 10).join('')
+                const secondHalf = lastOutputs.slice(10).join('')
+                if (firstHalf === secondHalf) {
+                  if (firstHalf.length > 20) {
+                    repetitionDetected = true
+                    abortController.abort()
+                  }
+                }
+              }
               agentCallback?.({
                 kind: TaskEventKind.Text,
                 newText: chunk.text,
@@ -331,7 +348,12 @@ async function generateText(input: { messages: JsonModelMessage[]; tools: ToolSe
       return resp.messages
     } catch (error: any) {
       if (error.name === 'AbortError') {
+        if (repetitionDetected) {
+          console.warn('Repetition detected, retrying...')
+          continue
+        }
         // This is a timeout
+        console.warn(`Request timed out after ${requestTimeoutSeconds} seconds, retrying...`)
         continue
       }
       if ('response' in error) {
