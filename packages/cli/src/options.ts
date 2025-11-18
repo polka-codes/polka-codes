@@ -45,7 +45,7 @@ export function addSharedOptions(command: Command) {
 
 export function parseOptions(
   options: CliOptions,
-  { cwdArg }: { cwdArg?: string } = {},
+  { cwdArg, commandName }: { cwdArg?: string; commandName?: string } = {},
   home: string = os.homedir(),
   env: Partial<Env> = getEnv(),
 ) {
@@ -93,14 +93,26 @@ export function parseOptions(
     ...config,
   })
 
+  const commandConfig = commandName ? providerConfig.getConfigForCommand(commandName) : undefined
+
   const verbose = options.silent ? -1 : (options.verbose ?? 0)
+
+  const commandSpecificConfig = commandName ? config.commands?.[commandName] : undefined
+  const defaultCommandConfig = config.commands?.default
+  const mergedCommandConfig = { ...defaultCommandConfig, ...commandSpecificConfig }
 
   return {
     maxMessageCount: options.maxMessageCount ?? config.maxMessageCount ?? 100,
-    budget: options.budget ?? (env.POLKA_BUDGET ? Number.parseFloat(env.POLKA_BUDGET) : undefined) ?? config.budget ?? 10,
+    budget:
+      options.budget ??
+      mergedCommandConfig.budget ??
+      (env.POLKA_BUDGET ? Number.parseFloat(env.POLKA_BUDGET) : undefined) ??
+      config.budget ??
+      10,
     verbose,
     config,
     providerConfig,
+    commandConfig,
     file: options.file,
   }
 }

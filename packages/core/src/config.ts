@@ -4,6 +4,7 @@ const providerModelSchema = z.object({
   provider: z.string().optional(),
   model: z.string().optional(),
   parameters: z.record(z.string(), z.any()).optional(),
+  budget: z.number().positive().optional(),
 })
 
 export const configSchema = z
@@ -54,12 +55,7 @@ export const configSchema = z
         ),
       )
       .optional(),
-    commands: z
-      .object({
-        default: providerModelSchema.optional(),
-      })
-      .catchall(providerModelSchema)
-      .optional(),
+    commands: z.record(z.string(), providerModelSchema).optional(),
     rules: z.array(z.string()).optional().or(z.string()).optional(),
     excludeFiles: z.array(z.string()).optional(),
   })

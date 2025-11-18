@@ -13,20 +13,22 @@ const defaultModels = {
 export class ApiProviderConfig {
   readonly defaultProvider?: AiProvider
   readonly providers: Readonly<Partial<Record<AiProvider, { apiKey: string; defaultModel?: string; defaultParameters: any }>>>
-  readonly commands?: Partial<Record<string, { provider?: AiProvider; model?: string; parameters: any }>>
+  readonly commands?: Config['commands']
   readonly defaultParameters: any
 
   constructor(config: Config) {
     this.defaultProvider = config.defaultProvider as AiProvider | undefined
     this.defaultParameters = config.defaultParameters ?? {}
     this.providers = config.providers ?? {}
-    this.commands = config.commands as Partial<Record<string, { provider?: AiProvider; model?: string; parameters: any }>>
+    this.commands = config.commands
   }
 
   getConfigForCommand(command: string) {
     // TODO: strong type command
-    const { provider, model, parameters } = this.commands?.[command] ?? this.commands?.default ?? {}
-    const finalProvider = provider ?? this.defaultProvider
+    const commandConfig = this.commands?.[command]
+    const defaultConfig = this.commands?.default
+    const { provider, model, parameters, budget } = { ...defaultConfig, ...commandConfig }
+    const finalProvider = (provider as AiProvider) ?? this.defaultProvider
     if (!finalProvider) {
       return undefined
     }
@@ -46,6 +48,7 @@ export class ApiProviderConfig {
       keyFile,
       baseUrl,
       parameters: finalParameters,
+      budget,
     }
   }
 }

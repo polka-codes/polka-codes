@@ -54,6 +54,19 @@ describe('ApiProviderConfig', () => {
 
     expect(config.getConfigForCommand('unknown')).toMatchSnapshot()
   })
+
+  test('getConfigForCommand with command-specific budget', () => {
+    const config = new ApiProviderConfig({
+      defaultProvider: AiProvider.Anthropic,
+      commands: {
+        chat: {
+          budget: 5,
+        },
+      },
+    })
+
+    expect(config.getConfigForCommand('chat')?.budget).toBe(5)
+  })
 })
 
 describe('parseOptions', () => {
@@ -182,5 +195,28 @@ rules:
 
     const result = parseOptions(options, { cwdArg: testDir }, testDir, env)
     expect(result.budget).toBe(500)
+  })
+
+  test('prioritizes command-specific budget', () => {
+    const configPath = join(testDir, 'test-config.yml')
+    writeFileSync(
+      configPath,
+      `
+budget: 10
+commands:
+  chat:
+    budget: 2
+`,
+    )
+
+    const command = new Command()
+    addSharedOptions(command)
+    const options = command.parse(['node', 'test', '--config', configPath]).opts()
+
+    const result = parseOptions(options, { cwdArg: testDir, commandName: 'chat' }, testDir, {})
+    expect(result.budget).toBe(2)
+
+    const result2 = parseOptions(options, { cwdArg: testDir, commandName: 'other' }, testDir, {})
+    expect(result2.budget).toBe(10)
   })
 })

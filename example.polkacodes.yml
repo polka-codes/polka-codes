@@ -82,6 +82,7 @@ commands:
   pr:
     provider: "ollama"
     model: "maryasov/qwen2.5-coder-cline:7b"
+    budget: 0.5
 
   commit:
     provider: "ollama"
