@@ -11,6 +11,7 @@ import {
   readBinaryFile,
   readFile,
   readMemory,
+  search,
   searchFiles,
   updateMemory,
   type WorkflowContext,
@@ -79,6 +80,7 @@ async function createPlan(input: CreatePlanInput, context: WorkflowContext<CliTo
   const agentTools: FullToolInfo[] = [
     readFile,
     listFiles,
+    search,
     searchFiles,
     readBinaryFile,
     fetchUrl,
