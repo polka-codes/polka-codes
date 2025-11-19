@@ -16,7 +16,7 @@ export default {
     'claude-sonnet-4-20250514': { inputPrice: 3, outputPrice: 15, cacheWritesPrice: 3.75, cacheReadsPrice: 0.3, supportsThinking: true },
     'claude-3-7-sonnet-20250219': { inputPrice: 3, outputPrice: 15, cacheWritesPrice: 3.75, cacheReadsPrice: 0.3, supportsThinking: true },
     'claude-3-5-sonnet-20241022': { inputPrice: 3, outputPrice: 15, cacheWritesPrice: 3.75, cacheReadsPrice: 0.3, supportsThinking: false },
-    'claude-3-5-haiku-20241022': { inputPrice: 1.0, outputPrice: 5.0, cacheWritesPrice: 1, cacheReadsPrice: 0.08, supportsThinking: false },
+    'claude-3-5-haiku-20241022': { inputPrice: 0.8, outputPrice: 4.0, cacheWritesPrice: 1, cacheReadsPrice: 0.08, supportsThinking: false },
     'claude-haiku-4-5-20250929': { inputPrice: 1, outputPrice: 5, cacheWritesPrice: 1.25, cacheReadsPrice: 0.1, supportsThinking: false },
   },
 
