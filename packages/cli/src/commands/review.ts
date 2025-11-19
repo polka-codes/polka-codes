@@ -66,7 +66,7 @@ export const reviewCommand = new Command('review')
         if (reviewResult.specificReviews && reviewResult.specificReviews.length > 0) {
           if (yes) {
             shouldRunTask = true
-          } else if (process.stdin.isTTY) {
+          } else if (process.stdin.isTTY && !json) {
             await new Promise((resolve) => setTimeout(resolve, 50)) // wait for ora to finish
             try {
               shouldRunTask = await confirm({
