@@ -1,8 +1,11 @@
 import { spawn } from 'node:child_process'
 import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises'
 import { dirname, normalize, resolve } from 'node:path'
+import { vertex } from '@ai-sdk/google-vertex'
+import type { LanguageModelV2 } from '@ai-sdk/provider'
 import { input, select } from '@inquirer/prompts'
 import type { TodoItem, ToolProvider } from '@polka-codes/core'
+import { generateText, stepCountIs } from 'ai'
 import ignore from 'ignore'
 import { lookup } from 'mime-types'
 import { checkRipgrep } from './utils/checkRipgrep'
@@ -43,6 +46,7 @@ export type ProviderOptions = {
   summaryThreshold?: number
   memoryStore?: ProviderDataStore<Record<string, string>>
   todoItemStore?: ProviderDataStore<TodoItem[]>
+  getModel?: (command: string) => LanguageModelV2
 }
 
 export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
@@ -352,6 +356,23 @@ export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
         throw error
       }
     },
+    search:
+      options.getModel &&
+      (async (query: string) => {
+        const model = options.getModel?.('search')
+        if (!model) {
+          throw new Error('Unable to get model for search')
+        }
+        const resp = await generateText({
+          model,
+          tools: {
+            google_search: vertex.tools.googleSearch({}) as any,
+          },
+          prompt: query,
+          stopWhen: stepCountIs(5),
+        })
+        return resp.text
+      }),
   }
 
   if (checkRipgrep()) {

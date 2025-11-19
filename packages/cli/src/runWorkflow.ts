@@ -58,14 +58,26 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
   options.onUsageMeterCreated?.(usage)
 
   const onEvent = printEvent(verbose, usage, process.stderr)
-  const excludeFiles = ['.epic.yml', ...(config.excludeFiles ?? [])]
-  const toolProvider = (options.getProvider ?? getProvider)({ excludeFiles })
 
   const commandConfig = providerConfig.getConfigForCommand(commandName)
   if (!commandConfig) {
     throw new Error(`No provider configured for command: ${commandName}`)
   }
   const model = getModel(commandConfig)
+
+  const excludeFiles = ['.epic.yml', ...(config.excludeFiles ?? [])]
+
+  const toolProvider = (options.getProvider ?? getProvider)({
+    excludeFiles,
+    getModel: (command) => {
+      let config = providerConfig.getConfigForCommand(command)
+      if (!config) {
+        logger.info('No provider config found for command. Defaulting to global config.', command)
+        config = commandConfig
+      }
+      return getModel(config)
+    },
+  })
 
   const providerOptions = getProviderOptions({
     provider: commandConfig.provider,

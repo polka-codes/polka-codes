@@ -26,6 +26,7 @@ export type InteractionProvider = {
 
 export type WebProvider = {
   fetchUrl?: (url: string) => Promise<string>
+  search?: (query: string) => Promise<string>
 }
 
 export interface MemoryProvider {
@@ -113,6 +114,10 @@ export class MockProvider implements ToolProvider {
 
   async askFollowupQuestion(_question: string, _options?: string[]): Promise<string> {
     return 'mock answer'
+  }
+
+  async search(_query: string): Promise<string> {
+    return 'mock search result'
   }
 
   async listMemoryTopics(): Promise<string[]> {

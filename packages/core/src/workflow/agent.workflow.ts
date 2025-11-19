@@ -38,7 +38,7 @@ export type AgentToolRegistry = {
   }
 }
 
-export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentToolRegistry> = async (input, { step, tools }) => {
+export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentToolRegistry> = async (input, { step, tools, logger }) => {
   const event = (name: string, event: TaskEvent) => step(name, () => tools.taskEvent(event))
 
   const { tools: toolInfo, maxToolRoundTrips = 200 } = input
@@ -79,7 +79,11 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
       if (msg.content) {
         for (const part of msg.content) {
           if (part.type === 'tool-call') {
-            toolCalls.push(part as ToolCallPart)
+            if (toolSet[part.toolName]) {
+              toolCalls.push(part as ToolCallPart)
+            } else {
+              logger.warn('Tool not found. Skipping.', part)
+            }
           }
         }
       }

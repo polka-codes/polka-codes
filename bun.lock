@@ -19,7 +19,7 @@
     },
     "packages/cli": {
       "name": "@polka-codes/cli",
-      "version": "0.9.53",
+      "version": "0.9.61",
       "bin": {
         "polka": "cli.mjs",
       },
@@ -52,11 +52,14 @@
     },
     "packages/cli-shared": {
       "name": "@polka-codes/cli-shared",
-      "version": "0.9.53",
+      "version": "0.9.61",
       "dependencies": {
+        "@ai-sdk/google-vertex": "^3.0.68",
+        "@ai-sdk/provider": "^2.0.0",
         "@ai-sdk/provider-utils": "^3.0.15",
         "@inquirer/prompts": "^7.9.0",
         "@polka-codes/core": "workspace:*",
+        "ai": "^5.0.95",
         "chalk": "^5.6.2",
         "ignore": "^7.0.5",
         "lodash-es": "^4.17.21",
@@ -71,7 +74,7 @@
     },
     "packages/core": {
       "name": "@polka-codes/core",
-      "version": "0.9.53",
+      "version": "0.9.61",
       "dependencies": {
         "@ai-sdk/provider": "^2.0.0",
         "@ai-sdk/provider-utils": "^3.0.15",
@@ -82,7 +85,7 @@
     },
     "packages/github": {
       "name": "@polka-codes/github",
-      "version": "0.9.53",
+      "version": "0.9.61",
       "dependencies": {
         "@octokit/core": "^6.1.4",
         "mdast": "^3.0.0",
@@ -98,7 +101,7 @@
     },
     "packages/runner": {
       "name": "@polka-codes/runner",
-      "version": "0.9.53",
+      "version": "0.9.61",
       "bin": {
         "polka-runner": "cli.mjs",
       },
@@ -1291,6 +1294,16 @@
 
     "@microsoft/api-extractor/typescript": ["typescript@5.8.2", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-aJn6wq13/afZp/jT9QZmwEjDqqvSGp1VT5GVg+f/t6/oVyrgXM6BY1h9BRh/O5p3PlUPAe+WuiEZOmb/49RqoQ=="],
 
+    "@polka-codes/cli-shared/@ai-sdk/google-vertex": ["@ai-sdk/google-vertex@3.0.68", "", { "dependencies": { "@ai-sdk/anthropic": "2.0.45", "@ai-sdk/google": "2.0.36", "@ai-sdk/provider": "2.0.0", "@ai-sdk/provider-utils": "3.0.17", "google-auth-library": "^9.15.0" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-RBfdGwhEoGMoS805AZ76FkpegGtsw/CiZnAnnmyx0JFx8BsS5dPExD+kWLogsUPxKTs/gAvBoOdJcA1Osls5Aw=="],
+
+    "@polka-codes/cli-shared/@ai-sdk/provider-utils": ["@ai-sdk/provider-utils@3.0.17", "", { "dependencies": { "@ai-sdk/provider": "2.0.0", "@standard-schema/spec": "^1.0.0", "eventsource-parser": "^3.0.6" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-TR3Gs4I3Tym4Ll+EPdzRdvo/rc8Js6c4nVhFLuvGLX/Y4V9ZcQMa/HTiYsHEgmYrf1zVi6Q145UEZUfleOwOjw=="],
+
+    "@polka-codes/cli-shared/ai": ["ai@5.0.95", "", { "dependencies": { "@ai-sdk/gateway": "2.0.11", "@ai-sdk/provider": "2.0.0", "@ai-sdk/provider-utils": "3.0.17", "@opentelemetry/api": "1.9.0" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-dsvFdYMeGP08zuUQkhKO1UMMXMCb+nro9ZmDdwaAkkTlCGkP3u1S+xaRUDNayu/c0KVkiTtfEroPG//U+kvXzg=="],
+
+    "@polka-codes/core/@ai-sdk/provider-utils": ["@ai-sdk/provider-utils@3.0.17", "", { "dependencies": { "@ai-sdk/provider": "2.0.0", "@standard-schema/spec": "^1.0.0", "eventsource-parser": "^3.0.6" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-TR3Gs4I3Tym4Ll+EPdzRdvo/rc8Js6c4nVhFLuvGLX/Y4V9ZcQMa/HTiYsHEgmYrf1zVi6Q145UEZUfleOwOjw=="],
+
+    "@polka-codes/core/ai": ["ai@5.0.95", "", { "dependencies": { "@ai-sdk/gateway": "2.0.11", "@ai-sdk/provider": "2.0.0", "@ai-sdk/provider-utils": "3.0.17", "@opentelemetry/api": "1.9.0" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-dsvFdYMeGP08zuUQkhKO1UMMXMCb+nro9ZmDdwaAkkTlCGkP3u1S+xaRUDNayu/c0KVkiTtfEroPG//U+kvXzg=="],
+
     "@rushstack/node-core-library/ajv": ["ajv@8.13.0", "", { "dependencies": { "fast-deep-equal": "^3.1.3", "json-schema-traverse": "^1.0.0", "require-from-string": "^2.0.2", "uri-js": "^4.4.1" } }, "sha512-PRA911Blj99jR5RMeTunVbNXMF6Lp4vZXnk5GQjcnUWUTsrXtekg/pnmFFI2u/I36Y/2bITGS30GZCXei6uNkA=="],
 
     "@theguild/federation-composition/debug": ["debug@4.4.1", "", { "dependencies": { "ms": "^2.1.3" } }, "sha512-KcKCqiftBJcZr++7ykoDIEwSa3XWowTfNPo92BYxjXiyYEVrUQh2aLyhxBCwww+heortUFxEJYcRzosstTEBYQ=="],
@@ -1366,6 +1379,14 @@
     "@isaacs/cliui/string-width/emoji-regex": ["emoji-regex@9.2.2", "", {}, "sha512-L18DaJsXSUk2+42pv8mLs5jJT2hqFkFE4j21wOmgbUqsZ2hL72NsUU785g9RXgo3s0ZNgVl42TiHp3ZtOv/Vyg=="],
 
     "@isaacs/cliui/wrap-ansi/ansi-styles": ["ansi-styles@6.2.3", "", {}, "sha512-4Dj6M28JB+oAH8kFkTLUo+a2jwOFkuqb3yucU0CANcRRUbxS0cP0nZYCGjcc3BNXwRIsUVmDGgzawme7zvJHvg=="],
+
+    "@polka-codes/cli-shared/@ai-sdk/google-vertex/@ai-sdk/anthropic": ["@ai-sdk/anthropic@2.0.45", "", { "dependencies": { "@ai-sdk/provider": "2.0.0", "@ai-sdk/provider-utils": "3.0.17" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-Ipv62vavDCmrV/oE/lXehL9FzwQuZOnnlhPEftWizx464Wb6lvnBTJx8uhmEYruFSzOWTI95Z33ncZ4tA8E6RQ=="],
+
+    "@polka-codes/cli-shared/@ai-sdk/google-vertex/@ai-sdk/google": ["@ai-sdk/google@2.0.36", "", { "dependencies": { "@ai-sdk/provider": "2.0.0", "@ai-sdk/provider-utils": "3.0.17" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-1Z2tV6A4PobK+zTKDd9NqqlDPh0lwF8yf8+FcOLCjHzyDB498iyiBFwKQ6lhQT8YYhY60jVsmsSvSTm+TOyazw=="],
+
+    "@polka-codes/cli-shared/ai/@ai-sdk/gateway": ["@ai-sdk/gateway@2.0.11", "", { "dependencies": { "@ai-sdk/provider": "2.0.0", "@ai-sdk/provider-utils": "3.0.17", "@vercel/oidc": "3.0.3" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-B0Vt2Xv88Lo9rg861Oyzq/SdTmT4LiqdjkpOxpSPpNk8Ih5TXTgyDAsV/qW14N6asPdK1YI5PosFLnVzfK5LrA=="],
+
+    "@polka-codes/core/ai/@ai-sdk/gateway": ["@ai-sdk/gateway@2.0.11", "", { "dependencies": { "@ai-sdk/provider": "2.0.0", "@ai-sdk/provider-utils": "3.0.17", "@vercel/oidc": "3.0.3" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-B0Vt2Xv88Lo9rg861Oyzq/SdTmT4LiqdjkpOxpSPpNk8Ih5TXTgyDAsV/qW14N6asPdK1YI5PosFLnVzfK5LrA=="],
 
     "cliui/strip-ansi/ansi-regex": ["ansi-regex@5.0.1", "", {}, "sha512-quJQXlTSUGL2LH9SUXo8VwsY4soanhgo6LNSm84E1LBcE8s3O0wpdiRzyR9z/ZZJMlMWv37qOOb9pdJlMUEKFQ=="],
 
