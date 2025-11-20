@@ -6,6 +6,10 @@ import type { Logger } from '@polka-codes/core'
 import { z } from 'zod'
 import type { CliToolRegistry } from '../workflow-tools'
 
+export type BaseWorkflowInput = {
+  interactive?: boolean
+}
+
 type FileChange = {
   path: string
   status: string

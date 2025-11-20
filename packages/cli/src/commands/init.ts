@@ -13,7 +13,7 @@ export const initCommand = new Command('init')
   .option('-g, --global', 'Use global config')
   .action(async (options, command: Command) => {
     const globalOpts = (command.parent ?? command).opts()
-    const { verbose } = globalOpts
+    const { verbose, yes } = globalOpts
     const logger = createLogger({
       verbose: verbose,
     })
@@ -22,6 +22,7 @@ export const initCommand = new Command('init')
       {
         global: options.global,
         parentOptions: command.parent?.opts() ?? {},
+        interactive: !yes,
       },
       {
         commandName: 'init',

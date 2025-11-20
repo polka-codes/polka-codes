@@ -21,7 +21,7 @@ import { UserCancelledError } from '../errors'
 import type { CliToolRegistry } from '../workflow-tools'
 import type { JsonFilePart, JsonImagePart } from './code.workflow'
 import { getPlanPrompt, PLANNER_SYSTEM_PROMPT, PlanSchema } from './prompts'
-import { getDefaultContext } from './workflow.utils'
+import { type BaseWorkflowInput, getDefaultContext } from './workflow.utils'
 
 type CreatePlanInput = {
   task: string
@@ -132,7 +132,7 @@ async function createPlan(input: CreatePlanInput, context: WorkflowContext<CliTo
   throw new Error('Failed to generate plan.')
 }
 
-export type PlanWorkflowInput = {
+export type PlanWorkflowInput = BaseWorkflowInput & {
   task?: string
   fileContent?: string
   filePath?: string
@@ -149,7 +149,9 @@ type State = 'Generating' | 'Reviewing' | 'Done'
 
 export const planWorkflow: WorkflowFn<PlanWorkflowInput, PlanWorkflowOutput, CliToolRegistry> = async (input, context) => {
   const { tools, logger, step } = context
-  const { fileContent, filePath, mode = 'interactive' } = input
+  const { fileContent, filePath, mode: inputMode, interactive } = input
+  const mode = interactive === false ? 'noninteractive' : (inputMode ?? 'interactive')
+
   let currentTask = input.task
   let plan = fileContent || ''
   let files: { path: string; content: string }[] = []

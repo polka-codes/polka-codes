@@ -12,8 +12,9 @@ import type { AiProvider } from '../getModel'
 import { parseOptions } from '../options'
 import type { CliToolRegistry } from '../workflow-tools'
 import { INIT_WORKFLOW_ANALYZE_SYSTEM_PROMPT } from './prompts'
+import type { BaseWorkflowInput } from './workflow.utils'
 
-type InitWorkflowInput = {
+export type InitWorkflowInput = BaseWorkflowInput & {
   global?: boolean
   parentOptions?: Record<string, any>
 }
@@ -32,24 +33,28 @@ export const initWorkflow: WorkflowFn<InitWorkflowInput, InitWorkflowOutput, Cli
     const exists = existsSync(configPath)
 
     if (exists) {
-      const proceed = await tools.confirm({
-        message: `Found existing config at ${configPath}. Do you want to proceed? This will overwrite the existing config.`,
-        default: false,
-      })
-      if (!proceed) {
-        throw new UserCancelledError('User cancelled')
+      if (input.interactive !== false) {
+        const proceed = await tools.confirm({
+          message: `Found existing config at ${configPath}. Do you want to proceed? This will overwrite the existing config.`,
+          default: false,
+        })
+        if (!proceed) {
+          throw new UserCancelledError('User cancelled')
+        }
       }
     } else if (!input.global) {
-      const isGlobal = await tools.select({
-        message: 'No config file found. Do you want to create one?',
-        choices: [
-          { name: `Create a global config at ${globalConfigPath}`, value: 'global' },
-          { name: `Create a local config at ${configPath}`, value: 'local' },
-        ],
-      })
-      if (isGlobal === 'global') {
-        global = true
-        configPath = globalConfigPath
+      if (input.interactive !== false) {
+        const isGlobal = await tools.select({
+          message: 'No config file found. Do you want to create one?',
+          choices: [
+            { name: `Create a global config at ${globalConfigPath}`, value: 'global' },
+            { name: `Create a local config at ${configPath}`, value: 'local' },
+          ],
+        })
+        if (isGlobal === 'global') {
+          global = true
+          configPath = globalConfigPath
+        }
       }
     }
 
@@ -87,14 +92,17 @@ export const initWorkflow: WorkflowFn<InitWorkflowInput, InitWorkflowOutput, Cli
 
   await step('handle-api-key', async () => {
     if (providerConfig?.apiKey && !global) {
-      const option = await tools.select({
-        message: 'It is not recommended to store API keys in the local config file. How would you like to proceed?',
-        choices: [
-          { name: 'Save API key in the local config file', value: 'local' },
-          { name: 'Save API key in the global config file', value: 'global' },
-          { name: 'Save API key to .env file', value: 'env' },
-        ],
-      })
+      let option = 'local'
+      if (input.interactive !== false) {
+        option = await tools.select({
+          message: 'It is not recommended to store API keys in the local config file. How would you like to proceed?',
+          choices: [
+            { name: 'Save API key in the local config file', value: 'local' },
+            { name: 'Save API key in the global config file', value: 'global' },
+            { name: 'Save API key to .env file', value: 'env' },
+          ],
+        })
+      }
 
       switch (option) {
         case 'local':
@@ -133,10 +141,12 @@ export const initWorkflow: WorkflowFn<InitWorkflowInput, InitWorkflowOutput, Cli
   const { shouldAnalyze } = await step('confirm-analyze', async () => {
     let shouldAnalyze = false
     if (!global) {
-      shouldAnalyze = await tools.confirm({
-        message: 'Would you like to analyze the project to generate recommended configuration?',
-        default: false,
-      })
+      if (input.interactive !== false) {
+        shouldAnalyze = await tools.confirm({
+          message: 'Would you like to analyze the project to generate recommended configuration?',
+          default: false,
+        })
+      }
     }
     return { shouldAnalyze }
   })

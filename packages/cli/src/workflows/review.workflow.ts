@@ -4,14 +4,21 @@ import { agentWorkflow, listFiles, readBinaryFile, readFile, searchFiles, type W
 import { gitDiff } from '../tools'
 import type { CliToolRegistry } from '../workflow-tools'
 import { CODE_REVIEW_SYSTEM_PROMPT, formatReviewToolInput, type ReviewToolInput } from './prompts'
-import { parseGitDiffNameStatus, parseGitStatus, printChangedFiles, type ReviewResult, reviewOutputSchema } from './workflow.utils'
+import {
+  type BaseWorkflowInput,
+  parseGitDiffNameStatus,
+  parseGitStatus,
+  printChangedFiles,
+  type ReviewResult,
+  reviewOutputSchema,
+} from './workflow.utils'
 
 type FileChange = {
   path: string
   status: string
 }
 
-export type ReviewWorkflowInput = {
+export type ReviewWorkflowInput = BaseWorkflowInput & {
   pr?: string
   context?: string
 }

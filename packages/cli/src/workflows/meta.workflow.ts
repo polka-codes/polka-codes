@@ -54,12 +54,13 @@ export const metaWorkflow: WorkflowFn<MetaWorkflowInput, void, CliToolRegistry> 
 
   switch (decision.workflow) {
     case 'code':
-      await codeWorkflow({ task }, context)
+      await codeWorkflow({ task, interactive: input.interactive }, context)
       break
     case 'task':
       await taskWorkflow(
         {
           task,
+          interactive: input.interactive,
         },
         context,
       )

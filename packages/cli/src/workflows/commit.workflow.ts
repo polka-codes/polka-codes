@@ -6,9 +6,9 @@ import { UserCancelledError } from '../errors'
 import { gitDiff } from '../tools'
 import type { CliToolRegistry } from '../workflow-tools'
 import { COMMIT_MESSAGE_SYSTEM_PROMPT } from './prompts'
-import { parseGitDiffNameStatus } from './workflow.utils'
+import { type BaseWorkflowInput, parseGitDiffNameStatus } from './workflow.utils'
 
-export type CommitWorkflowInput = {
+export type CommitWorkflowInput = BaseWorkflowInput & {
   all?: boolean
   context?: string
 }
@@ -32,10 +32,14 @@ export const commitWorkflow: WorkflowFn<CommitWorkflowInput, string | void, CliT
       })
       hasStaged = true
     } else if (hasUnstaged) {
-      const confirmed = await tools.confirm({
-        message: 'No staged files found. Stage all files?',
-        default: false,
-      })
+      let confirmed = false
+      if (input.interactive !== false) {
+        confirmed = await tools.confirm({
+          message: 'No staged files found. Stage all files?',
+          default: false,
+        })
+      }
+
       if (confirmed) {
         await step('stage-all', async () => {
           await tools.executeCommand({
@@ -44,7 +48,7 @@ export const commitWorkflow: WorkflowFn<CommitWorkflowInput, string | void, CliT
           })
         })
         hasStaged = true
-      } else {
+      } else if (input.interactive !== false) {
         throw new UserCancelledError()
       }
     }

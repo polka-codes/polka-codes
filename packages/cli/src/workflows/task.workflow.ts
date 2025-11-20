@@ -15,9 +15,9 @@ import {
   writeToFile,
 } from '@polka-codes/core'
 import type { CliToolRegistry } from '../workflow-tools'
-import { getDefaultContext } from './workflow.utils'
+import { type BaseWorkflowInput, getDefaultContext } from './workflow.utils'
 
-export type TaskWorkflowInput = {
+export type TaskWorkflowInput = BaseWorkflowInput & {
   task: string
 }
 

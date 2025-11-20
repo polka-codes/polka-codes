@@ -7,10 +7,12 @@ export const prCommand = new Command('pr')
   .description('Create a GitHub pull request')
   .argument('[message]', 'Optional context for the pull request generation')
   .action(async (message, _options, command: Command) => {
-    const input = { ...(message && { context: message }) }
-
     const globalOpts = (command.parent ?? command).opts()
-    const { verbose } = globalOpts
+    const { verbose, yes } = globalOpts
+    const input = {
+      ...(message && { context: message }),
+      interactive: !yes,
+    }
     const logger = createLogger({
       verbose: verbose,
     })

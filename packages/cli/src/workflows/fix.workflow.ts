@@ -20,13 +20,12 @@ import {
 import { z } from 'zod'
 import type { CliToolRegistry } from '../workflow-tools'
 import { FIX_SYSTEM_PROMPT, getFixUserPrompt } from './prompts'
-import { getDefaultContext } from './workflow.utils'
+import { type BaseWorkflowInput, getDefaultContext } from './workflow.utils'
 
-export type FixWorkflowInput = {
+export type FixWorkflowInput = BaseWorkflowInput & {
   command?: string
   task?: string
   context?: string
-  interactive?: boolean
 }
 
 const FixIterationSummarySchema = z

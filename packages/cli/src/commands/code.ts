@@ -99,13 +99,14 @@ export async function runCode(task: string | undefined, _options: any, command: 
     return
   }
 
+  const globalOpts = (command.parent ?? command).opts()
+  const { verbose, yes } = globalOpts
+
   const workflowInput: CodeWorkflowInput = {
     task: taskInput,
     files: fileContents,
+    interactive: !yes,
   }
-
-  const globalOpts = (command.parent ?? command).opts()
-  const { verbose, yes } = globalOpts
   const logger = createLogger({
     verbose,
   })

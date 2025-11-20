@@ -40,12 +40,20 @@ import {
   getPlanPrompt,
   type ReviewToolInput,
 } from './prompts'
-import { formatElapsedTime, getDefaultContext, parseGitDiffNameStatus, type ReviewResult, reviewOutputSchema } from './workflow.utils'
+import {
+  type BaseWorkflowInput,
+  formatElapsedTime,
+  getDefaultContext,
+  parseGitDiffNameStatus,
+  type ReviewResult,
+  reviewOutputSchema,
+} from './workflow.utils'
 
-export type EpicWorkflowInput = EpicContext & {
-  saveEpicContext: (context: EpicContext) => Promise<void>
-  saveUsageSnapshot: () => Promise<void>
-}
+export type EpicWorkflowInput = BaseWorkflowInput &
+  EpicContext & {
+    saveEpicContext: (context: EpicContext) => Promise<void>
+    saveUsageSnapshot: () => Promise<void>
+  }
 
 const MAX_REVIEW_RETRIES = 5
 
@@ -132,6 +140,7 @@ async function createAndApprovePlan(
   task: string,
   context: WorkflowContext<CliToolRegistry>,
   saveUsageSnapshot: () => Promise<void>,
+  interactive = true,
 ): Promise<{ plan: string; branchName: string } | null> {
   const { logger, step, tools } = context
 
@@ -162,6 +171,13 @@ async function createAndApprovePlan(
           }
           logger.info(`Plan:\n${result.plan}`)
           logger.info(`Suggested branch name: ${result.branchName}`)
+
+          if (!interactive) {
+            logger.info('Non-interactive mode: Auto-approving plan.')
+            await saveUsageSnapshot()
+            return { plan: result.plan, branchName: result.branchName }
+          }
+
           feedback = await tools.input({ message: 'Press Enter to approve the plan, or provide feedback to refine it.' })
           if (feedback.trim() === '') {
             logger.info('High-level plan approved.\n')
@@ -427,6 +443,7 @@ ${reviewSummary}`
           mode: 'noninteractive',
           additionalInstructions: TODO_HANDLING_INSTRUCTIONS,
           additionalTools: [getTodoItem, listTodoItems, updateTodoItem],
+          interactive: false,
         },
         context,
       )
@@ -437,6 +454,7 @@ ${reviewSummary}`
         {
           all: true,
           context: reviewSummary,
+          interactive: false,
         },
         context,
       )
@@ -515,6 +533,7 @@ Focus only on this item, but use the plan for context.`
           mode: 'noninteractive',
           additionalInstructions: TODO_HANDLING_INSTRUCTIONS,
           additionalTools: [getTodoItem, listTodoItems, updateTodoItem],
+          interactive: false,
         },
         context,
       )
@@ -666,6 +685,7 @@ async function performFinalReviewAndFix(
           mode: 'noninteractive',
           additionalInstructions: TODO_HANDLING_INSTRUCTIONS,
           additionalTools: [getTodoItem, listTodoItems, updateTodoItem],
+          interactive: false,
         },
         context,
       )
@@ -712,7 +732,7 @@ export const epicWorkflow: WorkflowFn<EpicWorkflowInput, void, CliToolRegistry> 
         logger.error('Error: Task is missing in epic context. Exiting.')
         return
       }
-      const planResult = await createAndApprovePlan(input.task, context, saveUsageSnapshot)
+      const planResult = await createAndApprovePlan(input.task, context, saveUsageSnapshot, input.interactive)
       if (!planResult) return
       input.plan = planResult.plan
       input.branchName = planResult.branchName

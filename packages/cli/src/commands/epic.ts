@@ -63,6 +63,7 @@ export async function runEpic(task: string | undefined, _options: any, command: 
       })
     },
     saveUsageSnapshot,
+    interactive: !yes,
   }
 
   await runWorkflow(epicWorkflow, workflowInput, {

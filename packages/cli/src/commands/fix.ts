@@ -10,9 +10,9 @@ export const fixCommand = new Command('fix')
   .argument('[context]', 'Additional context for the fix')
   .option('-t, --task <task>', 'The task to perform, providing specific instructions to the agent.')
   .action(async (command: string | undefined, context: string | undefined, options: { task?: string }, cmd: Command) => {
-    const workflowInput: FixWorkflowInput = { command, task: options.task, context }
     const globalOpts = (cmd.parent ?? cmd).opts()
-    const { verbose } = globalOpts
+    const { verbose, yes } = globalOpts
+    const workflowInput: FixWorkflowInput = { command, task: options.task, context, interactive: !yes }
     const logger = createLogger({
       verbose,
     })

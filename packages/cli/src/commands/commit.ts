@@ -8,10 +8,14 @@ export const commitCommand = new Command('commit')
   .option('-a, --all', 'Stage all files before committing')
   .argument('[message]', 'Optional context for the commit message generation')
   .action(async (message, localOptions, command: Command) => {
-    const input = { ...(localOptions.all && { all: true }), ...(message && { context: message }) }
-
     const globalOpts = (command.parent ?? command).opts()
-    const { verbose } = globalOpts
+    const { verbose, yes } = globalOpts
+
+    const input = {
+      ...(localOptions.all && { all: true }),
+      ...(message && { context: message }),
+      interactive: !yes,
+    }
     const logger = createLogger({
       verbose,
     })

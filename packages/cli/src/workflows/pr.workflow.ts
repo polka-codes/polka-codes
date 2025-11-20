@@ -4,17 +4,18 @@ import { agentWorkflow, ToolResponseType, type WorkflowFn } from '@polka-codes/c
 import { z } from 'zod'
 import type { CliToolRegistry } from '../workflow-tools'
 import { GET_PR_DETAILS_SYSTEM_PROMPT } from './prompts'
-import { checkGhInstalled, getDefaultBranch } from './workflow.utils'
+import { type BaseWorkflowInput, checkGhInstalled, getDefaultBranch } from './workflow.utils'
 
 const prDetailsSchema = z.object({
   title: z.string(),
   description: z.string(),
 })
 
-export const prWorkflow: WorkflowFn<{ context?: string }, { title: string; description: string }, CliToolRegistry> = async (
-  input,
-  context,
-) => {
+export type PrWorkflowInput = BaseWorkflowInput & {
+  context?: string
+}
+
+export const prWorkflow: WorkflowFn<PrWorkflowInput, { title: string; description: string }, CliToolRegistry> = async (input, context) => {
   const { step, tools } = context
   const { diff, commits, branchName } = await step('get-git-info', async () => {
     await checkGhInstalled(tools.executeCommand)

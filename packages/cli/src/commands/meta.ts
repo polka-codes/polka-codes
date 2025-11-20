@@ -60,6 +60,7 @@ export async function runMeta(task: string | undefined, command: Command) {
       await persistEpicContext(context)
     },
     saveUsageSnapshot,
+    interactive: !yes,
   }
 
   await runWorkflow(metaWorkflow, workflowInput, {

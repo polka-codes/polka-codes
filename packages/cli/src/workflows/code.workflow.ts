@@ -25,7 +25,7 @@ import type { CliToolRegistry } from '../workflow-tools'
 import { fixWorkflow } from './fix.workflow'
 import { planWorkflow } from './plan.workflow'
 import { CODER_SYSTEM_PROMPT, getImplementPrompt } from './prompts'
-import { getDefaultContext } from './workflow.utils'
+import { type BaseWorkflowInput, getDefaultContext } from './workflow.utils'
 
 export type JsonImagePart = {
   type: 'image'
@@ -49,7 +49,7 @@ const ImplementOutputSchema = z
     message: 'Either summary or bailReason must be provided, but not both',
   })
 
-export type CodeWorkflowInput = {
+export type CodeWorkflowInput = BaseWorkflowInput & {
   task: string
   files?: (JsonFilePart | JsonImagePart)[]
   mode?: 'interactive' | 'noninteractive'
@@ -63,13 +63,14 @@ export const codeWorkflow: WorkflowFn<
   CliToolRegistry
 > = async (input, context) => {
   const { logger, step, tools } = context
-  const { task, files, mode = 'interactive', additionalTools, additionalInstructions } = input
+  const { task, files, mode: inputMode, additionalTools, additionalInstructions, interactive } = input
+  const mode = interactive === false ? 'noninteractive' : (inputMode ?? 'interactive')
   const summaries: string[] = []
 
   // Planning phase
   logger.info('\nPhase 1: Creating implementation plan...\n')
   const planResult = await step('plan', async () => {
-    return await planWorkflow({ task, files, mode: mode === 'interactive' ? 'confirm' : 'noninteractive' }, context)
+    return await planWorkflow({ task, files, mode: mode === 'interactive' ? 'confirm' : 'noninteractive', interactive }, context)
   })
 
   if (!planResult) {

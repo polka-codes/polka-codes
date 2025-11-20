@@ -44,6 +44,7 @@ export const planCommand = new Command('plan')
         task: taskInput,
         fileContent,
         filePath: options.planFile,
+        interactive: !yes,
       },
       { commandName: 'plan', command, logger, yes },
     )
