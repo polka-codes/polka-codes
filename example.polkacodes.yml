@@ -49,6 +49,11 @@ defaultParameters: # Default parameters for the default model
 # Helps prevent infinite loops and excessive API calls
 maxMessageCount: 50
 
+# Threshold for summarizing the conversation history
+# When the number of messages exceeds this threshold, the AI will summarize the conversation
+# to save tokens and context window space.
+summaryThreshold: 20
+
 # Budget for the AI service
 # Ensures the AI service does not exceed the cost limit
 budget: 1.5
@@ -95,6 +100,14 @@ rules:
   - "Write tests using bun:test"
   - "Follow the project's coding style"
   - "Add JSDoc comments for public APIs"
+  # Load rules from a local file
+  - path: "rules/strict-mode.md"
+  # Load rules from a URL
+  - url: "https://example.com/rules/copyright-header.md"
+  # Load rules from a GitHub repository
+  - repo: "polka-codes/polka"
+    path: "rules/coding-style.md"
+    branch: "main"
 
 # Pricing information for AI models
 # Cost per million tokens in USD
