@@ -43,7 +43,7 @@ export function addSharedOptions(command: Command) {
     .option('-y, --yes', 'Skip interactive prompts', false)
 }
 
-export function parseOptions(
+export async function parseOptions(
   options: CliOptions,
   { cwdArg, commandName }: { cwdArg?: string; commandName?: string } = {},
   home: string = os.homedir(),
@@ -56,7 +56,7 @@ export function parseOptions(
     console.log('Changed working directory to', cwd)
   }
 
-  const config = loadConfig(options.config, cwd, home) ?? {}
+  const config = (await loadConfig(options.config, cwd, home)) ?? {}
 
   const defaultProvider = (options.apiProvider || env.POLKA_API_PROVIDER || config.defaultProvider) as AiProvider | undefined
   const defaultModel = options.model || env.POLKA_MODEL || config.defaultModel

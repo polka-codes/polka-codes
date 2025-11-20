@@ -38,7 +38,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
 ): Promise<TOutput | undefined> {
   const { commandName, command, logger, requiresProvider = true, yes } = options
   const globalOpts = (command.parent ?? command).opts()
-  const { providerConfig, config, verbose } = parseOptions(globalOpts, {})
+  const { providerConfig, config, verbose } = await parseOptions(globalOpts, {})
 
   if (requiresProvider) {
     const commandConfig = providerConfig.getConfigForCommand(commandName)

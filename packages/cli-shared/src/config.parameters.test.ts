@@ -30,7 +30,7 @@ describe('config parameters', () => {
     rmSync(testDir, { recursive: true, force: true })
   })
 
-  test('loads root level defaultParameters', () => {
+  test('loads root level defaultParameters', async () => {
     const configPath = join(testSubDir, 'params-config.yml')
     writeFileSync(
       configPath,
@@ -43,7 +43,7 @@ defaultParameters:
     `,
     )
 
-    const config = loadConfig(configPath, testSubDir, testHomeDir)
+    const config = await loadConfig(configPath, testSubDir, testHomeDir)
     expect(config?.defaultParameters).toEqual({
       temperature: 0.7,
       top_p: 0.9,
@@ -51,7 +51,7 @@ defaultParameters:
     })
   })
 
-  test('loads provider defaultParameters', () => {
+  test('loads provider defaultParameters', async () => {
     const configPath = join(testSubDir, 'provider-params-config.yml')
     writeFileSync(
       configPath,
@@ -71,7 +71,7 @@ providers:
     `,
     )
 
-    const config = loadConfig(configPath, testSubDir, testHomeDir)
+    const config = await loadConfig(configPath, testSubDir, testHomeDir)
     expect(config?.providers?.anthropic?.defaultParameters).toEqual({
       temperature: 0.5,
       max_tokens: 3000,
@@ -82,7 +82,7 @@ providers:
     })
   })
 
-  test('loads command parameters', () => {
+  test('loads command parameters', async () => {
     const configPath = join(testSubDir, 'command-params-config.yml')
     writeFileSync(
       configPath,
@@ -102,7 +102,7 @@ commands:
     `,
     )
 
-    const config = loadConfig(configPath, testSubDir, testHomeDir)
+    const config = await loadConfig(configPath, testSubDir, testHomeDir)
     expect(config?.commands?.default?.parameters).toEqual({
       temperature: 0.7,
       max_tokens: 4000,
@@ -159,7 +159,7 @@ commands:
     })
   })
 
-  test('merges global and local parameters with local precedence', () => {
+  test('merges global and local parameters with local precedence', async () => {
     const globalConfigPath = join(testHomeDir, '.config', 'polkacodes', 'config.yml')
     const localConfigPath = join(testSubDir, '.polkacodes.yml')
 
@@ -191,7 +191,7 @@ providers:
     `,
     )
 
-    const config = loadConfig(localConfigPath, testSubDir, testHomeDir)
+    const config = await loadConfig(localConfigPath, testSubDir, testHomeDir)
     expect(config?.defaultParameters).toMatchSnapshot()
     expect(config?.providers?.anthropic?.defaultParameters).toMatchSnapshot()
   })

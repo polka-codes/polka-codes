@@ -243,7 +243,7 @@ export function formatElapsedTime(ms: number): string {
 }
 
 export async function getDefaultContext(): Promise<string> {
-  const config = loadConfig()
+  const config = await loadConfig()
   const cwd = process.cwd()
   const [files, truncated] = await listFiles(cwd, true, 2000, cwd, config?.excludeFiles ?? [])
   const fileList = files.join('\n')
@@ -255,15 +255,7 @@ ${fileList}
 </file_list>`)
 
   if (config?.rules) {
-    if (Array.isArray(config.rules) && config.rules.length > 0) {
-      const rules = config.rules.map((rule) => `- ${rule}`).join('\n')
-      contextParts.push(`<rules>\n${rules}\n</rules>`)
-    } else if (typeof config.rules === 'string') {
-      const trimmed = config.rules.trim()
-      if (trimmed.length > 0) {
-        contextParts.push(`<rules>\n${trimmed}\n</rules>`)
-      }
-    }
+    contextParts.push(`<rules>\n${config.rules}\n</rules>`)
   }
 
   if (config?.scripts) {

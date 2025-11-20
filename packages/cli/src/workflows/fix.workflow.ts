@@ -50,7 +50,7 @@ export const fixWorkflow: WorkflowFn<
   let formatCommand: string | undefined
 
   if (!command) {
-    const config = loadConfig()
+    const config = await loadConfig()
     const check = config?.scripts?.check
     const test = config?.scripts?.test
     const format = config?.scripts?.format

@@ -80,7 +80,7 @@ describe('parseOptions', () => {
     rmSync(testDir, { recursive: true, force: true })
   })
 
-  test('prioritizes CLI flags over env vars and config', () => {
+  test('prioritizes CLI flags over env vars and config', async () => {
     const configPath = join(testDir, 'test-config.yml')
     writeFileSync(
       configPath,
@@ -111,12 +111,12 @@ providers:
       ])
       .opts()
 
-    const result = parseOptions(options, { cwdArg: testDir }, testDir, {})
+    const result = await parseOptions(options, { cwdArg: testDir }, testDir, {})
     expect(result.verbose).toBe(1)
     expect(result.providerConfig.getConfigForCommand('chat')).toMatchSnapshot()
   })
 
-  test('handles multiple config files', () => {
+  test('handles multiple config files', async () => {
     const configPath1 = join(testDir, 'config1.yml')
     const configPath2 = join(testDir, 'config2.yml')
 
@@ -143,11 +143,11 @@ rules:
     addSharedOptions(command)
     const options = command.parse(['node', 'test', '--config', configPath1, '--config', configPath2]).opts()
 
-    const result = parseOptions(options, { cwdArg: testDir }, testDir, {})
+    const result = await parseOptions(options, { cwdArg: testDir }, testDir, {})
     expect(result.config).toMatchSnapshot()
   })
 
-  test('merges environment variables with config', () => {
+  test('merges environment variables with config', async () => {
     const env = {
       POLKA_API_PROVIDER: AiProvider.DeepSeek,
       POLKA_MODEL: 'deepseek-chat',
@@ -157,19 +157,19 @@ rules:
     addSharedOptions(command)
     const options = command.parse(['node', 'test']).opts()
 
-    const result = parseOptions(options, { cwdArg: testDir }, testDir, env)
+    const result = await parseOptions(options, { cwdArg: testDir }, testDir, env)
     expect(result.providerConfig.getConfigForCommand('chat')).toMatchSnapshot()
   })
 
-  test('throws error when apiKey provided without provider', () => {
+  test('throws error when apiKey provided without provider', async () => {
     const command = new Command()
     addSharedOptions(command)
     const options = command.parse(['node', 'test', '--api-key', 'invalid-key']).opts()
 
-    expect(() => parseOptions(options, { cwdArg: testDir }, testDir, {})).toThrow('Must specify a provider')
+    expect(parseOptions(options, { cwdArg: testDir }, testDir, {})).rejects.toThrow('Must specify a provider')
   })
 
-  test('handles provider-specific environment variables', () => {
+  test('handles provider-specific environment variables', async () => {
     const env = {
       ANTHROPIC_API_KEY: 'provider-env-key',
       DEEPSEEK_API_KEY: 'deepseek-key',
@@ -179,13 +179,13 @@ rules:
     addSharedOptions(command)
     const options = command.parse(['node', 'test']).opts()
 
-    const result = parseOptions(options, { cwdArg: testDir }, testDir, env)
+    const result = await parseOptions(options, { cwdArg: testDir }, testDir, env)
     expect(result.providerConfig.providers.anthropic?.apiKey).toBe('provider-env-key')
     expect(result.providerConfig.providers.deepseek?.apiKey).toBe('deepseek-key')
     expect(result.providerConfig.providers.openrouter?.apiKey).toBe('openrouter-key')
   })
 
-  test('handles budget from environment', () => {
+  test('handles budget from environment', async () => {
     const env = {
       POLKA_BUDGET: '500',
     }
@@ -193,11 +193,11 @@ rules:
     addSharedOptions(command)
     const options = command.parse(['node', 'test']).opts()
 
-    const result = parseOptions(options, { cwdArg: testDir }, testDir, env)
+    const result = await parseOptions(options, { cwdArg: testDir }, testDir, env)
     expect(result.budget).toBe(500)
   })
 
-  test('prioritizes command-specific budget', () => {
+  test('prioritizes command-specific budget', async () => {
     const configPath = join(testDir, 'test-config.yml')
     writeFileSync(
       configPath,
@@ -213,10 +213,10 @@ commands:
     addSharedOptions(command)
     const options = command.parse(['node', 'test', '--config', configPath]).opts()
 
-    const result = parseOptions(options, { cwdArg: testDir, commandName: 'chat' }, testDir, {})
+    const result = await parseOptions(options, { cwdArg: testDir, commandName: 'chat' }, testDir, {})
     expect(result.budget).toBe(2)
 
-    const result2 = parseOptions(options, { cwdArg: testDir, commandName: 'other' }, testDir, {})
+    const result2 = await parseOptions(options, { cwdArg: testDir, commandName: 'other' }, testDir, {})
     expect(result2.budget).toBe(10)
   })
 })

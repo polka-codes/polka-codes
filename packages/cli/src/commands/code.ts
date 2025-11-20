@@ -50,7 +50,7 @@ export async function runCode(task: string | undefined, _options: any, command: 
     taskInput = stdin
   }
 
-  const { file: files } = parseOptions(command.opts(), { commandName: 'code' })
+  const { file: files } = await parseOptions(command.opts(), { commandName: 'code' })
 
   const fileContents: (JsonFilePart | JsonImagePart)[] = []
   if (files) {

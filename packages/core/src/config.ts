@@ -7,6 +7,15 @@ const providerModelSchema = z.object({
   budget: z.number().positive().optional(),
 })
 
+export const ruleSchema = z.union([
+  z.string(),
+  z.object({ path: z.string() }).strict(),
+  z.object({ url: z.string() }).strict(),
+  z.object({ repo: z.string(), path: z.string(), tag: z.string().optional() }).strict(),
+])
+
+export type ConfigRule = z.infer<typeof ruleSchema>
+
 export const configSchema = z
   .object({
     prices: z
@@ -56,7 +65,7 @@ export const configSchema = z
       )
       .optional(),
     commands: z.record(z.string(), providerModelSchema).optional(),
-    rules: z.array(z.string()).optional().or(z.string()).optional(),
+    rules: z.array(ruleSchema).optional().or(z.string()).optional(),
     excludeFiles: z.array(z.string()).optional(),
   })
   .strict()

@@ -3,7 +3,7 @@ import type { LanguageModelV2ToolResultOutput } from '@ai-sdk/provider'
 
 import { execSync } from 'node:child_process'
 import { promises as fs } from 'node:fs'
-import { getProvider, listFiles as listFilesHelper, loadConfig } from '@polka-codes/cli-shared'
+import { getProvider, type LoadedConfig, listFiles as listFilesHelper, loadConfig } from '@polka-codes/cli-shared'
 import {
   executeCommand,
   type FullToolInfo,
@@ -34,9 +34,10 @@ export class Runner {
   private provider: ReturnType<typeof getProvider>
   private availableTools: Record<string, FullToolInfo>
 
-  constructor(private options: RunnerOptions) {
-    const config = loadConfig() ?? {}
-
+  constructor(
+    private options: RunnerOptions,
+    config: LoadedConfig | undefined,
+  ) {
     // Create provider
     this.provider = getProvider({
       command: {
@@ -56,7 +57,7 @@ export class Runner {
           console.log(`$ <<<< $ Command error: ${error}`)
         },
       },
-      excludeFiles: config.excludeFiles,
+      excludeFiles: config?.excludeFiles,
     })
 
     // Define available tools
@@ -457,7 +458,9 @@ export async function runRunner(options: RunnerOptions): Promise<void> {
     process.exit(1)
   }
 
+  const config = await loadConfig()
+
   // Create and start the runner
-  const runner = new Runner(options)
+  const runner = new Runner(options, config)
   runner.start()
 }

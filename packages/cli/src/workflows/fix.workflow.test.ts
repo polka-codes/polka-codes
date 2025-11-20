@@ -51,7 +51,7 @@ describe('fixWorkflow', () => {
 
   test('should prompt for command when not provided', async () => {
     const { context, tools } = createMockContext()
-    const loadConfigSpy = spyOn(cliShared, 'loadConfig').mockReturnValue({
+    const loadConfigSpy = spyOn(cliShared, 'loadConfig').mockResolvedValue({
       scripts: {
         check: 'bun typecheck',
         test: 'bun test',
@@ -78,7 +78,7 @@ describe('fixWorkflow', () => {
 
   test('should use default command when not interactive', async () => {
     const { context, tools } = createMockContext()
-    const loadConfigSpy = spyOn(cliShared, 'loadConfig').mockReturnValue({
+    const loadConfigSpy = spyOn(cliShared, 'loadConfig').mockResolvedValue({
       scripts: {
         check: 'bun typecheck',
       },
@@ -95,7 +95,7 @@ describe('fixWorkflow', () => {
 
   test('should throw error when no command provided and user provides empty input', async () => {
     const { context, tools } = createMockContext()
-    const loadConfigSpy = spyOn(cliShared, 'loadConfig').mockReturnValue({})
+    const loadConfigSpy = spyOn(cliShared, 'loadConfig').mockResolvedValue({})
     tools.input.mockResolvedValue('')
 
     const promise = fixWorkflow({ interactive: true }, context)

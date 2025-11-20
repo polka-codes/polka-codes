@@ -52,10 +52,11 @@ exports[`parseOptions handles multiple config files 1`] = `
       "defaultModel": "claude-3-sonnet",
     },
   },
-  "rules": [
-    "rule1",
-    "rule2",
-  ],
+  "rules": 
+"rule1
+
+rule2"
+,
 }
 `;
 

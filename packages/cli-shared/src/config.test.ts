@@ -30,7 +30,7 @@ describe('config', () => {
     rmSync(testDir, { recursive: true, force: true })
   })
 
-  test('loads config from specified path', () => {
+  test('loads config from specified path', async () => {
     const configPath = join(testSubDir, 'test-config.yml')
     writeFileSync(
       configPath,
@@ -40,14 +40,15 @@ defaultModel: claude-3-opus
     `,
     )
 
-    const config = loadConfig(configPath, testSubDir, testHomeDir)
+    const config = await loadConfig(configPath, testSubDir, testHomeDir)
     expect(config).toEqual({
       defaultProvider: 'anthropic',
       defaultModel: 'claude-3-opus',
+      rules: undefined,
     })
   })
 
-  test('loads multiple config files', () => {
+  test('loads multiple config files', async () => {
     const configPath1 = join(testSubDir, 'config1.yml')
     const configPath2 = join(testSubDir, 'config2.yml')
 
@@ -71,15 +72,15 @@ rules:
     `,
     )
 
-    const config = loadConfig([configPath1, configPath2], testSubDir, testHomeDir)
+    const config = await loadConfig([configPath1, configPath2], testSubDir, testHomeDir)
     expect(config).toEqual({
       defaultProvider: 'anthropic',
       defaultModel: 'claude-3-sonnet',
-      rules: ['rule1', 'rule2', 'rule3'],
+      rules: 'rule1\n\nrule2\n\nrule3',
     })
   })
 
-  test('loads config from default paths', () => {
+  test('loads config from default paths', async () => {
     const configPath = join(testSubDir, '.polkacodes.yml')
     writeFileSync(
       configPath,
@@ -89,17 +90,18 @@ defaultModel: deepseek-chat
     `,
     )
 
-    const config = loadConfig(undefined, testSubDir, testHomeDir)
+    const config = await loadConfig(undefined, testSubDir, testHomeDir)
     expect(config).toEqual({
       defaultProvider: 'deepseek',
       defaultModel: 'deepseek-chat',
+      rules: undefined,
     })
 
     // Clean up
     writeFileSync(configPath, '')
   })
 
-  test('validates config schema', () => {
+  test('validates config schema', async () => {
     const consoleErrorSpy = spyOn(console, 'error').mockImplementation(() => {})
     const configPath = join(testSubDir, 'invalid-config.yml')
     writeFileSync(
@@ -109,11 +111,11 @@ invalidKey: value
     `,
     )
 
-    expect(() => loadConfig(configPath, testSubDir, testHomeDir)).toThrow()
+    expect(loadConfig(configPath, testSubDir, testHomeDir)).rejects.toThrow()
     consoleErrorSpy.mockRestore()
   })
 
-  test('handles commands configuration', () => {
+  test('handles commands configuration', async () => {
     const configPath = join(testSubDir, 'commands-config.yml')
     writeFileSync(
       configPath,
@@ -126,7 +128,7 @@ scripts:
     `,
     )
 
-    const config = loadConfig(configPath, testSubDir, testHomeDir)
+    const config = await loadConfig(configPath, testSubDir, testHomeDir)
     expect(config?.scripts).toEqual({
       test: 'echo "test"',
       complex: {
@@ -136,7 +138,7 @@ scripts:
     })
   })
 
-  test('handles rules configuration', () => {
+  test('handles rules configuration', async () => {
     const configPath = join(testSubDir, 'rules-config.yml')
     writeFileSync(
       configPath,
@@ -147,11 +149,11 @@ rules:
     `,
     )
 
-    const config = loadConfig(configPath, testSubDir, testHomeDir)
-    expect(config?.rules).toEqual(['rule1', 'rule2'])
+    const config = await loadConfig(configPath, testSubDir, testHomeDir)
+    expect(config?.rules).toEqual('rule1\n\nrule2')
   })
 
-  test('handles command defaults', () => {
+  test('handles command defaults', async () => {
     const configPath = join(testSubDir, 'defaults-config.yml')
     writeFileSync(
       configPath,
@@ -165,7 +167,7 @@ commands:
     `,
     )
 
-    const config = loadConfig(configPath, testSubDir, testHomeDir)
+    const config = await loadConfig(configPath, testSubDir, testHomeDir)
     expect(config?.commands).toEqual({
       default: {
         provider: 'deepseek',
@@ -205,7 +207,7 @@ commands:
     })
   })
 
-  test('merges global and local config with local precedence', () => {
+  test('merges global and local config with local precedence', async () => {
     const globalConfigPath = join(testHomeDir, '.config', 'polkacodes', 'config.yml')
     const localConfigPath = join(testSubDir, '.polkacodes.yml')
 
@@ -244,11 +246,11 @@ rules:
     `,
     )
 
-    const config = loadConfig(localConfigPath, testSubDir, testHomeDir)
+    const config = await loadConfig(localConfigPath, testSubDir, testHomeDir)
     expect(config).toMatchSnapshot()
   })
 
-  test('concatenates arrays', () => {
+  test('concatenates arrays', async () => {
     const globalConfigPath = join(testHomeDir, '.config', 'polkacodes', 'config.yml')
     const localConfigPath = join(testSubDir, '.polkacodes.yml')
 
@@ -268,19 +270,19 @@ rules: local-rule
     `,
     )
 
-    const config = loadConfig(localConfigPath, testSubDir, testHomeDir)
-    expect(config?.rules).toEqual(['global-rule-1', 'global-rule-2', 'local-rule'])
+    const config = await loadConfig(localConfigPath, testSubDir, testHomeDir)
+    expect(config?.rules).toEqual('global-rule-1\n\nglobal-rule-2\n\nlocal-rule')
   })
 
-  test('parses project .polkacodes.yml successfully', () => {
-    loadConfig()
+  test('parses project .polkacodes.yml successfully', async () => {
+    await loadConfig()
   })
 
-  test('parses example.polkacodes.yml successfully', () => {
-    loadConfig('example.polkacodes.yml')
+  test('parses example.polkacodes.yml successfully', async () => {
+    await loadConfig('example.polkacodes.yml')
   })
 
-  test('handles both string and array rules formats', () => {
+  test('handles both string and array rules formats', async () => {
     // Test string format
     const stringConfigPath = join(testSubDir, 'string-rules.yml')
     writeFileSync(
@@ -292,7 +294,7 @@ rules: |
   Rule 3
       `,
     )
-    const stringConfig = loadConfig(stringConfigPath, testSubDir, testHomeDir)
+    const stringConfig = await loadConfig(stringConfigPath, testSubDir, testHomeDir)
     expect(typeof stringConfig?.rules).toBe('string')
     expect(stringConfig?.rules).toContain('Rule 1')
 
@@ -307,9 +309,11 @@ rules:
   - "Rule 3"
       `,
     )
-    const arrayConfig = loadConfig(arrayConfigPath, testSubDir, testHomeDir)
-    expect(Array.isArray(arrayConfig?.rules)).toBe(true)
-    expect(arrayConfig?.rules).toHaveLength(3)
+    const arrayConfig = await loadConfig(arrayConfigPath, testSubDir, testHomeDir)
+    expect(typeof arrayConfig?.rules).toBe('string')
+    expect(arrayConfig?.rules).toContain('Rule 1')
+    expect(arrayConfig?.rules).toContain('Rule 2')
+    expect(arrayConfig?.rules).toContain('Rule 3')
 
     // Test merging behavior
     const globalConfigPath = join(testHomeDir, '.config', 'polkacodes', 'config.yml')
@@ -331,8 +335,10 @@ rules: "Local Rule"
       `,
     )
 
-    const mergedConfig = loadConfig(localConfigPath, testSubDir, testHomeDir)
-    expect(Array.isArray(mergedConfig?.rules)).toBe(true)
-    expect(mergedConfig?.rules).toEqual(['Global Rule 1', 'Global Rule 2', 'Local Rule'])
+    const mergedConfig = await loadConfig(localConfigPath, testSubDir, testHomeDir)
+    expect(typeof mergedConfig?.rules).toBe('string')
+    expect(mergedConfig?.rules).toContain('Global Rule 1')
+    expect(mergedConfig?.rules).toContain('Global Rule 2')
+    expect(mergedConfig?.rules).toContain('Local Rule')
   })
 })

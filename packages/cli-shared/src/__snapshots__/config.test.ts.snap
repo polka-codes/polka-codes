@@ -16,10 +16,11 @@ exports[`config merges global and local config with local precedence 1`] = `
       "apiKey": "local-key",
     },
   },
-  "rules": [
-    "global-rule",
-    "local-rule",
-  ],
+  "rules": 
+"global-rule
+
+local-rule"
+,
   "scripts": {
     "complex": {
       "command": "echo "global-complex"",
