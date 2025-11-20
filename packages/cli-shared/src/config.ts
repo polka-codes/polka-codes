@@ -86,8 +86,8 @@ export async function resolveRules(rules?: ConfigRule[] | string) {
           console.warn(`Error fetching rule from ${rule.url}: ${error}`)
         }
       } else if ('repo' in rule) {
-        const tag = rule.tag ?? 'main'
-        const url = `https://raw.githubusercontent.com/${rule.repo}/${tag}/${rule.path}`
+        const ref = rule.commit ?? rule.tag ?? rule.branch ?? 'main'
+        const url = `https://raw.githubusercontent.com/${rule.repo}/${ref}/${rule.path}`
         try {
           const response = await fetch(url)
           if (response.ok) {

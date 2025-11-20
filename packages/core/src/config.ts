@@ -11,7 +11,15 @@ export const ruleSchema = z.union([
   z.string(),
   z.object({ path: z.string() }).strict(),
   z.object({ url: z.string() }).strict(),
-  z.object({ repo: z.string(), path: z.string(), tag: z.string().optional() }).strict(),
+  z
+    .object({
+      repo: z.string(),
+      path: z.string(),
+      tag: z.string().optional(),
+      commit: z.string().optional(),
+      branch: z.string().optional(),
+    })
+    .strict(),
 ])
 
 export type ConfigRule = z.infer<typeof ruleSchema>
