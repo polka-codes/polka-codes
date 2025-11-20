@@ -46,7 +46,7 @@ export type ProviderOptions = {
   summaryThreshold?: number
   memoryStore?: ProviderDataStore<Record<string, string>>
   todoItemStore?: ProviderDataStore<TodoItem[]>
-  getModel?: (command: string) => LanguageModelV2
+  getModel?: (command: string) => LanguageModelV2 | undefined
 }
 
 export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
@@ -55,6 +55,8 @@ export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
   const todoItemStore = options.todoItemStore ?? new InMemoryStore()
 
   const defaultMemoryTopic = ':default:'
+
+  const searchModel = options.getModel?.('search')
 
   const provider: ToolProvider = {
     listTodoItems: async (id?: string | null, status?: string | null) => {
@@ -357,14 +359,10 @@ export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
       }
     },
     search:
-      options.getModel &&
+      searchModel &&
       (async (query: string) => {
-        const model = options.getModel?.('search')
-        if (!model) {
-          throw new Error('Unable to get model for search')
-        }
         const resp = await generateText({
-          model,
+          model: searchModel,
           system:
             'You are a web search assistant. When searching for information, provide comprehensive and detailed results. Include relevant facts, statistics, dates, and key details from the search results. Synthesize information from multiple sources when available. Structure your response clearly with the most relevant information first. Reference or cite sources when presenting specific claims or data.',
           tools: {

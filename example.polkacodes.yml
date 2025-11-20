@@ -93,6 +93,13 @@ commands:
     provider: "ollama"
     model: "maryasov/qwen2.5-coder-cline:7b"
 
+# Tool configurations
+# Override provider and model for specific tools
+tools:
+  search:
+    provider: "google-vertex"
+    model: "gemini-2.5-pro"
+
 # Custom rules to be followed by the AI
 # Can be a single string or an array of strings
 rules:

@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-const providerModelSchema = z.object({
+export const providerModelSchema = z.object({
   provider: z.string().optional(),
   model: z.string().optional(),
   parameters: z.record(z.string(), z.any()).optional(),
@@ -73,6 +73,11 @@ export const configSchema = z
       )
       .optional(),
     commands: z.record(z.string(), providerModelSchema).optional(),
+    tools: z
+      .object({
+        search: providerModelSchema.or(z.boolean()).optional(),
+      })
+      .optional(),
     rules: z.array(ruleSchema).optional().or(z.string()).optional(),
     excludeFiles: z.array(z.string()).optional(),
   })

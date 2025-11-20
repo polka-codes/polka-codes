@@ -69,13 +69,25 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
 
   const toolProvider = (options.getProvider ?? getProvider)({
     excludeFiles,
-    getModel: (command) => {
-      let config = providerConfig.getConfigForCommand(command)
-      if (!config) {
-        logger.info('No provider config found for command. Defaulting to global config.', command)
-        config = commandConfig
+    getModel: (tool) => {
+      const toolConfig = config.tools?.[tool as keyof typeof config.tools]
+      if (toolConfig === false) {
+        return undefined
       }
-      return getModel(config)
+      // Inherit from the main command config
+      const baseConfig = commandConfig
+
+      if (typeof toolConfig === 'object') {
+        // Merge to allow partial overrides (e.g. just model)
+        const mergedConfig = { ...baseConfig, ...toolConfig }
+        const resolvedConfig = providerConfig.resolveModelConfig(mergedConfig)
+        if (resolvedConfig) {
+          return getModel(resolvedConfig)
+        }
+      }
+
+      // Fallback for true or undefined
+      return getModel(baseConfig)
     },
   })
 

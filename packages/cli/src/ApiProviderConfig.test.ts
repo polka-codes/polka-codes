@@ -263,4 +263,27 @@ describe('ApiProviderConfig', () => {
     const commandConfig = apiConfig.getConfigForCommand('default')
     expect(commandConfig).toMatchSnapshot()
   })
+
+  test('should resolve model config correctly', () => {
+    const config = new ApiProviderConfig({
+      providers: {
+        [AiProvider.OpenAI]: {
+          apiKey: 'test-key',
+          defaultModel: 'gpt-4',
+          defaultParameters: { temperature: 0.7 },
+        },
+      },
+      defaultProvider: AiProvider.OpenAI,
+    })
+
+    const resolved = config.resolveModelConfig({
+      model: 'gpt-3.5-turbo',
+      parameters: { max_tokens: 100 },
+    })
+
+    expect(resolved).toBeDefined()
+    expect(resolved?.provider).toBe(AiProvider.OpenAI)
+    expect(resolved?.model).toBe('gpt-3.5-turbo')
+    expect(resolved?.parameters).toEqual({ temperature: 0.7, max_tokens: 100 })
+  })
 })

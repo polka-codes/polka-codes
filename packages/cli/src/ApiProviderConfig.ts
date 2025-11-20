@@ -27,7 +27,12 @@ export class ApiProviderConfig {
     // TODO: strong type command
     const commandConfig = this.commands?.[command]
     const defaultConfig = this.commands?.default
-    const { provider, model, parameters, budget } = { ...defaultConfig, ...commandConfig }
+    const mergedConfig = { ...defaultConfig, ...commandConfig }
+    return this.resolveModelConfig(mergedConfig)
+  }
+
+  resolveModelConfig(config: { provider?: string; model?: string; parameters?: any; budget?: number }) {
+    const { provider, model, parameters, budget } = config
     const finalProvider = (provider as AiProvider) ?? this.defaultProvider
     if (!finalProvider) {
       return undefined
