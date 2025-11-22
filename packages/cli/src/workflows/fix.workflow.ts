@@ -26,7 +26,7 @@ import { type BaseWorkflowInput, getDefaultContext } from './workflow.utils'
 export type FixWorkflowInput = {
   command?: string
   task?: string
-  context?: string
+  prompt?: string
 }
 
 const FixIterationSummarySchema = z
@@ -44,7 +44,7 @@ export const fixWorkflow: WorkflowFn<
   CliToolRegistry
 > = async (input, context) => {
   const { tools, logger, step } = context
-  const { command: inputCommand, task, context: userContext, interactive = true, additionalTools } = input
+  const { command: inputCommand, task, prompt, interactive = true, additionalTools } = input
   let command = inputCommand
   const summaries: string[] = []
   let formatCommand: string | undefined
@@ -124,7 +124,7 @@ export const fixWorkflow: WorkflowFn<
     const result = await step(`fix-${i}`, async () => {
       const defaultContext = await getDefaultContext()
       const memoryContext = await tools.getMemoryContext()
-      const userPrompt = getFixUserPrompt(command, exitCode, stdout, stderr, task, userContext)
+      const userPrompt = getFixUserPrompt(command, exitCode, stdout, stderr, task, prompt)
 
       const agentTools: FullToolInfo[] = [
         readFile,

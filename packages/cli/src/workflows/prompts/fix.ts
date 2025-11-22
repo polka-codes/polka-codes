@@ -30,12 +30,12 @@ export function getFixUserPrompt(
   stdout: string,
   stderr: string,
   task?: string,
-  context?: string,
+  prompt?: string,
 ): string {
-  const taskContext = task ? `\n## Original Task\n\n${task}\n` : ''
-  const contextSection = context ? `\n## User Context\n\n${context}\n` : ''
+  const taskSection = task ? `\n## Task\n\n${task}\n` : ''
+  const promptSection = prompt ? `\n## User Prompt\n\n${prompt}\n` : ''
 
-  return `## Context${taskContext}${contextSection}
+  return `## Context${taskSection}${promptSection}
 
 The following command failed with exit code ${exitCode}:
 \`${command}\`

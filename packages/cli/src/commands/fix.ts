@@ -7,12 +7,11 @@ import { type FixWorkflowInput, fixWorkflow } from '../workflows/fix.workflow'
 export const fixCommand = new Command('fix')
   .description('Fix issues by running a command and letting an agent fix it.')
   .argument('[command]', 'The command to run')
-  .argument('[context]', 'Additional context for the fix')
-  .option('-t, --task <task>', 'The task to perform, providing specific instructions to the agent.')
-  .action(async (command: string | undefined, context: string | undefined, options: { task?: string }, cmd: Command) => {
+  .option('-p, --prompt <prompt>', 'Additional prompt for the agent.')
+  .action(async (command: string | undefined, options: { prompt?: string }, cmd: Command) => {
     const globalOpts = (cmd.parent ?? cmd).opts()
     const { verbose, yes } = globalOpts
-    const workflowInput: FixWorkflowInput = { command, task: options.task, context }
+    const workflowInput: FixWorkflowInput = { command, prompt: options.prompt }
     const logger = createLogger({
       verbose,
     })

@@ -225,7 +225,7 @@ describe('fixWorkflow', () => {
     getFixUserPromptSpy.mockRestore()
   })
 
-  test('should pass context to agent prompt', async () => {
+  test('should pass prompt to agent prompt', async () => {
     const { context, tools } = createMockContext()
     const getFixUserPromptSpy = spyOn(prompts, 'getFixUserPrompt')
 
@@ -246,7 +246,7 @@ describe('fixWorkflow', () => {
       .mockResolvedValueOnce({ exitCode: 1, stdout: 'FAIL', stderr: 'Error' })
       .mockResolvedValueOnce({ exitCode: 0, stdout: 'PASS', stderr: '' })
 
-    await fixWorkflow({ ...defaultInput, command: 'bun test', context: 'Focus on the authentication tests' }, context)
+    await fixWorkflow({ ...defaultInput, command: 'bun test', prompt: 'Focus on the authentication tests' }, context)
 
     expect(getFixUserPromptSpy).toHaveBeenCalledTimes(1)
     expect(tools.generateText).toHaveBeenCalledTimes(1)
