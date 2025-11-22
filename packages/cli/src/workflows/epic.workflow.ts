@@ -13,7 +13,6 @@ import {
   readBinaryFile,
   readFile,
   readMemory,
-  search,
   searchFiles,
   type TodoItem,
   ToolResponseType,
@@ -49,11 +48,10 @@ import {
   reviewOutputSchema,
 } from './workflow.utils'
 
-export type EpicWorkflowInput = BaseWorkflowInput &
-  EpicContext & {
-    saveEpicContext: (context: EpicContext) => Promise<void>
-    saveUsageSnapshot: () => Promise<void>
-  }
+export type EpicWorkflowInput = EpicContext & {
+  saveEpicContext: (context: EpicContext) => Promise<void>
+  saveUsageSnapshot: () => Promise<void>
+}
 
 const MAX_REVIEW_RETRIES = 5
 
@@ -66,10 +64,11 @@ async function createPlan(
     files?: (JsonFilePart | JsonImagePart)[]
     feedback?: string
     messages?: JsonModelMessage[]
+    additionalTools: { search?: FullToolInfo }
   },
   context: WorkflowContext<CliToolRegistry>,
 ) {
-  const { task, plan, files, feedback, messages } = input
+  const { task, plan, files, feedback, messages, additionalTools } = input
   const { tools } = context
 
   const agentTools = [
@@ -78,12 +77,15 @@ async function createPlan(
     listFiles,
     readFile,
     readBinaryFile,
-    search,
     searchFiles,
     readMemory,
     updateMemory,
     listMemoryTopics,
   ] as FullToolInfo[]
+
+  if (additionalTools.search) {
+    agentTools.push(additionalTools.search)
+  }
 
   if (messages) {
     // Continuing a conversation
@@ -141,6 +143,7 @@ async function createAndApprovePlan(
   context: WorkflowContext<CliToolRegistry>,
   saveUsageSnapshot: () => Promise<void>,
   interactive = true,
+  additionalTools: { search?: FullToolInfo },
 ): Promise<{ plan: string; branchName: string } | null> {
   const { logger, step, tools } = context
 
@@ -151,7 +154,7 @@ async function createAndApprovePlan(
 
   try {
     while (true) {
-      const planAgentResult = await step(`plan-${planAttempt}`, () => createPlan({ task, feedback, messages }, context))
+      const planAgentResult = await step(`plan-${planAttempt}`, () => createPlan({ task, feedback, messages, additionalTools }, context))
       messages = planAgentResult.messages
       planAttempt++
 
@@ -369,6 +372,7 @@ async function performReviewAndFixCycle(
   taskItem: string,
   highLevelPlan: string,
   context: WorkflowContext<CliToolRegistry>,
+  additionalTools: { search?: FullToolInfo },
 ): Promise<{ passed: boolean; commitMessages: string[] }> {
   const { logger, step, tools } = context
   const commitMessages: string[] = []
@@ -442,8 +446,9 @@ ${reviewSummary}`
           task: fixTask,
           mode: 'noninteractive',
           additionalInstructions: TODO_HANDLING_INSTRUCTIONS,
-          additionalTools: [getTodoItem, listTodoItems, updateTodoItem],
+          customTools: [getTodoItem, listTodoItems, updateTodoItem],
           interactive: false,
+          additionalTools,
         },
         context,
       )
@@ -455,6 +460,7 @@ ${reviewSummary}`
           all: true,
           context: reviewSummary,
           interactive: false,
+          additionalTools,
         },
         context,
       )
@@ -496,6 +502,7 @@ async function runImplementationLoop(
   context: WorkflowContext<CliToolRegistry>,
   highLevelPlan: string,
   saveUsageSnapshot: () => Promise<void>,
+  additionalTools: { search?: FullToolInfo },
 ): Promise<string[]> {
   const { logger, step, tools } = context
   const commitMessages: string[] = []
@@ -532,8 +539,9 @@ Focus only on this item, but use the plan for context.`
           task: taskWithContext,
           mode: 'noninteractive',
           additionalInstructions: TODO_HANDLING_INSTRUCTIONS,
-          additionalTools: [getTodoItem, listTodoItems, updateTodoItem],
+          customTools: [getTodoItem, listTodoItems, updateTodoItem],
           interactive: false,
+          additionalTools,
         },
         context,
       )
@@ -551,6 +559,7 @@ Focus only on this item, but use the plan for context.`
       nextTask,
       highLevelPlan,
       context,
+      additionalTools,
     )
     commitMessages.push(...fixCommitMessages)
 
@@ -604,6 +613,7 @@ async function performFinalReviewAndFix(
   context: WorkflowContext<CliToolRegistry>,
   highLevelPlan: string,
   baseBranch: string | undefined,
+  additionalTools: { search?: FullToolInfo },
 ): Promise<{ passed: boolean }> {
   const { logger, step, tools } = context
 
@@ -684,8 +694,9 @@ async function performFinalReviewAndFix(
           task: fixTask,
           mode: 'noninteractive',
           additionalInstructions: TODO_HANDLING_INSTRUCTIONS,
-          additionalTools: [getTodoItem, listTodoItems, updateTodoItem],
+          customTools: [getTodoItem, listTodoItems, updateTodoItem],
           interactive: false,
+          additionalTools,
         },
         context,
       )
@@ -705,9 +716,9 @@ async function performFinalReviewAndFix(
   return { passed: false }
 }
 
-export const epicWorkflow: WorkflowFn<EpicWorkflowInput, void, CliToolRegistry> = async (input, context) => {
+export const epicWorkflow: WorkflowFn<EpicWorkflowInput & BaseWorkflowInput, void, CliToolRegistry> = async (input, context) => {
   const { logger, tools } = context
-  const { task, saveEpicContext, saveUsageSnapshot } = input
+  const { task, saveEpicContext, saveUsageSnapshot, additionalTools } = input
 
   const workflowStartTime = Date.now()
 
@@ -732,7 +743,7 @@ export const epicWorkflow: WorkflowFn<EpicWorkflowInput, void, CliToolRegistry> 
         logger.error('Error: Task is missing in epic context. Exiting.')
         return
       }
-      const planResult = await createAndApprovePlan(input.task, context, saveUsageSnapshot, input.interactive)
+      const planResult = await createAndApprovePlan(input.task, context, saveUsageSnapshot, input.interactive, additionalTools)
       if (!planResult) return
       input.plan = planResult.plan
       input.branchName = planResult.branchName
@@ -763,9 +774,9 @@ export const epicWorkflow: WorkflowFn<EpicWorkflowInput, void, CliToolRegistry> 
       await addTodoItemsFromPlan(input.plan, context)
     }
 
-    const commitMessages = await runImplementationLoop(context, input.plan, saveUsageSnapshot)
+    const commitMessages = await runImplementationLoop(context, input.plan, saveUsageSnapshot, additionalTools)
 
-    await performFinalReviewAndFix(context, input.plan, input.baseBranch ?? undefined)
+    await performFinalReviewAndFix(context, input.plan, input.baseBranch ?? undefined, additionalTools)
 
     await saveUsageSnapshot()
 

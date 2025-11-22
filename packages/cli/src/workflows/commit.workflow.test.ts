@@ -40,6 +40,11 @@ const createMockContext = () => {
 
 // TODO: investigate why this test is failing on CI but passes locally
 describe.skipIf(!!process.env.CI)('commitWorkflow', () => {
+  const defaultInput = {
+    interactive: false,
+    additionalTools: {},
+  }
+
   afterEach(() => {
     mock.restore()
   })
@@ -63,7 +68,7 @@ describe.skipIf(!!process.env.CI)('commitWorkflow', () => {
       },
     ])
 
-    const result = await commitWorkflow({}, context)
+    const result = await commitWorkflow({ ...defaultInput }, context)
 
     expect(result).toBe('feat: add newFunc')
     expect(tools.printChangeFile).toHaveBeenCalled()
@@ -97,7 +102,7 @@ describe.skipIf(!!process.env.CI)('commitWorkflow', () => {
       },
     ])
 
-    const result = await commitWorkflow({ all: true }, context)
+    const result = await commitWorkflow({ ...defaultInput, all: true }, context)
 
     expect(result).toBe('feat: stage file')
     expect(tools.executeCommand).toHaveBeenCalledWith({
@@ -126,7 +131,7 @@ describe.skipIf(!!process.env.CI)('commitWorkflow', () => {
       },
     ])
 
-    const result = await commitWorkflow({}, context)
+    const result = await commitWorkflow({ ...defaultInput, interactive: true }, context)
 
     expect(result).toBe('feat: stage file')
     expect(tools.confirm).toHaveBeenCalledWith({
@@ -152,7 +157,7 @@ describe.skipIf(!!process.env.CI)('commitWorkflow', () => {
     })
     tools.confirm.mockResolvedValue(false)
 
-    await expect(commitWorkflow({}, context)).rejects.toThrow(UserCancelledError)
+    await expect(commitWorkflow({ ...defaultInput, interactive: true }, context)).rejects.toThrow(UserCancelledError)
   })
 
   test('should throw error when no files to commit', async () => {
@@ -160,6 +165,6 @@ describe.skipIf(!!process.env.CI)('commitWorkflow', () => {
 
     tools.printChangeFile.mockResolvedValue({ stagedFiles: [], unstagedFiles: [] })
 
-    await expect(commitWorkflow({}, context)).rejects.toThrow('No files to commit. Aborting.')
+    await expect(commitWorkflow({ ...defaultInput }, context)).rejects.toThrow('No files to commit. Aborting.')
   })
 })

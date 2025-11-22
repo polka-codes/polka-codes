@@ -14,7 +14,7 @@ import type { CliToolRegistry } from '../workflow-tools'
 import { INIT_WORKFLOW_ANALYZE_SYSTEM_PROMPT } from './prompts'
 import type { BaseWorkflowInput } from './workflow.utils'
 
-export type InitWorkflowInput = BaseWorkflowInput & {
+export type InitWorkflowInput = {
   global?: boolean
   parentOptions?: Record<string, any>
 }
@@ -23,7 +23,10 @@ type InitWorkflowOutput = {
   configPath: string
 }
 
-export const initWorkflow: WorkflowFn<InitWorkflowInput, InitWorkflowOutput, CliToolRegistry> = async (input, context) => {
+export const initWorkflow: WorkflowFn<InitWorkflowInput & BaseWorkflowInput, InitWorkflowOutput, CliToolRegistry> = async (
+  input,
+  context,
+) => {
   const { step, logger, tools } = context
   const { global, configPath, existingConfig } = await step('setup', async () => {
     const globalConfigPath = getGlobalConfigPath()

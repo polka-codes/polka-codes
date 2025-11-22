@@ -4,6 +4,7 @@ import { getProvider, logGlobalToolCallStats, printEvent } from '@polka-codes/cl
 import {
   type Logger,
   makeStepFn,
+  search,
   TaskEventKind,
   type ToolProvider,
   type ToolRegistry,
@@ -20,6 +21,7 @@ import { getProviderOptions } from './getProviderOptions'
 import { parseOptions } from './options'
 import prices from './prices'
 import { type AgentContextParameters, toolCall } from './tool-implementations'
+import type { BaseWorkflowInput } from './workflows'
 
 type RunWorkflowOptions = {
   commandName: string
@@ -27,18 +29,30 @@ type RunWorkflowOptions = {
   logger: Logger
   requiresProvider?: boolean
   yes?: boolean
+  interactive?: boolean
   getProvider?: (args: { excludeFiles?: string[] }) => ToolProvider
   onUsageMeterCreated?: (meter: UsageMeter) => void
 }
 
 export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
-  workflow: WorkflowFn<TInput, TOutput, TTools>,
+  workflow: WorkflowFn<TInput & BaseWorkflowInput, TOutput, TTools>,
   workflowInput: TInput,
   options: RunWorkflowOptions,
 ): Promise<TOutput | undefined> {
-  const { commandName, command, logger, requiresProvider = true, yes } = options
+  const { commandName, command, logger, requiresProvider = true, yes, interactive } = options
   const globalOpts = (command.parent ?? command).opts()
   const { providerConfig, config, verbose } = await parseOptions(globalOpts, {})
+
+  const additionalTools: BaseWorkflowInput['additionalTools'] = {}
+  if (config.tools?.search) {
+    additionalTools.search = search
+  }
+
+  const finalWorkflowInput: TInput & BaseWorkflowInput = {
+    ...workflowInput,
+    interactive: interactive ?? !yes,
+    additionalTools,
+  }
 
   if (requiresProvider) {
     const commandConfig = providerConfig.getConfigForCommand(commandName)
@@ -132,7 +146,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
 
   try {
     logger.info('Running workflow...')
-    const output = await workflow(workflowInput, context)
+    const output = await workflow(finalWorkflowInput, context)
     logger.info('\n\nWorkflow completed successfully.')
     logger.info(usage.getUsageText())
     return output

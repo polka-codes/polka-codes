@@ -42,7 +42,7 @@ export const reviewCommand = new Command('review')
 
     for (let i = 0; i < maxIterations; i++) {
       changesAppliedInThisIteration = false
-      const input = { pr, context, interactive: !yes && !json }
+      const input = { pr, context }
 
       if (i > 0) {
         logger.debug(`Re-running review (iteration ${i + 1} of ${maxIterations})...`)
@@ -52,6 +52,7 @@ export const reviewCommand = new Command('review')
         commandName: 'review',
         command,
         logger,
+        interactive: !yes && !json,
       })
 
       if (reviewResult) {
@@ -88,12 +89,12 @@ export const reviewCommand = new Command('review')
             codeWorkflow,
             {
               task: taskInstruction,
-              interactive: !yes,
             },
             {
               commandName: 'code',
               command,
               logger,
+              interactive: !yes,
             },
           )
         }

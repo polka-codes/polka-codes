@@ -8,7 +8,7 @@ import type { CliToolRegistry } from '../workflow-tools'
 import { COMMIT_MESSAGE_SYSTEM_PROMPT } from './prompts'
 import { type BaseWorkflowInput, parseGitDiffNameStatus } from './workflow.utils'
 
-export type CommitWorkflowInput = BaseWorkflowInput & {
+export type CommitWorkflowInput = {
   all?: boolean
   context?: string
 }
@@ -18,7 +18,10 @@ type FileChange = {
   status: string
 }
 
-export const commitWorkflow: WorkflowFn<CommitWorkflowInput, string | void, CliToolRegistry> = async (input, context) => {
+export const commitWorkflow: WorkflowFn<CommitWorkflowInput & BaseWorkflowInput, string | void, CliToolRegistry> = async (
+  input,
+  context,
+) => {
   const { step, tools, logger } = context
   const { stagedFiles, unstagedFiles } = await tools.printChangeFile()
 

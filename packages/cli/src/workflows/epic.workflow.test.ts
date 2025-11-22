@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, mock, test } from 'bun:test'
 import { type EpicWorkflowInput, epicWorkflow } from './epic.workflow'
 import { createTestProxy } from './testing/helper'
+import type { BaseWorkflowInput } from './workflow.utils'
 
 describe('epicWorkflow', () => {
   let assert: () => void
@@ -310,13 +311,15 @@ describe('epicWorkflow', () => {
     ])
     assert = proxyAssert
 
-    const epicContext: EpicWorkflowInput = {
+    const epicContext: EpicWorkflowInput & BaseWorkflowInput = {
       task,
       plan: '',
       branchName: '',
       baseBranch: '',
       saveEpicContext,
       saveUsageSnapshot,
+      interactive: true,
+      additionalTools: {},
     }
 
     await epicWorkflow(epicContext, context)

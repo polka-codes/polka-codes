@@ -7,6 +7,7 @@ import { codeWorkflow } from './code.workflow'
 import { type EpicWorkflowInput, epicWorkflow } from './epic.workflow'
 import { META_SYSTEM_PROMPT } from './prompts'
 import { taskWorkflow } from './task.workflow'
+import type { BaseWorkflowInput } from './workflow.utils'
 
 export type MetaWorkflowInput = EpicWorkflowInput
 
@@ -14,7 +15,7 @@ const DecisionSchema = z.object({
   workflow: z.enum(['code', 'task', 'epic']),
 })
 
-export const metaWorkflow: WorkflowFn<MetaWorkflowInput, void, CliToolRegistry> = async (input, context) => {
+export const metaWorkflow: WorkflowFn<MetaWorkflowInput & BaseWorkflowInput, void, CliToolRegistry> = async (input, context) => {
   const { task } = input
   const { logger } = context
 
@@ -54,13 +55,14 @@ export const metaWorkflow: WorkflowFn<MetaWorkflowInput, void, CliToolRegistry> 
 
   switch (decision.workflow) {
     case 'code':
-      await codeWorkflow({ task, interactive: input.interactive }, context)
+      await codeWorkflow({ task, interactive: input.interactive, additionalTools: input.additionalTools }, context)
       break
     case 'task':
       await taskWorkflow(
         {
           task,
           interactive: input.interactive,
+          additionalTools: input.additionalTools,
         },
         context,
       )

@@ -279,7 +279,7 @@ rules: local-rule
   })
 
   test('parses example.polkacodes.yml successfully', async () => {
-    const fetchSpy = spyOn(global, 'fetch').mockResolvedValue(new Response('mock rule content'))
+    const fetchSpy = spyOn(global, 'fetch').mockImplementation((() => Promise.resolve(new Response('mock rule content'))) as any)
     await loadConfig('example.polkacodes.yml')
     fetchSpy.mockRestore()
   })

@@ -49,28 +49,31 @@ const ImplementOutputSchema = z
     message: 'Either summary or bailReason must be provided, but not both',
   })
 
-export type CodeWorkflowInput = BaseWorkflowInput & {
+export type CodeWorkflowInput = {
   task: string
   files?: (JsonFilePart | JsonImagePart)[]
   mode?: 'interactive' | 'noninteractive'
-  additionalTools?: FullToolInfo[]
+  customTools?: FullToolInfo[]
   additionalInstructions?: string
 }
 
 export const codeWorkflow: WorkflowFn<
-  CodeWorkflowInput,
+  CodeWorkflowInput & BaseWorkflowInput,
   { success: true; summaries: string[] } | { success: false; reason: string; summaries: string[] },
   CliToolRegistry
 > = async (input, context) => {
   const { logger, step, tools } = context
-  const { task, files, mode: inputMode, additionalTools, additionalInstructions, interactive } = input
+  const { task, files, mode: inputMode, customTools, additionalInstructions, interactive, additionalTools } = input
   const mode = interactive === false ? 'noninteractive' : (inputMode ?? 'interactive')
   const summaries: string[] = []
 
   // Planning phase
   logger.info('\nPhase 1: Creating implementation plan...\n')
   const planResult = await step('plan', async () => {
-    return await planWorkflow({ task, files, mode: mode === 'interactive' ? 'confirm' : 'noninteractive', interactive }, context)
+    return await planWorkflow(
+      { task, files, mode: mode === 'interactive' ? 'confirm' : 'noninteractive', interactive, additionalTools },
+      context,
+    )
   })
 
   if (!planResult) {
@@ -126,8 +129,11 @@ export const codeWorkflow: WorkflowFn<
   if (mode === 'interactive') {
     agentTools.push(askFollowupQuestion)
   }
-  if (additionalTools) {
-    agentTools.push(...additionalTools)
+  if (customTools) {
+    agentTools.push(...customTools)
+  }
+  if (additionalTools?.search) {
+    agentTools.push(additionalTools.search)
   }
 
   const res = await step('implement', async () => {
@@ -185,7 +191,7 @@ export const codeWorkflow: WorkflowFn<
   // Fixing phase
   logger.info('\nPhase 3: Checking for errors...\n')
   const fixResult = await step('fix', async () => {
-    return await fixWorkflow({ interactive: false, task: input.task }, context)
+    return await fixWorkflow({ interactive: false, task: input.task, additionalTools: input.additionalTools }, context)
   })
 
   if (fixResult.summaries) {

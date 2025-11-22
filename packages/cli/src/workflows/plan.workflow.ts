@@ -11,7 +11,6 @@ import {
   readBinaryFile,
   readFile,
   readMemory,
-  search,
   searchFiles,
   updateMemory,
   type WorkflowContext,
@@ -30,11 +29,12 @@ type CreatePlanInput = {
   files?: (JsonFilePart | JsonImagePart)[]
   interactive: boolean
   messages?: JsonModelMessage[]
+  additionalTools?: { search?: FullToolInfo }
 }
 
 async function createPlan(input: CreatePlanInput, context: WorkflowContext<CliToolRegistry>) {
   const { tools, step } = context
-  const { task, files, plan: inputPlan, userFeedback, interactive, messages } = input
+  const { task, files, plan: inputPlan, userFeedback, interactive, messages, additionalTools } = input
 
   const getMessages = async () => {
     if (messages) {
@@ -80,7 +80,6 @@ async function createPlan(input: CreatePlanInput, context: WorkflowContext<CliTo
   const agentTools: FullToolInfo[] = [
     readFile,
     listFiles,
-    search,
     searchFiles,
     readBinaryFile,
     fetchUrl,
@@ -88,6 +87,9 @@ async function createPlan(input: CreatePlanInput, context: WorkflowContext<CliTo
     readMemory,
     updateMemory,
   ]
+  if (additionalTools?.search) {
+    agentTools.push(additionalTools.search)
+  }
   if (interactive) {
     agentTools.push(askFollowupQuestion)
   }
@@ -132,7 +134,7 @@ async function createPlan(input: CreatePlanInput, context: WorkflowContext<CliTo
   throw new Error('Failed to generate plan.')
 }
 
-export type PlanWorkflowInput = BaseWorkflowInput & {
+export type PlanWorkflowInput = {
   task?: string
   fileContent?: string
   filePath?: string
@@ -147,9 +149,12 @@ export type PlanWorkflowOutput = {
 
 type State = 'Generating' | 'Reviewing' | 'Done'
 
-export const planWorkflow: WorkflowFn<PlanWorkflowInput, PlanWorkflowOutput, CliToolRegistry> = async (input, context) => {
+export const planWorkflow: WorkflowFn<PlanWorkflowInput & BaseWorkflowInput, PlanWorkflowOutput, CliToolRegistry> = async (
+  input,
+  context,
+) => {
   const { tools, logger, step } = context
-  const { fileContent, filePath, mode: inputMode, interactive } = input
+  const { fileContent, filePath, mode: inputMode, interactive, additionalTools } = input
   const mode = interactive === false ? 'noninteractive' : (inputMode ?? 'interactive')
 
   let currentTask = input.task
@@ -185,6 +190,7 @@ export const planWorkflow: WorkflowFn<PlanWorkflowInput, PlanWorkflowOutput, Cli
               files: input.files,
               interactive: mode === 'interactive' || mode === 'confirm',
               messages,
+              additionalTools,
             },
             context,
           )

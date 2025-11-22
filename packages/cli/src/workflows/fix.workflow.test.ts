@@ -3,6 +3,7 @@
 import { afterEach, describe, expect, mock, spyOn, test } from 'bun:test'
 import * as cliShared from '@polka-codes/cli-shared'
 import type { WorkflowContext } from '@polka-codes/core'
+import { z } from 'zod'
 import type { CliToolRegistry } from '../workflow-tools'
 import { fixWorkflow } from './fix.workflow'
 import * as prompts from './prompts'
@@ -35,6 +36,11 @@ const createMockContext = () => {
 }
 
 describe('fixWorkflow', () => {
+  const defaultInput = {
+    interactive: false,
+    additionalTools: {},
+  }
+
   afterEach(() => {
     mock.restore()
   })
@@ -43,7 +49,7 @@ describe('fixWorkflow', () => {
     const { context, tools } = createMockContext()
     tools.executeCommand.mockResolvedValue({ exitCode: 0, stdout: 'All tests passed', stderr: '' })
 
-    const result = await fixWorkflow({ command: 'bun test' }, context)
+    const result = await fixWorkflow({ ...defaultInput, command: 'bun test' }, context)
 
     expect(tools.executeCommand).toHaveBeenCalledWith({ command: 'bun test', shell: true, pipe: true })
     expect(result).toStrictEqual({ success: true, summaries: [] })
@@ -61,7 +67,7 @@ describe('fixWorkflow', () => {
     tools.input.mockResolvedValue('bun typecheck && bun test')
     tools.executeCommand.mockResolvedValue({ exitCode: 0, stdout: 'Success', stderr: '' })
 
-    await fixWorkflow({ interactive: true }, context)
+    await fixWorkflow({ ...defaultInput, interactive: true }, context)
 
     expect(tools.input).toHaveBeenCalledWith({
       message: 'Please enter the command to run to identify issues:',
@@ -86,7 +92,7 @@ describe('fixWorkflow', () => {
 
     tools.executeCommand.mockResolvedValue({ exitCode: 0, stdout: '', stderr: '' })
 
-    await fixWorkflow({ interactive: false }, context)
+    await fixWorkflow({ ...defaultInput, interactive: false }, context)
 
     expect(tools.executeCommand).toHaveBeenCalledWith({ command: 'bun typecheck', shell: true, pipe: true })
 
@@ -98,7 +104,7 @@ describe('fixWorkflow', () => {
     const loadConfigSpy = spyOn(cliShared, 'loadConfig').mockResolvedValue({})
     tools.input.mockResolvedValue('')
 
-    const promise = fixWorkflow({ interactive: true }, context)
+    const promise = fixWorkflow({ ...defaultInput, interactive: true }, context)
 
     await expect(promise).rejects.toThrow('No command provided. Aborting.')
     loadConfigSpy.mockRestore()
@@ -118,7 +124,7 @@ describe('fixWorkflow', () => {
       },
     ])
 
-    const result = await fixWorkflow({ command: 'bun test' }, context)
+    const result = await fixWorkflow({ ...defaultInput, command: 'bun test' }, context)
 
     expect(tools.executeCommand).toHaveBeenCalledTimes(2)
     expect(tools.generateText).toHaveBeenCalledTimes(1)
@@ -136,7 +142,7 @@ describe('fixWorkflow', () => {
       },
     ])
 
-    const result = await fixWorkflow({ command: 'bun test' }, context)
+    const result = await fixWorkflow({ ...defaultInput, command: 'bun test' }, context)
 
     expect(tools.executeCommand).toHaveBeenCalledTimes(10)
     expect(tools.generateText).toHaveBeenCalledTimes(10)
@@ -169,7 +175,7 @@ describe('fixWorkflow', () => {
       },
     ])
 
-    const result = await fixWorkflow({ command: 'bun test' }, context)
+    const result = await fixWorkflow({ ...defaultInput, command: 'bun test' }, context)
 
     expect(tools.executeCommand).toHaveBeenCalledTimes(1)
     expect(tools.generateText).toHaveBeenCalledTimes(1)
@@ -207,7 +213,7 @@ describe('fixWorkflow', () => {
       .mockResolvedValueOnce({ exitCode: 1, stdout: 'FAIL', stderr: 'Error' })
       .mockResolvedValueOnce({ exitCode: 0, stdout: 'PASS', stderr: '' })
 
-    await fixWorkflow({ command: 'bun test', task: 'My original task was to do this thing.' }, context)
+    await fixWorkflow({ ...defaultInput, command: 'bun test', task: 'My original task was to do this thing.' }, context)
 
     expect(getFixUserPromptSpy).toHaveBeenCalledTimes(1)
     expect(tools.generateText).toHaveBeenCalledTimes(1)
@@ -240,7 +246,7 @@ describe('fixWorkflow', () => {
       .mockResolvedValueOnce({ exitCode: 1, stdout: 'FAIL', stderr: 'Error' })
       .mockResolvedValueOnce({ exitCode: 0, stdout: 'PASS', stderr: '' })
 
-    await fixWorkflow({ command: 'bun test', context: 'Focus on the authentication tests' }, context)
+    await fixWorkflow({ ...defaultInput, command: 'bun test', context: 'Focus on the authentication tests' }, context)
 
     expect(getFixUserPromptSpy).toHaveBeenCalledTimes(1)
     expect(tools.generateText).toHaveBeenCalledTimes(1)
@@ -250,5 +256,36 @@ describe('fixWorkflow', () => {
     expect(userMessage?.content).toContain('Focus on the authentication tests')
 
     getFixUserPromptSpy.mockRestore()
+  })
+
+  test('should pass additional tools to agent workflow', async () => {
+    const { context, tools } = createMockContext()
+    const searchTool = {
+      name: 'search',
+      description: 'Search the web',
+      parameters: z.object({ query: z.string() }),
+      handler: async () => ({ type: 'Reply', message: { type: 'text', value: 'result' } }),
+    } as any
+
+    tools.executeCommand.mockResolvedValue({ exitCode: 1, stdout: 'FAIL', stderr: 'Error' })
+    tools.generateText.mockResolvedValue([
+      {
+        role: 'assistant',
+        content: '```json\n{"summary":"I did a fix","bailReason":null}\n```',
+      },
+    ])
+
+    await fixWorkflow(
+      {
+        ...defaultInput,
+        command: 'bun test',
+        additionalTools: { search: searchTool },
+      },
+      context,
+    )
+
+    const generateTextCall = tools.generateText.mock.calls[0][0] as { tools: any }
+    expect(generateTextCall.tools).toHaveProperty('search')
+    expect(generateTextCall.tools.search.description).toBe('Search the web')
   })
 })

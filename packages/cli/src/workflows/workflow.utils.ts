@@ -2,12 +2,15 @@
 
 import { execSync } from 'node:child_process'
 import { listFiles, loadConfig } from '@polka-codes/cli-shared'
-import type { Logger } from '@polka-codes/core'
+import type { FullToolInfo, Logger } from '@polka-codes/core'
 import { z } from 'zod'
 import type { CliToolRegistry } from '../workflow-tools'
 
 export type BaseWorkflowInput = {
-  interactive?: boolean
+  interactive: boolean
+  additionalTools: {
+    search?: FullToolInfo
+  }
 }
 
 type FileChange = {

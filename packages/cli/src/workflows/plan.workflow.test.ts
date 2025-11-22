@@ -56,7 +56,7 @@ describe('planWorkflow', () => {
     ])
     assert = proxyAssert
 
-    const result = await planWorkflow({ task, mode: 'interactive' }, context)
+    const result = await planWorkflow({ task, mode: 'interactive', interactive: true, additionalTools: {} }, context)
 
     expect(result.plan).toBe(generatedPlan)
     expect(logger.info).toHaveBeenCalledWith(`Plan saved to ${savePath}`)
@@ -119,7 +119,7 @@ ${JSON.stringify({ plan: regeneratedPlan })}
     ])
     assert = proxyAssert
 
-    const result = await planWorkflow({ task, mode: 'interactive' }, context)
+    const result = await planWorkflow({ task, mode: 'interactive', interactive: true, additionalTools: {} }, context)
 
     expect(result.plan).toBe(regeneratedPlan)
   })
@@ -152,7 +152,7 @@ ${JSON.stringify({ plan: generatedPlan })}
     ])
     assert = proxyAssert
 
-    const result = await planWorkflow({ task, mode: 'interactive' }, context)
+    const result = await planWorkflow({ task, mode: 'interactive', interactive: true, additionalTools: {} }, context)
     expect(result.plan).toBe(generatedPlan)
   })
 
@@ -176,7 +176,7 @@ ${JSON.stringify({ plan: generatedPlan })}
     ])
     assert = proxyAssert
 
-    const result = await planWorkflow({ task, mode: 'noninteractive' }, context)
+    const result = await planWorkflow({ task, mode: 'noninteractive', interactive: false, additionalTools: {} }, context)
 
     expect(result.plan).toBe(generatedPlan)
   })
@@ -208,7 +208,7 @@ ${JSON.stringify({ plan: generatedPlan })}
     ])
     assert = proxyAssert
 
-    const result = await planWorkflow({ task, mode: 'confirm' }, context)
+    const result = await planWorkflow({ task, mode: 'confirm', interactive: true, additionalTools: {} }, context)
 
     expect(result.plan).toBe(generatedPlan)
   })
@@ -241,7 +241,9 @@ ${JSON.stringify({ plan: generatedPlan })}
     ])
     assert = proxyAssert
 
-    await expect(planWorkflow({ task, mode: 'confirm' }, context)).rejects.toThrow(UserCancelledError)
+    await expect(planWorkflow({ task, mode: 'confirm', interactive: true, additionalTools: {} }, context)).rejects.toThrow(
+      UserCancelledError,
+    )
   })
 
   test('should handle agent asking a question', async () => {
@@ -289,7 +291,7 @@ ${JSON.stringify({ plan: generatedPlan })}
     ])
     assert = proxyAssert
 
-    const result = await planWorkflow({ task, mode: 'interactive' }, context)
+    const result = await planWorkflow({ task, mode: 'interactive', interactive: true, additionalTools: {} }, context)
 
     expect(result.plan).toBe(generatedPlan)
   })
@@ -343,7 +345,7 @@ ${JSON.stringify({ plan: regeneratedPlan })}
     ])
     assert = proxyAssert
 
-    const result = await planWorkflow({ task, mode: 'interactive' }, context)
+    const result = await planWorkflow({ task, mode: 'interactive', interactive: true, additionalTools: {} }, context)
 
     expect(result.plan).toBe(regeneratedPlan)
   })
@@ -379,7 +381,7 @@ ${JSON.stringify(generatedPlan)}
     const { context, assert: proxyAssert } = createTestProxy(expectedCalls)
     assert = proxyAssert
 
-    const result = await planWorkflow({ task, mode: 'noninteractive' }, context)
+    const result = await planWorkflow({ task, mode: 'noninteractive', interactive: false, additionalTools: {} }, context)
 
     expect(result.plan).toBe(generatedPlan.plan)
     expect(result.files).toEqual([{ path: 'src/index.ts', content: fileContent }])

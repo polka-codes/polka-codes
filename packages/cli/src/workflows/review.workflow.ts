@@ -18,12 +18,15 @@ type FileChange = {
   status: string
 }
 
-export type ReviewWorkflowInput = BaseWorkflowInput & {
+export type ReviewWorkflowInput = {
   pr?: string
   context?: string
 }
 
-export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput, ReviewResult, CliToolRegistry> = async (input, context) => {
+export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput, ReviewResult, CliToolRegistry> = async (
+  input,
+  context,
+) => {
   const { step, tools, logger } = context
   const { pr, context: userContext } = input
   let changeInfo: ReviewToolInput | undefined

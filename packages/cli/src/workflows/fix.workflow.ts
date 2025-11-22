@@ -3,6 +3,7 @@ import { loadConfig } from '@polka-codes/cli-shared'
 import {
   agentWorkflow,
   executeCommand,
+  type FullToolInfo,
   fetchUrl,
   listFiles,
   listMemoryTopics,
@@ -22,7 +23,7 @@ import type { CliToolRegistry } from '../workflow-tools'
 import { FIX_SYSTEM_PROMPT, getFixUserPrompt } from './prompts'
 import { type BaseWorkflowInput, getDefaultContext } from './workflow.utils'
 
-export type FixWorkflowInput = BaseWorkflowInput & {
+export type FixWorkflowInput = {
   command?: string
   task?: string
   context?: string
@@ -38,12 +39,12 @@ const FixIterationSummarySchema = z
   })
 
 export const fixWorkflow: WorkflowFn<
-  FixWorkflowInput,
+  FixWorkflowInput & BaseWorkflowInput,
   { success: true; summaries: string[] } | { success: false; reason: string; summaries: string[] },
   CliToolRegistry
 > = async (input, context) => {
   const { tools, logger, step } = context
-  const { command: inputCommand, task, context: userContext, interactive = true } = input
+  const { command: inputCommand, task, context: userContext, interactive = true, additionalTools } = input
   let command = inputCommand
   const summaries: string[] = []
   let formatCommand: string | undefined
@@ -124,6 +125,27 @@ export const fixWorkflow: WorkflowFn<
       const defaultContext = await getDefaultContext()
       const memoryContext = await tools.getMemoryContext()
       const userPrompt = getFixUserPrompt(command, exitCode, stdout, stderr, task, userContext)
+
+      const agentTools: FullToolInfo[] = [
+        readFile,
+        writeToFile,
+        replaceInFile,
+        searchFiles,
+        listFiles,
+        executeCommand,
+        fetchUrl,
+        readBinaryFile,
+        removeFile,
+        renameFile,
+        readMemory,
+        updateMemory,
+        listMemoryTopics,
+      ]
+
+      if (additionalTools?.search) {
+        agentTools.push(additionalTools.search)
+      }
+
       return await agentWorkflow(
         {
           systemPrompt: FIX_SYSTEM_PROMPT,
@@ -133,21 +155,7 @@ export const fixWorkflow: WorkflowFn<
               content: `${userPrompt}\n\n${defaultContext}\n${memoryContext}`,
             },
           ],
-          tools: [
-            readFile,
-            writeToFile,
-            replaceInFile,
-            searchFiles,
-            listFiles,
-            executeCommand,
-            fetchUrl,
-            readBinaryFile,
-            removeFile,
-            renameFile,
-            readMemory,
-            updateMemory,
-            listMemoryTopics,
-          ],
+          tools: agentTools,
           outputSchema: FixIterationSummarySchema,
         },
         context,

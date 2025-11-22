@@ -11,11 +11,14 @@ const prDetailsSchema = z.object({
   description: z.string(),
 })
 
-export type PrWorkflowInput = BaseWorkflowInput & {
+export type PrWorkflowInput = {
   context?: string
 }
 
-export const prWorkflow: WorkflowFn<PrWorkflowInput, { title: string; description: string }, CliToolRegistry> = async (input, context) => {
+export const prWorkflow: WorkflowFn<PrWorkflowInput & BaseWorkflowInput, { title: string; description: string }, CliToolRegistry> = async (
+  input,
+  context,
+) => {
   const { step, tools } = context
   const { diff, commits, branchName } = await step('get-git-info', async () => {
     await checkGhInstalled(tools.executeCommand)

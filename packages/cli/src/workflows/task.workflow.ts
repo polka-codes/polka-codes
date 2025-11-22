@@ -3,6 +3,7 @@
 import {
   agentWorkflow,
   executeCommand,
+  type FullToolInfo,
   fetchUrl,
   listFiles,
   readBinaryFile,
@@ -17,7 +18,7 @@ import {
 import type { CliToolRegistry } from '../workflow-tools'
 import { type BaseWorkflowInput, getDefaultContext } from './workflow.utils'
 
-export type TaskWorkflowInput = BaseWorkflowInput & {
+export type TaskWorkflowInput = {
   task: string
 }
 
@@ -25,13 +26,33 @@ const SYSTEM_PROMPT = `You are a generic AI assistant.
 You are able to perform simple tasks including making simple changes, reading code, and answering user questions.
 Use the available tools to perform the task.`
 
-export const taskWorkflow: WorkflowFn<TaskWorkflowInput, { success: boolean }, CliToolRegistry> = async (input, context) => {
+export const taskWorkflow: WorkflowFn<TaskWorkflowInput & BaseWorkflowInput, { success: boolean }, CliToolRegistry> = async (
+  input,
+  context,
+) => {
   const { logger, step } = context
-  const { task } = input
+  const { task, additionalTools } = input
 
   logger.info(`
 Running generic agent...
 `)
+
+  const agentTools: FullToolInfo[] = [
+    readFile,
+    writeToFile,
+    replaceInFile,
+    searchFiles,
+    listFiles,
+    executeCommand,
+    fetchUrl,
+    readBinaryFile,
+    removeFile,
+    renameFile,
+  ]
+
+  if (additionalTools?.search) {
+    agentTools.push(additionalTools.search)
+  }
 
   await step('agent', async () => {
     const defaultContext = await getDefaultContext()
@@ -40,18 +61,7 @@ Running generic agent...
       {
         systemPrompt: SYSTEM_PROMPT,
         userMessage: [{ role: 'user', content: userMessage }],
-        tools: [
-          readFile,
-          writeToFile,
-          replaceInFile,
-          searchFiles,
-          listFiles,
-          executeCommand,
-          fetchUrl,
-          readBinaryFile,
-          removeFile,
-          renameFile,
-        ],
+        tools: agentTools,
       },
       context,
     )

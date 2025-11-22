@@ -105,7 +105,6 @@ export async function runCode(task: string | undefined, _options: any, command: 
   const workflowInput: CodeWorkflowInput = {
     task: taskInput,
     files: fileContents,
-    interactive: !yes,
   }
   const logger = createLogger({
     verbose,

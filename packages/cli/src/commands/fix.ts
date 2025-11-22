@@ -12,9 +12,9 @@ export const fixCommand = new Command('fix')
   .action(async (command: string | undefined, context: string | undefined, options: { task?: string }, cmd: Command) => {
     const globalOpts = (cmd.parent ?? cmd).opts()
     const { verbose, yes } = globalOpts
-    const workflowInput: FixWorkflowInput = { command, task: options.task, context, interactive: !yes }
+    const workflowInput: FixWorkflowInput = { command, task: options.task, context }
     const logger = createLogger({
       verbose,
     })
-    await runWorkflow(fixWorkflow, workflowInput, { commandName: 'fix', command: cmd, logger })
+    await runWorkflow(fixWorkflow, workflowInput, { commandName: 'fix', command: cmd, logger, yes })
   })
