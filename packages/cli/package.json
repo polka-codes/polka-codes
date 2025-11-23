@@ -19,6 +19,7 @@
   "dependencies": {
     "@ai-sdk/anthropic": "^2.0.40",
     "@ai-sdk/deepseek": "^1.0.28",
+    "@ai-sdk/google": "^2.0.42",
     "@ai-sdk/google-vertex": "^3.0.71",
     "@ai-sdk/openai": "^2.0.69",
     "@ai-sdk/provider": "^2.0.0",

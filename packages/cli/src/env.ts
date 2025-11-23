@@ -23,6 +23,8 @@ export interface Env {
   OPENROUTER_API_KEY?: string
   /** API key for OpenAI */
   OPENAI_API_KEY?: string
+  /** API key for Google */
+  GOOGLE_API_KEY?: string
   /** The file to write tracing information to */
   TRACING_FILE?: string
 }
@@ -40,6 +42,7 @@ export function getEnv(override?: Partial<Env>): Env {
     DEEPSEEK_API_KEY: process.env.DEEPSEEK_API_KEY,
     OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+    GOOGLE_API_KEY: process.env.GOOGLE_API_KEY,
     TRACING_FILE: process.env.TRACING_FILE,
     ...override,
   }

@@ -8,6 +8,7 @@ const defaultModels = {
   [AiProvider.OpenRouter]: 'google/gemini-2.5-pro',
   [AiProvider.OpenAI]: 'gpt-5-2025-08-07',
   [AiProvider.GoogleVertex]: 'gemini-2.5-pro',
+  [AiProvider.Google]: 'gemini-2.5-pro',
 }
 
 export class ApiProviderConfig {

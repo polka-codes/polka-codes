@@ -1,6 +1,7 @@
 import { appendFileSync } from 'node:fs'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { createDeepSeek } from '@ai-sdk/deepseek'
+import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createVertex } from '@ai-sdk/google-vertex'
 import { createOpenAI } from '@ai-sdk/openai'
 import type { LanguageModelV2 } from '@ai-sdk/provider'
@@ -43,6 +44,7 @@ export enum AiProvider {
   OpenRouter = 'openrouter',
   OpenAI = 'openai',
   GoogleVertex = 'google-vertex',
+  Google = 'google',
 }
 
 export type ModelConfig = {
@@ -245,6 +247,13 @@ export const getModel = (config: ModelConfig, debugLogging = false): LanguageMod
         },
       })
       return vertex(config.model)
+    }
+    case AiProvider.Google: {
+      const google = createGoogleGenerativeAI({
+        fetch: fetchOverride,
+        apiKey: config.apiKey,
+      })
+      return google(config.model)
     }
   }
 }

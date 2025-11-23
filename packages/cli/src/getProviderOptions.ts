@@ -57,6 +57,7 @@ export function getProviderOptions(options: GetProviderOptionsArgs): Record<stri
       }
       break
     case AiProvider.GoogleVertex:
+    case AiProvider.Google:
       providerOptions.google = {
         thinkingConfig: {
           includeThoughts: true,

@@ -87,6 +87,9 @@ export async function parseOptions(
   if (env.OPENAI_API_KEY) {
     set(config, ['providers', AiProvider.OpenAI, 'apiKey'], env.OPENAI_API_KEY)
   }
+  if (env.GOOGLE_API_KEY) {
+    set(config, ['providers', AiProvider.Google, 'apiKey'], env.GOOGLE_API_KEY)
+  }
 
   const providerConfig = new ApiProviderConfig({
     defaultProvider,

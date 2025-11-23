@@ -8,6 +8,29 @@ export type ModelInfo = {
   supportsThinking?: boolean
 }
 
+const googleModelPrices = {
+  'gemini-1.5-pro': { inputPrice: 1.25, outputPrice: 5, cacheWritesPrice: 0, cacheReadsPrice: 0.31, supportsThinking: false },
+  'gemini-1.5-flash': { inputPrice: 0.075, outputPrice: 0.3, cacheWritesPrice: 0, cacheReadsPrice: 0.01875, supportsThinking: false },
+  'gemini-2.0-flash': { inputPrice: 0.1, outputPrice: 0.4, cacheWritesPrice: 0, cacheReadsPrice: 0.025, supportsThinking: false },
+  'gemini-2.5-pro': { inputPrice: 1.25, outputPrice: 10, cacheWritesPrice: 1.625, cacheReadsPrice: 0.125, supportsThinking: true },
+  'gemini-2.5-flash': { inputPrice: 0.3, outputPrice: 2.5, cacheWritesPrice: 0, cacheReadsPrice: 0.075, supportsThinking: true },
+  'gemini-2.5-flash-lite': { inputPrice: 0.1, outputPrice: 0.4, cacheWritesPrice: 0, cacheReadsPrice: 0.025, supportsThinking: false },
+  'gemini-3-pro-preview': {
+    inputPrice: 2,
+    outputPrice: 12,
+    cacheWritesPrice: 2.375,
+    cacheReadsPrice: 0.2,
+    supportsThinking: true,
+  },
+  'gemini-3-pro': {
+    inputPrice: 2,
+    outputPrice: 12,
+    cacheWritesPrice: 2.375,
+    cacheReadsPrice: 0.2,
+    supportsThinking: true,
+  },
+} satisfies Record<string, ModelInfo>
+
 export default {
   [AiProvider.Anthropic]: {
     'claude-sonnet-4-5-20250929': { inputPrice: 3, outputPrice: 15, cacheWritesPrice: 3.75, cacheReadsPrice: 0.3, supportsThinking: true },
@@ -43,26 +66,6 @@ export default {
     'gpt-5.1-codex': { inputPrice: 1.25, outputPrice: 10, cacheWritesPrice: 0, cacheReadsPrice: 0.125, supportsThinking: true },
   },
 
-  [AiProvider.GoogleVertex]: {
-    'gemini-1.5-pro': { inputPrice: 1.25, outputPrice: 5, cacheWritesPrice: 0, cacheReadsPrice: 0.31, supportsThinking: false },
-    'gemini-1.5-flash': { inputPrice: 0.075, outputPrice: 0.3, cacheWritesPrice: 0, cacheReadsPrice: 0.01875, supportsThinking: false },
-    'gemini-2.0-flash': { inputPrice: 0.1, outputPrice: 0.4, cacheWritesPrice: 0, cacheReadsPrice: 0.025, supportsThinking: false },
-    'gemini-2.5-pro': { inputPrice: 1.25, outputPrice: 10, cacheWritesPrice: 1.625, cacheReadsPrice: 0.125, supportsThinking: true },
-    'gemini-2.5-flash': { inputPrice: 0.3, outputPrice: 2.5, cacheWritesPrice: 0, cacheReadsPrice: 0.075, supportsThinking: true },
-    'gemini-2.5-flash-lite': { inputPrice: 0.1, outputPrice: 0.4, cacheWritesPrice: 0, cacheReadsPrice: 0.025, supportsThinking: false },
-    'gemini-3-pro-preview': {
-      inputPrice: 2,
-      outputPrice: 12,
-      cacheWritesPrice: 2.375,
-      cacheReadsPrice: 0.2,
-      supportsThinking: true,
-    },
-    'gemini-3-pro': {
-      inputPrice: 2,
-      outputPrice: 12,
-      cacheWritesPrice: 2.375,
-      cacheReadsPrice: 0.2,
-      supportsThinking: true,
-    },
-  },
+  [AiProvider.GoogleVertex]: googleModelPrices,
+  [AiProvider.Google]: googleModelPrices,
 } as const satisfies Record<AiProvider, Record<string, ModelInfo>>
