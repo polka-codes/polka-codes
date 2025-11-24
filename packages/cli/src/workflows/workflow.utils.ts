@@ -255,11 +255,12 @@ export async function getDefaultContext(): Promise<string> {
   const [files, truncated] = await listFiles(cwd, true, 2000, cwd, config?.excludeFiles ?? [])
   const fileList = files.join('\n')
 
-  const contextParts: string[] = []
-
-  contextParts.push(`<file_list truncated="${truncated}">
+  const contextParts: string[] = [
+    `<file_list truncated="${truncated}">
 ${fileList}
-</file_list>`)
+</file_list>`,
+    `<now_date>${new Date().toISOString()}</now_date>`,
+  ]
 
   if (config?.rules) {
     contextParts.push(`<rules>\n${config.rules}\n</rules>`)
