@@ -44,26 +44,30 @@ export async function runEpic(task: string | undefined, _options: any, command: 
 
   let usageMeter: UsageMeter | undefined
 
-  const saveUsageSnapshot = async () => {
-    if (usageMeter) {
-      const currentUsage = usageMeter.usage
-      if (!epicContext.usages) {
-        epicContext.usages = []
-      }
-      epicContext.usages.push({ ...currentUsage, timestamp: Date.now() })
-    }
-  }
-
   const workflowInput = {
     ...epicContext,
-    async saveEpicContext(context: EpicContext) {
-      await persistEpicContext({
-        ...epicContext,
-        ...context,
-      })
-    },
-    saveUsageSnapshot,
     interactive: !yes,
+    saveEpicContext: async (context: EpicContext) => {
+      // Update fields that might have changed in the workflow
+      // We explicitly exclude 'memory' and 'todos' because they are managed by their respective stores
+      // and the context object passed here might have stale references to them.
+      if (context.task) workflowInput.task = context.task
+      if (context.plan) workflowInput.plan = context.plan
+      if (context.branchName) workflowInput.branchName = context.branchName
+      if (context.baseBranch) workflowInput.baseBranch = context.baseBranch
+
+      await persistEpicContext(workflowInput)
+    },
+    saveUsageSnapshot: async () => {
+      if (usageMeter) {
+        const currentUsage = usageMeter.usage
+        if (!workflowInput.usages) {
+          workflowInput.usages = []
+        }
+        workflowInput.usages.push({ ...currentUsage, timestamp: Date.now() })
+        await persistEpicContext(workflowInput)
+      }
+    },
   }
 
   await runWorkflow(epicWorkflow, workflowInput, {
