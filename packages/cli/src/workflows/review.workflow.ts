@@ -6,17 +6,14 @@ import type { CliToolRegistry } from '../workflow-tools'
 import { CODE_REVIEW_SYSTEM_PROMPT, formatReviewToolInput, type ReviewToolInput } from './prompts'
 import {
   type BaseWorkflowInput,
+  type FileChange,
   parseGitDiffNameStatus,
+  parseGitDiffNumStat,
   parseGitStatus,
   printChangedFiles,
   type ReviewResult,
   reviewOutputSchema,
 } from './workflow.utils'
-
-type FileChange = {
-  path: string
-  status: string
-}
 
 export type ReviewWorkflowInput = {
   pr?: string
@@ -71,7 +68,22 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput,
         logger.warn('Warning: Could not retrieve file changes list')
         return []
       }
-      return parseGitDiffNameStatus(diffResult.stdout)
+      const files = parseGitDiffNameStatus(diffResult.stdout)
+
+      const statResult = await tools.executeCommand({
+        command: 'git',
+        args: ['--no-pager', 'diff', '--numstat', '--no-color', `${prDetails.baseRefOid}...HEAD`],
+      })
+      if (statResult.exitCode === 0) {
+        const stats = parseGitDiffNumStat(statResult.stdout)
+        for (const file of files) {
+          if (stats[file.path]) {
+            file.insertions = stats[file.path].insertions
+            file.deletions = stats[file.path].deletions
+          }
+        }
+      }
+      return files
     })
 
     printChangedFiles(logger, changedFiles)
@@ -93,6 +105,28 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput,
     if (hasLocalChanges) {
       const hasStagedChanges = statusLines.some((line: string) => line[0] !== ' ' && line[0] !== '?')
       const changedFiles = parseGitStatus(gitStatus)
+
+      const unstagedStatResult = await tools.executeCommand({
+        command: 'git',
+        args: ['diff', '--numstat', '--no-color'],
+      })
+      const unstagedStats = unstagedStatResult.exitCode === 0 ? parseGitDiffNumStat(unstagedStatResult.stdout) : {}
+
+      const stagedStatResult = await tools.executeCommand({
+        command: 'git',
+        args: ['diff', '--numstat', '--cached', '--no-color'],
+      })
+      const stagedStats = stagedStatResult.exitCode === 0 ? parseGitDiffNumStat(stagedStatResult.stdout) : {}
+
+      for (const file of changedFiles) {
+        const unstaged = unstagedStats[file.path] || { insertions: 0, deletions: 0 }
+        const staged = stagedStats[file.path] || { insertions: 0, deletions: 0 }
+
+        if (unstaged.insertions > 0 || unstaged.deletions > 0 || staged.insertions > 0 || staged.deletions > 0) {
+          file.insertions = unstaged.insertions + staged.insertions
+          file.deletions = unstaged.deletions + staged.deletions
+        }
+      }
 
       printChangedFiles(logger, changedFiles)
 
@@ -138,7 +172,22 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput,
           logger.warn('Warning: Could not retrieve file changes list')
           return []
         }
-        return parseGitDiffNameStatus(diffResult.stdout)
+        const files = parseGitDiffNameStatus(diffResult.stdout)
+
+        const statResult = await tools.executeCommand({
+          command: 'git',
+          args: ['--no-pager', 'diff', '--numstat', '--no-color', `${defaultBranch}...${currentBranch}`],
+        })
+        if (statResult.exitCode === 0) {
+          const stats = parseGitDiffNumStat(statResult.stdout)
+          for (const file of files) {
+            if (stats[file.path]) {
+              file.insertions = stats[file.path].insertions
+              file.deletions = stats[file.path].deletions
+            }
+          }
+        }
+        return files
       })
 
       printChangedFiles(logger, branchChangedFiles)

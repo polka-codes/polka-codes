@@ -96,7 +96,7 @@ export type ReviewToolInput = {
   commitMessages?: string
   commitRange?: string
   staged?: boolean
-  changedFiles?: { path: string; status: string }[]
+  changedFiles?: { path: string; status: string; insertions?: number; deletions?: number }[]
   context?: string
 }
 
@@ -120,7 +120,17 @@ function getReviewInstructions(params: ReviewToolInput): string {
 export function formatReviewToolInput(params: ReviewToolInput): string {
   const fileList =
     params.changedFiles && params.changedFiles.length > 0
-      ? params.changedFiles.map((file) => `${file.status}: ${file.path}`).join('\n')
+      ? params.changedFiles
+          .map((file) => {
+            let statString = ''
+            if (file.insertions !== undefined || file.deletions !== undefined) {
+              const ins = file.insertions ?? 0
+              const del = file.deletions ?? 0
+              statString = ` (+${ins}/-${del})`
+            }
+            return `${file.status}: ${file.path}${statString}`
+          })
+          .join('\n')
       : undefined
 
   const parts = [

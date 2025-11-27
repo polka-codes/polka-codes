@@ -13,9 +13,11 @@ export type BaseWorkflowInput = {
   }
 }
 
-type FileChange = {
+export type FileChange = {
   path: string
   status: string
+  insertions?: number
+  deletions?: number
 }
 
 export function parseGitDiffNameStatus(diffOutput: string): FileChange[] {
@@ -56,8 +58,31 @@ export function printChangedFiles(logger: Logger, changedFiles: FileChange[]) {
   }
   logger.info('Changed Files:')
   for (const file of changedFiles) {
-    logger.info(`- ${file.status}: ${file.path}`)
+    let statString = ''
+    if (file.insertions !== undefined || file.deletions !== undefined) {
+      const ins = file.insertions ?? 0
+      const del = file.deletions ?? 0
+      statString = ` (+${ins}/-${del})`
+    }
+    logger.info(`- ${file.status}: ${file.path}${statString}`)
   }
+}
+
+export function parseGitDiffNumStat(output: string): Record<string, { insertions: number; deletions: number }> {
+  const stats: Record<string, { insertions: number; deletions: number }> = {}
+  const lines = output.split('\n').filter((line) => line.trim())
+
+  for (const line of lines) {
+    const parts = line.split('\t')
+    if (parts.length >= 3) {
+      const insertions = parts[0] === '-' ? 0 : Number.parseInt(parts[0], 10)
+      const deletions = parts[1] === '-' ? 0 : Number.parseInt(parts[1], 10)
+      const path = unquotePath(parts.slice(2).join('\t'))
+
+      stats[path] = { insertions, deletions }
+    }
+  }
+  return stats
 }
 
 // unquotes path from git status --porcelain
@@ -134,15 +159,59 @@ export function getLocalChanges() {
     encoding: 'utf-8',
   })
   const allFiles = parseGitStatus(statusOutput)
+
+  let stagedStats: Record<string, { insertions: number; deletions: number }> = {}
+  try {
+    const stagedDiffOutput = execSync('git diff --staged --numstat --no-color', { encoding: 'utf-8' })
+    stagedStats = parseGitDiffNumStat(stagedDiffOutput)
+  } catch {
+    // Ignore error
+  }
+
+  let unstagedStats: Record<string, { insertions: number; deletions: number }> = {}
+  try {
+    const unstagedDiffOutput = execSync('git diff --numstat --no-color', { encoding: 'utf-8' })
+    unstagedStats = parseGitDiffNumStat(unstagedDiffOutput)
+  } catch {
+    // Ignore error
+  }
+
   const stagedFiles: FileChange[] = []
   const unstagedFiles: FileChange[] = []
 
   for (const file of allFiles) {
+    let totalInsertions = 0
+    let totalDeletions = 0
+
     if (file.status.includes('(staged)')) {
-      stagedFiles.push(file)
+      const stats = stagedStats[file.path]
+      const stagedFile = { ...file }
+      if (stats) {
+        stagedFile.insertions = stats.insertions
+        stagedFile.deletions = stats.deletions
+        totalInsertions += stats.insertions
+        totalDeletions += stats.deletions
+      }
+      stagedFiles.push(stagedFile)
     }
-    if (file.status.includes('(unstaged)') || file.status.includes('Untracked')) {
+
+    if (file.status.includes('(unstaged)')) {
+      const stats = unstagedStats[file.path]
+      const unstagedFile = { ...file }
+      if (stats) {
+        unstagedFile.insertions = stats.insertions
+        unstagedFile.deletions = stats.deletions
+        totalInsertions += stats.insertions
+        totalDeletions += stats.deletions
+      }
+      unstagedFiles.push(unstagedFile)
+    } else if (file.status.includes('Untracked')) {
       unstagedFiles.push(file)
+    }
+
+    if (totalInsertions > 0 || totalDeletions > 0) {
+      file.insertions = totalInsertions
+      file.deletions = totalDeletions
     }
   }
 
@@ -153,7 +222,17 @@ export function createFileStatusPrompt(changedFiles: FileChange[]): string {
   if (changedFiles.length === 0) {
     return ''
   }
-  const fileList = changedFiles.map((file) => `${file.status}: ${file.path}`).join('\n')
+  const fileList = changedFiles
+    .map((file) => {
+      let statString = ''
+      if (file.insertions !== undefined || file.deletions !== undefined) {
+        const ins = file.insertions ?? 0
+        const del = file.deletions ?? 0
+        statString = ` (+${ins}/-${del})`
+      }
+      return `${file.status}: ${file.path}${statString}`
+    })
+    .join('\n')
   return `<file_status>\n${fileList}\n</file_status>`
 }
 
