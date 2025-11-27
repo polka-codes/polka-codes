@@ -23,3 +23,4 @@ rules: |
   biome is used for linting and formatting. DO NOT use prettier or eslint
   ToolInfo parameters MUST be z.object reqired by AI providers
   DO NOT have conditional logic such as if-else or try-catch in unit tests. Use .rejects.toThrow() to test for errors.
+  Avoid creating temporary test scripts if possible. Use proper test to confirm the behavior.

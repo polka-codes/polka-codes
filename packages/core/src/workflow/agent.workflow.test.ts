@@ -14,7 +14,7 @@ const createMockTool = (name: string, description: string, handler: (args: any) 
   parameters: z.object({
     path: z.string().describe('The path to list files from'),
   }),
-  handler,
+  handler: (_: any, args: any) => handler(args),
 })
 
 const listFilesTool = createMockTool('listFiles', 'List files in a directory', async ({ path }: { path: string }) => {
@@ -184,4 +184,70 @@ test('should fail if maxToolRoundTrips is exceeded', async () => {
       createContext(tools),
     ),
   ).rejects.toThrow('Maximum number of tool round trips reached.')
+})
+
+test('should handle mixed valid and invalid tool calls by returning results for both', async () => {
+  const mockResponses: ModelMessage[] = [
+    {
+      role: 'assistant',
+      content: [
+        {
+          type: 'tool-call',
+          toolCallId: 'call-1',
+          toolName: 'listFiles',
+          input: { path: './src' },
+        },
+        {
+          type: 'tool-call',
+          toolCallId: 'call-2',
+          toolName: 'invalidTool',
+          input: { some: 'param' },
+        },
+      ],
+    },
+    {
+      role: 'assistant',
+      content: 'Result received.',
+    },
+  ]
+
+  const allTools = [listFilesTool]
+
+  // We need to capture the tool results sent back to the model
+  let capturedToolResults: any[] = []
+
+  const tools: WorkflowTools<AgentToolRegistry> = {
+    generateText: async ({ messages }) => {
+      // Check if the last message is a tool result message and capture it
+      const lastMsg = messages[messages.length - 1]
+      if (lastMsg.role === 'tool') {
+        capturedToolResults = lastMsg.content as any[]
+      }
+
+      const response = mockResponses.shift()
+      if (!response) {
+        // Return a dummy response to stop the loop if we run out of mocks
+        return [{ role: 'assistant', content: 'Done' }] as JsonResponseMessage[]
+      }
+      return [response] as JsonResponseMessage[]
+    },
+    invokeTool: async (input) => {
+      const { toolName, input: toolInput } = input
+      const toolInfo = allTools.find((t) => t.name === toolName)
+      if (!toolInfo) throw new Error(`Tool not found: ${toolName}`)
+      return toolInfo.handler({} as any, toolInput)
+    },
+    taskEvent: async () => {},
+  }
+
+  await agentWorkflow(
+    {
+      userMessage: [toJsonModelMessage({ role: 'user', content: 'Do things.' })] as any,
+      tools: allTools,
+      systemPrompt: 'You are a helpful assistant.',
+    },
+    createContext(tools),
+  )
+
+  expect(capturedToolResults).toMatchSnapshot()
 })

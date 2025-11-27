@@ -1,0 +1,24 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`should handle mixed valid and invalid tool calls by returning results for both 1`] = `
+[
+  {
+    "output": {
+      "type": "json",
+      "value": [
+        "index.ts",
+        "agent.workflow.ts",
+      ],
+    },
+    "toolCallId": "call-1",
+    "toolName": "listFiles",
+    "type": "tool-result",
+  },
+  {
+    "output": "Error: Tool 'invalidTool' not found.",
+    "toolCallId": "call-2",
+    "toolName": "invalidTool",
+    "type": "tool-result",
+  },
+]
+`;

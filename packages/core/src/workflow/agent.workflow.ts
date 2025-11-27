@@ -79,11 +79,7 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
       if (msg.content) {
         for (const part of msg.content) {
           if (part.type === 'tool-call') {
-            if (toolSet[part.toolName]) {
-              toolCalls.push(part as ToolCallPart)
-            } else {
-              logger.warn('Tool not found. Skipping.', part)
-            }
+            toolCalls.push(part as ToolCallPart)
           }
         }
       }
@@ -136,6 +132,24 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
 
     const toolResults: { toolCallId: string; toolName: string; output: any }[] = []
     for (const toolCall of toolCalls) {
+      if (!toolSet[toolCall.toolName]) {
+        logger.warn('Tool not found.', toolCall)
+        await event(`event-tool-error-${toolCall.toolName}-${toolCall.toolCallId}`, {
+          kind: TaskEventKind.ToolError,
+          tool: toolCall.toolName,
+          error: {
+            type: 'error-text',
+            value: `Tool '${toolCall.toolName}' not found.`,
+          },
+        })
+        toolResults.push({
+          toolCallId: toolCall.toolCallId,
+          toolName: toolCall.toolName,
+          output: `Error: Tool '${toolCall.toolName}' not found.`,
+        })
+        continue
+      }
+
       await event(`event-tool-use-${toolCall.toolName}-${toolCall.toolCallId}`, {
         kind: TaskEventKind.ToolUse,
         tool: toolCall.toolName,
