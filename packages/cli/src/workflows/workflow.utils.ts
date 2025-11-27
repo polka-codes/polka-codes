@@ -92,8 +92,8 @@ const unquotePath = (path: string) => {
     try {
       return JSON.parse(path)
     } catch {
-      // if JSON.parse fails, return the original string without quotes
-      return path.substring(1, path.length - 1)
+      // if JSON.parse fails, return the original string
+      return path
     }
   }
   return path
