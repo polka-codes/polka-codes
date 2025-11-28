@@ -202,6 +202,7 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter, stream: Writ
         if (verbose > 0) {
           logToolCallStats(stream, taskToolCallStats, 'Task Tool Call Stats')
         }
+        taskToolCallStats.clear()
         break
     }
   }

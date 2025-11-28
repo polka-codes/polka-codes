@@ -1,0 +1,13 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`eventHandler should not double count stats when logGlobalToolCallStats is called after EndTask 1`] = `
+"
+
+======== Global Tool Call Stats ========
+┌─────────┬─────────────┬───────┬─────────┬────────┬──────────────┐
+│ (index) │  Tool Name  │ Calls │ Success │ Errors │ Success Rate │
+├─────────┼─────────────┼───────┼─────────┼────────┼──────────────┤
+│    0    │ 'test-tool' │   1   │    1    │   0    │  '100.00%'   │
+└─────────┴─────────────┴───────┴─────────┴────────┴──────────────┘
+"
+`;
