@@ -7,6 +7,7 @@ import { CODE_REVIEW_SYSTEM_PROMPT, formatReviewToolInput, type ReviewToolInput 
 import {
   type BaseWorkflowInput,
   type FileChange,
+  getDefaultContext,
   parseGitDiffNameStatus,
   parseGitDiffNumStat,
   parseGitStatus,
@@ -205,13 +206,18 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput,
   }
 
   const result = await step('review', async () => {
+    const defaultContext = await getDefaultContext()
+    const memoryContext = await tools.getMemoryContext()
+    const reviewInput = formatReviewToolInput(changeInfo)
+    const fullContent = `${reviewInput}\n\n${defaultContext}\n${memoryContext}`
+
     return await agentWorkflow(
       {
         systemPrompt: CODE_REVIEW_SYSTEM_PROMPT,
         userMessage: [
           {
             role: 'user',
-            content: formatReviewToolInput(changeInfo),
+            content: fullContent,
           },
         ],
         tools: [readFile, readBinaryFile, searchFiles, listFiles, gitDiff],
