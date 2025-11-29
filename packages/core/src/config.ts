@@ -82,5 +82,6 @@ export const configSchema = z
     excludeFiles: z.array(z.string()).optional(),
   })
   .strict()
+  .nullish()
 
-export type Config = z.infer<typeof configSchema>
+export type Config = NonNullable<z.infer<typeof configSchema>>

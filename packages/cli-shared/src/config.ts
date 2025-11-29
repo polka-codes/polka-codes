@@ -170,7 +170,11 @@ export async function loadConfig(
 export const readConfig = (path: string): Config => {
   const file = readFileSync(path, 'utf8')
   const config = parse(file)
-  return configSchema.parse(config)
+  const result = configSchema.parse(config)
+  if (result == null) {
+    return {}
+  }
+  return result
 }
 
 export const readLocalConfig = (path?: string): Config | undefined => {

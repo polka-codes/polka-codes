@@ -57,7 +57,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
   if (requiresProvider) {
     const commandConfig = providerConfig.getConfigForCommand(commandName)
     if (!commandConfig || !commandConfig.provider || !commandConfig.model) {
-      logger.error(`Error: No provider specified for ${commandName}. Please run "polka config" to configure your AI provider.`)
+      logger.error(`Error: No provider specified for ${commandName}. Please run "polka init" to configure your AI provider.`)
       process.exit(1)
     }
     logger.info('Provider:', commandConfig.provider)
