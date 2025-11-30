@@ -30,7 +30,7 @@ export enum ToolResponseType {
 
 export type ToolResponseResultMedia = {
   type: 'media'
-  base64Data: string
+  data: string // base64 encoded
   mediaType: string
   url: string
 }

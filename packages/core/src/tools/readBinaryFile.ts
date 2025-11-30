@@ -35,7 +35,7 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
           {
             type: 'media',
             url,
-            base64Data: filePart.base64Data,
+            data: filePart.base64Data,
             mediaType: filePart.mediaType,
           },
         ],

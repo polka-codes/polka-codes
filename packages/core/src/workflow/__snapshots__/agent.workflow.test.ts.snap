@@ -15,7 +15,10 @@ exports[`should handle mixed valid and invalid tool calls by returning results f
     "type": "tool-result",
   },
   {
-    "output": "Error: Tool 'invalidTool' not found.",
+    "output": {
+      "type": "error-text",
+      "value": "Error: Tool 'invalidTool' not found.",
+    },
     "toolCallId": "call-2",
     "toolName": "invalidTool",
     "type": "tool-result",
