@@ -70,14 +70,11 @@ The `review` command provides AI-powered code reviews for your projects. It can 
 
 ### Reviewing Pull Requests
 
-To review a pull request, use the `--pr` option with the pull request number or URL. This feature requires the [GitHub CLI](https://cli.github.com/) (`gh`) to be installed and authenticated.
+To review a pull request, use the `--pr` option with the pull request number. This feature requires the [GitHub CLI](https://cli.github.com/) (`gh`) to be installed and authenticated.
 
 '''bash
 # Review a pull request by number
 polka review --pr 123
-
-# Review a pull request by URL
-polka review --pr https://github.com/owner/repo/pull/123
 
 # Review and automatically apply feedback in a loop (up to 3 times)
 polka review --pr 123 --loop 3

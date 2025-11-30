@@ -11,7 +11,13 @@ import { formatReviewForConsole, type ReviewResult } from '../workflows/workflow
 export const reviewCommand = new Command('review')
   .description('Review a GitHub pull request or local changes')
   .argument('[context]', 'Additional context for the review')
-  .option('--pr <pr>', 'The pull request number or URL to review')
+  .option('--pr <pr>', 'The pull request number to review', (value) => {
+    const parsedValue = parseInt(value, 10)
+    if (Number.isNaN(parsedValue) || parsedValue < 1) {
+      throw new InvalidOptionArgumentError('Must be a positive number.')
+    }
+    return parsedValue
+  })
   .option('--json', 'Output the review in JSON format', false)
   .option('-y, --yes', 'Automatically apply review feedback', false)
   .option(
@@ -29,7 +35,7 @@ export const reviewCommand = new Command('review')
     },
     1,
   )
-  .action(async (context: string | undefined, options: { pr?: string; json: boolean; yes: boolean; loop: number }, command: Command) => {
+  .action(async (context: string | undefined, options: { pr?: number; json: boolean; yes: boolean; loop: number }, command: Command) => {
     const { json, pr, loop: maxIterations, yes: yesOption } = options
     const yes = maxIterations > 1 || yesOption
     let changesAppliedInThisIteration = false

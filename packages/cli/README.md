@@ -61,10 +61,10 @@ polka epic "build a new e-commerce platform"
 
 ### `fix`
 
-Identify and fix bugs in your codebase.
+Identify and fix bugs in your codebase by running a command (like tests) and letting Polka fix the issues.
 
 ```bash
-polka fix "the login button is not working on the mobile app"
+polka fix "npm test"
 ```
 
 ### `review`
@@ -72,7 +72,7 @@ polka fix "the login button is not working on the mobile app"
 Review a pull request.
 
 ```bash
-polka review "https://github.com/my-org/my-repo/pull/123"
+polka review --pr 123
 ```
 
 ### `meta`
@@ -139,7 +139,7 @@ POLKA_API_KEY=your_api_key_here
 
 # Optional - override defaults
 POLKA_API_PROVIDER=deepseek  # or anthropic, openrouter, ollama
-POLKA_AI_MODEL_ID=deepseek-chat  # or claude-3-7-sonnet-20250219
+POLKA_MODEL=deepseek-chat  # or claude-3-7-sonnet-20250219
 ```
 
 ### Project Configuration
@@ -148,8 +148,8 @@ Create `.polkacodes.yml` in your project root:
 
 ```yaml
 # AI provider settings
-provider: deepseek  # default provider
-modelId: deepseek-chat  # default model
+defaultProvider: deepseek  # default provider
+defaultModel: deepseek-chat  # default model
 
 # Custom commands available to AI
 commands:
@@ -203,9 +203,9 @@ rules: |
     git add . && polka commit && polka pr
     ```
 
-4.  Get help with a bug:
+4.  Get help with a failing test:
     ```bash
-    polka fix "users are reporting a 500 error on the checkout page" --verbose
+    polka fix "bun test tests/checkout.test.ts" --verbose
     ```
 
 ## Requirements

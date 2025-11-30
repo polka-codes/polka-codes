@@ -17,7 +17,7 @@ import {
 } from './workflow.utils'
 
 export type ReviewWorkflowInput = {
-  pr?: string
+  pr?: number
   context?: string
 }
 
@@ -30,32 +30,26 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput,
   let changeInfo: ReviewToolInput | undefined
 
   if (pr) {
-    const prNumberMatch = pr.match(/\d+$/)
-    if (!prNumberMatch) {
-      throw new Error('Invalid PR number or URL.')
-    }
-    const prNumber = prNumberMatch[0]
-
     const ghCheckResult = await tools.executeCommand({ command: 'gh', args: ['--version'] })
     if (ghCheckResult.exitCode !== 0) {
       throw new Error('Error: GitHub CLI (gh) is not installed. Please install it from https://cli.github.com/')
     }
 
-    await step(`Checking out PR #${prNumber}...`, async () => {
+    await step(`Checking out PR #${pr}...`, async () => {
       const checkoutResult = await tools.executeCommand({
         command: 'gh',
-        args: ['pr', 'checkout', prNumber],
+        args: ['pr', 'checkout', pr.toString()],
       })
       if (checkoutResult.exitCode !== 0) {
         logger.error(checkoutResult.stderr)
-        throw new Error(`Error checking out PR #${prNumber}. Make sure the PR number is correct and you have access to the repository.`)
+        throw new Error(`Error checking out PR #${pr}. Make sure the PR number is correct and you have access to the repository.`)
       }
     })
 
     const prDetails = await step('Fetching pull request details...', async () => {
       const result = await tools.executeCommand({
         command: 'gh',
-        args: ['pr', 'view', prNumber, '--json', 'title,body,commits,baseRefName,baseRefOid'],
+        args: ['pr', 'view', pr.toString(), '--json', 'title,body,commits,baseRefName,baseRefOid'],
       })
       return JSON.parse(result.stdout)
     })

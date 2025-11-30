@@ -167,6 +167,10 @@ When generating your plan, follow these formatting guidelines:
    a. Do not generate a plan
    b. Provide a concise reason in the "reason" field
 
+## IMPORTANT NOTE
+
+You MUST NOT attempt to make any modifications to the codebase. You DO NOT have access to any tools with write access.
+
 ## Response Format
 
 ${createJsonResponseInstruction({
