@@ -24,7 +24,7 @@
     "@ai-sdk/openai": "^2.0.74",
     "@ai-sdk/provider": "^2.0.0",
     "@ai-sdk/provider-utils": "^3.0.18",
-    "@inquirer/prompts": "^7.10.1",
+    "@inquirer/prompts": "^8.0.1",
     "@openrouter/ai-sdk-provider": "^1.2.8",
     "@polka-codes/cli-shared": "workspace:*",
     "@polka-codes/core": "workspace:*",
