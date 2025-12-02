@@ -17,7 +17,7 @@
     "build": "bun build src/index.ts --outdir dist --target node"
   },
   "dependencies": {
-    "@ai-sdk/google-vertex": "^3.0.81",
+    "@ai-sdk/google-vertex": "^3.0.85",
     "@ai-sdk/provider": "^2.0.0",
     "@ai-sdk/provider-utils": "^3.0.18",
     "@inquirer/prompts": "^7.10.1",
