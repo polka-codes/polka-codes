@@ -33,6 +33,7 @@ const googleModelPrices = {
 
 export default {
   [AiProvider.Anthropic]: {
+    'claude-opus-4-5-20251101': { inputPrice: 5, outputPrice: 25, cacheWritesPrice: 6.25, cacheReadsPrice: 0.5, supportsThinking: true },
     'claude-sonnet-4-5-20250929': { inputPrice: 3, outputPrice: 15, cacheWritesPrice: 3.75, cacheReadsPrice: 0.3, supportsThinking: true },
     'claude-opus-4-20250514': { inputPrice: 15, outputPrice: 75, cacheWritesPrice: 18.75, cacheReadsPrice: 1.5, supportsThinking: true },
     'claude-opus-4-1-20250805': { inputPrice: 15, outputPrice: 75, cacheWritesPrice: 18.75, cacheReadsPrice: 1.5, supportsThinking: true },
