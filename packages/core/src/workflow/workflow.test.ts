@@ -185,7 +185,7 @@ test('makeStepFn should not cache errors', async () => {
   const step = makeStepFn()
 
   // First call, should throw
-  await expect(step('step1', { retry: 0 }, mock.innerFn)).rejects.toThrow('test error')
+  await expect(step('step1', mock.innerFn)).rejects.toThrow('test error')
   expect(innerFnSpy).toHaveBeenCalledTimes(1)
 
   // Second call, should not throw and should execute again

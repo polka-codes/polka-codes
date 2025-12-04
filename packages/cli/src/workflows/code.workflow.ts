@@ -69,7 +69,7 @@ export const codeWorkflow: WorkflowFn<
 
   // Planning phase
   logger.info('\nPhase 1: Creating implementation plan...\n')
-  const planResult = await step('plan', { retry: 0 }, async () => {
+  const planResult = await step('plan', async () => {
     return await planWorkflow(
       { task, files, mode: mode === 'interactive' ? 'confirm' : 'noninteractive', interactive, additionalTools },
       context,

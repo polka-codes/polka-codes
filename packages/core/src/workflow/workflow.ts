@@ -81,7 +81,7 @@ export const makeStepFn = (): StepFn => {
         return results.get(key) as T
       }
 
-      const maxRetryCount = options?.retry ?? 1
+      const maxRetryCount = options?.retry ?? 0
       let lastError: unknown
 
       for (let retryCount = 0; retryCount <= maxRetryCount; retryCount++) {
