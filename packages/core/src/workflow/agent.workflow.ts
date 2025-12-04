@@ -62,7 +62,7 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
     messages.push(...nextMessage)
 
     await event(`start-round-${i}`, { kind: TaskEventKind.StartRequest, userMessage: nextMessage })
-    const assistantMessage = await step(`agent-round-${i}`, async () => {
+    const assistantMessage = await step(`agent-round-${i}`, { retry: 2 }, async () => {
       return await tools.generateText({
         messages,
         tools: toolSet,
