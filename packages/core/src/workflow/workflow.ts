@@ -20,7 +20,10 @@ export type StepOptions = {
   retry?: number
 }
 
-export type StepFn = <T>(name: string, fn: () => Promise<T>, options?: StepOptions) => Promise<T>
+export interface StepFn {
+  <T>(name: string, fn: () => Promise<T>): Promise<T>
+  <T>(name: string, options: StepOptions, fn: () => Promise<T>): Promise<T>
+}
 
 export type WorkflowContext<TTools extends ToolRegistry> = {
   step: StepFn
@@ -45,7 +48,10 @@ export function createContext<TTools extends ToolRegistry>(
 ): WorkflowContext<TTools> {
   if (!stepFn) {
     // simple default step function
-    stepFn = async <T>(_name: string, fn: () => Promise<T>, _options?: StepOptions) => fn()
+    stepFn = async <T>(_name: string, arg2: (() => Promise<T>) | StepOptions, arg3?: StepOptions | (() => Promise<T>)) => {
+      const fn = typeof arg2 === 'function' ? arg2 : (arg3 as () => Promise<T>)
+      return fn()
+    }
   }
 
   return { step: stepFn, logger, tools }
@@ -55,7 +61,18 @@ export const makeStepFn = (): StepFn => {
   const results: Map<string, any> = new Map()
   const callStack: string[] = []
 
-  return async <T>(name: string, fn: () => Promise<T>, options?: StepOptions): Promise<T> => {
+  return async <T>(name: string, arg2: (() => Promise<T>) | StepOptions, arg3?: StepOptions | (() => Promise<T>)): Promise<T> => {
+    let fn: () => Promise<T>
+    let options: StepOptions | undefined
+
+    if (typeof arg2 === 'function') {
+      fn = arg2 as () => Promise<T>
+      options = arg3 as StepOptions | undefined
+    } else {
+      options = arg2 as StepOptions
+      fn = arg3 as () => Promise<T>
+    }
+
     callStack.push(name)
     const key = callStack.join('>')
 

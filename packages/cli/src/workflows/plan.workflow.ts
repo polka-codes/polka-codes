@@ -166,7 +166,7 @@ export const planWorkflow: WorkflowFn<PlanWorkflowInput & BaseWorkflowInput, Pla
   let count = 0
 
   while (state !== 'Done') {
-    state = await step(`plan-iteration-${count++}`, async () => {
+    state = await step(`plan-iteration-${count++}`, { retry: 0 }, async () => {
       switch (state) {
         case 'Generating': {
           if (!currentTask) {

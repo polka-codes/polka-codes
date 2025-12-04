@@ -185,7 +185,7 @@ test('makeStepFn should not cache errors', async () => {
   const step = makeStepFn()
 
   // First call, should throw
-  await expect(step('step1', mock.innerFn, { retry: 0 })).rejects.toThrow('test error')
+  await expect(step('step1', { retry: 0 }, mock.innerFn)).rejects.toThrow('test error')
   expect(innerFnSpy).toHaveBeenCalledTimes(1)
 
   // Second call, should not throw and should execute again
@@ -210,7 +210,7 @@ test('makeStepFn should retry failing step', async () => {
 
   const step = makeStepFn()
 
-  const result = await step('step1', mock.innerFn, { retry: 3 })
+  const result = await step('step1', { retry: 3 }, mock.innerFn)
   expect(result).toBe('result')
   expect(innerFnSpy).toHaveBeenCalledTimes(3)
 })
@@ -225,6 +225,6 @@ test('makeStepFn should fail after max attempts', async () => {
 
   const step = makeStepFn()
 
-  await expect(step('step1', mock.innerFn, { retry: 3 })).rejects.toThrow('persistent error')
+  await expect(step('step1', { retry: 3 }, mock.innerFn)).rejects.toThrow('persistent error')
   expect(innerFnSpy).toHaveBeenCalledTimes(4)
 })

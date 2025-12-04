@@ -37,8 +37,9 @@ const createMockContext = () => {
     const context = createContext<CliToolRegistry>(tools as any)
     const testContext: WorkflowContext<CliToolRegistry> = {
       ...context,
-      step: (_name, fn) => {
+      step: (_name, arg2, arg3?) => {
         // In tests, we can simplify the step function to execute immediately
+        const fn = (typeof arg2 === 'function' ? arg2 : arg3) as () => Promise<any>
         return fn()
       },
     }
