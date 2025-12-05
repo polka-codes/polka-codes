@@ -21,7 +21,10 @@ const createMockContext = () => {
     select: mock<any>(),
     input: mock<any>(),
   }
-  const step = mock(async (_name: string, fn: () => any) => fn())
+  const step = mock(async (_name: string, arg2: any, arg3: any) => {
+    const fn = typeof arg2 === 'function' ? arg2 : arg3
+    return fn()
+  })
   const logger = {
     info: mock(() => {}),
     error: mock(() => {}),
