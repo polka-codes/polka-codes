@@ -360,7 +360,8 @@ async function generateText(input: { messages: JsonModelMessage[]; tools: ToolSe
       }
       if ('response' in error) {
         const response: Response = error.response
-        if (response.status === 429) {
+        if (response.status === 429 || response.status >= 500) {
+          console.debug(`Request failed with status ${response.status}, retrying...`)
           const backoff = computeRateLimitBackoffSeconds(i)
           await new Promise((resolve) => setTimeout(resolve, backoff * 1000))
           continue

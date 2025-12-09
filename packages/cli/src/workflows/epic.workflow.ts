@@ -395,7 +395,7 @@ async function performReviewAndFixCycle(
       changedFiles,
     }
 
-    const reviewAgentResult = await step(`review-${iterationCount}-${i}`, async () => {
+    const reviewAgentResult = await step(`review-${iterationCount}-${i}`, { retry: 1 }, async () => {
       const defaultContext = await getDefaultContext()
       const memoryContext = await tools.getMemoryContext()
       const userMessage = `${defaultContext}\n${memoryContext}\n\n${formatReviewToolInput(changeInfo)}`
@@ -441,7 +441,7 @@ After an initial implementation, a review found the following issues. Please fix
 
 ${reviewSummary}`
 
-    await step(`fix-${iterationCount}-${i}`, async () => {
+    await step(`fix-${iterationCount}-${i}`, { retry: 1 }, async () => {
       await codeWorkflow(
         {
           task: fixTask,
@@ -525,7 +525,7 @@ async function runImplementationLoop(
     logger.info(`${'-'.repeat(80)}`)
     logger.info(`${nextTask}\n`)
 
-    await step(`task-${iterationCount}`, async () => {
+    await step(`task-${iterationCount}`, { retry: 1 }, async () => {
       const taskWithContext = `You are working on an epic. Here is the full plan:
 
 <plan>
