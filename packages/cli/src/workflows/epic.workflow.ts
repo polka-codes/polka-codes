@@ -51,6 +51,7 @@ import {
 export type EpicWorkflowInput = EpicContext & {
   saveEpicContext: (context: EpicContext) => Promise<void>
   saveUsageSnapshot: () => Promise<void>
+  noReview?: boolean
 }
 
 const MAX_REVIEW_RETRIES = 5
@@ -503,6 +504,7 @@ async function runImplementationLoop(
   highLevelPlan: string,
   saveUsageSnapshot: () => Promise<void>,
   additionalTools: { search?: FullToolInfo },
+  noReview?: boolean,
 ): Promise<string[]> {
   const { logger, step, tools } = context
   const commitMessages: string[] = []
@@ -554,22 +556,28 @@ Focus only on this item, but use the plan for context.`
     })
     commitMessages.push(commitMessage)
 
-    const { passed: reviewPassed, commitMessages: fixCommitMessages } = await performReviewAndFixCycle(
-      iterationCount,
-      nextTask,
-      highLevelPlan,
-      context,
-      additionalTools,
-    )
-    commitMessages.push(...fixCommitMessages)
+    if (!noReview) {
+      const { passed: reviewPassed, commitMessages: fixCommitMessages } = await performReviewAndFixCycle(
+        iterationCount,
+        nextTask,
+        highLevelPlan,
+        context,
+        additionalTools,
+      )
+      commitMessages.push(...fixCommitMessages)
 
-    const taskElapsed = Date.now() - taskStartTime
-    const taskElapsedTime = formatElapsedTime(taskElapsed)
+      const taskElapsed = Date.now() - taskStartTime
+      const taskElapsedTime = formatElapsedTime(taskElapsed)
 
-    if (reviewPassed) {
-      logger.info(`Iteration ${iterationCount} completed successfully (${taskElapsedTime})`)
+      if (reviewPassed) {
+        logger.info(`Iteration ${iterationCount} completed successfully (${taskElapsedTime})`)
+      } else {
+        logger.warn(`Warning: Iteration ${iterationCount} completed with potential issues (${taskElapsedTime})`)
+      }
     } else {
-      logger.warn(`Warning: Iteration ${iterationCount} completed with potential issues (${taskElapsedTime})`)
+      const taskElapsed = Date.now() - taskStartTime
+      const taskElapsedTime = formatElapsedTime(taskElapsed)
+      logger.info(`Iteration ${iterationCount} completed (${taskElapsedTime})`)
     }
 
     // Mark the current task as completed
@@ -718,7 +726,7 @@ async function performFinalReviewAndFix(
 
 export const epicWorkflow: WorkflowFn<EpicWorkflowInput & BaseWorkflowInput, void, CliToolRegistry> = async (input, context) => {
   const { logger, tools } = context
-  const { task, saveEpicContext, saveUsageSnapshot, additionalTools } = input
+  const { task, saveEpicContext, saveUsageSnapshot, additionalTools, noReview } = input
 
   const workflowStartTime = Date.now()
 
@@ -774,9 +782,11 @@ export const epicWorkflow: WorkflowFn<EpicWorkflowInput & BaseWorkflowInput, voi
       await addTodoItemsFromPlan(input.plan, context)
     }
 
-    const commitMessages = await runImplementationLoop(context, input.plan, saveUsageSnapshot, additionalTools)
+    const commitMessages = await runImplementationLoop(context, input.plan, saveUsageSnapshot, additionalTools, noReview)
 
-    await performFinalReviewAndFix(context, input.plan, input.baseBranch ?? undefined, additionalTools)
+    if (!noReview) {
+      await performFinalReviewAndFix(context, input.plan, input.baseBranch ?? undefined, additionalTools)
+    }
 
     await saveUsageSnapshot()
 

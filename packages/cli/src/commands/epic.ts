@@ -13,9 +13,10 @@ import {
   saveEpicContext as persistEpicContext,
 } from '../workflows/epic-context'
 
-export async function runEpic(task: string | undefined, _options: any, command: Command) {
+export async function runEpic(task: string | undefined, options: any, command: Command) {
   const globalOpts = (command.parent ?? command).opts()
   const { verbose, yes } = globalOpts
+  const { review } = options
   const logger = createLogger({
     verbose,
   })
@@ -47,6 +48,7 @@ export async function runEpic(task: string | undefined, _options: any, command: 
   const workflowInput = {
     ...epicContext,
     interactive: !yes,
+    noReview: review === false,
     saveEpicContext: async (context: EpicContext) => {
       // Update fields that might have changed in the workflow
       // We explicitly exclude 'memory' and 'todos' because they are managed by their respective stores
@@ -90,4 +92,5 @@ export async function runEpic(task: string | undefined, _options: any, command: 
 export const epicCommand = new Command('epic')
   .description('Orchestrates a large feature or epic, breaking it down into smaller tasks.')
   .argument('[task]', 'The epic to plan and implement.')
+  .option('--no-review', 'Disable the review step')
   .action(runEpic)
