@@ -19,7 +19,7 @@
   "dependencies": {
     "@ai-sdk/provider": "^2.0.0",
     "@ai-sdk/provider-utils": "^3.0.18",
-    "ai": "^5.0.106",
+    "ai": "^5.0.108",
     "yaml": "^2.8.2",
     "zod": "^4.1.13"
   }
