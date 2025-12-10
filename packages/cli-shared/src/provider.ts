@@ -47,6 +47,7 @@ export type ProviderOptions = {
   memoryStore?: ProviderDataStore<Record<string, string>>
   todoItemStore?: ProviderDataStore<TodoItem[]>
   getModel?: (command: string) => LanguageModelV2 | undefined
+  yes?: boolean
 }
 
 export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
@@ -326,6 +327,13 @@ export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
       })
     },
     askFollowupQuestion: async (question: string, answerOptions: string[]): Promise<string> => {
+      if (options.yes) {
+        if (answerOptions.length > 0) {
+          return answerOptions[0]
+        }
+        return ''
+      }
+
       if (answerOptions.length === 0) {
         return await input({ message: question })
       }
