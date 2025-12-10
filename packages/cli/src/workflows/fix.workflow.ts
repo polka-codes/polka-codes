@@ -6,15 +6,12 @@ import {
   type FullToolInfo,
   fetchUrl,
   listFiles,
-  listMemoryTopics,
   readBinaryFile,
   readFile,
-  readMemory,
   removeFile,
   renameFile,
   replaceInFile,
   searchFiles,
-  updateMemory,
   type WorkflowFn,
   writeToFile,
 } from '@polka-codes/core'
@@ -137,9 +134,6 @@ export const fixWorkflow: WorkflowFn<
         readBinaryFile,
         removeFile,
         renameFile,
-        readMemory,
-        updateMemory,
-        listMemoryTopics,
       ]
 
       if (additionalTools?.search) {

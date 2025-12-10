@@ -7,12 +7,9 @@ import {
   type JsonModelMessage,
   type JsonUserContent,
   listFiles,
-  listMemoryTopics,
   readBinaryFile,
   readFile,
-  readMemory,
   searchFiles,
-  updateMemory,
   type WorkflowContext,
   type WorkflowFn,
 } from '@polka-codes/core'
@@ -77,16 +74,7 @@ async function createPlan(input: CreatePlanInput, context: WorkflowContext<CliTo
     }
   }
 
-  const agentTools: FullToolInfo[] = [
-    readFile,
-    listFiles,
-    searchFiles,
-    readBinaryFile,
-    fetchUrl,
-    listMemoryTopics,
-    readMemory,
-    updateMemory,
-  ]
+  const agentTools: FullToolInfo[] = [readFile, listFiles, searchFiles, readBinaryFile, fetchUrl]
   if (additionalTools?.search) {
     agentTools.push(additionalTools.search)
   }

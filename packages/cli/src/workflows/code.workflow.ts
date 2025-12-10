@@ -8,15 +8,12 @@ import {
   fetchUrl,
   type JsonUserContent,
   listFiles,
-  listMemoryTopics,
   readBinaryFile,
   readFile,
-  readMemory,
   removeFile,
   renameFile,
   replaceInFile,
   searchFiles,
-  updateMemory,
   type WorkflowFn,
   writeToFile,
 } from '@polka-codes/core'
@@ -122,9 +119,6 @@ export const codeWorkflow: WorkflowFn<
     readBinaryFile,
     removeFile,
     renameFile,
-    readMemory,
-    updateMemory,
-    listMemoryTopics,
   ]
   if (mode === 'interactive') {
     agentTools.push(askFollowupQuestion)
