@@ -143,6 +143,14 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
             value: `Tool '${toolCall.toolName}' not found.`,
           },
         })
+        toolResults.push({
+          toolCallId: toolCall.toolCallId,
+          toolName: toolCall.toolName,
+          output: {
+            type: 'error-text',
+            value: `Error: Tool '${toolCall.toolName}' not found.`,
+          },
+        })
         continue
       }
 
