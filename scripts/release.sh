@@ -30,6 +30,14 @@ else
   echo "Using specified version: $VERSION"
 fi
 
+# Check npm authentication
+if ! USERNAME=$(bun pm whoami 2>/dev/null); then
+  echo "Not logged in to npm. Running npm login..."
+  npm login || exit 1
+else
+  echo "Logged in to npm as: $USERNAME"
+fi
+
 git pull
 
 # require no unstaged changes
