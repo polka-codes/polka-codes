@@ -14,5 +14,14 @@ exports[`should handle mixed valid and invalid tool calls by returning results f
     "toolName": "listFiles",
     "type": "tool-result",
   },
+  {
+    "output": {
+      "type": "error-text",
+      "value": "Error: Tool 'invalidTool' not found.",
+    },
+    "toolCallId": "call-2",
+    "toolName": "invalidTool",
+    "type": "tool-result",
+  },
 ]
 `;
