@@ -6,7 +6,7 @@ export function readMultiline(prompt = 'Enter text (Ctrl+D to finish):') {
     const rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout,
-      terminal: true,
+      prompt: '',
     })
 
     const lines: string[] = []
