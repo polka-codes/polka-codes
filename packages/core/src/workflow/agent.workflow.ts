@@ -4,13 +4,13 @@ import type { LanguageModelV2ToolResultOutput } from '@ai-sdk/provider'
 import { jsonSchema, type ToolCallPart, type ToolSet } from 'ai'
 import { toJSONSchema, z } from 'zod'
 import { parseJsonFromMarkdown } from '../Agent/parseJsonFromMarkdown'
-import { type FullToolInfo, type ToolResponse, ToolResponseType } from '../tool'
+import { type AgentToolResponse, type FullAgentToolInfo, ToolResponseType } from '../tool'
 import type { JsonModelMessage, JsonResponseMessage, JsonUserModelMessage } from './json-ai-types'
 import { type ExitReason, type TaskEvent, TaskEventKind } from './types'
 import type { WorkflowFn } from './workflow'
 
 export type AgentWorkflowInput = {
-  tools: Readonly<FullToolInfo[]>
+  tools: Readonly<FullAgentToolInfo[]>
   maxToolRoundTrips?: number
   userMessage: readonly JsonUserModelMessage[]
   outputSchema?: z.ZodSchema
@@ -35,7 +35,7 @@ export type AgentToolRegistry = {
   }
   invokeTool: {
     input: { toolName: string; input: any }
-    output: ToolResponse
+    output: AgentToolResponse
   }
 }
 
@@ -159,7 +159,7 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
         tool: toolCall.toolName,
         params: toolCall.input as any,
       })
-      const toolResponse: ToolResponse = await step(`invoke-tool-${toolCall.toolName}-${toolCall.toolCallId}`, async () => {
+      const toolResponse: AgentToolResponse = await step(`invoke-tool-${toolCall.toolName}-${toolCall.toolCallId}`, async () => {
         return await tools.invokeTool({
           toolName: toolCall.toolName,
           input: toolCall.input,

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { type FullToolInfo, type ToolHandler, type ToolInfo, ToolResponseType } from '../tool'
+import { type AgentToolInfo, type FullAgentToolInfo, type ToolHandler, ToolResponseType } from '../tool'
 import type { TodoProvider } from './provider'
 import { TodoStatus } from './todo'
 
@@ -10,7 +10,7 @@ export const toolInfo = {
     id: z.string().nullish(),
     status: TodoStatus.nullish(),
   }),
-} as const satisfies ToolInfo
+} as const satisfies AgentToolInfo
 
 export const handler: ToolHandler<typeof toolInfo, TodoProvider> = async (provider, args) => {
   if (!provider.listTodoItems) {
@@ -37,4 +37,4 @@ export const handler: ToolHandler<typeof toolInfo, TodoProvider> = async (provid
 export default {
   ...toolInfo,
   handler,
-} satisfies FullToolInfo
+} satisfies FullAgentToolInfo

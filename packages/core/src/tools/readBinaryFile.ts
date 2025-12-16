@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { type FullToolInfo, type ToolHandler, type ToolInfo, ToolResponseType } from '../tool'
+import { type AgentToolInfo, type FullAgentToolInfo, type ToolHandler, ToolResponseType } from '../tool'
 import type { FilesystemProvider } from './provider'
 
 export const toolInfo = {
@@ -9,7 +9,7 @@ export const toolInfo = {
   parameters: z.object({
     url: z.string().describe('The URL or local path of the file to read.'),
   }),
-} as const satisfies ToolInfo
+} as const satisfies AgentToolInfo
 
 export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (provider, args) => {
   if (!provider.readBinaryFile) {
@@ -56,4 +56,4 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
 export default {
   ...toolInfo,
   handler,
-} satisfies FullToolInfo
+} satisfies FullAgentToolInfo

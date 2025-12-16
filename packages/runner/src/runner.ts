@@ -6,7 +6,7 @@ import { promises as fs } from 'node:fs'
 import { getProvider, type LoadedConfig, listFiles as listFilesHelper, loadConfig } from '@polka-codes/cli-shared'
 import {
   executeCommand,
-  type FullToolInfo,
+  type FullAgentToolInfo,
   listFiles,
   readBinaryFile,
   readFile,
@@ -32,7 +32,7 @@ export interface RunnerOptions {
 export class Runner {
   private wsManager: WebSocketManager
   private provider: ReturnType<typeof getProvider>
-  private availableTools: Record<string, FullToolInfo>
+  private availableTools: Record<string, FullAgentToolInfo>
 
   constructor(
     private options: RunnerOptions,

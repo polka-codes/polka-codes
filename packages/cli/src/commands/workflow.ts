@@ -5,7 +5,7 @@ import {
   createDynamicWorkflow,
   type DynamicWorkflowRegistry,
   executeCommand,
-  type FullToolInfo,
+  type FullAgentToolInfo,
   fetchUrl,
   generateWorkflowCodeWorkflow,
   generateWorkflowDefinitionWorkflow,
@@ -53,7 +53,7 @@ export async function runWorkflowCommand(task: string | undefined, _options: any
   }
 
   // Tools available to the dynamic workflow
-  const tools: FullToolInfo[] = [
+  const tools: FullAgentToolInfo[] = [
     readFileTool,
     writeToFile,
     replaceInFile,

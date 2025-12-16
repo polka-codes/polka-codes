@@ -12,14 +12,14 @@ export type ToolParameter = {
   children?: ToolParameter[]
 }
 
-export type ToolInfo = {
+export type AgentToolInfo = {
   name: string
   description: string
   parameters: z.ZodObject<any>
 }
 
-export type FullToolInfo = ToolInfo & {
-  handler: ToolHandler<ToolInfo, any>
+export type FullAgentToolInfo = AgentToolInfo & {
+  handler: ToolHandler<AgentToolInfo, any>
 }
 
 export enum ToolResponseType {
@@ -85,6 +85,6 @@ export type ToolResponseError = {
   message: ToolResponseResult
 }
 
-export type ToolResponse = ToolResponseReply | ToolResponseExit | ToolResponseError
+export type AgentToolResponse = ToolResponseReply | ToolResponseExit | ToolResponseError
 
-export type ToolHandler<_T, P> = (provider: P, args: Partial<Record<string, ToolParameterValue>>) => Promise<ToolResponse>
+export type ToolHandler<_T, P> = (provider: P, args: Partial<Record<string, ToolParameterValue>>) => Promise<AgentToolResponse>

@@ -29,7 +29,7 @@ import {
   agentWorkflow,
   createContext,
   makeStepFn,
-  type ToolResponse,
+  type AgentToolResponse,
   ToolResponseType,
 } from '@polka-codes/core';
 import { z } from 'zod';
@@ -52,10 +52,10 @@ async function main() {
         const { location } = input as z.infer<typeof getCurrentWeather.parameters>;
         // In a real app, you would call a weather API here
         const weather = `The weather in ${location} is 70°F and sunny.`;
-        const response: ToolResponse = { type: ToolResponseType.Reply, message: weather };
+        const response: AgentToolResponse = { type: ToolResponseType.Reply, message: weather };
         return response;
       }
-      const response: ToolResponse = { type: ToolResponseType.Error, message: 'Tool not found' };
+      const response: AgentToolResponse = { type: ToolResponseType.Error, message: 'Tool not found' };
       return response;
     },
     // A simple text generation function

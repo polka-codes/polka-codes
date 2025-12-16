@@ -1,7 +1,7 @@
 import { parse } from 'yaml'
 import { z } from 'zod'
 import { parseJsonFromMarkdown } from '../Agent/parseJsonFromMarkdown'
-import type { FullToolInfo, ToolResponseResult } from '../tool'
+import type { FullAgentToolInfo, ToolResponseResult } from '../tool'
 import { ToolResponseType } from '../tool'
 import { type AgentToolRegistry, agentWorkflow } from './agent.workflow'
 import { type WorkflowFile, WorkflowFileSchema, type WorkflowStepDefinition } from './dynamic-types'
@@ -35,7 +35,7 @@ export type DynamicStepRuntimeContext<TTools extends ToolRegistry> = {
   logger: Logger
   step: StepFn
   runWorkflow: (workflowId: string, input?: Record<string, any>) => Promise<any>
-  toolInfo: Readonly<FullToolInfo[]> | undefined
+  toolInfo: Readonly<FullAgentToolInfo[]> | undefined
 }
 
 export type DynamicWorkflowRunnerOptions = {
@@ -43,7 +43,7 @@ export type DynamicWorkflowRunnerOptions = {
    * Tool definitions used when a step does not have persisted `code`
    * and needs to be executed via `agentWorkflow`.
    */
-  toolInfo?: Readonly<FullToolInfo[]>
+  toolInfo?: Readonly<FullAgentToolInfo[]>
   /**
    * Model id forwarded to `agentWorkflow` for agent-executed steps.
    */
@@ -138,7 +138,7 @@ async function executeStepWithAgent<TTools extends ToolRegistry>(
   }
 
   const allowedToolNames = stepDef.tools
-  const toolsForAgent: FullToolInfo[] = allowedToolNames
+  const toolsForAgent: FullAgentToolInfo[] = allowedToolNames
     ? options.toolInfo.filter((t) => allowedToolNames.includes(t.name))
     : [...options.toolInfo]
 

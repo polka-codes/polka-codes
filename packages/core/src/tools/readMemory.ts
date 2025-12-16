@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { type FullToolInfo, type ToolHandler, type ToolInfo, ToolResponseType } from '../tool'
+import { type AgentToolInfo, type FullAgentToolInfo, type ToolHandler, ToolResponseType } from '../tool'
 import type { MemoryProvider } from './provider'
 
 export const toolInfo = {
@@ -9,7 +9,7 @@ export const toolInfo = {
   parameters: z.object({
     topic: z.string().nullish().describe('The topic to read from memory. Defaults to ":default:".'),
   }),
-} as const satisfies ToolInfo
+} as const satisfies AgentToolInfo
 
 export const handler: ToolHandler<typeof toolInfo, MemoryProvider> = async (provider, args) => {
   const { topic } = toolInfo.parameters.parse(args)
@@ -35,4 +35,4 @@ export const handler: ToolHandler<typeof toolInfo, MemoryProvider> = async (prov
 export default {
   ...toolInfo,
   handler,
-} satisfies FullToolInfo
+} satisfies FullAgentToolInfo
