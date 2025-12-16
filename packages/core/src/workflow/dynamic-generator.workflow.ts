@@ -48,6 +48,8 @@ The workflow definition must follow this structure:
 }
 
 Constraints:
+- You MUST always include a workflow named 'main'. This is the entry point.
+- The 'main' workflow input must be either empty (no input) or a single string input.
 - Break down complex tasks into logical steps.
 - Define clear inputs and outputs.
 
@@ -57,7 +59,7 @@ Output:
 \`\`\`json
 {
   "workflows": {
-    "researchAndSummarize": {
+    "main": {
       "task": "Research a topic and provide a summary",
       "inputs": [
         { "id": "topic", "description": "The topic to research" }
@@ -88,7 +90,7 @@ Output:
 \`\`\`json
 {
   "workflows": {
-    "reviewUrgentPRs": {
+    "main": {
       "task": "Fetch urgent PRs and review them",
       "inputs": [],
       "steps": [

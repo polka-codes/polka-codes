@@ -180,11 +180,13 @@ export async function runWorkflowCommand(task: string | undefined, _options: any
 
   let workflowId = workflowName
   if (!workflowId) {
-    if (workflowNames.length === 1) {
+    if (workflowNames.includes('main')) {
+      workflowId = 'main'
+    } else if (workflowNames.length === 1) {
       workflowId = workflowNames[0]
     } else if (workflowNames.length > 1) {
       logger.error(
-        `Multiple workflows found in file. Please specify one using --workflow <name>. Available workflows: ${workflowNames.join(', ')}`,
+        `Multiple workflows found in file and no 'main' workflow. Please specify one using --workflow <name>. Available workflows: ${workflowNames.join(', ')}`,
       )
       return
     } else {
@@ -213,7 +215,14 @@ export async function runWorkflowCommand(task: string | undefined, _options: any
     return dynamicRunner(workflowId, input, context)
   }
 
-  await runWorkflow(workflowFn, {}, { commandName: 'workflow', command, logger, yes })
+  const selectedWorkflow = workflowDef.workflows[workflowId]
+  const workflowInput: Record<string, any> = {}
+  if (selectedWorkflow.inputs && selectedWorkflow.inputs.length > 0 && task) {
+    const firstInput = selectedWorkflow.inputs[0]
+    workflowInput[firstInput.id] = task
+  }
+
+  await runWorkflow(workflowFn, workflowInput, { commandName: 'workflow', command, logger, yes })
 }
 
 export const workflowCommand = new Command('workflow')
