@@ -13,6 +13,7 @@ import { runMeta } from './commands/meta'
 import { planCommand } from './commands/plan'
 import { prCommand } from './commands/pr'
 import { reviewCommand } from './commands/review'
+import { workflowCommand } from './commands/workflow'
 import { addSharedOptions } from './options'
 
 const program = new Command()
@@ -45,6 +46,8 @@ program.addCommand(epicCommand)
 
 // Fix command
 program.addCommand(fixCommand)
+
+program.addCommand(workflowCommand)
 
 addSharedOptions(program)
 

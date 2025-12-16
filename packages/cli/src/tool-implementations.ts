@@ -5,6 +5,7 @@ import { dirname } from 'node:path'
 import type { LanguageModelV2 } from '@ai-sdk/provider'
 import { confirm as inquirerConfirm, select as inquirerSelect } from '@inquirer/prompts'
 import type {
+  AgentWorkflowInput,
   MemoryProvider,
   TodoItem,
   TodoProvider,
@@ -12,11 +13,14 @@ import type {
   UpdateTodoItemInput,
   UpdateTodoItemOutput,
   UsageMeter,
+  WorkflowContext,
 } from '@polka-codes/core'
 import {
+  agentWorkflow,
   askFollowupQuestion,
   computeRateLimitBackoffSeconds,
   executeCommand as executeCommandTool,
+  type FullToolInfo,
   fetchUrl,
   fromJsonModelMessage,
   getTodoItem as getTodoItemTool,
@@ -37,6 +41,7 @@ import {
   TaskEventKind,
   type ToolRegistry,
   ToolResponseType,
+  toJsonModelMessage,
   updateMemory as updateMemoryTool,
   updateTodoItem as updateTodoItemTool,
   writeToFile as writeToFileTool,
@@ -82,7 +87,7 @@ const allTools = [
   listTodoItemsTool,
   updateTodoItemTool,
 ] as const
-const toolHandlers = new Map(allTools.map((t) => [t.name, t]))
+const toolHandlers = new Map<string, FullToolInfo>(allTools.map((t) => [t.name, t]))
 
 type ToolCall<TTools extends ToolRegistry> = {
   [K in keyof TTools]: {
@@ -98,6 +103,7 @@ type ToolCallContext = {
   toolProvider: any // ToolProvider
   command: Command
   yes?: boolean
+  workflowContext: WorkflowContext<any>
 }
 
 async function createPullRequest(input: { title: string; description: string }, _context: ToolCallContext) {
@@ -347,7 +353,7 @@ async function generateText(input: { messages: JsonModelMessage[]; tools: ToolSe
       })
 
       const resp = await stream.response
-      return resp.messages
+      return resp.messages.map(toJsonModelMessage)
     } catch (error: any) {
       if (error.name === 'AbortError') {
         if (repetitionDetected) {
@@ -463,7 +469,12 @@ async function updateTodoItem(input: UpdateTodoItemInput, context: ToolCallConte
   return provider.updateTodoItem(input)
 }
 
+async function runAgent(input: AgentWorkflowInput, context: ToolCallContext) {
+  return await agentWorkflow(input, context.workflowContext)
+}
+
 const localToolHandlers = {
+  runAgent,
   createPullRequest,
   createCommit,
   printChangeFile,

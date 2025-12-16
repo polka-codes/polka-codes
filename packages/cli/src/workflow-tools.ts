@@ -1,8 +1,17 @@
-import type { AgentToolRegistry, TodoItem, ToolSignature, UpdateTodoItemInput, UpdateTodoItemOutput } from '@polka-codes/core'
+import type {
+  AgentToolRegistry,
+  AgentWorkflowInput,
+  ExitReason,
+  TodoItem,
+  ToolSignature,
+  UpdateTodoItemInput,
+  UpdateTodoItemOutput,
+} from '@polka-codes/core'
 
 type FileChange = { path: string; status: string }
 
 export type CliToolRegistry = {
+  runAgent: ToolSignature<AgentWorkflowInput, ExitReason>
   createPullRequest: ToolSignature<{ title: string; description: string }, { title: string; description: string }>
   createCommit: ToolSignature<{ message: string }, { message: string }>
   printChangeFile: ToolSignature<void, { stagedFiles: FileChange[]; unstagedFiles: FileChange[] }>

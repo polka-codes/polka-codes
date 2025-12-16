@@ -120,6 +120,8 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
     usageMeter: usage,
   }
 
+  let context: WorkflowContext<TTools>
+
   const tools = new Proxy({} as WorkflowTools<TTools>, {
     get: (_target, tool: string) => {
       return async (input: any) => {
@@ -133,13 +135,14 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
             toolProvider,
             command,
             yes,
+            workflowContext: context,
           },
         )
       }
     },
   })
 
-  const context: WorkflowContext<TTools> = {
+  context = {
     step: makeStepFn(),
     logger,
     tools,
