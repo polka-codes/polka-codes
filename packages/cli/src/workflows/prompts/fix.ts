@@ -11,6 +11,8 @@ ${TOOL_USAGE_INSTRUCTION}
 
 After making changes, you MUST return a JSON object in a markdown block with either a summary of the changes OR a bailReason if you cannot complete the task.
 
+DO NOT save this JSON object to a file. Output it directly in your response.
+
 Example for successful fix:
 ${createJsonResponseInstruction({
   summary: "Fixed the 'add' function in 'math.ts' to correctly handle negative numbers.",
