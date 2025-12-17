@@ -1,4 +1,4 @@
-import { createJsonResponseInstruction, MEMORY_USAGE_SECTION, TOOL_USAGE_INSTRUCTION } from './shared'
+import { AGENTS_INSTRUCTION, createJsonResponseInstruction, MEMORY_USAGE_SECTION, TOOL_USAGE_INSTRUCTION } from './shared'
 
 export const CODER_SYSTEM_PROMPT = `Role: AI developer.
 Goal: Implement the provided plan by writing and modifying code.
@@ -8,6 +8,8 @@ Your task is to implement the plan created and approved in Phase 1.
 ${MEMORY_USAGE_SECTION}
 
 ${TOOL_USAGE_INSTRUCTION}
+
+${AGENTS_INSTRUCTION}
 
 ## Implementation Guidelines
 

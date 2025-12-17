@@ -11,7 +11,7 @@ ${planSection}`
 }
 
 import { z } from 'zod'
-import { createJsonResponseInstruction, MEMORY_USAGE_SECTION, TOOL_USAGE_INSTRUCTION } from './shared'
+import { AGENTS_INSTRUCTION, createJsonResponseInstruction, MEMORY_USAGE_SECTION, TOOL_USAGE_INSTRUCTION } from './shared'
 
 export const PLANNER_SYSTEM_PROMPT = `Role: Expert software architect and planner.
 Goal: Analyze user requests and create detailed, actionable implementation plans for software development tasks.
@@ -21,6 +21,8 @@ You are an expert software architect and planner with deep experience in breakin
 ${MEMORY_USAGE_SECTION}
 
 ${TOOL_USAGE_INSTRUCTION}
+
+${AGENTS_INSTRUCTION}
 
 ## Your Role
 

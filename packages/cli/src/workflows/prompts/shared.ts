@@ -35,3 +35,7 @@ Memory is organized using topics, which are like named containers for different 
 - Use the default topic for simple, single-context scenarios
 - Memory persists across all tool calls within the current workflow
 `
+
+export const AGENTS_INSTRUCTION = `## AGENTS.md Instructions
+
+If you are working in a subdirectory, check if there is an AGENTS.md file in that directory or parent directories for specific instructions. These files contain project-specific guidelines and conventions that you must follow.`
