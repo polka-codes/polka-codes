@@ -109,6 +109,27 @@ test('generateWorkflowCodeWorkflow returns workflow with code', async () => {
   expect(result).toEqual(outputWorkflow)
 })
 
+test('generateWorkflowCodeWorkflow prompt includes ctx types and tool usage examples', async () => {
+  const inputWorkflow: WorkflowFile = { workflows: {} }
+  const outputWorkflow: WorkflowFile = { workflows: {} }
+  let capturedSystemPrompt = ''
+
+  const tools = {
+    generateText: async (input: any) => {
+      const systemMessage = input.messages.find((m: any) => m.role === 'system')
+      if (systemMessage) capturedSystemPrompt = systemMessage.content
+      return [{ role: 'assistant', content: JSON.stringify(outputWorkflow) }]
+    },
+    taskEvent: async () => {},
+    invokeTool: async () => ({ type: 'Reply', message: 'ok' }),
+  } as unknown as any
+
+  const ctx = createContext<AgentToolRegistry>(tools)
+  await generateWorkflowCodeWorkflow({ workflow: inputWorkflow }, ctx)
+
+  expect(capturedSystemPrompt).toMatchSnapshot()
+})
+
 test('generateWorkflowDefinitionWorkflow includes available tools in prompt', async () => {
   const mockWorkflowDefinition: WorkflowFile = { workflows: {} }
   let capturedSystemPrompt = ''
