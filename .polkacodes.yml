@@ -7,20 +7,3 @@ scripts:
   test: AGENT=1 bun test -u
   check: bun check
   format: bun fix
-rules: |
-  Use #methodName / #fieldName for private methods and fields
-  Use `bun` as the package manager
-  When adding new dependencies, cd to the package directory and run `bun add <dependency>`
-  Use `bun:test` to write tests. DO NOT use jest or mocha or vi
-  DO NOT mock existing functions in unit test. DO NOT mock modules.
-  When writing unit tests, use `.toMatchSnapshot()` if suitable.
-  In tests, ensure no redundant assertions. i.e. if `.toMatchSnapshot()` is used, then there is no need to have other assertions.
-  Avoid unnecessary comments. Doc comments are not required when the code is self-explanatory.
-  DO NOT use comment as section separators
-  DO NOT add comment to explain changes
-  Use '.nullish()' instead of '.optional()' in zod schema unless there is a specific reason to use optional.
-  DO NOT use global variables unless absolutely necessary. Add justification as comment.
-  biome is used for linting and formatting. DO NOT use prettier or eslint
-  AgentToolInfo parameters MUST be z.object reqired by AI providers
-  DO NOT have conditional logic such as if-else or try-catch in unit tests. Use .rejects.toThrow() to test for errors.
-  Avoid creating temporary test scripts if possible. Use proper test to confirm the behavior.
