@@ -177,13 +177,16 @@ export async function runWorkflowCommand(task: string | undefined, _options: any
   const workflowDef = parsedResult.definition
 
   const workflowNames = Object.keys(workflowDef.workflows)
+  logger.info(`Available workflows: ${workflowNames.join(', ')}`)
 
   let workflowId = workflowName
   if (!workflowId) {
     if (workflowNames.includes('main')) {
       workflowId = 'main'
+      logger.info(`Using 'main' workflow`)
     } else if (workflowNames.length === 1) {
       workflowId = workflowNames[0]
+      logger.info(`Using workflow '${workflowId}'`)
     } else if (workflowNames.length > 1) {
       logger.error(
         `Multiple workflows found in file and no 'main' workflow. Please specify one using --workflow <name>. Available workflows: ${workflowNames.join(', ')}`,
@@ -198,6 +201,7 @@ export async function runWorkflowCommand(task: string | undefined, _options: any
       logger.error(`Workflow '${workflowId}' not found in file. Available workflows: ${workflowNames.join(', ')}`)
       return
     }
+    logger.info(`Using workflow '${workflowId}'`)
   }
 
   let dynamicRunner: ReturnType<typeof createDynamicWorkflow>
@@ -220,7 +224,15 @@ export async function runWorkflowCommand(task: string | undefined, _options: any
   if (selectedWorkflow.inputs && selectedWorkflow.inputs.length > 0 && task) {
     const firstInput = selectedWorkflow.inputs[0]
     workflowInput[firstInput.id] = task
+    logger.info(`Workflow input '${firstInput.id}': ${task}`)
+  } else if (selectedWorkflow.inputs && selectedWorkflow.inputs.length > 0) {
+    logger.info(`Workflow expects inputs: ${selectedWorkflow.inputs.map((i) => i.id).join(', ')}`)
+  } else {
+    logger.info('Workflow has no inputs')
   }
+
+  logger.info(`Workflow has ${selectedWorkflow.steps.length} step(s)`)
+  logger.debug(`Steps: ${selectedWorkflow.steps.map((s) => `${s.id} (${s.task})`).join(', ')}`)
 
   await runWorkflow(workflowFn, workflowInput, { commandName: 'workflow', command, logger, yes })
 }

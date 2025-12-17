@@ -32,19 +32,19 @@ Polka Codes is a powerful TypeScript-based AI coding assistant framework that he
 
 ### Installation
 
-'''bash
+```bash
 # Install globally using npm
 npm install -g @polka-codes/cli
 
 # Or run directly using npx
 npx @polka-codes/cli "your task description"
-'''
+```
 
 ### Example Workflow
 
 Here's an example of a typical development workflow using Polka Codes:
 
-'''bash
+```bash
 # 1. Break down a large feature into tasks
 polka epic "Implement user authentication"
 
@@ -62,7 +62,7 @@ polka commit -a
 
 # 6. Create a pull request
 polka pr
-'''
+```
 
 ## Code Review
 
@@ -72,13 +72,13 @@ The `review` command provides AI-powered code reviews for your projects. It can 
 
 To review a pull request, use the `--pr` option with the pull request number. This feature requires the [GitHub CLI](https://cli.github.com/) (`gh`) to be installed and authenticated.
 
-'''bash
+```bash
 # Review a pull request by number
 polka review --pr 123
 
 # Review and automatically apply feedback in a loop (up to 3 times)
 polka review --pr 123 --loop 3
-'''
+```
 
 ### Reviewing Local Changes
 
@@ -88,21 +88,21 @@ To review local changes, run the `review` command without any arguments. It will
 
 If no local changes are found, it will fall back to reviewing the diff between the current branch and the repository's default branch (e.g., `main` or `master`). This also requires `gh`.
 
-'''bash
+```bash
 # Review staged or unstaged changes
 polka review
 
 # Review and apply feedback
 polka review --yes
-'''
+```
 
 ### JSON Output
 
 For programmatic use, you can get the review in JSON format by adding the `--json` flag.
 
-'''bash
+```bash
 polka review --json
-'''
+```
 
 For more information, see the [CLI README](packages/cli/README.md).
 
@@ -127,14 +127,14 @@ The project is organized as a monorepo with the following packages:
 
 ### Development Setup
 
-'''bash
+```bash
 # Clone the repository
 git clone https://github.com/polka-codes/polka-codes.git
 cd polka-codes
 
 # Install dependencies
 bun install
-'''
+```
 
 ### Available Scripts
 
@@ -150,6 +150,14 @@ bun install
 - `bun commit`: A shortcut for `bun cli commit`.
 - `bun codegen`: Generate GraphQL types for the GitHub package.
 
+## Contributing
+
+If you're contributing to this project, please refer to [AGENTS.md](AGENTS.md) for:
+- Comprehensive project architecture and workflow system documentation
+- Code conventions and development guidelines
+- Tool system patterns and multi-agent architecture
+- Important implementation notes
+
 ## Configuration
 
 A [`.polkacodes.yml`](.polkacodes.yml) configuration file can be used to customize the behavior of polka-codes. An example configuration file is provided in the repository as [`example.polkacodes.yml`](example.polkacodes.yml).
@@ -160,17 +168,17 @@ For detailed configuration options, refer to the example file, which includes co
 
 You can specify the format for tool integration using the `toolFormat` option in your `.polkacodes.yml` file. This setting determines how the AI model interacts with the available tools.
 
--   **`native`**: This option uses the model's native tool-use capabilities. It can be more efficient and lead to better results, but it is not supported by all models. Check your model provider's documentation for compatibility.
+-   **`native`**: Uses the model's native tool-use capabilities via the Vercel AI SDK. More efficient and leads to better results, but not supported by all models. Check your model provider's documentation for compatibility.
 
--   **`polka-codes`** (default): This option uses a custom XML-based format for tool calls. It is designed to be compatible with a wide range of models but may consume more tokens and be less performant compared to the `native` format.
+-   **`polka-codes`** (default): Uses a custom XML-based format for tool calls. Designed to be compatible with a wide range of models but may consume more tokens compared to the `native` format.
 
 You can set the `toolFormat` globally or for specific agents or commands.
 
 Example:
-'''yaml
+```yaml
 # .polkacodes.yml
 toolFormat: "native"
-'''
+```
 
 ## Environment Variables
 

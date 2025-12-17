@@ -22,6 +22,10 @@ export const WorkflowStepDefinitionSchema = z.object({
    * Not interpreted by core today.
    */
   outputSchema: z.any().nullish(),
+  /**
+   * Optional timeout in milliseconds. Step execution will be aborted if it exceeds this duration.
+   */
+  timeout: z.number().positive().nullish(),
 })
 
 export const WorkflowDefinitionSchema = z.object({

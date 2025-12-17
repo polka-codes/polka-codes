@@ -38,8 +38,11 @@ The workflow definition must follow this structure:
         {
           "id": "stepId",
           "task": "Description of the step",
-          "tools": ["toolName1", "toolName2"], // Optional list of tools needed
-          "output": "outputVariableName", // Optional
+          "tools": ["toolName1", "toolName2"], // Optional: restrict which tools can be used
+          "output": "outputVariableName", // Optional: defaults to step id
+          "timeout": 30000, // Optional: timeout in milliseconds
+          "expected_outcome": "What this step produces", // Optional: documentation
+          "outputSchema": { "type": "object" } // Optional: validation schema
         }
       ],
       "output": "outputVariableName" // Optional
@@ -52,6 +55,15 @@ Constraints:
 - The 'main' workflow input must be either empty (no input) or a single string input.
 - Break down complex tasks into logical steps.
 - Define clear inputs and outputs.
+
+Quality Guidelines:
+- Add "timeout" field (in milliseconds) for steps that might take long (file I/O, API calls, searches)
+- Use "expected_outcome" field to document what each step should produce
+- Use descriptive step IDs (e.g., "validateInput", "fetchUserData", not "step1", "step2")
+- Design steps to be focused - one responsibility per step
+- For steps that process multiple items, consider creating a sub-workflow
+- Add "outputSchema" with type information for validation-critical steps
+- Order steps logically with clear data flow
 
 Example 1:
 User: "Research a topic and summarize it."
@@ -141,10 +153,30 @@ Your task is to implement the TypeScript code for the steps in the provided work
 You will receive a JSON workflow definition where the "code" field is null.
 You must fill in the "code" field for each step with valid TypeScript code.
 
-Each step "code" is executed as the body of an async function:
+CRITICAL: Each step "code" field must contain ONLY the function body statements (the code inside the curly braces).
+DO NOT include function declaration, arrow function syntax, async keyword, parameter list, or outer curly braces.
+
+The code will be wrapped automatically in: \`async (ctx) => { YOUR_CODE_HERE }\`
+
+Example of CORRECT code field:
+	\`\`\`ts
+	const result = await ctx.tools.readFile({ path: 'README.md' })
+	if (!result) throw new Error('File not found')
+	return result
+	\`\`\`
+
+Example of INCORRECT code field (DO NOT DO THIS):
 	\`\`\`ts
 	async (ctx) => {
-	  // step.code goes here (this function body only)
+	  const result = await ctx.tools.readFile({ path: 'README.md' })
+	  return result
+	}
+	\`\`\`
+
+Example of INCORRECT code field (DO NOT DO THIS):
+	\`\`\`ts
+	(ctx) => {
+	  return 'hello'
 	}
 	\`\`\`
 
@@ -237,6 +269,49 @@ Each step "code" is executed as the body of an async function:
 	- Return the output value for the step (this becomes the step output).
 	- Access inputs via \`ctx.input.<inputId>\`.
 	- Access previous step outputs via \`ctx.state.<stepOutputKey>\` (defaults to the step \`output\` or \`id\`).
+
+	## Quality Guidelines for Code Implementation
+
+	### Error Handling
+	- ALWAYS validate inputs at the start of steps
+	- Use try-catch for operations that might fail (file I/O, parsing, API calls)
+	- Preserve stack traces: re-throw original errors rather than creating new ones
+	- Use error type guards: \`const err = error instanceof Error ? error : new Error(String(error))\`
+	- Check for null/undefined before using values
+	- Handle edge cases (empty arrays, missing files, invalid data)
+
+	### Logging
+	- Use \`ctx.logger.info()\` for important progress updates
+	- Use \`ctx.logger.debug()\` for detailed information
+	- Use \`ctx.logger.warn()\` for recoverable issues
+	- Use \`ctx.logger.error()\` before throwing errors
+	- Log when starting and completing significant operations
+	- Use template literals for readability: \`ctx.logger.info(\\\`Processing \${items.length} items...\\\`)\`
+
+	### User Experience
+	- Provide progress feedback for long operations
+	- Return structured data (objects/arrays), not strings when possible
+	- Include helpful metadata in results (counts, timestamps, status)
+	- For batch operations, report progress: \`Processed 5/10 items\`
+
+	### Data Validation
+	- Validate required fields exist before accessing
+	- Check data types match expectations
+	- Validate array lengths before iteration
+	- Example: \`if (!data?.users || !Array.isArray(data.users)) throw new Error('Invalid data format')\`
+
+	### Best Practices
+	- Use meaningful variable names
+	- Avoid nested callbacks - use async/await
+	- Clean up resources (close files, clear timeouts)
+	- Return consistent data structures across similar steps
+	- For iteration, consider batching or rate limiting
+
+	### When to Simplify
+	- Simple transformation steps (e.g., formatting strings) need only basic error handling
+	- Internal sub-workflow steps with validated inputs from parent can skip redundant validation
+	- Minimal logging is fine for fast steps (<100ms) that don't perform I/O or external calls
+	- Use judgment: match error handling complexity to the step's failure risk and impact
 
 	## Tool calling examples (every tool)
 
@@ -364,6 +439,118 @@ Each step "code" is executed as the body of an async function:
 	}
 	return results
 	\`\`\`
+
+	## Complete Example: High-Quality Step Implementation
+
+	This example demonstrates all quality guidelines in a single step:
+
+	\`\`\`ts
+	// Step: processUserData
+	// Task: Read, validate, and process user data from a file
+
+	// Input validation
+	if (!ctx.input.dataFile) {
+	  throw new Error('Missing required input: dataFile')
+	}
+
+	ctx.logger.info(\`Starting user data processing for: \${ctx.input.dataFile}\`)
+
+	// Read file with error handling
+	let rawData
+	try {
+	  ctx.logger.debug(\`Reading file: \${ctx.input.dataFile}\`)
+	  rawData = await ctx.tools.readFile({ path: ctx.input.dataFile })
+
+	  if (!rawData) {
+	    throw new Error(\`File not found or empty: \${ctx.input.dataFile}\`)
+	  }
+	} catch (error) {
+	  const err = error instanceof Error ? error : new Error(String(error))
+	  ctx.logger.error(\`Failed to read file: \${err.message}\`)
+	  throw err  // Preserve original stack trace
+	}
+
+	// Parse and validate data
+	let users
+	try {
+	  ctx.logger.debug('Parsing JSON data')
+	  const parsed = JSON.parse(rawData)
+
+	  if (!parsed?.users || !Array.isArray(parsed.users)) {
+	    throw new Error('Invalid data format: expected {users: [...]}')
+	  }
+
+	  users = parsed.users
+	  ctx.logger.info(\`Found \${users.length} users to process\`)
+	} catch (error) {
+	  const err = error instanceof Error ? error : new Error(String(error))
+	  ctx.logger.error(\`Data parsing failed: \${err.message}\`)
+	  throw err  // Preserve original stack trace
+	}
+
+	// Process each user with progress reporting
+	const results = []
+	for (let i = 0; i < users.length; i++) {
+	  const user = users[i]
+
+	  // Validate each user object
+	  if (!user?.id || !user?.email) {
+	    ctx.logger.warn(\`Skipping invalid user at index \${i}: missing id or email\`)
+	    continue
+	  }
+
+	  // Process user
+	  const processed = {
+	    id: user.id,
+	    email: user.email.toLowerCase().trim(),
+	    name: user.name?.trim() || 'Unknown',
+	    processedAt: new Date().toISOString(),
+	    status: 'active'
+	  }
+
+	  results.push(processed)
+
+	  // Progress feedback every 10 items
+	  if ((i + 1) % 10 === 0) {
+	    ctx.logger.info(\`Processed \${i + 1}/\${users.length} users\`)
+	  }
+	}
+
+	ctx.logger.info(\`Successfully processed \${results.length}/\${users.length} users\`)
+
+	// Return structured result with metadata
+	return {
+	  users: results,
+	  metadata: {
+	    totalInput: users.length,
+	    totalProcessed: results.length,
+	    skipped: users.length - results.length,
+	    processedAt: new Date().toISOString()
+	  }
+	}
+	\`\`\`
+
+	Key features demonstrated:
+	- Input validation at start
+	- Comprehensive error handling with try-catch that preserves stack traces
+	- Logging at info, debug, warn, and error levels
+	- Progress reporting for long operations (every 10 items)
+	- Data validation throughout (null checks, type checks, array validation)
+	- Structured return value with metadata for observability
+	- Descriptive error messages with context
+	- Meaningful variable names (rawData, users, processed)
+	- Clean async/await usage
+	- Template literals for readable string interpolation
+	- Proper error type guards (error instanceof Error)
+
+	## Final Instructions
+
+	REMEMBER: The "code" field must be ONLY the function body statements.
+	- DO NOT wrap code in arrow functions: \`(ctx) => { ... }\`
+	- DO NOT wrap code in async functions: \`async (ctx) => { ... }\`
+	- DO NOT include outer curly braces
+	- DO include a return statement if the step should produce output
+	- Each "code" field should be a string containing multiple statements separated by newlines
 
 	Return the complete workflow JSON with the "code" fields populated.
 	`
