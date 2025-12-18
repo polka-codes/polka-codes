@@ -7,6 +7,12 @@ import { type AgentToolRegistry, agentWorkflow } from './agent.workflow'
 import { type WorkflowDefinition, type WorkflowFile, WorkflowFileSchema, type WorkflowStepDefinition } from './dynamic-types'
 import type { Logger, StepFn, ToolRegistry, WorkflowContext, WorkflowTools } from './workflow'
 
+const TOOL_GROUPS: Record<string, string[]> = {
+  readonly: ['readFile', 'readBinaryFile', 'listFiles', 'searchFiles'],
+  readwrite: ['readFile', 'readBinaryFile', 'listFiles', 'searchFiles', 'writeToFile', 'replaceInFile', 'removeFile', 'renameFile'],
+  internet: ['fetchUrl', 'search'],
+}
+
 export type RunWorkflowTool = { input: { workflowId: string; input?: any }; output: any }
 
 export type DynamicWorkflowRegistry = ToolRegistry & { runWorkflow: RunWorkflowTool }
@@ -176,12 +182,37 @@ async function executeStepWithAgent<TTools extends ToolRegistry>(
     )
   }
 
-  const allowedToolNames = stepDef.tools
-  const toolsForAgent: FullAgentToolInfo[] = allowedToolNames
-    ? options.toolInfo.filter((t) => allowedToolNames.includes(t.name))
-    : [...options.toolInfo]
+  const rawAllowedToolNames = stepDef.tools
+  let toolsForAgent: FullAgentToolInfo[]
 
-  if (!allowedToolNames || allowedToolNames.includes('runWorkflow')) {
+  if (rawAllowedToolNames) {
+    const expandedToolNames = new Set<string>()
+    let includeAll = false
+
+    for (const name of rawAllowedToolNames) {
+      if (name === 'all') {
+        includeAll = true
+        break
+      }
+      if (Object.hasOwn(TOOL_GROUPS, name)) {
+        for (const tool of TOOL_GROUPS[name]) {
+          expandedToolNames.add(tool)
+        }
+      } else {
+        expandedToolNames.add(name)
+      }
+    }
+
+    if (includeAll) {
+      toolsForAgent = [...options.toolInfo]
+    } else {
+      toolsForAgent = options.toolInfo.filter((t) => expandedToolNames.has(t.name))
+    }
+  } else {
+    toolsForAgent = [...options.toolInfo]
+  }
+
+  if (!rawAllowedToolNames || rawAllowedToolNames.includes('all') || rawAllowedToolNames.includes('runWorkflow')) {
     toolsForAgent.push({
       name: 'runWorkflow',
       description: 'Run a named sub-workflow defined in the current workflow file.',

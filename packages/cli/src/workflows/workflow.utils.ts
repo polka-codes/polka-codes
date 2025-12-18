@@ -336,11 +336,14 @@ export async function getDefaultContext(): Promise<string> {
   const [files, truncated] = await listFiles(cwd, true, 2000, cwd, config?.excludeFiles ?? [])
   const fileList = files.join('\n')
 
+  const now = new Date()
+  const formattedDate = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')}`
+
   const contextParts: string[] = [
     `<file_list truncated="${truncated}">
 ${fileList}
 </file_list>`,
-    `<now_date>${new Date().toISOString()}</now_date>`,
+    `<now_date>${formattedDate}</now_date>`,
   ]
 
   try {

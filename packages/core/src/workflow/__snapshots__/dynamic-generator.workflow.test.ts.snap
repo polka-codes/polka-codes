@@ -10,6 +10,8 @@ You must fill in the "code" field for each step with valid TypeScript code.
 CRITICAL: Each step "code" field must contain ONLY the function body statements (the code inside the curly braces).
 DO NOT include function declaration, arrow function syntax, async keyword, parameter list, or outer curly braces.
 
+Prefer using \`ctx.tools.runAgent\` for complex tasks or when multiple steps/tools are needed. Use \`ctx.tools.generateText\` only for simple text processing tasks.
+
 The code will be wrapped automatically in: \`async (ctx) => { YOUR_CODE_HERE }\`
 
 Example of CORRECT code field:
@@ -88,7 +90,12 @@ Example of INCORRECT code field (DO NOT DO THIS):
 	  // File + command helpers (direct)
 	  readFile: (input: { path: string }) => Promise<string | null>
 	  writeToFile: (input: { path: string; content: string }) => Promise<void>
-	  executeCommand: (input: { command: string; pipe?: boolean } & ({ args: string[]; shell?: false } | { shell: true })) => Promise<{
+	  replaceInFile: (input: { path: string; diff: string }) => Promise<void>
+	  removeFile: (input: { path: string }) => Promise<void>
+	  renameFile: (input: { source_path: string; target_path: string }) => Promise<void>
+	  listFiles: (input: { path: string; recursive?: boolean; maxCount?: number; includeIgnored?: boolean }) => Promise<string>
+	  searchFiles: (input: { path: string; regex: string; filePattern?: string }) => Promise<string>
+	  executeCommand: (input: { command: string; pipe?: boolean; requiresApproval?: boolean } & ({ args: string[]; shell?: false } | { shell: true })) => Promise<{
 	    exitCode: number
 	    stdout: string
 	    stderr: string
