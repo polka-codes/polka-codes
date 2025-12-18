@@ -7,7 +7,14 @@ import { type AgentToolRegistry, agentWorkflow } from './agent.workflow'
 import { type WorkflowDefinition, type WorkflowFile, WorkflowFileSchema, type WorkflowStepDefinition } from './dynamic-types'
 import type { Logger, StepFn, ToolRegistry, WorkflowContext, WorkflowTools } from './workflow'
 
-const TOOL_GROUPS: Record<string, string[]> = {
+/**
+ * Tool groups that can be used in step.tools arrays.
+ * - "readonly": File reading operations only
+ * - "readwrite": Full file system access
+ * - "internet": Network operations (fetch, search)
+ * - "all": All available tools (special keyword, not in this map)
+ */
+export const TOOL_GROUPS: Record<string, string[]> = {
   readonly: ['readFile', 'readBinaryFile', 'listFiles', 'searchFiles'],
   readwrite: ['readFile', 'readBinaryFile', 'listFiles', 'searchFiles', 'writeToFile', 'replaceInFile', 'removeFile', 'renameFile'],
   internet: ['fetchUrl', 'search'],

@@ -1,35 +1,12 @@
-// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+/**
+ * Shared prompt components for dynamic workflow generation.
+ * These are used by both code generation and code review workflows.
+ */
 
-exports[`generateWorkflowCodeWorkflow prompt includes ctx types and tool usage examples 1`] = `
-"You are an expert TypeScript developer.
-Your task is to implement the TypeScript code for the steps in the provided workflow definition.
-
-You will receive a JSON workflow definition where the "code" field is null.
-You must fill in the "code" field for each step with valid TypeScript code.
-
-CRITICAL: Each step "code" field must contain ONLY the function body statements (the code inside the curly braces).
-DO NOT include function declaration, arrow function syntax, async keyword, parameter list, or outer curly braces.
-
-Prefer using \`ctx.tools.runAgent\` for complex tasks or when multiple steps/tools are needed. Use \`ctx.tools.generateText\` only for simple text processing tasks.
-
-The code will be wrapped automatically in: \`async (ctx) => { YOUR_CODE_HERE }\`
-
-Example of CORRECT code field:
-\`\`\`ts
-const result = await ctx.tools.readFile({ path: 'README.md' })
-if (!result) throw new Error('File not found')
-return result
-\`\`\`
-
-Example of INCORRECT code field (DO NOT DO THIS):
-\`\`\`ts
-async (ctx) => {
-  const result = await ctx.tools.readFile({ path: 'README.md' })
-  return result
-}
-\`\`\`
-
-## Runtime context (ctx)
+/**
+ * TypeScript type definitions for the runtime context available in dynamic workflow steps.
+ */
+export const RUNTIME_CONTEXT_TYPES = `## Runtime context (ctx)
 \`\`\`ts
 // Runtime types (for reference)
 type Logger = {
@@ -116,15 +93,21 @@ type DynamicStepRuntimeContext = {
 - \`ctx.input\`: workflow inputs (read-only).
 - \`ctx.state\`: shared state between steps (previous step outputs are stored here).
 - \`ctx.tools\`: async tool functions. Call tools as \`await ctx.tools.someTool({ ... })\`.
-- \`ctx.runWorkflow\`: run a sub-workflow by id.
+- \`ctx.runWorkflow\`: run a sub-workflow by id.`
 
-## Guidelines
+/**
+ * Guidelines for accessing context and returning values.
+ */
+export const CONTEXT_USAGE_GUIDELINES = `## Guidelines
 - Use \`await\` for all async operations.
 - Return the output value for the step (this becomes the step output).
 - Access inputs via \`ctx.input.<inputId>\`.
-- Access previous step outputs via \`ctx.state.<stepOutputKey>\` (defaults to the step \`output\` or \`id\`).
+- Access previous step outputs via \`ctx.state.<stepOutputKey>\` (defaults to the step \`output\` or \`id\`).`
 
-## Quality Guidelines for Code Implementation
+/**
+ * Quality guidelines for error handling, logging, validation, and best practices.
+ */
+export const QUALITY_GUIDELINES = `## Quality Guidelines for Code Implementation
 
 ### Error Handling
 - ALWAYS validate inputs at the start of steps
@@ -165,9 +148,12 @@ type DynamicStepRuntimeContext = {
 - Simple transformation steps (e.g., formatting strings) need only basic error handling
 - Internal sub-workflow steps with validated inputs from parent can skip redundant validation
 - Minimal logging is fine for fast steps (<100ms) that don't perform I/O or external calls
-- Use judgment: match error handling complexity to the step's failure risk and impact
+- Use judgment: match error handling complexity to the step's failure risk and impact`
 
-## Tool calling examples (every tool)
+/**
+ * Examples of tool usage including direct ctx.tools methods and invokeTool.
+ */
+export const TOOL_CALLING_EXAMPLES = `## Tool calling examples (every tool)
 
 ### Direct ctx.tools methods
 \`\`\`ts
@@ -292,9 +278,12 @@ for (const pr of ctx.state.prs ?? []) {
   results.push(await ctx.runWorkflow('reviewPR', { prId: pr.id }))
 }
 return results
-\`\`\`
+\`\`\``
 
-## Complete Example: High-Quality Step Implementation
+/**
+ * Complete example demonstrating all quality guidelines in a single step.
+ */
+export const COMPLETE_STEP_EXAMPLE = `## Complete Example: High-Quality Step Implementation
 
 This example demonstrates all quality guidelines in a single step:
 
@@ -395,99 +384,31 @@ Key features demonstrated:
 - Meaningful variable names (rawData, users, processed)
 - Clean async/await usage
 - Template literals for readable string interpolation
-- Proper error type guards (error instanceof Error)
+- Proper error type guards (error instanceof Error)`
 
-## Final Instructions
-
-REMEMBER: The "code" field must be ONLY the function body statements.
+/**
+ * Instructions about code field format constraints.
+ */
+export const CODE_FIELD_CONSTRAINTS = `REMEMBER: The "code" field must be ONLY the function body statements.
 - DO NOT wrap code in arrow functions: \`(ctx) => { ... }\`
 - DO NOT wrap code in async functions: \`async (ctx) => { ... }\`
 - DO NOT include outer curly braces
 - DO include a return statement if the step should produce output
-- Each "code" field should be a string containing multiple statements separated by newlines
+- Each "code" field should be a string containing multiple statements separated by newlines`
 
-Return the complete workflow JSON with the "code" fields populated.
-"
-`;
-
-exports[`validateWorkflowDefinition detects missing main workflow 1`] = `
-{
-  "errors": [
-    "Missing required 'main' workflow",
-  ],
-  "valid": false,
+/**
+ * Compose the full implementation guidelines from individual components.
+ */
+export function composeImplementationGuidelines(): string {
+  return [
+    RUNTIME_CONTEXT_TYPES,
+    '',
+    CONTEXT_USAGE_GUIDELINES,
+    '',
+    QUALITY_GUIDELINES,
+    '',
+    TOOL_CALLING_EXAMPLES,
+    '',
+    COMPLETE_STEP_EXAMPLE,
+  ].join('\n')
 }
-`;
-
-exports[`validateWorkflowDefinition detects duplicate step IDs 1`] = `
-{
-  "errors": [
-    "Duplicate step ID 'step1' in workflow 'main'",
-  ],
-  "valid": false,
-}
-`;
-
-exports[`generateWorkflowCodeWorkflow review prompt includes quality guidelines 1`] = `
-"You are an expert TypeScript Code Reviewer.
-Your task is to review the provided workflow definition and its implemented code, and improve it to meet the highest quality standards.
-
-You will receive a JSON workflow definition where the "code" fields are already populated.
-You must review each step's code and improve it if necessary.
-
-Check for:
-- Correct usage of \`ctx.tools\` and \`ctx.state\`.
-- Proper error handling (try-catch, input validation).
-- Meaningful logging.
-- Adherence to the Quality Guidelines.
-- Correct syntax (no outer function wrappers).
-
-## Quality Guidelines for Code Implementation
-
-### Error Handling
-- ALWAYS validate inputs at the start of steps
-- Use try-catch for operations that might fail (file I/O, parsing, API calls)
-- Preserve stack traces: re-throw original errors rather than creating new ones
-- Use error type guards: \`const err = error instanceof Error ? error : new Error(String(error))\`
-- Check for null/undefined before using values
-- Handle edge cases (empty arrays, missing files, invalid data)
-
-### Logging
-- Use \`ctx.logger.info()\` for important progress updates
-- Use \`ctx.logger.debug()\` for detailed information
-- Use \`ctx.logger.warn()\` for recoverable issues
-- Use \`ctx.logger.error()\` before throwing errors
-- Log when starting and completing significant operations
-- Use template literals for readability: \`ctx.logger.info(\\\`Processing \${items.length} items...\\\`)\`
-
-### User Experience
-- Provide progress feedback for long operations
-- Return structured data (objects/arrays), not strings when possible
-- Include helpful metadata in results (counts, timestamps, status)
-- For batch operations, report progress: \`Processed 5/10 items\`
-
-### Data Validation
-- Validate required fields exist before accessing
-- Check data types match expectations
-- Validate array lengths before iteration
-- Example: \`if (!data?.users || !Array.isArray(data.users)) throw new Error('Invalid data format')\`
-
-### Best Practices
-- Use meaningful variable names
-- Avoid nested callbacks - use async/await
-- Clean up resources (close files, clear timeouts)
-- Return consistent data structures across similar steps
-- For iteration, consider batching or rate limiting
-
-### When to Simplify
-- Simple transformation steps (e.g., formatting strings) need only basic error handling
-- Internal sub-workflow steps with validated inputs from parent can skip redundant validation
-- Minimal logging is fine for fast steps (<100ms) that don't perform I/O or external calls
-- Use judgment: match error handling complexity to the step's failure risk and impact
-
-## Final Instructions
-
-Return the complete workflow JSON with the "code" fields improved where necessary.
-Ensure the "code" field still contains ONLY the function body statements.
-"
-`;
