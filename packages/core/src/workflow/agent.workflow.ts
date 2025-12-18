@@ -4,13 +4,13 @@ import type { LanguageModelV2ToolResultOutput } from '@ai-sdk/provider'
 import { jsonSchema, type ToolCallPart, type ToolSet } from 'ai'
 import { toJSONSchema, z } from 'zod'
 import { parseJsonFromMarkdown } from '../Agent/parseJsonFromMarkdown'
-import { type AgentToolResponse, type FullAgentToolInfo, ToolResponseType } from '../tool'
+import { type AgentToolResponse, type FullToolInfo, ToolResponseType } from '../tool'
 import type { JsonModelMessage, JsonResponseMessage, JsonUserModelMessage } from './json-ai-types'
 import { type ExitReason, type TaskEvent, TaskEventKind } from './types'
 import type { WorkflowFn } from './workflow'
 
 export type AgentWorkflowInput = {
-  tools: Readonly<FullAgentToolInfo[]>
+  tools: Readonly<FullToolInfo[]>
   maxToolRoundTrips?: number
   userMessage: readonly JsonUserModelMessage[]
   outputSchema?: z.ZodSchema

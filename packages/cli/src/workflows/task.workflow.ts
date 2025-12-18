@@ -3,7 +3,7 @@
 import {
   agentWorkflow,
   executeCommand,
-  type FullAgentToolInfo,
+  type FullToolInfo,
   fetchUrl,
   listFiles,
   readBinaryFile,
@@ -37,7 +37,7 @@ export const taskWorkflow: WorkflowFn<TaskWorkflowInput & BaseWorkflowInput, { s
 Running generic agent...
 `)
 
-  const agentTools: FullAgentToolInfo[] = [
+  const agentTools: FullToolInfo[] = [
     readFile,
     writeToFile,
     replaceInFile,

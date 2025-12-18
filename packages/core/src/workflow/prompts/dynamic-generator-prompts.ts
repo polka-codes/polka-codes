@@ -42,34 +42,31 @@ type ExitReason =
   | { type: 'Exit'; message: string; object?: any }
   | { type: 'Error'; error: { message: string; stack?: string } }
 
-type FullAgentToolInfo = { name: string; description: string; parameters: any; handler: any }
+type FullToolInfo = { name: string; description: string; parameters: any; handler: any }
 
-// Tools available on ctx.tools in dynamic steps
-type DynamicWorkflowTools = {
-  // LLM + agent helpers
-  generateText: (input: { messages: JsonModelMessage[]; tools: ToolSet }) => Promise<JsonResponseMessage[]>
-  runAgent: (input: {
-    tools: Readonly<FullAgentToolInfo[]>
-    maxToolRoundTrips?: number
-    userMessage: readonly JsonModelMessage[]
-  } & ({ messages: JsonModelMessage[] } | { systemPrompt: string })) => Promise<ExitReason>
-
-  // Generic bridge to "agent tools" by name
-  invokeTool: (input: { toolName: string; input: any }) => Promise<AgentToolResponse>
-
-  // File + command helpers (direct)
+type AgentTools = {
   readFile: (input: { path: string }) => Promise<string | null>
   writeToFile: (input: { path: string; content: string }) => Promise<void>
-  replaceInFile: (input: { path: string; diff: string }) => Promise<void>
-  removeFile: (input: { path: string }) => Promise<void>
-  renameFile: (input: { source_path: string; target_path: string }) => Promise<void>
-  listFiles: (input: { path: string; recursive?: boolean; maxCount?: number; includeIgnored?: boolean }) => Promise<string>
-  searchFiles: (input: { path: string; regex: string; filePattern?: string }) => Promise<string>
   executeCommand: (input: { command: string; pipe?: boolean; requiresApproval?: boolean } & ({ args: string[]; shell?: false } | { shell: true })) => Promise<{
     exitCode: number
     stdout: string
     stderr: string
   }>
+  searchFiles: (input: { path: string; regex: string; filePattern?: string }) => Promise<string>
+  listFiles: (input: { path: string; recursive?: boolean; maxCount?: number; includeIgnored?: boolean }) => Promise<string>
+  fetchUrl: (input: { url: string[] }) => Promise<string>
+  askFollowupQuestion: (input: { questions: { prompt: string; options?: string[] }[] }) => Promise<any>
+  // ... and other tools available in the environment
+}
+
+// Tools available on ctx.tools in dynamic steps
+type DynamicWorkflowTools = {
+  // LLM + agent helpers
+  runAgent: (input: {
+    tools: Readonly<FullToolInfo[]>
+    maxToolRoundTrips?: number
+    userMessage: readonly JsonModelMessage[]
+  } & ({ messages: JsonModelMessage[] } | { systemPrompt: string })) => Promise<ExitReason>
 
   // CLI UX helpers
   confirm: (input: { message: string }) => Promise<boolean>
@@ -83,16 +80,18 @@ type DynamicStepRuntimeContext = {
   input: Record<string, any>
   state: Record<string, any>
   tools: DynamicWorkflowTools
+  agentTools: AgentTools
   logger: Logger
   step: StepFn
   runWorkflow: (workflowId: string, input?: Record<string, any>) => Promise<any>
-  toolInfo?: ReadonlyArray<FullAgentToolInfo>
+  toolInfo?: ReadonlyArray<FullToolInfo>
 }
 \`\`\`
 
 - \`ctx.input\`: workflow inputs (read-only).
 - \`ctx.state\`: shared state between steps (previous step outputs are stored here).
-- \`ctx.tools\`: async tool functions. Call tools as \`await ctx.tools.someTool({ ... })\`.
+- \`ctx.agentTools\`: standard tools (readFile, executeCommand, etc.). Call as \`await ctx.agentTools.someTool({ ... })\`.
+- \`ctx.tools\`: workflow helpers (runAgent, confirm, input, select).
 - \`ctx.runWorkflow\`: run a sub-workflow by id.`
 
 /**
@@ -150,38 +149,27 @@ export const QUALITY_GUIDELINES = `## Quality Guidelines for Code Implementation
 - Minimal logging is fine for fast steps (<100ms) that don't perform I/O or external calls
 - Use judgment: match error handling complexity to the step's failure risk and impact`
 
-/**
- * Examples of tool usage including direct ctx.tools methods and invokeTool.
- */
-export const TOOL_CALLING_EXAMPLES = `## Tool calling examples (every tool)
+export const TOOL_CALLING_EXAMPLES = `## Tool calling examples
 
-### Direct ctx.tools methods
+### Standard tools (ctx.agentTools)
 \`\`\`ts
 // readFile
-const readme = await ctx.tools.readFile({ path: 'README.md' })
+const readme = await ctx.agentTools.readFile({ path: 'README.md' })
 if (readme == null) throw new Error('README.md not found')
 
 // writeToFile
-await ctx.tools.writeToFile({ path: 'notes.txt', content: 'hello\\n' })
+await ctx.agentTools.writeToFile({ path: 'notes.txt', content: 'hello\\n' })
 
 // executeCommand (args form)
-const rg = await ctx.tools.executeCommand({ command: 'rg', args: ['-n', 'TODO', '.'] })
+const rg = await ctx.agentTools.executeCommand({ command: 'rg', args: ['-n', 'TODO', '.'] })
 if (rg.exitCode !== 0) throw new Error(rg.stderr)
 
 // executeCommand (shell form)
-await ctx.tools.executeCommand({ command: 'ls -la', shell: true, pipe: true })
+await ctx.agentTools.executeCommand({ command: 'ls -la', shell: true, pipe: true })
+\`\`\`
 
-// generateText (LLM call; pass tools: {})
-const msgs = await ctx.tools.generateText({
-  messages: [
-    { role: 'system', content: 'Summarize the following text.' },
-    { role: 'user', content: readme },
-  ],
-  tools: {},
-})
-const last = msgs[msgs.length - 1]
-const lastText = typeof last?.content === 'string' ? last.content : JSON.stringify(last?.content)
-
+### Workflow helpers (ctx.tools)
+\`\`\`ts
 // runAgent (nested agent; use ctx.toolInfo as the tool list)
 const agentRes = await ctx.tools.runAgent({
   systemPrompt: 'You are a helpful assistant.',
@@ -200,75 +188,6 @@ const flavor = await ctx.tools.select({
     { name: 'B', value: 'b' },
   ],
 })
-
-\`\`\`
-
-### Agent tools via ctx.tools.invokeTool (toolName examples)
-\`\`\`ts
-// Helper to unwrap a successful tool reply
-function unwrapToolValue(resp: any) {
-  if (!resp || resp.type !== 'Reply') {
-    const msg = resp?.message?.value
-    throw new Error(typeof msg === 'string' ? msg : JSON.stringify(resp))
-  }
-  return resp.message.value
-}
-
-// askFollowupQuestion
-const answersText = unwrapToolValue(
-  await ctx.tools.invokeTool({
-    toolName: 'askFollowupQuestion',
-    input: { questions: [{ prompt: 'Which directory?', options: ['src', 'packages'] }] },
-  }),
-)
-
-// listFiles
-const filesText = unwrapToolValue(
-  await ctx.tools.invokeTool({
-    toolName: 'listFiles',
-    input: { path: 'src', recursive: true, maxCount: 2000, includeIgnored: false },
-  }),
-)
-
-// searchFiles
-const hitsText = unwrapToolValue(
-  await ctx.tools.invokeTool({
-    toolName: 'searchFiles',
-    input: { path: '.', regex: 'generateWorkflowCodeWorkflow', filePattern: '*.ts' },
-  }),
-)
-
-// fetchUrl
-const pageText = unwrapToolValue(await ctx.tools.invokeTool({ toolName: 'fetchUrl', input: { url: 'https://example.com' } }))
-
-// search (web search)
-const webResults = unwrapToolValue(
-  await ctx.tools.invokeTool({ toolName: 'search', input: { query: 'TypeScript zod schema examples' } }),
-)
-
-// executeCommand (provider-backed; may require approval in some environments)
-const cmdText = unwrapToolValue(
-  await ctx.tools.invokeTool({ toolName: 'executeCommand', input: { command: 'bun test', requiresApproval: false } }),
-)
-
-// readFile / writeToFile (provider-backed)
-const fileText = unwrapToolValue(
-  await ctx.tools.invokeTool({ toolName: 'readFile', input: { path: 'README.md', includeIgnored: false } }),
-)
-const writeText = unwrapToolValue(await ctx.tools.invokeTool({ toolName: 'writeToFile', input: { path: 'out.txt', content: 'hi' } }))
-
-// replaceInFile
-const diff = ['<<<<<<< SEARCH', 'old', '=======', 'new', '>>>>>>> REPLACE'].join('\\n')
-const replaceText = unwrapToolValue(await ctx.tools.invokeTool({ toolName: 'replaceInFile', input: { path: 'out.txt', diff } }))
-
-// removeFile / renameFile
-const rmText = unwrapToolValue(await ctx.tools.invokeTool({ toolName: 'removeFile', input: { path: 'out.txt' } }))
-const mvText = unwrapToolValue(
-  await ctx.tools.invokeTool({ toolName: 'renameFile', input: { source_path: 'a.txt', target_path: 'b.txt' } }),
-)
-
-// readBinaryFile (returns { type: 'content', value: [...] } in resp.message)
-const binResp = await ctx.tools.invokeTool({ toolName: 'readBinaryFile', input: { url: 'file://path/to/image.png' } })
 \`\`\`
 
 ### Sub-workflow example (ctx.runWorkflow)
@@ -302,7 +221,7 @@ ctx.logger.info(\`Starting user data processing for: \${ctx.input.dataFile}\`)
 let rawData
 try {
   ctx.logger.debug(\`Reading file: \${ctx.input.dataFile}\`)
-  rawData = await ctx.tools.readFile({ path: ctx.input.dataFile })
+  rawData = await ctx.agentTools.readFile({ path: ctx.input.dataFile })
 
   if (!rawData) {
     throw new Error(\`File not found or empty: \${ctx.input.dataFile}\`)

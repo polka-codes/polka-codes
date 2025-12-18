@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { type AgentToolInfo, type FullAgentToolInfo, type ToolHandler, ToolResponseType } from '../tool'
+import { type FullToolInfo, type ToolHandler, type ToolInfo, ToolResponseType } from '../tool'
 import type { InteractionProvider } from './provider'
 
 const questionObject = z.object({
@@ -66,7 +66,7 @@ export const toolInfo = {
         },
       ],
     }),
-} as const satisfies AgentToolInfo
+} as const satisfies ToolInfo
 
 export const handler: ToolHandler<typeof toolInfo, InteractionProvider> = async (provider, args) => {
   if (!provider.askFollowupQuestion) {
@@ -111,4 +111,4 @@ ${answer}
 export default {
   ...toolInfo,
   handler,
-} satisfies FullAgentToolInfo
+} satisfies FullToolInfo

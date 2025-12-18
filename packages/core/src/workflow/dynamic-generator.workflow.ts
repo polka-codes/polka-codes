@@ -150,7 +150,7 @@ Output:
         {
           "id": "summarize",
           "task": "Summarize the search results",
-          "tools": ["generateText"],
+          "tools": ["runAgent"],
           "output": "summary",
           "expected_outcome": "Returns a concise summary string (2-3 paragraphs) of the key findings"
         }
@@ -206,7 +206,7 @@ Output:
         {
           "id": "analyze",
           "task": "Analyze the diff and provide feedback",
-          "tools": ["generateText"],
+          "tools": ["runAgent"],
           "output": "analysis",
           "expected_outcome": "Returns { summary, issues, suggestions } object with review feedback"
         }
@@ -294,13 +294,13 @@ You must fill in the "code" field for each step with valid TypeScript code.
 CRITICAL: Each step "code" field must contain ONLY the function body statements (the code inside the curly braces).
 DO NOT include function declaration, arrow function syntax, async keyword, parameter list, or outer curly braces.
 
-Prefer using \`ctx.tools.runAgent\` for complex tasks or when multiple steps/tools are needed. Use \`ctx.tools.generateText\` only for simple text processing tasks.
+Prefer using \`ctx.tools.runAgent\` for complex tasks or when multiple steps/tools are needed. Use \`ctx.agentTools\` for direct tool usage (e.g. \`ctx.agentTools.readFile\`).
 
 The code will be wrapped automatically in: \`async (ctx) => { YOUR_CODE_HERE }\`
 
 Example of CORRECT code field:
 \`\`\`ts
-const result = await ctx.tools.readFile({ path: 'README.md' })
+const result = await ctx.agentTools.readFile({ path: 'README.md' })
 if (!result) throw new Error('File not found')
 return result
 \`\`\`
@@ -308,7 +308,7 @@ return result
 Example of INCORRECT code field (DO NOT DO THIS):
 \`\`\`ts
 async (ctx) => {
-  const result = await ctx.tools.readFile({ path: 'README.md' })
+  const result = await ctx.agentTools.readFile({ path: 'README.md' })
   return result
 }
 \`\`\`
@@ -329,7 +329,7 @@ You will receive a JSON workflow definition where the "code" fields are already 
 You must review each step's code and improve it if necessary.
 
 Check for:
-- Correct usage of \`ctx.tools\` and \`ctx.state\`.
+- Correct usage of \`ctx.agentTools\` (for standard tools) and \`ctx.tools\` (for workflow helpers).
 - Proper error handling (try-catch, input validation).
 - Meaningful logging.
 - Adherence to the Quality Guidelines.

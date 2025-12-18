@@ -1,4 +1,4 @@
-import { type AgentToolInfo, type FullAgentToolInfo, type ToolHandler, ToolResponseType } from '../tool'
+import { type FullToolInfo, type ToolHandler, type ToolInfo, ToolResponseType } from '../tool'
 import type { TodoProvider } from './provider'
 import { UpdateTodoItemInputSchema } from './todo'
 
@@ -6,7 +6,7 @@ export const toolInfo = {
   name: 'updateTodoItem',
   description: 'Add or update a to-do item.',
   parameters: UpdateTodoItemInputSchema,
-} as const satisfies AgentToolInfo
+} as const satisfies ToolInfo
 
 export const handler: ToolHandler<typeof toolInfo, TodoProvider> = async (provider, args) => {
   if (!provider.updateTodoItem) {
@@ -32,4 +32,4 @@ export const handler: ToolHandler<typeof toolInfo, TodoProvider> = async (provid
 export default {
   ...toolInfo,
   handler,
-} satisfies FullAgentToolInfo
+} satisfies FullToolInfo

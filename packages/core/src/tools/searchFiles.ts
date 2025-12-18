@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { type AgentToolInfo, type FullAgentToolInfo, type ToolHandler, ToolResponseType } from '../tool'
+import { type FullToolInfo, type ToolHandler, type ToolInfo, ToolResponseType } from '../tool'
 import type { FilesystemProvider } from './provider'
 
 export const toolInfo = {
@@ -39,7 +39,7 @@ export const toolInfo = {
         },
       ],
     }),
-} as const satisfies AgentToolInfo
+} as const satisfies ToolInfo
 
 export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (provider, args) => {
   if (!provider.searchFiles) {
@@ -94,4 +94,4 @@ ${files.join('\n')}
 export default {
   ...toolInfo,
   handler,
-} satisfies FullAgentToolInfo
+} satisfies FullToolInfo

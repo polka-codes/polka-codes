@@ -1,7 +1,7 @@
 import { parse } from 'yaml'
 import { z } from 'zod'
 import { parseJsonFromMarkdown } from '../Agent/parseJsonFromMarkdown'
-import type { FullAgentToolInfo, ToolResponseResult } from '../tool'
+import type { FullToolInfo, ToolResponseResult } from '../tool'
 import { ToolResponseType } from '../tool'
 import { type AgentToolRegistry, agentWorkflow } from './agent.workflow'
 import { type WorkflowDefinition, type WorkflowFile, WorkflowFileSchema, type WorkflowStepDefinition } from './dynamic-types'
@@ -48,7 +48,8 @@ export type DynamicStepRuntimeContext<TTools extends ToolRegistry> = {
   logger: Logger
   step: StepFn
   runWorkflow: (workflowId: string, input?: Record<string, any>) => Promise<any>
-  toolInfo: Readonly<FullAgentToolInfo[]> | undefined
+  toolInfo: Readonly<FullToolInfo[]> | undefined
+  agentTools: Record<string, (input: any) => Promise<any>>
 }
 
 export type DynamicWorkflowRunnerOptions = {
@@ -56,7 +57,7 @@ export type DynamicWorkflowRunnerOptions = {
    * Tool definitions used when a step does not have persisted `code`
    * and needs to be executed via `agentWorkflow`.
    */
-  toolInfo?: Readonly<FullAgentToolInfo[]>
+  toolInfo?: Readonly<FullToolInfo[]>
   /**
    * Model id forwarded to `agentWorkflow` for agent-executed steps.
    */
@@ -190,7 +191,7 @@ async function executeStepWithAgent<TTools extends ToolRegistry>(
   }
 
   const rawAllowedToolNames = stepDef.tools
-  let toolsForAgent: FullAgentToolInfo[]
+  let toolsForAgent: FullToolInfo[]
 
   if (rawAllowedToolNames) {
     const expandedToolNames = new Set<string>()
@@ -362,6 +363,15 @@ async function executeStepWithTimeout<TTools extends ToolRegistry>(
       const fn = compileStep(stepDef, workflowId, compiledSteps)
       const runWorkflow = createRunWorkflowFn({ input, state, context, runInternal })
 
+      const agentTools: Record<string, (input: any) => Promise<any>> = {}
+      if (options.toolInfo) {
+        for (const tool of options.toolInfo) {
+          if (typeof (context.tools as any)[tool.name] === 'function') {
+            agentTools[tool.name] = (context.tools as any)[tool.name]
+          }
+        }
+      }
+
       const runtimeCtx: DynamicStepRuntimeContext<TTools> = {
         workflowId,
         stepId: stepDef.id,
@@ -372,6 +382,7 @@ async function executeStepWithTimeout<TTools extends ToolRegistry>(
         step: context.step,
         runWorkflow,
         toolInfo: options.toolInfo,
+        agentTools,
       }
 
       const result = await fn(runtimeCtx)

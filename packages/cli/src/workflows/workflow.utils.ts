@@ -4,14 +4,14 @@ import { execSync } from 'node:child_process'
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import { listFiles, loadConfig } from '@polka-codes/cli-shared'
-import type { FullAgentToolInfo, Logger } from '@polka-codes/core'
+import type { FullToolInfo, Logger } from '@polka-codes/core'
 import { z } from 'zod'
 import type { CliToolRegistry } from '../workflow-tools'
 
 export type BaseWorkflowInput = {
   interactive: boolean
   additionalTools: {
-    search?: FullAgentToolInfo
+    search?: FullToolInfo
   }
 }
 

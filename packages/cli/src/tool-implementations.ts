@@ -20,7 +20,7 @@ import {
   askFollowupQuestion,
   computeRateLimitBackoffSeconds,
   executeCommand as executeCommandTool,
-  type FullAgentToolInfo,
+  type FullToolInfo,
   fetchUrl,
   fromJsonModelMessage,
   getTodoItem as getTodoItemTool,
@@ -87,7 +87,7 @@ const allTools = [
   listTodoItemsTool,
   updateTodoItemTool,
 ] as const
-const toolHandlers = new Map<string, FullAgentToolInfo>(allTools.map((t) => [t.name, t]))
+const toolHandlers = new Map<string, FullToolInfo>(allTools.map((t) => [t.name, t]))
 
 type ToolCall<TTools extends ToolRegistry> = {
   [K in keyof TTools]: {

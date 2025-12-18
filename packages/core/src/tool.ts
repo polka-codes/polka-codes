@@ -12,14 +12,14 @@ export type ToolParameter = {
   children?: ToolParameter[]
 }
 
-export type AgentToolInfo = {
+export type ToolInfo = {
   name: string
   description: string
   parameters: z.ZodObject<any>
 }
 
-export type FullAgentToolInfo = AgentToolInfo & {
-  handler: ToolHandler<AgentToolInfo, any>
+export type FullToolInfo = ToolInfo & {
+  handler: ToolHandler<ToolInfo, any>
 }
 
 export enum ToolResponseType {

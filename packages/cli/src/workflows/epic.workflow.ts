@@ -1,7 +1,7 @@
 import {
   agentWorkflow,
   askFollowupQuestion,
-  type FullAgentToolInfo,
+  type FullToolInfo,
   fetchUrl,
   getTodoItem,
   type JsonModelMessage,
@@ -65,7 +65,7 @@ async function createPlan(
     files?: (JsonFilePart | JsonImagePart)[]
     feedback?: string
     messages?: JsonModelMessage[]
-    additionalTools: { search?: FullAgentToolInfo }
+    additionalTools: { search?: FullToolInfo }
   },
   context: WorkflowContext<CliToolRegistry>,
 ) {
@@ -82,7 +82,7 @@ async function createPlan(
     readMemory,
     updateMemory,
     listMemoryTopics,
-  ] as FullAgentToolInfo[]
+  ] as FullToolInfo[]
 
   if (additionalTools.search) {
     agentTools.push(additionalTools.search)
@@ -144,7 +144,7 @@ async function createAndApprovePlan(
   context: WorkflowContext<CliToolRegistry>,
   saveUsageSnapshot: () => Promise<void>,
   interactive = true,
-  additionalTools: { search?: FullAgentToolInfo },
+  additionalTools: { search?: FullToolInfo },
 ): Promise<{ plan: string; branchName: string } | null> {
   const { logger, step, tools } = context
 
@@ -373,7 +373,7 @@ async function performReviewAndFixCycle(
   taskItem: string,
   highLevelPlan: string,
   context: WorkflowContext<CliToolRegistry>,
-  additionalTools: { search?: FullAgentToolInfo },
+  additionalTools: { search?: FullToolInfo },
 ): Promise<{ passed: boolean; commitMessages: string[] }> {
   const { logger, step, tools } = context
   const commitMessages: string[] = []
@@ -503,7 +503,7 @@ async function runImplementationLoop(
   context: WorkflowContext<CliToolRegistry>,
   highLevelPlan: string,
   saveUsageSnapshot: () => Promise<void>,
-  additionalTools: { search?: FullAgentToolInfo },
+  additionalTools: { search?: FullToolInfo },
   noReview?: boolean,
 ): Promise<string[]> {
   const { logger, step, tools } = context
@@ -621,7 +621,7 @@ async function performFinalReviewAndFix(
   context: WorkflowContext<CliToolRegistry>,
   highLevelPlan: string,
   baseBranch: string | undefined,
-  additionalTools: { search?: FullAgentToolInfo },
+  additionalTools: { search?: FullToolInfo },
 ): Promise<{ passed: boolean }> {
   const { logger, step, tools } = context
 

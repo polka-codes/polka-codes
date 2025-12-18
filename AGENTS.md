@@ -85,8 +85,8 @@ The workflow system is the foundation of how tasks are orchestrated:
 ### Tool System
 
 **Tool Definition** (`packages/core/src/tool.ts`):
-- `AgentToolInfo`: Name, description, and Zod schema for parameters
-- `FullAgentToolInfo`: Extends `AgentToolInfo` with handler implementation
+- `ToolInfo`: Name, description, and Zod schema for parameters
+- `FullToolInfo`: Extends `ToolInfo` with handler implementation
 - `AgentToolResponse`: Union of Reply, Exit, or Error responses
 - Tools MUST use `z.object` for parameters (required by AI providers)
 
@@ -171,7 +171,7 @@ The workflow system is the foundation of how tasks are orchestrated:
 - Use `.nullish()` instead of `.optional()` in zod schema unless there is a specific reason to use optional.
 - DO NOT use global variables unless absolutely necessary. Add justification as comment.
 - biome is used for linting and formatting. DO NOT use prettier or eslint
-- AgentToolInfo parameters MUST be z.object required by AI providers
+- ToolInfo parameters MUST be z.object required by AI providers
 - DO NOT have conditional logic such as if-else or try-catch in unit tests. Use .rejects.toThrow() to test for errors.
 - Avoid creating temporary test scripts if possible. Use proper test to confirm the behavior.
 

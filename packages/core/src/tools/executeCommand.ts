@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { type AgentToolInfo, type FullAgentToolInfo, type ToolHandler, ToolResponseType } from '../tool'
+import { type FullToolInfo, type ToolHandler, type ToolInfo, ToolResponseType } from '../tool'
 import type { CommandProvider } from './provider'
 
 export const toolInfo = {
@@ -38,7 +38,7 @@ export const toolInfo = {
         },
       ],
     }),
-} as const satisfies AgentToolInfo
+} as const satisfies ToolInfo
 
 export const handler: ToolHandler<typeof toolInfo, CommandProvider> = async (provider, args) => {
   if (!provider.executeCommand) {
@@ -99,4 +99,4 @@ ${result.stderr}
 export default {
   ...toolInfo,
   handler,
-} satisfies FullAgentToolInfo
+} satisfies FullToolInfo

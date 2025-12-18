@@ -4,7 +4,7 @@ import {
   agentWorkflow,
   askFollowupQuestion,
   executeCommand,
-  type FullAgentToolInfo,
+  type FullToolInfo,
   fetchUrl,
   type JsonUserContent,
   listFiles,
@@ -50,7 +50,7 @@ export type CodeWorkflowInput = {
   task: string
   files?: (JsonFilePart | JsonImagePart)[]
   mode?: 'interactive' | 'noninteractive'
-  customTools?: FullAgentToolInfo[]
+  customTools?: FullToolInfo[]
   additionalInstructions?: string
 }
 
@@ -108,7 +108,7 @@ export const codeWorkflow: WorkflowFn<
     }
   }
 
-  const agentTools: FullAgentToolInfo[] = [
+  const agentTools: FullToolInfo[] = [
     readFile,
     writeToFile,
     replaceInFile,

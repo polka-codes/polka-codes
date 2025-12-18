@@ -3,7 +3,7 @@ import { loadConfig } from '@polka-codes/cli-shared'
 import {
   agentWorkflow,
   executeCommand,
-  type FullAgentToolInfo,
+  type FullToolInfo,
   fetchUrl,
   listFiles,
   readBinaryFile,
@@ -123,7 +123,7 @@ export const fixWorkflow: WorkflowFn<
       const memoryContext = await tools.getMemoryContext()
       const userPrompt = getFixUserPrompt(command, exitCode, stdout, stderr, task, prompt)
 
-      const agentTools: FullAgentToolInfo[] = [
+      const agentTools: FullToolInfo[] = [
         readFile,
         writeToFile,
         replaceInFile,

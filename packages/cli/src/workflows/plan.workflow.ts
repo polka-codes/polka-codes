@@ -2,7 +2,7 @@
 import {
   agentWorkflow,
   askFollowupQuestion,
-  type FullAgentToolInfo,
+  type FullToolInfo,
   fetchUrl,
   type JsonModelMessage,
   type JsonUserContent,
@@ -26,7 +26,7 @@ type CreatePlanInput = {
   files?: (JsonFilePart | JsonImagePart)[]
   interactive: boolean
   messages?: JsonModelMessage[]
-  additionalTools?: { search?: FullAgentToolInfo }
+  additionalTools?: { search?: FullToolInfo }
 }
 
 async function createPlan(input: CreatePlanInput, context: WorkflowContext<CliToolRegistry>) {
@@ -74,7 +74,7 @@ async function createPlan(input: CreatePlanInput, context: WorkflowContext<CliTo
     }
   }
 
-  const agentTools: FullAgentToolInfo[] = [readFile, listFiles, searchFiles, readBinaryFile, fetchUrl]
+  const agentTools: FullToolInfo[] = [readFile, listFiles, searchFiles, readBinaryFile, fetchUrl]
   if (additionalTools?.search) {
     agentTools.push(additionalTools.search)
   }
