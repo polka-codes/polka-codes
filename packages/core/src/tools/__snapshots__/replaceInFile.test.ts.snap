@@ -17,7 +17,7 @@ exports[`replaceInFile tool handler should return no_diff_applied message 1`] = 
 </replace_in_file_result>"
 ,
   },
-  "type": "Error",
+  "success": false,
 }
 `;
 

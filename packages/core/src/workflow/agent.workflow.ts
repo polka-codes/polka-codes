@@ -4,7 +4,7 @@ import type { LanguageModelV2ToolResultOutput } from '@ai-sdk/provider'
 import { jsonSchema, type ToolCallPart, type ToolSet } from 'ai'
 import { toJSONSchema, z } from 'zod'
 import { parseJsonFromMarkdown } from '../Agent/parseJsonFromMarkdown'
-import { type FullToolInfo, type ToolResponse, ToolResponseType } from '../tool'
+import type { FullToolInfo, ToolResponse } from '../tool'
 import type { JsonModelMessage, JsonResponseMessage, JsonUserModelMessage } from './json-ai-types'
 import { type ExitReason, type TaskEvent, TaskEventKind } from './types'
 import type { WorkflowFn } from './workflow'
@@ -166,31 +166,28 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
         })
       })
 
-      switch (toolResponse.type) {
-        case ToolResponseType.Reply:
-          await event(`event-tool-reply-${toolCall.toolName}-${toolCall.toolCallId}`, {
-            kind: TaskEventKind.ToolReply,
-            tool: toolCall.toolName,
-            content: toolResponse.message,
-          })
-          toolResults.push({
-            toolCallId: toolCall.toolCallId,
-            toolName: toolCall.toolName,
-            output: toolResponse.message,
-          })
-          break
-        case ToolResponseType.Error:
-          await event(`event-tool-error-${toolCall.toolName}-${toolCall.toolCallId}`, {
-            kind: TaskEventKind.ToolError,
-            tool: toolCall.toolName,
-            error: toolResponse.message ?? 'Unknown error',
-          })
-          toolResults.push({
-            toolCallId: toolCall.toolCallId,
-            toolName: toolCall.toolName,
-            output: toolResponse.message,
-          })
-          break
+      if (toolResponse.success) {
+        await event(`event-tool-reply-${toolCall.toolName}-${toolCall.toolCallId}`, {
+          kind: TaskEventKind.ToolReply,
+          tool: toolCall.toolName,
+          content: toolResponse.message,
+        })
+        toolResults.push({
+          toolCallId: toolCall.toolCallId,
+          toolName: toolCall.toolName,
+          output: toolResponse.message,
+        })
+      } else {
+        await event(`event-tool-error-${toolCall.toolName}-${toolCall.toolCallId}`, {
+          kind: TaskEventKind.ToolError,
+          tool: toolCall.toolName,
+          error: toolResponse.message ?? 'Unknown error',
+        })
+        toolResults.push({
+          toolCallId: toolCall.toolCallId,
+          toolName: toolCall.toolName,
+          output: toolResponse.message,
+        })
       }
     }
 

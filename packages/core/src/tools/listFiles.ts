@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { type FullToolInfo, type ToolHandler, type ToolInfo, ToolResponseType } from '../tool'
+import type { FullToolInfo, ToolHandler, ToolInfo } from '../tool'
 import type { FilesystemProvider } from './provider'
 
 export const toolInfo = {
@@ -57,7 +57,7 @@ export const toolInfo = {
 export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (provider, args) => {
   if (!provider.listFiles) {
     return {
-      type: ToolResponseType.Error,
+      success: false,
       message: {
         type: 'error-text',
         value: 'Not possible to list files.',
@@ -69,7 +69,7 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
   const [files, limitReached] = await provider.listFiles(path, recursive, maxCount, includeIgnored)
 
   return {
-    type: ToolResponseType.Reply,
+    success: true,
     message: {
       type: 'text',
       value: `<list_files_path>${path}</list_files_path>

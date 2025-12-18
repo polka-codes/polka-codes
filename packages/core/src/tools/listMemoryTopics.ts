@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { type FullToolInfo, type ToolHandler, type ToolInfo, ToolResponseType } from '../tool'
+import type { FullToolInfo, ToolHandler, ToolInfo } from '../tool'
 import type { MemoryProvider } from './provider'
 
 export const toolInfo = {
@@ -11,10 +11,10 @@ export const toolInfo = {
 export const handler: ToolHandler<typeof toolInfo, MemoryProvider> = async (provider, _args) => {
   const topics = await provider.listMemoryTopics()
   if (!topics.length) {
-    return { type: ToolResponseType.Reply, message: { type: 'text', value: 'No topics found.' } }
+    return { success: true, message: { type: 'text', value: 'No topics found.' } }
   }
   return {
-    type: ToolResponseType.Reply,
+    success: true,
     message: {
       type: 'text',
       value: `Memory topics:\n${topics.join('\n')}`,

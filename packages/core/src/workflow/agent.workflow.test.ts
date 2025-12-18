@@ -3,7 +3,7 @@
 import { expect, spyOn, test } from 'bun:test'
 import type { ModelMessage, UserModelMessage } from 'ai'
 import { z } from 'zod'
-import { type FullToolInfo, type ToolResponse, ToolResponseType } from '../'
+import type { FullToolInfo, ToolResponse } from '../'
 import { type AgentToolRegistry, agentWorkflow } from './agent.workflow'
 import { type JsonResponseMessage, toJsonModelMessage } from './json-ai-types'
 import { createContext, type WorkflowTools } from './workflow'
@@ -20,7 +20,7 @@ const createMockTool = (name: string, description: string, handler: (args: any) 
 const listFilesTool = createMockTool('listFiles', 'List files in a directory', async ({ path }: { path: string }) => {
   if (path === './src') {
     return {
-      type: ToolResponseType.Reply,
+      success: true,
       message: {
         type: 'json',
         value: ['index.ts', 'agent.workflow.ts'],
@@ -28,7 +28,7 @@ const listFilesTool = createMockTool('listFiles', 'List files in a directory', a
     }
   }
   return {
-    type: ToolResponseType.Reply,
+    success: true,
     message: { type: 'json', value: [] },
   }
 })

@@ -1,4 +1,4 @@
-import type { ToolResponseError, ToolResponseResult } from '../tool'
+import type { ToolResponseResult } from '../tool'
 import type { JsonModelMessage } from './json-ai-types'
 
 /**
@@ -74,7 +74,7 @@ export interface TaskEventToolResult extends TaskEventBase {
 export interface TaskEventToolError extends TaskEventBase {
   kind: TaskEventKind.ToolError
   tool: string
-  error: ToolResponseError | ToolResponseResult
+  error: ToolResponseResult
 }
 
 /**

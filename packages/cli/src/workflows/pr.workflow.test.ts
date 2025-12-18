@@ -2,7 +2,7 @@
 
 import { expect, mock, test } from 'bun:test'
 import type { WorkflowContext } from '@polka-codes/core'
-import { createContext, ToolResponseType } from '@polka-codes/core'
+import { createContext } from '@polka-codes/core'
 import type { CliToolRegistry } from '../workflow-tools'
 import { prWorkflow } from './pr.workflow'
 
@@ -30,7 +30,7 @@ const createMockContext = () => {
     select: mock(async () => ''),
     writeToFile: mock(async () => {}),
     readFile: mock(async () => ''),
-    invokeTool: mock(async () => ({ type: ToolResponseType.Reply, message: { type: 'text', value: '' } })),
+    invokeTool: mock(async () => ({ success: true, message: { type: 'text', value: '' } })),
   }
 
   const run = (input: any) => {

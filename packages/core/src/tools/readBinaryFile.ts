@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { type FullToolInfo, type ToolHandler, type ToolInfo, ToolResponseType } from '../tool'
+import type { FullToolInfo, ToolHandler, ToolInfo } from '../tool'
 import type { FilesystemProvider } from './provider'
 
 export const toolInfo = {
@@ -14,7 +14,7 @@ export const toolInfo = {
 export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (provider, args) => {
   if (!provider.readBinaryFile) {
     return {
-      type: ToolResponseType.Error,
+      success: false,
       message: {
         type: 'error-text',
         value: 'Not possible to fetch files. Abort.',
@@ -28,7 +28,7 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
     const filePart = await provider.readBinaryFile(url)
 
     return {
-      type: ToolResponseType.Reply,
+      success: true,
       message: {
         type: 'content',
         value: [
@@ -44,7 +44,7 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     return {
-      type: ToolResponseType.Error,
+      success: false,
       message: {
         type: 'error-text',
         value: `Error fetching file from ${url}: ${errorMessage}`,

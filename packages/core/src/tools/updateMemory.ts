@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { type FullToolInfo, type ToolHandler, type ToolInfo, ToolResponseType } from '../tool'
+import type { FullToolInfo, ToolHandler, ToolInfo } from '../tool'
 import type { MemoryProvider } from './provider'
 
 export const toolInfo = {
@@ -36,7 +36,7 @@ export const toolInfo = {
 export const handler: ToolHandler<typeof toolInfo, MemoryProvider> = async (provider, args) => {
   if (!provider.updateMemory) {
     return {
-      type: ToolResponseType.Error,
+      success: false,
       message: {
         type: 'error-text',
         value: 'Memory operations are not supported by the current provider.',
@@ -50,7 +50,7 @@ export const handler: ToolHandler<typeof toolInfo, MemoryProvider> = async (prov
   switch (params.operation) {
     case 'append':
       return {
-        type: ToolResponseType.Reply,
+        success: true,
         message: {
           type: 'text',
           value: `Content appended to memory topic '${params.topic || ':default:'}'.`,
@@ -58,7 +58,7 @@ export const handler: ToolHandler<typeof toolInfo, MemoryProvider> = async (prov
       }
     case 'replace':
       return {
-        type: ToolResponseType.Reply,
+        success: true,
         message: {
           type: 'text',
           value: `Memory topic '${params.topic || ':default:'}' replaced.`,
@@ -66,7 +66,7 @@ export const handler: ToolHandler<typeof toolInfo, MemoryProvider> = async (prov
       }
     case 'remove':
       return {
-        type: ToolResponseType.Reply,
+        success: true,
         message: {
           type: 'text',
           value: `Memory topic '${params.topic || ':default:'}' removed.`,

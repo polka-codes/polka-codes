@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { type FullToolInfo, type ToolHandler, type ToolInfo, ToolResponseType } from '../tool'
+import type { FullToolInfo, ToolHandler, ToolInfo } from '../tool'
 import type { WebProvider } from './provider'
 
 export const toolInfo = {
@@ -39,7 +39,7 @@ export const handler: ToolHandler<typeof toolInfo, WebProvider> = async (provide
 
   if (!provider.search) {
     return {
-      type: ToolResponseType.Error,
+      success: false,
       message: {
         type: 'text',
         value: 'This tool requires a web provider to be installed.',
@@ -48,7 +48,7 @@ export const handler: ToolHandler<typeof toolInfo, WebProvider> = async (provide
   }
   const result = await provider.search(query)
   return {
-    type: ToolResponseType.Reply,
+    success: true,
     message: {
       type: 'text',
       value: result,

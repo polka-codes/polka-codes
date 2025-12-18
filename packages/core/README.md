@@ -30,7 +30,6 @@ import {
   createContext,
   makeStepFn,
   type ToolResponse,
-  ToolResponseType,
 } from '@polka-codes/core';
 import { z } from 'zod';
 
@@ -52,10 +51,10 @@ async function main() {
         const { location } = input as z.infer<typeof getCurrentWeather.parameters>;
         // In a real app, you would call a weather API here
         const weather = `The weather in ${location} is 70°F and sunny.`;
-        const response: ToolResponse = { type: ToolResponseType.Reply, message: weather };
+        const response: ToolResponse = { success: true, message: { type: 'text', value: weather } };
         return response;
       }
-      const response: ToolResponse = { type: ToolResponseType.Error, message: 'Tool not found' };
+      const response: ToolResponse = { success: false, message: { type: 'error-text', value: 'Tool not found' } };
       return response;
     },
     // A simple text generation function

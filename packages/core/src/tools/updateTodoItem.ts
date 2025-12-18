@@ -1,4 +1,4 @@
-import { type FullToolInfo, type ToolHandler, type ToolInfo, ToolResponseType } from '../tool'
+import type { FullToolInfo, ToolHandler, ToolInfo } from '../tool'
 import type { TodoProvider } from './provider'
 import { UpdateTodoItemInputSchema } from './todo'
 
@@ -11,7 +11,7 @@ export const toolInfo = {
 export const handler: ToolHandler<typeof toolInfo, TodoProvider> = async (provider, args) => {
   if (!provider.updateTodoItem) {
     return {
-      type: ToolResponseType.Error,
+      success: false,
       message: {
         type: 'error-text',
         value: 'Not possible to update a to-do item.',
@@ -21,7 +21,7 @@ export const handler: ToolHandler<typeof toolInfo, TodoProvider> = async (provid
   const input = toolInfo.parameters.parse(args)
   const result = await provider.updateTodoItem(input)
   return {
-    type: ToolResponseType.Reply,
+    success: true,
     message: {
       type: 'json',
       value: result,

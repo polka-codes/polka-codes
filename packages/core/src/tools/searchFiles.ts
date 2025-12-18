@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { type FullToolInfo, type ToolHandler, type ToolInfo, ToolResponseType } from '../tool'
+import type { FullToolInfo, ToolHandler, ToolInfo } from '../tool'
 import type { FilesystemProvider } from './provider'
 
 export const toolInfo = {
@@ -44,7 +44,7 @@ export const toolInfo = {
 export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (provider, args) => {
   if (!provider.searchFiles) {
     return {
-      type: ToolResponseType.Error,
+      success: false,
       message: {
         type: 'error-text',
         value: 'Not possible to search files.',
@@ -55,7 +55,7 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
   const parsed = toolInfo.parameters.safeParse(args)
   if (!parsed.success) {
     return {
-      type: ToolResponseType.Error,
+      success: false,
       message: {
         type: 'error-text',
         value: `Invalid arguments for searchFiles: ${parsed.error.message}`,
@@ -68,7 +68,7 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
     const files = await provider.searchFiles(path, regex, filePattern ?? '*')
 
     return {
-      type: ToolResponseType.Reply,
+      success: true,
       message: {
         type: 'text',
         value: `<search_files_path>${path}</search_files_path>
@@ -82,7 +82,7 @@ ${files.join('\n')}
     }
   } catch (error) {
     return {
-      type: ToolResponseType.Error,
+      success: false,
       message: {
         type: 'error-text',
         value: `Error searching files: ${error}`,

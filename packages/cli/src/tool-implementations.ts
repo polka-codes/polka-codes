@@ -40,7 +40,6 @@ import {
   type TaskEventCallback,
   TaskEventKind,
   type ToolRegistry,
-  ToolResponseType,
   toJsonModelMessage,
   updateMemory as updateMemoryTool,
   updateTodoItem as updateTodoItemTool,
@@ -385,7 +384,7 @@ async function invokeTool(input: { toolName: string; input: any }, context: Tool
   const tool = toolHandlers.get(input.toolName as any)
   if (!tool) {
     return {
-      type: ToolResponseType.Error,
+      success: false,
       message: {
         type: 'error-text',
         value: `Tool not found: ${input.toolName}`,
@@ -397,7 +396,7 @@ async function invokeTool(input: { toolName: string; input: any }, context: Tool
     return result
   } catch (error: any) {
     return {
-      type: ToolResponseType.Error,
+      success: false,
       message: {
         type: 'error-text',
         value: error?.message ?? `${error}`,

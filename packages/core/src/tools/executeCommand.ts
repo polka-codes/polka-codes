@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { type FullToolInfo, type ToolHandler, type ToolInfo, ToolResponseType } from '../tool'
+import type { FullToolInfo, ToolHandler, ToolInfo } from '../tool'
 import type { CommandProvider } from './provider'
 
 export const toolInfo = {
@@ -43,7 +43,7 @@ export const toolInfo = {
 export const handler: ToolHandler<typeof toolInfo, CommandProvider> = async (provider, args) => {
   if (!provider.executeCommand) {
     return {
-      type: ToolResponseType.Error,
+      success: false,
       message: {
         type: 'error-text',
         value: 'Not possible to execute command. Abort.',
@@ -71,7 +71,7 @@ ${result.stderr}
 
     if (result.exitCode === 0) {
       return {
-        type: ToolResponseType.Reply,
+        success: true,
         message: {
           type: 'text',
           value: message,
@@ -79,7 +79,7 @@ ${result.stderr}
       }
     }
     return {
-      type: ToolResponseType.Error,
+      success: false,
       message: {
         type: 'error-text',
         value: message,
@@ -87,7 +87,7 @@ ${result.stderr}
     }
   } catch (error) {
     return {
-      type: ToolResponseType.Error,
+      success: false,
       message: {
         type: 'error-text',
         value: error instanceof Error ? error.message : String(error),

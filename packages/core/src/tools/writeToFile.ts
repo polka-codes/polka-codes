@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { type FullToolInfo, type ToolHandler, type ToolInfo, ToolResponseType } from '../tool'
+import type { FullToolInfo, ToolHandler, ToolInfo } from '../tool'
 import type { FilesystemProvider } from './provider'
 
 export const toolInfo = {
@@ -43,7 +43,7 @@ export default App;
 export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (provider, args) => {
   if (!provider.writeFile) {
     return {
-      type: ToolResponseType.Error,
+      success: false,
       message: {
         type: 'error-text',
         value: 'Not possible to write file.',
@@ -54,7 +54,7 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
   const parsed = toolInfo.parameters.safeParse(args)
   if (!parsed.success) {
     return {
-      type: ToolResponseType.Error,
+      success: false,
       message: {
         type: 'error-text',
         value: `Invalid arguments for writeToFile: ${parsed.error.message}`,
@@ -71,7 +71,7 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
   await provider.writeFile(path, content)
 
   return {
-    type: ToolResponseType.Reply,
+    success: true,
     message: {
       type: 'text',
       value: `<write_to_file_path>${path}</write_to_file_path><status>Success</status>`,

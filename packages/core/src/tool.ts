@@ -22,11 +22,6 @@ export type FullToolInfo = ToolInfo & {
   handler: ToolHandler<ToolInfo, any>
 }
 
-export enum ToolResponseType {
-  Reply = 'Reply',
-  Error = 'Error',
-}
-
 export type ToolResponseResultMedia = {
   type: 'media'
   data: string // base64 encoded
@@ -63,19 +58,9 @@ export type ToolResponseResult =
       >
     }
 
-// Reply to the tool use
-export type ToolResponseReply = {
-  type: ToolResponseType.Reply
+export type ToolResponse = {
+  success: boolean
   message: ToolResponseResult
 }
-
-// Some error occurred when executing the tool
-// e.g. network request error, IO error
-export type ToolResponseError = {
-  type: ToolResponseType.Error
-  message: ToolResponseResult
-}
-
-export type ToolResponse = ToolResponseReply | ToolResponseError
 
 export type ToolHandler<_T, P> = (provider: P, args: Partial<Record<string, ToolParameterValue>>) => Promise<ToolResponse>

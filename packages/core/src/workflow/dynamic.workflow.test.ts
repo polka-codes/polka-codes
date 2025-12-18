@@ -1,5 +1,4 @@
 import { expect, test } from 'bun:test'
-import { ToolResponseType } from '../tool'
 import { createDynamicWorkflow } from './dynamic'
 import { createContext, makeStepFn, type ToolRegistry } from './workflow'
 
@@ -118,7 +117,7 @@ workflows:
     },
     taskEvent: async () => {},
     invokeTool: async () => {
-      return { type: ToolResponseType.Error, message: { type: 'error-text', value: 'Should not be called directly' } }
+      return { success: false, message: { type: 'error-text', value: 'Should not be called directly' } }
     },
   }
 
@@ -188,7 +187,7 @@ workflows:
     },
     taskEvent: async () => {},
     invokeTool: async () => {
-      return { type: ToolResponseType.Error, message: { type: 'error-text', value: 'Should not be called directly' } }
+      return { success: false, message: { type: 'error-text', value: 'Should not be called directly' } }
     },
   }
 

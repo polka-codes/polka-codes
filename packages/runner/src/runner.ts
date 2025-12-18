@@ -16,7 +16,6 @@ import {
   responsePrompts,
   searchFiles,
   type ToolResponseResult,
-  ToolResponseType,
   writeToFile,
 } from '@polka-codes/core'
 import type { UserContent, WsIncomingMessage } from './types'
@@ -184,7 +183,7 @@ export class Runner {
               }
               return resp
             }
-            if (resp.type === ToolResponseType.Reply) {
+            if (resp.success) {
               return responsePrompts.toolResults(request.tool, processResponse(resp.message))
             }
             return {

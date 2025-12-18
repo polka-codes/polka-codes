@@ -2,7 +2,6 @@ import { parse } from 'yaml'
 import { z } from 'zod'
 import { parseJsonFromMarkdown } from '../Agent/parseJsonFromMarkdown'
 import type { FullToolInfo, ToolResponseResult } from '../tool'
-import { ToolResponseType } from '../tool'
 import { type AgentToolRegistry, agentWorkflow } from './agent.workflow'
 import { type WorkflowDefinition, type WorkflowFile, WorkflowFileSchema, type WorkflowStepDefinition } from './dynamic-types'
 import type { Logger, StepFn, ToolRegistry, WorkflowContext, WorkflowTools } from './workflow'
@@ -229,7 +228,7 @@ async function executeStepWithAgent<TTools extends ToolRegistry>(
         input: z.any().nullish().describe('Optional input object for the sub-workflow'),
       }),
       handler: async () => {
-        return { type: ToolResponseType.Error, message: { type: 'error-text', value: 'runWorkflow is virtual.' } }
+        return { success: false, message: { type: 'error-text', value: 'runWorkflow is virtual.' } }
       },
     })
   }
@@ -271,7 +270,7 @@ async function executeStepWithAgent<TTools extends ToolRegistry>(
     invokeTool: async ({ toolName, input: toolInput }: { toolName: string; input: any }) => {
       if (!allowedToolNameSet.has(toolName)) {
         return {
-          type: ToolResponseType.Error,
+          success: false,
           message: { type: 'error-text', value: `Tool '${toolName}' is not allowed in this step.` },
         }
       }
@@ -281,17 +280,17 @@ async function executeStepWithAgent<TTools extends ToolRegistry>(
         const subInput = toolInput?.input
         if (typeof subWorkflowId !== 'string') {
           return {
-            type: ToolResponseType.Error,
+            success: false,
             message: { type: 'error-text', value: 'runWorkflow.workflowId must be a string.' },
           }
         }
         try {
           const output = await runWorkflow(subWorkflowId, subInput)
           const jsonResult: ToolResponseResult = { type: 'json', value: output as any }
-          return { type: ToolResponseType.Reply, message: jsonResult }
+          return { success: true, message: jsonResult }
         } catch (error) {
           return {
-            type: ToolResponseType.Error,
+            success: false,
             message: { type: 'error-text', value: error instanceof Error ? error.message : String(error) },
           }
         }

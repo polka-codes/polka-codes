@@ -2,7 +2,7 @@
 // Tool for renaming files in the filesystem
 
 import { z } from 'zod'
-import { type FullToolInfo, type ToolHandler, type ToolInfo, ToolResponseType } from '../tool'
+import type { FullToolInfo, ToolHandler, ToolInfo } from '../tool'
 import type { FilesystemProvider } from './provider'
 
 export const toolInfo = {
@@ -29,7 +29,7 @@ export const toolInfo = {
 export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (provider, args) => {
   if (!provider.renameFile) {
     return {
-      type: ToolResponseType.Error,
+      success: false,
       message: {
         type: 'error-text',
         value: 'Not possible to rename file.',
@@ -41,7 +41,7 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
   await provider.renameFile(source_path, target_path)
 
   return {
-    type: ToolResponseType.Reply,
+    success: true,
     message: {
       type: 'text',
       value: `<rename_file_path>${target_path}</rename_file_path><status>Success</status>`,

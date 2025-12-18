@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { type FullToolInfo, type ToolHandler, type ToolInfo, ToolResponseType } from '../tool'
+import type { FullToolInfo, ToolHandler, ToolInfo } from '../tool'
 import type { TodoProvider } from './provider'
 import { TodoStatus } from './todo'
 
@@ -15,7 +15,7 @@ export const toolInfo = {
 export const handler: ToolHandler<typeof toolInfo, TodoProvider> = async (provider, args) => {
   if (!provider.listTodoItems) {
     return {
-      type: ToolResponseType.Error,
+      success: false,
       message: {
         type: 'error-text',
         value: 'Not possible to list to-do items.',
@@ -26,7 +26,7 @@ export const handler: ToolHandler<typeof toolInfo, TodoProvider> = async (provid
   const items = await provider.listTodoItems(id, status)
 
   return {
-    type: ToolResponseType.Reply,
+    success: true,
     message: {
       type: 'json',
       value: items,

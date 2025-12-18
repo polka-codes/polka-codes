@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { type FullToolInfo, type ToolHandler, type ToolInfo, ToolResponseType } from '../tool'
+import type { FullToolInfo, ToolHandler, ToolInfo } from '../tool'
 import type { InteractionProvider } from './provider'
 
 const questionObject = z.object({
@@ -71,7 +71,7 @@ export const toolInfo = {
 export const handler: ToolHandler<typeof toolInfo, InteractionProvider> = async (provider, args) => {
   if (!provider.askFollowupQuestion) {
     return {
-      type: ToolResponseType.Error,
+      success: false,
       message: {
         type: 'error-text',
         value: 'Not possible to ask followup question.',
@@ -82,7 +82,7 @@ export const handler: ToolHandler<typeof toolInfo, InteractionProvider> = async 
   const { questions } = toolInfo.parameters.parse(args)
   if (questions.length === 0) {
     return {
-      type: ToolResponseType.Error,
+      success: false,
       message: {
         type: 'error-text',
         value: 'No questions provided',
@@ -100,7 +100,7 @@ ${answer}
   }
 
   return {
-    type: ToolResponseType.Reply,
+    success: true,
     message: {
       type: 'text',
       value: answers.join('\n'),
