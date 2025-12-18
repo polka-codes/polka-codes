@@ -5,11 +5,11 @@ import { dirname } from 'node:path'
 import type { LanguageModelV2 } from '@ai-sdk/provider'
 import { confirm as inquirerConfirm, select as inquirerSelect } from '@inquirer/prompts'
 import type {
-  AgentToolResponse,
   AgentWorkflowInput,
   MemoryProvider,
   TodoItem,
   TodoProvider,
+  ToolResponse,
   UpdateTodoItemInput,
   UpdateTodoItemOutput,
   UsageMeter,
@@ -381,7 +381,7 @@ async function generateText(input: { messages: JsonModelMessage[]; tools: ToolSe
   throw new Error(`Failed to get a response from the model after ${retryCount} retries.`)
 }
 
-async function invokeTool(input: { toolName: string; input: any }, context: ToolCallContext): Promise<AgentToolResponse> {
+async function invokeTool(input: { toolName: string; input: any }, context: ToolCallContext): Promise<ToolResponse> {
   const tool = toolHandlers.get(input.toolName as any)
   if (!tool) {
     return {

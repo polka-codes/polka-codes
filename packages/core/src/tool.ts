@@ -85,6 +85,6 @@ export type ToolResponseError = {
   message: ToolResponseResult
 }
 
-export type AgentToolResponse = ToolResponseReply | ToolResponseExit | ToolResponseError
+export type ToolResponse = ToolResponseReply | ToolResponseExit | ToolResponseError
 
-export type ToolHandler<_T, P> = (provider: P, args: Partial<Record<string, ToolParameterValue>>) => Promise<AgentToolResponse>
+export type ToolHandler<_T, P> = (provider: P, args: Partial<Record<string, ToolParameterValue>>) => Promise<ToolResponse>

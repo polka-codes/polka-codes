@@ -3,12 +3,12 @@
 import { expect, spyOn, test } from 'bun:test'
 import type { ModelMessage, UserModelMessage } from 'ai'
 import { z } from 'zod'
-import { type AgentToolResponse, type FullToolInfo, ToolResponseType } from '../'
+import { type FullToolInfo, type ToolResponse, ToolResponseType } from '../'
 import { type AgentToolRegistry, agentWorkflow } from './agent.workflow'
 import { type JsonResponseMessage, toJsonModelMessage } from './json-ai-types'
 import { createContext, type WorkflowTools } from './workflow'
 
-const createMockTool = (name: string, description: string, handler: (args: any) => Promise<AgentToolResponse>): FullToolInfo => ({
+const createMockTool = (name: string, description: string, handler: (args: any) => Promise<ToolResponse>): FullToolInfo => ({
   name,
   description,
   parameters: z.object({

@@ -87,7 +87,7 @@ The workflow system is the foundation of how tasks are orchestrated:
 **Tool Definition** (`packages/core/src/tool.ts`):
 - `ToolInfo`: Name, description, and Zod schema for parameters
 - `FullToolInfo`: Extends `ToolInfo` with handler implementation
-- `AgentToolResponse`: Union of Reply, Exit, or Error responses
+- `ToolResponse`: Union of Reply, Exit, or Error responses
 - Tools MUST use `z.object` for parameters (required by AI providers)
 
 **Tool Implementation Patterns** (`packages/cli/src/tool-implementations.ts`):

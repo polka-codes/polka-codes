@@ -55,7 +55,7 @@ type ToolResponseResult =
   | { type: 'error-json'; value: any }
   | { type: 'content'; value: any[] }
 
-type AgentToolResponse =
+type ToolResponse =
   | { type: 'Reply'; message: ToolResponseResult }
   | { type: 'Exit'; message: string; object?: any }
   | { type: 'Error'; message: ToolResponseResult }
