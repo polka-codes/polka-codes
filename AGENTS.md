@@ -174,6 +174,7 @@ The workflow system is the foundation of how tasks are orchestrated:
 - ToolInfo parameters MUST be z.object required by AI providers
 - DO NOT have conditional logic such as if-else or try-catch in unit tests. Use .rejects.toThrow() to test for errors.
 - Avoid creating temporary test scripts if possible. Use proper test to confirm the behavior.
+- Usage of typeof is code smell. Everything should be strongly typed. Exceptions are allowed but must be justified.
 
 ## Important Implementation Notes
 
