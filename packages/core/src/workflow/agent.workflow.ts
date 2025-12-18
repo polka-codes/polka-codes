@@ -191,27 +191,6 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
             output: toolResponse.message,
           })
           break
-        case 'Exit': {
-          if (toolCalls.length > 1) {
-            toolResults.push({
-              toolCallId: toolCall.toolCallId,
-              toolName: toolCall.toolName,
-              output: {
-                type: 'error-text',
-                value: `Error: The tool '${toolCall.toolName}' must be called alone, but it was called with other tools.`,
-              },
-            })
-            break
-          }
-          if (toolResults.length > 0) {
-            // Another tool already ran.
-            break
-          }
-          // Otherwise, it's a clean exit.
-          const exitReason: ExitReason = { ...toolResponse, messages }
-          await event('end-task', { kind: TaskEventKind.EndTask, exitReason })
-          return exitReason
-        }
       }
     }
 

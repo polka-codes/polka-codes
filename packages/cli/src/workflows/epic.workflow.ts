@@ -15,7 +15,6 @@ import {
   readMemory,
   searchFiles,
   type TodoItem,
-  ToolResponseType,
   UsageMeter,
   updateMemory,
   updateTodoItem,
@@ -159,7 +158,7 @@ async function createAndApprovePlan(
       messages = planAgentResult.messages
       planAttempt++
 
-      if (planAgentResult.type !== ToolResponseType.Exit) {
+      if (planAgentResult.type !== 'Exit') {
         logger.error(`Plan creation failed. Agent exited with status: ${planAgentResult.type}`)
         return null
       }
@@ -410,7 +409,7 @@ async function performReviewAndFixCycle(
       )
     })
 
-    if (reviewAgentResult.type !== ToolResponseType.Exit) {
+    if (reviewAgentResult.type !== 'Exit') {
       logger.error(`Review agent failed with status: ${reviewAgentResult.type}.`)
       break
     }
@@ -674,7 +673,7 @@ async function performFinalReviewAndFix(
       )
     })
 
-    if (reviewAgentResult.type !== ToolResponseType.Exit) {
+    if (reviewAgentResult.type !== 'Exit') {
       logger.error(`Review agent failed with status: ${reviewAgentResult.type}.`)
       break
     }

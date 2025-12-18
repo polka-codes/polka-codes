@@ -33,11 +33,6 @@ const listFilesTool = createMockTool('listFiles', 'List files in a directory', a
   }
 })
 
-const exitTool = createMockTool('exitTool', 'Exit the workflow', async () => ({
-  type: ToolResponseType.Exit,
-  message: 'Workflow exited',
-}))
-
 test('should run agent workflow with a tool call and reply', async () => {
   const mockResponses: ModelMessage[] = [
     {
@@ -89,58 +84,8 @@ test('should run agent workflow with a tool call and reply', async () => {
   )
 
   expect(result).toMatchObject({
-    type: ToolResponseType.Exit,
+    type: 'Exit',
     message: 'The files are index.ts and agent.workflow.ts',
-  })
-})
-
-test('should exit when a tool returns an Exit response', async () => {
-  const mockResponses: ModelMessage[] = [
-    {
-      role: 'assistant',
-      content: [
-        {
-          type: 'tool-call',
-          toolCallId: 'tool-call-1',
-          toolName: 'exitTool',
-          input: {},
-        },
-      ],
-    },
-  ]
-
-  const allTools = [exitTool]
-  const spied = { fn: (_: any) => {} }
-  const taskEventSpy = spyOn(spied, 'fn')
-
-  const tools: WorkflowTools<AgentToolRegistry> = {
-    generateText: async () => {
-      const response = mockResponses.shift()
-      return [response!] as JsonResponseMessage[]
-    },
-    invokeTool: async (input) => {
-      const { toolName, input: toolInput } = input
-      const toolInfo = allTools.find((t) => t.name === toolName)
-      if (!toolInfo) throw new Error(`Tool not found: ${toolName}`)
-      return toolInfo.handler({} as any, toolInput)
-    },
-    taskEvent: async (input) => {
-      taskEventSpy(input)
-    },
-  }
-
-  const result = await agentWorkflow(
-    {
-      userMessage: [toJsonModelMessage({ role: 'user', content: 'Please exit.' })] as any,
-      tools: allTools,
-      systemPrompt: 'You are a helpful assistant.',
-    },
-    createContext(tools),
-  )
-
-  expect(result).toMatchObject({
-    type: ToolResponseType.Exit,
-    message: 'Workflow exited',
   })
 })
 

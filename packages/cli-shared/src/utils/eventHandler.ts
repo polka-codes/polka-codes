@@ -1,6 +1,6 @@
 import { Console } from 'node:console'
 import type { Writable } from 'node:stream'
-import { type TaskEvent, TaskEventKind, ToolResponseType, type UsageMeter } from '@polka-codes/core'
+import { type TaskEvent, TaskEventKind, type UsageMeter } from '@polka-codes/core'
 import chalk from 'chalk'
 import { simplifyToolParameters } from './parameterSimplifier'
 
@@ -186,11 +186,6 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter, stream: Writ
             }
             break
           }
-          case ToolResponseType.Exit:
-            if (verbose > 0) {
-              customConsole.log('Exit Message:', event.exitReason.message)
-            }
-            break
         }
         for (const [tool, taskStats] of taskToolCallStats.entries()) {
           const globalStats = globalToolCallStats.get(tool) ?? { calls: 0, success: 0, errors: 0 }

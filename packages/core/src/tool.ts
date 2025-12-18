@@ -24,7 +24,6 @@ export type FullToolInfo = ToolInfo & {
 
 export enum ToolResponseType {
   Reply = 'Reply',
-  Exit = 'Exit',
   Error = 'Error',
 }
 
@@ -70,14 +69,6 @@ export type ToolResponseReply = {
   message: ToolResponseResult
 }
 
-// Should end the message thread
-// e.g. task completed successfully
-export type ToolResponseExit = {
-  type: ToolResponseType.Exit
-  message: string
-  object?: any
-}
-
 // Some error occurred when executing the tool
 // e.g. network request error, IO error
 export type ToolResponseError = {
@@ -85,6 +76,6 @@ export type ToolResponseError = {
   message: ToolResponseResult
 }
 
-export type ToolResponse = ToolResponseReply | ToolResponseExit | ToolResponseError
+export type ToolResponse = ToolResponseReply | ToolResponseError
 
 export type ToolHandler<_T, P> = (provider: P, args: Partial<Record<string, ToolParameterValue>>) => Promise<ToolResponse>
