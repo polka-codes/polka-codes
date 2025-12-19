@@ -96,7 +96,7 @@ async function createPlan(
   }
 
   // Starting a new conversation
-  const defaultContext = await getDefaultContext()
+  const defaultContext = await getDefaultContext('epic')
   const memoryContext = await tools.getMemoryContext()
   const prompt = `${memoryContext}\n${getPlanPrompt(task, plan)}\n\n${defaultContext}`
   const content: JsonUserContent = [{ type: 'text', text: prompt }]
@@ -389,7 +389,7 @@ async function performReviewAndFixCycle(
     }
 
     const reviewAgentResult = await step(`review-${iterationCount}-${i}`, { retry: 1 }, async () => {
-      const defaultContext = await getDefaultContext()
+      const defaultContext = await getDefaultContext('review')
       const memoryContext = await tools.getMemoryContext()
       const userMessage = `${defaultContext}\n${memoryContext}\n\n${formatReviewToolInput(changeInfo)}`
       return await agentWorkflow(
@@ -653,7 +653,7 @@ async function performFinalReviewAndFix(
     }
 
     const reviewAgentResult = await step(`final-review-${i}`, async () => {
-      const defaultContext = await getDefaultContext()
+      const defaultContext = await getDefaultContext('review')
       const memoryContext = await tools.getMemoryContext()
       const userMessage = `${defaultContext}\n${memoryContext}\n\n${formatReviewToolInput(changeInfo)}`
       return await agentWorkflow(

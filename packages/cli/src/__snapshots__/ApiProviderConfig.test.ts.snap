@@ -43,6 +43,7 @@ exports[`ApiProviderConfig getConfigForCommand resolves parameters correctly 1`]
   },
   "project": undefined,
   "provider": "anthropic",
+  "rules": undefined,
 }
 `;
 
@@ -61,6 +62,7 @@ exports[`ApiProviderConfig getConfigForCommand resolves parameters correctly 2`]
   },
   "project": undefined,
   "provider": "anthropic",
+  "rules": undefined,
 }
 `;
 
@@ -79,6 +81,7 @@ exports[`ApiProviderConfig getConfigForCommand resolves parameters correctly 3`]
   },
   "project": undefined,
   "provider": "anthropic",
+  "rules": undefined,
 }
 `;
 
@@ -102,6 +105,7 @@ exports[`ApiProviderConfig handles missing providers gracefully 1`] = `
   "parameters": {},
   "project": undefined,
   "provider": "anthropic",
+  "rules": undefined,
 }
 `;
 
@@ -142,6 +146,7 @@ exports[`ApiProviderConfig resolves toolFormat correctly for commands 1`] = `
   "parameters": {},
   "project": undefined,
   "provider": "anthropic",
+  "rules": undefined,
 }
 `;
 
@@ -156,6 +161,7 @@ exports[`ApiProviderConfig resolves toolFormat correctly for commands 2`] = `
   "parameters": {},
   "project": undefined,
   "provider": "openrouter",
+  "rules": undefined,
 }
 `;
 
@@ -170,6 +176,7 @@ exports[`ApiProviderConfig resolves toolFormat correctly for commands 3`] = `
   "parameters": {},
   "project": undefined,
   "provider": "anthropic",
+  "rules": undefined,
 }
 `;
 
@@ -184,6 +191,7 @@ exports[`ApiProviderConfig resolves toolFormat correctly for commands 4`] = `
   "parameters": {},
   "project": undefined,
   "provider": "openrouter",
+  "rules": undefined,
 }
 `;
 
@@ -198,5 +206,6 @@ exports[`ApiProviderConfig should correctly read Google Vertex provider config 1
   "parameters": {},
   "project": "my-gcp-project",
   "provider": "google-vertex",
+  "rules": undefined,
 }
 `;

@@ -286,4 +286,27 @@ describe('ApiProviderConfig', () => {
     expect(resolved?.model).toBe('gpt-3.5-turbo')
     expect(resolved?.parameters).toEqual({ temperature: 0.7, max_tokens: 100 })
   })
+
+  test('resolves rules for commands', () => {
+    const config: Config = {
+      defaultProvider: AiProvider.Anthropic,
+      commands: {
+        default: {
+          rules: 'default rules',
+        },
+        task: {
+          rules: ['rule1', 'rule2'],
+        },
+        code: {
+          // Should inherit default rules
+        },
+      },
+    }
+
+    const apiConfig = new ApiProviderConfig(config)
+
+    expect(apiConfig.getConfigForCommand('default')?.rules).toBe('default rules')
+    expect(apiConfig.getConfigForCommand('task')?.rules).toEqual(['rule1', 'rule2'])
+    expect(apiConfig.getConfigForCommand('code')?.rules).toBe('default rules')
+  })
 })

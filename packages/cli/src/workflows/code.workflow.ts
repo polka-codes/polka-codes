@@ -131,7 +131,7 @@ export const codeWorkflow: WorkflowFn<
   }
 
   const res = await step('implement', async () => {
-    const defaultContext = await getDefaultContext()
+    const defaultContext = await getDefaultContext('code')
     const memoryContext = await tools.getMemoryContext()
     const textContent = userContent.find((c) => c.type === 'text')
     if (textContent && textContent.type === 'text') {

@@ -11,6 +11,7 @@ exports[`ApiProviderConfig getConfigForCommand with command-specific config 1`] 
   "parameters": {},
   "project": undefined,
   "provider": "deepseek",
+  "rules": undefined,
 }
 `;
 
@@ -25,6 +26,7 @@ exports[`ApiProviderConfig getConfigForCommand falls back to default provider 1`
   "parameters": {},
   "project": undefined,
   "provider": "anthropic",
+  "rules": undefined,
 }
 `;
 
@@ -39,6 +41,7 @@ exports[`parseOptions prioritizes CLI flags over env vars and config 1`] = `
   "parameters": {},
   "project": undefined,
   "provider": "deepseek",
+  "rules": undefined,
 }
 `;
 
@@ -71,5 +74,6 @@ exports[`parseOptions merges environment variables with config 1`] = `
   "parameters": {},
   "project": undefined,
   "provider": "deepseek",
+  "rules": undefined,
 }
 `;

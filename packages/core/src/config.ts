@@ -1,12 +1,5 @@
 import { z } from 'zod'
 
-export const providerModelSchema = z.object({
-  provider: z.string().optional(),
-  model: z.string().optional(),
-  parameters: z.record(z.string(), z.any()).optional(),
-  budget: z.number().positive().optional(),
-})
-
 export const ruleSchema = z.union([
   z.string(),
   z.object({ path: z.string() }).strict(),
@@ -21,6 +14,14 @@ export const ruleSchema = z.union([
     })
     .strict(),
 ])
+
+export const providerModelSchema = z.object({
+  provider: z.string().optional(),
+  model: z.string().optional(),
+  parameters: z.record(z.string(), z.any()).optional(),
+  budget: z.number().positive().optional(),
+  rules: z.array(ruleSchema).optional().or(z.string()).optional(),
+})
 
 export type ConfigRule = z.infer<typeof ruleSchema>
 

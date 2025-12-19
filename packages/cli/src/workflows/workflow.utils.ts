@@ -3,9 +3,10 @@
 import { execSync } from 'node:child_process'
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
-import { listFiles, loadConfig } from '@polka-codes/cli-shared'
+import { listFiles, loadConfig, resolveRules } from '@polka-codes/cli-shared'
 import type { FullToolInfo, Logger } from '@polka-codes/core'
 import { z } from 'zod'
+import { ApiProviderConfig } from '../ApiProviderConfig'
 import type { CliToolRegistry } from '../workflow-tools'
 
 export type BaseWorkflowInput = {
@@ -330,7 +331,7 @@ export function formatElapsedTime(ms: number): string {
   return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`
 }
 
-export async function getDefaultContext(): Promise<string> {
+export async function getDefaultContext(commandName?: string): Promise<string> {
   const config = await loadConfig()
   const cwd = process.cwd()
   const [files, truncated] = await listFiles(cwd, true, 2000, cwd, config?.excludeFiles ?? [])
@@ -353,8 +354,21 @@ ${fileList}
     // Ignore error
   }
 
-  if (config?.rules) {
-    contextParts.push(`<rules>\n${config.rules}\n</rules>`)
+  let rules = await resolveRules(config?.rules)
+
+  if (commandName && config) {
+    const apiConfig = new ApiProviderConfig(config)
+    const commandConfig = apiConfig.getConfigForCommand(commandName)
+    if (commandConfig?.rules) {
+      const commandRules = await resolveRules(commandConfig.rules)
+      if (commandRules) {
+        rules = rules ? `${rules}\n\n${commandRules}` : commandRules
+      }
+    }
+  }
+
+  if (rules) {
+    contextParts.push(`<rules>\n${rules}\n</rules>`)
   }
 
   if (config?.scripts) {

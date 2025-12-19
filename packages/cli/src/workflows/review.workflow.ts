@@ -200,7 +200,7 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput,
   }
 
   const result = await step('review', async () => {
-    const defaultContext = await getDefaultContext()
+    const defaultContext = await getDefaultContext('review')
     const memoryContext = await tools.getMemoryContext()
     const reviewInput = formatReviewToolInput(changeInfo)
     const fullContent = `${reviewInput}\n\n${defaultContext}\n${memoryContext}`

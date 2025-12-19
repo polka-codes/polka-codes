@@ -1,4 +1,5 @@
 import type { Config } from '@polka-codes/cli-shared'
+import type { ConfigRule } from '@polka-codes/core'
 import { AiProvider } from './getModel'
 
 const defaultModels = {
@@ -32,8 +33,8 @@ export class ApiProviderConfig {
     return this.resolveModelConfig(mergedConfig)
   }
 
-  resolveModelConfig(config: { provider?: string; model?: string; parameters?: any; budget?: number }) {
-    const { provider, model, parameters, budget } = config
+  resolveModelConfig(config: { provider?: string; model?: string; parameters?: any; budget?: number; rules?: ConfigRule[] | string }) {
+    const { provider, model, parameters, budget, rules } = config
     const finalProvider = (provider as AiProvider) ?? this.defaultProvider
     if (!finalProvider) {
       return undefined
@@ -55,6 +56,7 @@ export class ApiProviderConfig {
       baseUrl,
       parameters: finalParameters,
       budget,
+      rules,
     }
   }
 }

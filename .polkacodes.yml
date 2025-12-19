@@ -7,3 +7,16 @@ scripts:
   test: AGENT=1 bun test -u
   check: bun check
   format: bun fix
+commands:
+  review:
+    rules:
+      - repo: polka-codes/prompts
+        path: review/preamble.md
+        branch: master
+      - repo: polka-codes/prompts
+        path: review/javascript.md
+        branch: master
+      - repo: polka-codes/prompts
+        path: review/typescript.md
+        branch: master
+

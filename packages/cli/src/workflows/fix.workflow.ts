@@ -119,7 +119,7 @@ export const fixWorkflow: WorkflowFn<
     logger.info(`Command failed with exit code ${exitCode}. Asking agent to fix it...`)
 
     const result = await step(`fix-${i}`, async () => {
-      const defaultContext = await getDefaultContext()
+      const defaultContext = await getDefaultContext('fix')
       const memoryContext = await tools.getMemoryContext()
       const userPrompt = getFixUserPrompt(command, exitCode, stdout, stderr, task, prompt)
 

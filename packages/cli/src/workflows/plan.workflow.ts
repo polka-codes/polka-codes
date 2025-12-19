@@ -44,7 +44,7 @@ async function createPlan(input: CreatePlanInput, context: WorkflowContext<CliTo
     } else {
       // start a new thread
 
-      const defaultContext = await getDefaultContext()
+      const defaultContext = await getDefaultContext('plan')
       const memoryContext = await tools.getMemoryContext()
       const prompt = `${memoryContext}\n${getPlanPrompt(task, inputPlan)}\n\n${defaultContext}`
       const userContent: JsonUserContent = [{ type: 'text', text: prompt }]
