@@ -428,3 +428,59 @@ test('generateWorkflowCodeWorkflow review prompt includes quality guidelines', a
   expect(capturedSystemPrompts.length).toBe(2)
   expect(capturedSystemPrompts[1]).toMatchSnapshot()
 })
+
+test('generateWorkflowDefinitionWorkflow includes built-in workflows in prompt', async () => {
+  const mockWorkflowDefinition: WorkflowFile = { workflows: { main: { task: 'test', steps: [], inputs: null, output: null } } }
+  let capturedSystemPrompt = ''
+
+  const tools = {
+    generateText: async (input: any) => {
+      const systemMessage = input.messages.find((m: any) => m.role === 'system')
+      if (systemMessage) capturedSystemPrompt = systemMessage.content
+      return [{ role: 'assistant', content: JSON.stringify(mockWorkflowDefinition) }]
+    },
+    taskEvent: async () => {},
+    invokeTool: async () => ({ type: 'Reply', message: 'ok' }),
+  } as unknown as any
+
+  const ctx = createContext<AgentToolRegistry>(tools)
+  await generateWorkflowDefinitionWorkflow(
+    {
+      prompt: 'test',
+      builtInWorkflows: [{ name: 'myWorkflow', description: 'my description' }],
+    },
+    ctx,
+  )
+
+  expect(capturedSystemPrompt).toContain('Available Built-in Workflows:')
+  expect(capturedSystemPrompt).toContain('- myWorkflow: my description')
+})
+
+test('generateWorkflowCodeWorkflow includes built-in workflows in prompt', async () => {
+  const inputWorkflow: WorkflowFile = { workflows: {} }
+  const outputWorkflow: WorkflowFile = { workflows: {} }
+  const capturedSystemPrompts: string[] = []
+
+  const tools = {
+    generateText: async (input: any) => {
+      const systemMessage = input.messages.find((m: any) => m.role === 'system')
+      if (systemMessage) capturedSystemPrompts.push(systemMessage.content)
+      return [{ role: 'assistant', content: JSON.stringify(outputWorkflow) }]
+    },
+    taskEvent: async () => {},
+    invokeTool: async () => ({ type: 'Reply', message: 'ok' }),
+  } as unknown as any
+
+  const ctx = createContext<AgentToolRegistry>(tools)
+  await generateWorkflowCodeWorkflow(
+    {
+      workflow: inputWorkflow,
+      builtInWorkflows: [{ name: 'myWorkflow', description: 'my description' }],
+    },
+    ctx,
+  )
+
+  const promptWithWorkflows = capturedSystemPrompts.find((p) => p.includes('Available Built-in Workflows:'))
+  expect(promptWithWorkflows).toBeDefined()
+  expect(promptWithWorkflows).toContain('- myWorkflow: my description')
+})

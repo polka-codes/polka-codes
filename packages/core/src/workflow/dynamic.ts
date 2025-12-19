@@ -4,7 +4,7 @@ import { parseJsonFromMarkdown } from '../Agent/parseJsonFromMarkdown'
 import type { FullToolInfo, ToolResponseResult } from '../tool'
 import { type AgentToolRegistry, agentWorkflow } from './agent.workflow'
 import { type WorkflowDefinition, type WorkflowFile, WorkflowFileSchema, type WorkflowStepDefinition } from './dynamic-types'
-import type { Logger, StepFn, ToolRegistry, WorkflowContext, WorkflowTools } from './workflow'
+import type { Logger, StepFn, ToolRegistry, WorkflowContext, WorkflowFn, WorkflowTools } from './workflow'
 
 /**
  * Tool groups that can be used in step.tools arrays.
@@ -79,6 +79,10 @@ export type DynamicWorkflowRunnerOptions = {
    * Defaults to false.
    */
   wrapAgentResultInObject?: boolean
+  /**
+   * Built-in workflows that can be called by name if not found in the definition.
+   */
+  builtInWorkflows?: Record<string, WorkflowFn<any, any, any>>
 }
 
 type CompiledStepFn<TTools extends ToolRegistry> = (ctx: DynamicStepRuntimeContext<TTools>) => Promise<any>
@@ -90,7 +94,7 @@ function validateAndApplyDefaults(workflowId: string, workflow: WorkflowDefiniti
     return input
   }
 
-  const validatedInput: Record<string, any> = {}
+  const validatedInput: Record<string, any> = { ...input }
   const errors: string[] = []
 
   for (const inputDef of workflow.inputs) {
@@ -482,6 +486,11 @@ export function createDynamicWorkflow<TTools extends ToolRegistry = DynamicWorkf
   ): Promise<any> => {
     const workflow = definition.workflows[workflowId]
     if (!workflow) {
+      const builtIn = options.builtInWorkflows?.[workflowId]
+      if (builtIn) {
+        context.logger.info(`[Workflow] Delegating to built-in workflow '${workflowId}'`)
+        return await builtIn(input, context as any)
+      }
       throw new Error(`Workflow '${workflowId}' not found`)
     }
 

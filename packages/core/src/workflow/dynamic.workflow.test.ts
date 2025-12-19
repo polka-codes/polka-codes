@@ -204,3 +204,31 @@ workflows:
   // Expect success result
   expect(toolResult.output.value).toEqual({ subStep: { doubled: 20 } })
 })
+
+test('dynamic runner delegates to built-in workflow if not found in definition', async () => {
+  const yamlDef = `
+workflows:
+  main:
+    task: Main workflow
+    steps:
+      - id: call_builtin
+        task: Call built-in
+        code: |
+          return await ctx.runWorkflow('myBuiltIn', { val: 5 })
+`
+  const builtInMock = async (input: any, _ctx: any) => {
+    return { doubled: input.val * 2 }
+  }
+
+  const runner = createDynamicWorkflow<ToolRegistry>(yamlDef, {
+    allowUnsafeCodeExecution: true,
+    builtInWorkflows: {
+      myBuiltIn: builtInMock,
+    },
+  })
+  const context = createContext({} as any, makeStepFn())
+
+  const result = await runner('main', {}, context)
+
+  expect(result.call_builtin).toEqual({ doubled: 10 })
+})

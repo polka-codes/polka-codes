@@ -14,6 +14,14 @@ export const GenerateWorkflowDefinitionInputSchema = z.object({
       }),
     )
     .nullish(),
+  builtInWorkflows: z
+    .array(
+      z.object({
+        name: z.string(),
+        description: z.string(),
+      }),
+    )
+    .nullish(),
 })
 
 export type GenerateWorkflowDefinitionInput = z.infer<typeof GenerateWorkflowDefinitionInputSchema>
@@ -21,6 +29,14 @@ export type GenerateWorkflowDefinitionInput = z.infer<typeof GenerateWorkflowDef
 export const GenerateWorkflowCodeInputSchema = z.object({
   workflow: WorkflowFileSchema,
   skipReview: z.boolean().nullish(),
+  builtInWorkflows: z
+    .array(
+      z.object({
+        name: z.string(),
+        description: z.string(),
+      }),
+    )
+    .nullish(),
 })
 
 export type GenerateWorkflowCodeInput = z.infer<typeof GenerateWorkflowCodeInputSchema>
@@ -355,6 +371,11 @@ export const generateWorkflowDefinitionWorkflow: WorkflowFn<GenerateWorkflowDefi
     systemPrompt += `\n\nAvailable Tools:\n${toolsList}\n\nUse these tools when appropriate.`
   }
 
+  if (input.builtInWorkflows && input.builtInWorkflows.length > 0) {
+    const workflowsList = input.builtInWorkflows.map((w) => `- ${w.name}: ${w.description}`).join('\n')
+    systemPrompt += `\n\nAvailable Built-in Workflows:\n${workflowsList}\n\nPrefer using these built-in workflows when applicable. To use them, specify "runWorkflow" in the "tools" array for the step.`
+  }
+
   const result = await ctx.step('generate-workflow-definition', async () => {
     return agentWorkflow(
       {
@@ -388,6 +409,12 @@ export const generateWorkflowCodeWorkflow: WorkflowFn<GenerateWorkflowCodeInput,
   let lastError: string | null = null
   let currentWorkflow = input.workflow
 
+  let systemPrompt = WORKFLOW_CODE_SYSTEM_PROMPT
+  if (input.builtInWorkflows && input.builtInWorkflows.length > 0) {
+    const workflowsList = input.builtInWorkflows.map((w) => `- ${w.name}: ${w.description}`).join('\n')
+    systemPrompt += `\n\nAvailable Built-in Workflows:\n${workflowsList}\n\nYou can call these workflows using \`await ctx.runWorkflow('workflowName', input)\`.`
+  }
+
   for (let attempt = 0; attempt < MAX_GENERATION_ATTEMPTS; attempt++) {
     const stepName = attempt === 0 ? 'generate-workflow-code' : `retry-workflow-code-${attempt}`
 
@@ -398,7 +425,7 @@ export const generateWorkflowCodeWorkflow: WorkflowFn<GenerateWorkflowCodeInput,
     const generated = await ctx.step(stepName, async () => {
       return agentWorkflow(
         {
-          systemPrompt: WORKFLOW_CODE_SYSTEM_PROMPT,
+          systemPrompt,
           userMessage: [{ role: 'user', content: userMessage }],
           tools: [],
           outputSchema: WorkflowFileSchema,

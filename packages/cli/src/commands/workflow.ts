@@ -25,7 +25,7 @@ import { Command } from 'commander'
 import { stringify } from 'yaml'
 import { createLogger } from '../logger'
 import { runWorkflow } from '../runWorkflow'
-import type { BaseWorkflowInput } from '../workflows'
+import { type BaseWorkflowInput, codeWorkflow, commitWorkflow, fixWorkflow, planWorkflow, prWorkflow, reviewWorkflow } from '../workflows'
 
 async function saveWorkflowFile(path: string, workflow: WorkflowFile) {
   await mkdir(dirname(path), { recursive: true })
@@ -69,6 +69,33 @@ export async function runWorkflowCommand(task: string | undefined, _options: any
 
   const availableTools = tools.map((t) => ({ name: t.name, description: t.description }))
 
+  const builtInWorkflowInfo = [
+    {
+      name: 'plan',
+      description: 'Create an implementation plan. Input: { task: string, mode?: "interactive" | "confirm" | "noninteractive" }',
+    },
+    {
+      name: 'code',
+      description: 'Implement code. Input: { task: string, mode?: "interactive" | "noninteractive", additionalInstructions?: string }',
+    },
+    {
+      name: 'fix',
+      description: 'Fix issues. Input: { command?: string, task?: string, prompt?: string }',
+    },
+    {
+      name: 'review',
+      description: 'Review code changes. Input: { pr?: number, context?: string }',
+    },
+    {
+      name: 'commit',
+      description: 'Commit changes. Input: { all?: boolean, context?: string }',
+    },
+    {
+      name: 'pr',
+      description: 'Create a pull request. Input: { context?: string }',
+    },
+  ]
+
   const isCreate = !!create
   const isUpdate = !!regenerate
 
@@ -81,7 +108,7 @@ export async function runWorkflowCommand(task: string | undefined, _options: any
     logger.info('Generating workflow definition...')
     const defResult = await runWorkflow(
       generateWorkflowDefinitionWorkflow,
-      { prompt: task, availableTools },
+      { prompt: task, availableTools, builtInWorkflows: builtInWorkflowInfo },
       { commandName: 'workflow', command, logger, yes },
     )
 
@@ -93,7 +120,7 @@ export async function runWorkflowCommand(task: string | undefined, _options: any
     logger.info('Generating workflow code...')
     const codeResult = await runWorkflow(
       generateWorkflowCodeWorkflow,
-      { workflow: defResult },
+      { workflow: defResult, builtInWorkflows: builtInWorkflowInfo },
       { commandName: 'workflow', command, logger, yes },
     )
 
@@ -126,7 +153,7 @@ export async function runWorkflowCommand(task: string | undefined, _options: any
       const updatePrompt = `Current workflow definition:\n${JSON.stringify(workflowDef, null, 2)}\n\nUpdate request: ${task}\n\nReturn the updated workflow definition.`
       const defResult = await runWorkflow(
         generateWorkflowDefinitionWorkflow,
-        { prompt: updatePrompt, availableTools },
+        { prompt: updatePrompt, availableTools, builtInWorkflows: builtInWorkflowInfo },
         { commandName: 'workflow', command, logger, yes },
       )
 
@@ -143,7 +170,7 @@ export async function runWorkflowCommand(task: string | undefined, _options: any
     logger.info('Generating workflow code...')
     const codeResult = await runWorkflow(
       generateWorkflowCodeWorkflow,
-      { workflow: workflowDef },
+      { workflow: workflowDef, builtInWorkflows: builtInWorkflowInfo },
       { commandName: 'workflow', command, logger, yes },
     )
 
@@ -209,6 +236,14 @@ export async function runWorkflowCommand(task: string | undefined, _options: any
     dynamicRunner = createDynamicWorkflow(workflowDef, {
       allowUnsafeCodeExecution: true,
       toolInfo: tools,
+      builtInWorkflows: {
+        plan: planWorkflow,
+        code: codeWorkflow,
+        fix: fixWorkflow,
+        review: reviewWorkflow,
+        commit: commitWorkflow,
+        pr: prWorkflow,
+      },
     })
   } catch (error: any) {
     logger.error(`Failed to parse workflow: ${error.message}`)
