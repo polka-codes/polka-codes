@@ -6,6 +6,6 @@ exports[`search should use provider.search if available 1`] = `
     "type": "text",
     "value": "search result",
   },
-  "type": "Reply",
+  "success": true,
 }
 `;

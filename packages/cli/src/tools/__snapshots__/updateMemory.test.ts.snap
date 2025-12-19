@@ -36,7 +36,7 @@ exports[`updateMemory handler should handle append operation 1`] = `
     "type": "text",
     "value": "Content appended to memory topic ':default:'.",
   },
-  "type": "Reply",
+  "success": true,
 }
 `;
 
@@ -46,7 +46,7 @@ exports[`updateMemory handler should handle replace operation with topic 1`] = `
     "type": "text",
     "value": "Memory topic 'my-topic' replaced.",
   },
-  "type": "Reply",
+  "success": true,
 }
 `;
 
@@ -56,7 +56,7 @@ exports[`updateMemory handler should handle remove operation 1`] = `
     "type": "text",
     "value": "Memory topic ':default:' removed.",
   },
-  "type": "Reply",
+  "success": true,
 }
 `;
 
@@ -66,6 +66,6 @@ exports[`updateMemory handler should return error if provider does not support m
     "type": "error-text",
     "value": "Memory operations are not supported by the current provider.",
   },
-  "type": "Error",
+  "success": false,
 }
 `;

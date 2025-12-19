@@ -6,7 +6,7 @@ exports[`readFile should read single file 1`] = `
     "type": "text",
     "value": "<read_file_file_content path="file.txt">file content</read_file_file_content>",
   },
-  "type": "Reply",
+  "success": true,
 }
 `;
 
@@ -19,7 +19,7 @@ exports[`readFile should read multiple files 1`] = `
 <read_file_file_content path="file2.txt">file2 content</read_file_file_content>"
 ,
   },
-  "type": "Reply",
+  "success": true,
 }
 `;
 

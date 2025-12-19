@@ -13,7 +13,7 @@ file2.ts
 <list_files_truncated>false</list_files_truncated>"
 ,
   },
-  "type": "Reply",
+  "success": true,
 }
 `;
 
@@ -30,7 +30,7 @@ file2.ts
 <list_files_truncated>false</list_files_truncated>"
 ,
   },
-  "type": "Reply",
+  "success": true,
 }
 `;
 
@@ -46,7 +46,7 @@ exports[`listFiles should handle empty directory 1`] = `
 <list_files_truncated>true</list_files_truncated>"
 ,
   },
-  "type": "Reply",
+  "success": true,
 }
 `;
 
@@ -63,7 +63,7 @@ file2.ts
 <list_files_truncated>true</list_files_truncated>"
 ,
   },
-  "type": "Reply",
+  "success": true,
 }
 `;
 

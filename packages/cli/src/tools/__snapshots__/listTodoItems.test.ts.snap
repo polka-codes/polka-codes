@@ -37,7 +37,7 @@ exports[`listTodoItems should list all todo items sorted correctly 1`] = `
       },
     ],
   },
-  "type": "Reply",
+  "success": true,
 }
 `;
 
@@ -60,7 +60,7 @@ exports[`listTodoItems should filter items by status 1`] = `
       },
     ],
   },
-  "type": "Reply",
+  "success": true,
 }
 `;
 
@@ -83,6 +83,6 @@ exports[`listTodoItems should list sub-items for a given id 1`] = `
       },
     ],
   },
-  "type": "Reply",
+  "success": true,
 }
 `;

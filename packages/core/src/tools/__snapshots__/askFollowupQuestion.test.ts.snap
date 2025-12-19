@@ -10,7 +10,7 @@ Test response
 </ask_followup_question_answer>"
 ,
   },
-  "type": "Reply",
+  "success": true,
 }
 `;
 
@@ -29,7 +29,7 @@ Answer1|Answer2
 </ask_followup_question_answer>"
 ,
   },
-  "type": "Reply",
+  "success": true,
 }
 `;
 
@@ -43,7 +43,7 @@ Free text answer
 </ask_followup_question_answer>"
 ,
   },
-  "type": "Reply",
+  "success": true,
 }
 `;
 
@@ -57,7 +57,7 @@ Fallback answer
 </ask_followup_question_answer>"
 ,
   },
-  "type": "Reply",
+  "success": true,
 }
 `;
 

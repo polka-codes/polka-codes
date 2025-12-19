@@ -6,7 +6,7 @@ exports[`removeFile should remove file successfully 1`] = `
     "type": "text",
     "value": "<remove_file_path>test.txt</remove_file_path><status>Success</status>",
   },
-  "type": "Reply",
+  "success": true,
 }
 `;
 

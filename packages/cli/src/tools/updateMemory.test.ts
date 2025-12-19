@@ -1,5 +1,5 @@
 import { describe, expect, it, spyOn } from 'bun:test'
-import { MockProvider } from './provider'
+import { MockProvider } from '@polka-codes/core'
 import updateMemory from './updateMemory'
 
 describe('updateMemory', () => {

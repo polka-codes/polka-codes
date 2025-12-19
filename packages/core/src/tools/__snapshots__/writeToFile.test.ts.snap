@@ -6,7 +6,7 @@ exports[`writeToFile should write file successfully 1`] = `
     "type": "text",
     "value": "<write_to_file_path>test.txt</write_to_file_path><status>Success</status>",
   },
-  "type": "Reply",
+  "success": true,
 }
 `;
 
@@ -16,7 +16,7 @@ exports[`writeToFile should handle directory creation 1`] = `
     "type": "text",
     "value": "<write_to_file_path>new-dir/test.txt</write_to_file_path><status>Success</status>",
   },
-  "type": "Reply",
+  "success": true,
 }
 `;
 
@@ -28,7 +28,7 @@ exports[`writeToFile should remove CDATA tags when present 1`] = `
     "type": "text",
     "value": "<write_to_file_path>cdata.txt</write_to_file_path><status>Success</status>",
   },
-  "type": "Reply",
+  "success": true,
 }
 `;
 
@@ -38,7 +38,7 @@ exports[`writeToFile should not modify content without CDATA tags 1`] = `
     "type": "text",
     "value": "<write_to_file_path>nocdata.txt</write_to_file_path><status>Success</status>",
   },
-  "type": "Reply",
+  "success": true,
 }
 `;
 
@@ -48,6 +48,6 @@ exports[`writeToFile should not modify partial CDATA tags 1`] = `
     "type": "text",
     "value": "<write_to_file_path>partial.txt</write_to_file_path><status>Success</status>",
   },
-  "type": "Reply",
+  "success": true,
 }
 `;

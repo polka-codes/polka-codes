@@ -23,14 +23,10 @@ import {
   type FullToolInfo,
   fetchUrl,
   fromJsonModelMessage,
-  getTodoItem as getTodoItemTool,
   type JsonModelMessage,
   listFiles as listFilesTool,
-  listMemoryTopics as listMemoryTopicsTool,
-  listTodoItems as listTodoItemsTool,
   readBinaryFile,
   readFile as readFileTool,
-  readMemory as readMemoryTool,
   removeFile,
   renameFile,
   replaceInFile,
@@ -41,8 +37,6 @@ import {
   TaskEventKind,
   type ToolRegistry,
   toJsonModelMessage,
-  updateMemory as updateMemoryTool,
-  updateTodoItem as updateTodoItemTool,
   writeToFile as writeToFileTool,
 } from '@polka-codes/core'
 import { streamText, type ToolSet } from 'ai'
@@ -59,7 +53,15 @@ export type AgentContextParameters = {
   usageMeter: UsageMeter
 }
 
-import { gitDiff } from './tools'
+import {
+  getTodoItem as getTodoItemTool,
+  gitDiff,
+  listMemoryTopics as listMemoryTopicsTool,
+  listTodoItems as listTodoItemsTool,
+  readMemory as readMemoryTool,
+  updateMemory as updateMemoryTool,
+  updateTodoItem as updateTodoItemTool,
+} from './tools'
 import { applyCacheControl } from './utils/cacheControl'
 import { getUserInput } from './utils/userInput'
 import type { CliToolRegistry } from './workflow-tools'

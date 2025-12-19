@@ -1,6 +1,5 @@
-import type { FullToolInfo, ToolHandler, ToolInfo } from '../tool'
-import type { TodoProvider } from './provider'
-import { UpdateTodoItemInputSchema } from './todo'
+import type { FullToolInfo, TodoProvider, ToolHandler, ToolInfo } from '@polka-codes/core'
+import { UpdateTodoItemInputSchema } from '@polka-codes/core'
 
 export const toolInfo = {
   name: 'updateTodoItem',

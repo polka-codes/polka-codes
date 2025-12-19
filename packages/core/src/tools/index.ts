@@ -3,20 +3,18 @@
 export { default as askFollowupQuestion } from './askFollowupQuestion'
 export { default as executeCommand } from './executeCommand'
 export { default as fetchUrl } from './fetchUrl'
-export { default as getTodoItem } from './getTodoItem'
+
 export { default as listFiles } from './listFiles'
-export { default as listMemoryTopics } from './listMemoryTopics'
-export { default as listTodoItems } from './listTodoItems'
+
 export * from './provider'
 export { default as readBinaryFile } from './readBinaryFile'
 export { default as readFile } from './readFile'
-export { default as readMemory } from './readMemory'
+
 export { default as removeFile } from './removeFile'
 export { default as renameFile } from './renameFile'
 export { default as replaceInFile } from './replaceInFile'
 export { default as search } from './search'
 export { default as searchFiles } from './searchFiles'
 export * from './todo'
-export { default as updateMemory } from './updateMemory'
-export { default as updateTodoItem } from './updateTodoItem'
+
 export { default as writeToFile } from './writeToFile'

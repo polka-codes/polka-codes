@@ -1,7 +1,6 @@
 import { describe, expect, it, spyOn } from 'bun:test'
+import type { TodoItem, TodoProvider } from '@polka-codes/core'
 import listTodoItems from './listTodoItems'
-import type { TodoProvider } from './provider'
-import type { TodoItem } from './todo'
 
 describe('listTodoItems', () => {
   const mockTodos: TodoItem[] = [

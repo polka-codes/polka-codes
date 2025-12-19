@@ -1,6 +1,5 @@
+import type { FullToolInfo, MemoryProvider, ToolHandler, ToolInfo } from '@polka-codes/core'
 import { z } from 'zod'
-import type { FullToolInfo, ToolHandler, ToolInfo } from '../tool'
-import type { MemoryProvider } from './provider'
 
 export const toolInfo = {
   name: 'listMemoryTopics',
