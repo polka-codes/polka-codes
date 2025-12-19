@@ -1,11 +1,18 @@
-import { describe, expect, mock, test } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test'
 import { resolveRules } from './config'
 
 describe('resolveRules', () => {
-  test('resolves repo rule with default branch', async () => {
-    const fetchMock = mock(() => Promise.resolve(new Response('rule content')))
-    global.fetch = fetchMock as unknown as typeof fetch
+  let fetchSpy: ReturnType<typeof spyOn>
 
+  beforeEach(() => {
+    fetchSpy = spyOn(global, 'fetch').mockImplementation((() => Promise.resolve(new Response('rule content'))) as any)
+  })
+
+  afterEach(() => {
+    fetchSpy.mockRestore()
+  })
+
+  test('resolves repo rule with default branch', async () => {
     const rules = [
       {
         repo: 'owner/repo',
@@ -15,13 +22,10 @@ describe('resolveRules', () => {
 
     await resolveRules(rules)
 
-    expect(fetchMock).toHaveBeenCalledWith('https://raw.githubusercontent.com/owner/repo/main/rules/rule.md')
+    expect(fetchSpy).toHaveBeenCalledWith('https://raw.githubusercontent.com/owner/repo/main/rules/rule.md')
   })
 
   test('resolves repo rule with tag', async () => {
-    const fetchMock = mock(() => Promise.resolve(new Response('rule content')))
-    global.fetch = fetchMock as unknown as typeof fetch
-
     const rules = [
       {
         repo: 'owner/repo',
@@ -32,13 +36,10 @@ describe('resolveRules', () => {
 
     await resolveRules(rules)
 
-    expect(fetchMock).toHaveBeenCalledWith('https://raw.githubusercontent.com/owner/repo/v1.0.0/rules/rule.md')
+    expect(fetchSpy).toHaveBeenCalledWith('https://raw.githubusercontent.com/owner/repo/v1.0.0/rules/rule.md')
   })
 
   test('resolves repo rule with branch', async () => {
-    const fetchMock = mock(() => Promise.resolve(new Response('rule content')))
-    global.fetch = fetchMock as unknown as typeof fetch
-
     const rules = [
       {
         repo: 'owner/repo',
@@ -49,13 +50,10 @@ describe('resolveRules', () => {
 
     await resolveRules(rules)
 
-    expect(fetchMock).toHaveBeenCalledWith('https://raw.githubusercontent.com/owner/repo/develop/rules/rule.md')
+    expect(fetchSpy).toHaveBeenCalledWith('https://raw.githubusercontent.com/owner/repo/develop/rules/rule.md')
   })
 
   test('resolves repo rule with commit', async () => {
-    const fetchMock = mock(() => Promise.resolve(new Response('rule content')))
-    global.fetch = fetchMock as unknown as typeof fetch
-
     const rules = [
       {
         repo: 'owner/repo',
@@ -66,13 +64,10 @@ describe('resolveRules', () => {
 
     await resolveRules(rules)
 
-    expect(fetchMock).toHaveBeenCalledWith('https://raw.githubusercontent.com/owner/repo/sha123/rules/rule.md')
+    expect(fetchSpy).toHaveBeenCalledWith('https://raw.githubusercontent.com/owner/repo/sha123/rules/rule.md')
   })
 
   test('prioritizes commit over tag and branch', async () => {
-    const fetchMock = mock(() => Promise.resolve(new Response('rule content')))
-    global.fetch = fetchMock as unknown as typeof fetch
-
     const rules = [
       {
         repo: 'owner/repo',
@@ -85,13 +80,10 @@ describe('resolveRules', () => {
 
     await resolveRules(rules)
 
-    expect(fetchMock).toHaveBeenCalledWith('https://raw.githubusercontent.com/owner/repo/sha123/rules/rule.md')
+    expect(fetchSpy).toHaveBeenCalledWith('https://raw.githubusercontent.com/owner/repo/sha123/rules/rule.md')
   })
 
   test('prioritizes tag over branch', async () => {
-    const fetchMock = mock(() => Promise.resolve(new Response('rule content')))
-    global.fetch = fetchMock as unknown as typeof fetch
-
     const rules = [
       {
         repo: 'owner/repo',
@@ -103,6 +95,6 @@ describe('resolveRules', () => {
 
     await resolveRules(rules)
 
-    expect(fetchMock).toHaveBeenCalledWith('https://raw.githubusercontent.com/owner/repo/v1.0.0/rules/rule.md')
+    expect(fetchSpy).toHaveBeenCalledWith('https://raw.githubusercontent.com/owner/repo/v1.0.0/rules/rule.md')
   })
 })
