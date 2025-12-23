@@ -16,7 +16,7 @@ import { metaWorkflow } from '../workflows/meta.workflow'
 
 export async function runMeta(task: string | undefined, command: Command) {
   const globalOpts = (command.parent ?? command).opts()
-  const { verbose, yes } = globalOpts
+  const { verbose } = globalOpts
   const logger = createLogger({
     verbose,
   })
@@ -60,22 +60,21 @@ export async function runMeta(task: string | undefined, command: Command) {
       await persistEpicContext(context)
     },
     saveUsageSnapshot,
-    interactive: !yes,
+    interactive: !globalOpts.yes,
   }
 
   await runWorkflow(metaWorkflow, workflowInput, {
     commandName: 'meta',
-    command,
+    context: globalOpts,
     logger,
-    yes,
+    onUsageMeterCreated: (meter) => {
+      usageMeter = meter
+    },
     getProvider: (opt) =>
       getProvider({
         ...opt,
         todoItemStore: new EpicTodoItemStore(workflowInput),
         memoryStore: new EpicMemoryStore(workflowInput),
       }),
-    onUsageMeterCreated: (meter) => {
-      usageMeter = meter
-    },
   })
 }

@@ -2,11 +2,9 @@
 
 import { checkbox, select } from '@inquirer/prompts'
 import { Command, InvalidOptionArgumentError } from 'commander'
+import { code, reviewCode } from '../api'
 import { createLogger } from '../logger'
-import { runWorkflow } from '../runWorkflow'
-import type { CliToolRegistry } from '../workflow-tools'
-import { codeWorkflow, type ReviewWorkflowInput, reviewWorkflow } from '../workflows'
-import { formatReviewForConsole, type ReviewResult } from '../workflows/workflow.utils'
+import { formatReviewForConsole } from '../workflows/workflow.utils'
 
 export const reviewCommand = new Command('review')
   .description('Review a GitHub pull request or local changes')
@@ -48,17 +46,16 @@ export const reviewCommand = new Command('review')
 
     for (let i = 0; i < maxIterations; i++) {
       changesAppliedInThisIteration = false
-      const input = { pr, context }
 
       if (i > 0) {
         logger.debug(`Re-running review (iteration ${i + 1} of ${maxIterations})...`)
       }
 
-      const reviewResult = await runWorkflow<ReviewWorkflowInput, ReviewResult, CliToolRegistry>(reviewWorkflow, input, {
-        commandName: 'review',
-        command,
-        logger,
+      const reviewResult = await reviewCode({
+        pr,
+        context,
         interactive: !yes && !json,
+        ...globalOpts,
       })
 
       if (reviewResult) {
@@ -115,18 +112,11 @@ export const reviewCommand = new Command('review')
         if (shouldRunTask && formattedReview) {
           changesAppliedInThisIteration = true
           const taskInstruction = `please address the review result:\n\n${formattedReview}`
-          await runWorkflow(
-            codeWorkflow,
-            {
-              task: taskInstruction,
-            },
-            {
-              commandName: 'code',
-              command,
-              logger,
-              interactive: !yes,
-            },
-          )
+          await code({
+            task: taskInstruction,
+            interactive: !yes,
+            ...globalOpts,
+          })
         }
       }
 

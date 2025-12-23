@@ -13,22 +13,29 @@ import {
   type WorkflowFn,
   type WorkflowTools,
 } from '@polka-codes/core'
-import type { Command } from 'commander'
 import { merge } from 'lodash-es'
 import { UserCancelledError } from './errors'
 import { getModel } from './getModel'
 import { getProviderOptions } from './getProviderOptions'
-import { parseOptions } from './options'
+import { type CliOptions, parseOptions } from './options'
 import prices from './prices'
 import { type AgentContextParameters, toolCall } from './tool-implementations'
 import type { BaseWorkflowInput } from './workflows'
 
+/**
+ * Execution context for running workflows.
+ * This replaces the Commander.js Command object, making the code
+ * usable both from CLI and as a scripting API.
+ */
+export interface ExecutionContext extends CliOptions {
+  // All CLI options are inherited from CliOptions
+}
+
 type RunWorkflowOptions = {
   commandName: string
-  command: Command
+  context: ExecutionContext
   logger: Logger
   requiresProvider?: boolean
-  yes?: boolean
   interactive?: boolean
   getProvider?: (args: ProviderOptions) => ToolProvider
   onUsageMeterCreated?: (meter: UsageMeter) => void
@@ -39,9 +46,9 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
   workflowInput: TInput,
   options: RunWorkflowOptions,
 ): Promise<TOutput | undefined> {
-  const { commandName, command, logger, requiresProvider = true, yes, interactive } = options
-  const globalOpts = (command.parent ?? command).opts()
-  const { providerConfig, config, verbose } = await parseOptions(globalOpts, {})
+  const { commandName, context, logger, requiresProvider = true, interactive } = options
+  const { providerConfig, config, verbose } = await parseOptions(context, {})
+  const yes = context.yes
 
   const additionalTools: BaseWorkflowInput['additionalTools'] = {}
   if (config.tools?.search) {
@@ -50,7 +57,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
 
   const finalWorkflowInput: TInput & BaseWorkflowInput = {
     ...workflowInput,
-    interactive: interactive ?? !yes,
+    interactive: interactive ?? yes !== true,
     additionalTools,
   }
 
@@ -83,7 +90,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
 
   const toolProvider = (options.getProvider ?? getProvider)({
     excludeFiles,
-    yes,
+    yes: context.yes,
     getModel: (tool) => {
       const toolConfig = config.tools?.[tool as keyof typeof config.tools]
       if (toolConfig === false) {
@@ -120,7 +127,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
     usageMeter: usage,
   }
 
-  let context: WorkflowContext<TTools>
+  let workflowContext: WorkflowContext<TTools>
 
   const tools = new Proxy({} as WorkflowTools<TTools>, {
     get: (_target, tool: string) => {
@@ -133,16 +140,15 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
             model,
             agentCallback: onEvent,
             toolProvider,
-            command,
-            yes,
-            workflowContext: context,
+            yes: context.yes,
+            workflowContext: workflowContext,
           },
         )
       }
     },
   })
 
-  context = {
+  workflowContext = {
     step: makeStepFn(),
     logger,
     tools,
@@ -150,7 +156,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
 
   try {
     logger.info('Running workflow...')
-    const output = await workflow(finalWorkflowInput, context)
+    const output = await workflow(finalWorkflowInput, workflowContext)
     logger.info('\n\nWorkflow completed successfully.')
     logger.info(usage.getUsageText())
     return output

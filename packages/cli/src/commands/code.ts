@@ -2,11 +2,10 @@
 import { readFile } from 'node:fs/promises'
 import { Command } from 'commander'
 import { lookup } from 'mime-types'
-import { createLogger } from '../logger'
+import { code } from '../api'
 import { parseOptions } from '../options'
-import { runWorkflow } from '../runWorkflow'
 import { getUserInput } from '../utils/userInput'
-import { type CodeWorkflowInput, codeWorkflow, type JsonFilePart, type JsonImagePart } from '../workflows/code.workflow'
+import type { JsonFilePart, JsonImagePart } from '../workflows/code.workflow'
 
 const readStdin = async (timeoutMs = 1000): Promise<string> => {
   if (process.stdin.isTTY) {
@@ -100,17 +99,13 @@ export async function runCode(task: string | undefined, _options: any, command: 
   }
 
   const globalOpts = (command.parent ?? command).opts()
-  const { verbose, yes } = globalOpts
 
-  const workflowInput: CodeWorkflowInput = {
+  await code({
     task: taskInput,
     files: fileContents,
-  }
-  const logger = createLogger({
-    verbose,
+    interactive: !globalOpts.yes,
+    ...globalOpts,
   })
-
-  await runWorkflow(codeWorkflow, workflowInput, { commandName: 'code', command, logger, yes })
 }
 
 export const codeCommand = new Command('code')

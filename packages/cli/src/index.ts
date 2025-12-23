@@ -16,6 +16,8 @@ import { reviewCommand } from './commands/review'
 import { workflowCommand } from './commands/workflow'
 import { addSharedOptions } from './options'
 
+export * from './api'
+
 const program = new Command()
 
 program.name('polka').description('Polka Codes CLI').version(version)

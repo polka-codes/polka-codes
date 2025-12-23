@@ -145,7 +145,7 @@ export const initCommand = new Command('init')
         },
         {
           commandName: 'init',
-          command,
+          context: globalOpts,
           logger,
           requiresProvider: true,
         },

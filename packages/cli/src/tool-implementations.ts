@@ -41,8 +41,6 @@ import {
 } from '@polka-codes/core'
 import { streamText, type ToolSet } from 'ai'
 
-import type { Command } from 'commander'
-
 import { UserCancelledError } from './errors'
 
 export type AgentContextParameters = {
@@ -102,7 +100,6 @@ type ToolCallContext = {
   model: LanguageModelV2
   agentCallback?: TaskEventCallback
   toolProvider: any // ToolProvider
-  command: Command
   yes?: boolean
   workflowContext: WorkflowContext<any>
 }

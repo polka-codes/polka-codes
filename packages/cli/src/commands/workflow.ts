@@ -42,7 +42,7 @@ function clearWorkflowCode(workflowDef: WorkflowFile) {
 
 export async function runWorkflowCommand(task: string | undefined, _options: any, command: Command) {
   const globalOpts = (command.parent ?? command).opts()
-  const { verbose, yes } = globalOpts
+  const { verbose } = globalOpts
   const logger = createLogger({ verbose })
 
   const { file, regenerate, create, workflow: workflowName } = command.opts()
@@ -109,7 +109,7 @@ export async function runWorkflowCommand(task: string | undefined, _options: any
     const defResult = await runWorkflow(
       generateWorkflowDefinitionWorkflow,
       { prompt: task, availableTools, builtInWorkflows: builtInWorkflowInfo },
-      { commandName: 'workflow', command, logger, yes },
+      { commandName: 'workflow', context: globalOpts, logger },
     )
 
     if (!defResult) {
@@ -121,7 +121,7 @@ export async function runWorkflowCommand(task: string | undefined, _options: any
     const codeResult = await runWorkflow(
       generateWorkflowCodeWorkflow,
       { workflow: defResult, builtInWorkflows: builtInWorkflowInfo },
-      { commandName: 'workflow', command, logger, yes },
+      { commandName: 'workflow', context: globalOpts, logger },
     )
 
     if (!codeResult) {
@@ -154,7 +154,7 @@ export async function runWorkflowCommand(task: string | undefined, _options: any
       const defResult = await runWorkflow(
         generateWorkflowDefinitionWorkflow,
         { prompt: updatePrompt, availableTools, builtInWorkflows: builtInWorkflowInfo },
-        { commandName: 'workflow', command, logger, yes },
+        { commandName: 'workflow', context: globalOpts, logger },
       )
 
       if (!defResult) {
@@ -171,7 +171,7 @@ export async function runWorkflowCommand(task: string | undefined, _options: any
     const codeResult = await runWorkflow(
       generateWorkflowCodeWorkflow,
       { workflow: workflowDef, builtInWorkflows: builtInWorkflowInfo },
-      { commandName: 'workflow', command, logger, yes },
+      { commandName: 'workflow', context: globalOpts, logger },
     )
 
     if (!codeResult) {
@@ -269,7 +269,7 @@ export async function runWorkflowCommand(task: string | undefined, _options: any
   logger.info(`Workflow has ${selectedWorkflow.steps.length} step(s)`)
   logger.debug(`Steps: ${selectedWorkflow.steps.map((s) => `${s.id} (${s.task})`).join(', ')}`)
 
-  await runWorkflow(workflowFn, workflowInput, { commandName: 'workflow', command, logger, yes })
+  await runWorkflow(workflowFn, workflowInput, { commandName: 'workflow', context: globalOpts, logger })
 }
 
 export const workflowCommand = new Command('workflow')
