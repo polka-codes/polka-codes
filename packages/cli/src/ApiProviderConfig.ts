@@ -1,5 +1,5 @@
 import type { Config } from '@polka-codes/cli-shared'
-import type { ConfigRule } from '@polka-codes/core'
+import type { ConfigRule, ProviderConfig } from '@polka-codes/core'
 import { AiProvider } from './getModel'
 
 const defaultModels = {
@@ -14,9 +14,9 @@ const defaultModels = {
 
 export class ApiProviderConfig {
   readonly defaultProvider?: AiProvider
-  readonly providers: Readonly<Partial<Record<AiProvider, { apiKey: string; defaultModel?: string; defaultParameters: any }>>>
+  readonly providers: Readonly<Partial<Record<AiProvider, ProviderConfig>>>
   readonly commands?: Config['commands']
-  readonly defaultParameters: any
+  readonly defaultParameters: Record<string, any>
 
   constructor(config: Config) {
     this.defaultProvider = config.defaultProvider as AiProvider | undefined
@@ -39,7 +39,7 @@ export class ApiProviderConfig {
     if (!finalProvider) {
       return undefined
     }
-    const { apiKey, defaultModel, defaultParameters, location, project, keyFile, baseUrl } = (this.providers[finalProvider] as any) ?? {}
+    const { apiKey, defaultModel, defaultParameters, location, project, keyFile, baseUrl } = this.providers[finalProvider] ?? {}
     const finalModel = model ?? defaultModel ?? defaultModels[finalProvider]
     const finalParameters = {
       ...this.defaultParameters,

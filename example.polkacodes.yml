@@ -23,6 +23,16 @@ providers:
     apiKey: "sk-..." # Your OpenRouter API key
     defaultModel: "openai/gpt-4o" # Default model for this provider
 
+  # OpenAI-compatible provider configuration
+  # You can use the OpenAI provider with any OpenAI-compatible service
+  # by specifying the baseUrl
+  openai:
+    apiKey: "sk-..." # Your API key for the OpenAI-compatible service
+    baseUrl: "https://api.openai.com/v1" # Base URL for the API (optional, defaults to OpenAI)
+    # For example, to use a different OpenAI-compatible provider:
+    # baseUrl: "https://your-openai-compatible-provider.com/v1"
+    defaultModel: "gpt-4o" # Default model for this provider
+
   # Google Vertex AI configuration
   google-vertex:
     project: "your-gcp-project-id" # Your Google Cloud project ID

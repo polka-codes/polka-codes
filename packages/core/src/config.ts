@@ -15,6 +15,16 @@ export const ruleSchema = z.union([
     .strict(),
 ])
 
+export const providerConfigSchema = z.object({
+  apiKey: z.string().optional(),
+  defaultModel: z.string().optional(),
+  defaultParameters: z.record(z.string(), z.any()).optional(),
+  location: z.string().optional(),
+  project: z.string().optional(),
+  keyFile: z.string().optional(),
+  baseUrl: z.string().optional(),
+})
+
 export const providerModelSchema = z.object({
   provider: z.string().optional(),
   model: z.string().optional(),
@@ -24,6 +34,7 @@ export const providerModelSchema = z.object({
 })
 
 export type ConfigRule = z.infer<typeof ruleSchema>
+export type ProviderConfig = z.infer<typeof providerConfigSchema>
 
 export const configSchema = z
   .object({
@@ -41,19 +52,7 @@ export const configSchema = z
         ),
       )
       .optional(),
-    providers: z
-      .record(
-        z.string(),
-        z.object({
-          apiKey: z.string().optional(),
-          defaultModel: z.string().optional(),
-          defaultParameters: z.record(z.string(), z.any()).optional(),
-          location: z.string().optional(),
-          project: z.string().optional(),
-          keyFile: z.string().optional(),
-        }),
-      )
-      .optional(),
+    providers: z.record(z.string(), providerConfigSchema).optional(),
     defaultProvider: z.string().optional(),
     defaultModel: z.string().optional(),
     defaultParameters: z.record(z.string(), z.any()).optional(),
