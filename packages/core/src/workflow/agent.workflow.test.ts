@@ -118,17 +118,19 @@ test('should fail if maxToolRoundTrips is exceeded', async () => {
     taskEvent: async () => {},
   }
 
-  await expect(
-    agentWorkflow(
-      {
-        userMessage: [toJsonModelMessage({ role: 'user', content: 'List files.' })] as any,
-        tools: allTools,
-        systemPrompt: 'You are a helpful assistant.',
-        maxToolRoundTrips: 10,
-      },
-      createContext(tools),
-    ),
-  ).rejects.toThrow('Maximum number of tool round trips reached.')
+  const result = await agentWorkflow(
+    {
+      userMessage: [toJsonModelMessage({ role: 'user', content: 'List files.' })] as any,
+      tools: allTools,
+      systemPrompt: 'You are a helpful assistant.',
+      maxToolRoundTrips: 10,
+    },
+    createContext(tools),
+  )
+
+  expect(result.type).toBe('UsageExceeded')
+  expect(result.messages).toBeDefined()
+  expect(result.messages.length).toBeGreaterThan(0)
 })
 
 test('should handle mixed valid and invalid tool calls by returning results for both', async () => {

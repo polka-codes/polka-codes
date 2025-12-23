@@ -202,6 +202,7 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
     ]
   }
 
-  await event('end-task', { kind: TaskEventKind.EndTask, exitReason: { type: 'UsageExceeded', messages } as ExitReason })
-  throw new Error('Maximum number of tool round trips reached.')
+  const exitReason: ExitReason = { type: 'UsageExceeded', messages }
+  await event('end-task', { kind: TaskEventKind.EndTask, exitReason })
+  return exitReason
 }
