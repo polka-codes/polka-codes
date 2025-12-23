@@ -78,14 +78,43 @@ export const replaceInFile = (fileContent: string, diff: string): ReplaceResult 
         runningIndex++
       }
 
-      // By the time we’re done, actualPos should be the end of the matched substring.
-      // We do a length calc for the final replacement index:
-      // but we need the total length of trimmedSearch minus whitespace. We'll reconstruct:
-      const strippedSearch = trimmedSearch.replace(/\s+/g, '')
-      const endPos = actualPos // The end of the final segment
-      const startPos = endPos - strippedSearch.length
+      // By the time we're done, we need to find the actual matched region.
+      // The first segment position tells us where the match started.
+      // We need to scan from there to find where the actual match ends by finding
+      // the actual original text that corresponds to our whitespace-normalized match.
+      //
+      // Reconstruct the actual match by finding the start and walking forward through
+      // the original content, matching the pattern of words/non-whitespace from trimmedSearch.
+      const searchWords = trimmedSearch
+        .replace(/\s+/g, ' ')
+        .split(' ')
+        .filter((w) => w.length > 0)
+      let matchStartPos = -1
+      let matchEndPos = -1
 
-      return content.slice(0, startPos) + replace + content.slice(endPos)
+      // Find where the sequence of words starts in content
+      if (searchWords.length > 0) {
+        const firstWordPos = content.indexOf(searchWords[0], offset)
+        if (firstWordPos !== -1) {
+          matchStartPos = firstWordPos
+          matchEndPos = firstWordPos + searchWords[0].length
+
+          // Try to match subsequent words
+          for (let i = 1; i < searchWords.length; i++) {
+            const nextWordPos = content.indexOf(searchWords[i], matchEndPos)
+            if (nextWordPos === -1 || nextWordPos > matchEndPos + 100) {
+              // Word not found or too far (arbitrary threshold for reasonable whitespace)
+              matchStartPos = -1
+              break
+            }
+            matchEndPos = nextWordPos + searchWords[i].length
+          }
+        }
+      }
+
+      if (matchStartPos !== -1 && matchEndPos !== -1) {
+        return content.slice(0, matchStartPos) + replace + content.slice(matchEndPos)
+      }
     }
 
     return null

@@ -271,4 +271,69 @@ new line4`,
       totalCount: 3,
     })
   })
+
+  it('should handle whitespace-agnostic replacement with multiple spaces', () => {
+    // Test the bug fix: search text with irregular whitespace should match content with normalized whitespace
+    const content = `function test() {
+  const x = 1
+  return x
+}`
+    const diff = `<<<<<<< SEARCH
+function test() {
+    const x = 1
+    return x
+}
+=======
+function test() {
+  const y = 2
+  return y
+}
+>>>>>>> REPLACE`
+
+    const result = replaceInFile(content, diff)
+    expect(result.status).toBe('all_diff_applied')
+    expect(result.appliedCount).toBe(1)
+    expect(result.content).toContain('const y = 2')
+    expect(result.content).toContain('return y')
+  })
+
+  it('should handle whitespace-agnostic replacement with tabs vs spaces', () => {
+    const content = `line1
+	line2
+line3`
+    const diff = `<<<<<<< SEARCH
+line1
+line2
+line3
+=======
+line1
+new line2
+line3
+>>>>>>> REPLACE`
+
+    const result = replaceInFile(content, diff)
+    expect(result.status).toBe('all_diff_applied')
+    expect(result.appliedCount).toBe(1)
+    expect(result.content).toContain('new line2')
+  })
+
+  it('should handle whitespace-agnostic replacement with extra newlines', () => {
+    const content = `line1
+
+
+line2
+line3`
+    const diff = `<<<<<<< SEARCH
+line1
+
+line2
+=======
+line1
+line2
+>>>>>>> REPLACE`
+
+    const result = replaceInFile(content, diff)
+    expect(result.status).toBe('all_diff_applied')
+    expect(result.appliedCount).toBe(1)
+  })
 })
