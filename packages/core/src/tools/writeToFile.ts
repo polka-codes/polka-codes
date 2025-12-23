@@ -65,7 +65,7 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
 
   // Remove CDATA tags if present
   const trimmedContent = content.trim()
-  if (trimmedContent.startsWith('<![CDATA[') && content.endsWith(']]>')) content = trimmedContent.slice(9, -3)
+  if (trimmedContent.startsWith('<![CDATA[') && trimmedContent.endsWith(']]>')) content = trimmedContent.slice(9, -3)
 
   // Create parent directories if they don't exist
   await provider.writeFile(path, content)
