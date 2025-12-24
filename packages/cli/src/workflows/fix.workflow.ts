@@ -57,6 +57,12 @@ export const fixWorkflow: WorkflowFn<
       checkCommand = check
     } else if (check && 'command' in check) {
       checkCommand = check.command
+    } else if (check && 'script' in check) {
+      // For TypeScript scripts, invoke via CLI
+      checkCommand = `polka run check`
+    } else if (check && 'workflow' in check) {
+      // Workflows not yet supported for fix workflow
+      logger.warn('Workflow scripts are not yet supported in fix workflow')
     }
 
     let testCommand: string | undefined
@@ -64,12 +70,24 @@ export const fixWorkflow: WorkflowFn<
       testCommand = test
     } else if (test && 'command' in test) {
       testCommand = test.command
+    } else if (test && 'script' in test) {
+      // For TypeScript scripts, invoke via CLI
+      testCommand = `polka run test`
+    } else if (test && 'workflow' in test) {
+      // Workflows not yet supported for fix workflow
+      logger.warn('Workflow scripts are not yet supported in fix workflow')
     }
 
     if (typeof format === 'string') {
       formatCommand = format
     } else if (format && 'command' in format) {
       formatCommand = format.command
+    } else if (format && 'script' in format) {
+      // For TypeScript scripts, invoke via CLI
+      formatCommand = `polka run format`
+    } else if (format && 'workflow' in format) {
+      // Workflows not yet supported for fix workflow
+      logger.warn('Workflow scripts are not yet supported in fix workflow')
     }
 
     let defaultCommand: string | undefined

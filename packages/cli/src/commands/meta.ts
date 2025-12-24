@@ -105,9 +105,9 @@ export async function runMeta(task: string | undefined, command: Command) {
       return
     }
 
-    // Multi-word: must be >2 words
-    if (words.length <= 2) {
-      logger.error('Error: Task must be more than 2 words.')
+    // Multi-word: must be >1 word (2 or more words is a task)
+    if (words.length < 2) {
+      logger.error('Error: Task must be at least 2 words.')
       logger.info('  For commands: polka <command>')
       logger.info('  For tasks: polka "detailed task description"')
       return
@@ -176,9 +176,9 @@ export async function runMeta(task: string | undefined, command: Command) {
     return
   }
 
-  // Multi-word: must be >2 words
-  if (words.length <= 2) {
-    logger.error('Error: Task must be more than 2 words.')
+  // Multi-word: must be >1 word (2 or more words is a task)
+  if (words.length < 2) {
+    logger.error('Error: Task must be at least 2 words.')
     logger.info('  For commands: polka <command>')
     logger.info('  For tasks: polka "detailed task description"')
     return

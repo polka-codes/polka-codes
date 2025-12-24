@@ -277,7 +277,21 @@ export class ScriptRunner {
    * @throws {ScriptTimeoutError} if timeout is exceeded
    */
   private withTimeout<T>(ms: number, fn: () => Promise<T>): Promise<T> {
-    return Promise.race([fn(), new Promise<never>((_, reject) => setTimeout(() => reject(new ScriptTimeoutError('script', ms)), ms))])
+    let timeoutHandle: ReturnType<typeof setTimeout> | undefined
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutHandle = setTimeout(() => reject(new ScriptTimeoutError('script', ms)), ms)
+    })
+
+    return Promise.race([fn(), timeoutPromise]).then(
+      (result) => {
+        if (timeoutHandle) clearTimeout(timeoutHandle)
+        return result
+      },
+      (error) => {
+        if (timeoutHandle) clearTimeout(timeoutHandle)
+        throw error
+      },
+    )
   }
 
   /**
