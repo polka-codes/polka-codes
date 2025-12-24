@@ -49,11 +49,13 @@ export async function parseOptions(
   home: string = os.homedir(),
   env: Partial<Env> = getEnv(),
 ) {
-  let cwd = cwdArg
+  // Use baseDir from options, or fall back to cwdArg, or current working directory
+  const cwd = options.baseDir ?? cwdArg ?? process.cwd()
+
   if (options.baseDir) {
-    process.chdir(options.baseDir)
-    cwd = options.baseDir
-    console.log('Changed working directory to', cwd)
+    console.log('Using base directory:', cwd)
+    // Change to the base directory so all tools operate in the correct context
+    process.chdir(cwd)
   }
 
   const config = (await loadConfig(options.config, cwd, home)) ?? {}

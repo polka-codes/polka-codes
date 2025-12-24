@@ -100,55 +100,64 @@ export const getModel = (config: ModelConfig, debugLogging = false): LanguageMod
             ;(async () => {
               const reader = branch.getReader()
               const decoder = new TextDecoder()
-              let done = false
-              while (!done) {
-                const { value, done: d } = await reader.read()
-                done = d
-                if (value) {
-                  const text = decoder.decode(value)
-                  if (debugLogging) {
-                    console.log('<- Stream chunk:', text.replace(/\n/g, '\\n'))
-                  }
-                  if (TRACING_FILE) {
-                    for (const line of text.split('\n')) {
-                      if (line.startsWith('data:')) {
-                        const content = line.slice('data:'.length).trim()
-                        if (content) {
-                          try {
-                            const json = JSON.parse(content)
-                            appendFileSync(
-                              TRACING_FILE,
-                              `${JSON.stringify(
-                                {
-                                  type: 'response-chunk',
-                                  timestamp: new Date().toISOString(),
-                                  chunk: json,
-                                },
-                                null,
-                                2,
-                              )}\n`,
-                            )
-                          } catch (_e) {
-                            appendFileSync(
-                              TRACING_FILE,
-                              `${JSON.stringify(
-                                {
-                                  type: 'response-chunk',
-                                  timestamp: new Date().toISOString(),
-                                  chunk: content,
-                                },
-                                null,
-                                2,
-                              )}\n`,
-                            )
+              try {
+                let done = false
+                while (!done) {
+                  const { value, done: d } = await reader.read()
+                  done = d
+                  if (value) {
+                    const text = decoder.decode(value)
+                    if (debugLogging) {
+                      console.log('<- Stream chunk:', text.replace(/\n/g, '\\n'))
+                    }
+                    if (TRACING_FILE) {
+                      for (const line of text.split('\n')) {
+                        if (line.startsWith('data:')) {
+                          const content = line.slice('data:'.length).trim()
+                          if (content) {
+                            try {
+                              const json = JSON.parse(content)
+                              appendFileSync(
+                                TRACING_FILE,
+                                `${JSON.stringify(
+                                  {
+                                    type: 'response-chunk',
+                                    timestamp: new Date().toISOString(),
+                                    chunk: json,
+                                  },
+                                  null,
+                                  2,
+                                )}\n`,
+                              )
+                            } catch (_e) {
+                              appendFileSync(
+                                TRACING_FILE,
+                                `${JSON.stringify(
+                                  {
+                                    type: 'response-chunk',
+                                    timestamp: new Date().toISOString(),
+                                    chunk: content,
+                                  },
+                                  null,
+                                  2,
+                                )}\n`,
+                              )
+                            }
                           }
                         }
                       }
                     }
                   }
                 }
+              } finally {
+                // Ensure the reader is properly closed to prevent memory leaks
+                reader.releaseLock()
               }
-            })()
+            })().catch((error) => {
+              if (debugLogging) {
+                console.error('Stream reading error:', error)
+              }
+            })
             return new Response(clientStream, {
               headers: res.headers,
               status: res.status,
@@ -156,7 +165,13 @@ export const getModel = (config: ModelConfig, debugLogging = false): LanguageMod
           }
 
           const full = await res.text()
-          const responseBody = JSON.parse(full)
+          let responseBody: unknown
+          try {
+            responseBody = JSON.parse(full)
+          } catch (_error) {
+            // If parsing fails, treat the body as a string (e.g. HTML error page)
+            responseBody = full
+          }
 
           if (debugLogging) {
             console.log('<- Response Body:')
