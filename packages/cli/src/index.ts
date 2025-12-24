@@ -13,6 +13,7 @@ import { runMeta } from './commands/meta'
 import { planCommand } from './commands/plan'
 import { prCommand } from './commands/pr'
 import { reviewCommand } from './commands/review'
+import { runCommand } from './commands/run'
 import { workflowCommand } from './commands/workflow'
 import { addSharedOptions } from './options'
 
@@ -48,6 +49,9 @@ program.addCommand(epicCommand)
 
 // Fix command
 program.addCommand(fixCommand)
+
+// Run command
+program.addCommand(runCommand)
 
 program.addCommand(workflowCommand)
 

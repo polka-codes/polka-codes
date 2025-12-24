@@ -89,7 +89,7 @@ export async function runMeta(task: string | undefined, command: Command) {
 
       logger.error(`Error: Unknown command '${words[0]}'`)
       logger.info('Available commands:')
-      logger.info('  Built-in: code, commit, pr, review, fix, plan, workflow')
+      logger.info('  Built-in: code, commit, pr, review, fix, plan, workflow, run')
 
       // List custom scripts from config
       const config = await loadConfig()
@@ -172,7 +172,7 @@ export async function runMeta(task: string | undefined, command: Command) {
 
     logger.error(`Error: Unknown command '${words[0]}'`)
     logger.info('Available commands:')
-    logger.info('  Built-in: code, commit, pr, review, fix, plan, workflow')
+    logger.info('  Built-in: code, commit, pr, review, fix, plan, workflow, run')
     return
   }
 
@@ -229,7 +229,7 @@ export async function runMeta(task: string | undefined, command: Command) {
  */
 async function tryExecuteCommand(commandName: string, logger: Logger): Promise<boolean> {
   // Check built-in commands
-  const builtInCommands = ['code', 'commit', 'pr', 'review', 'fix', 'plan', 'workflow']
+  const builtInCommands = ['code', 'commit', 'pr', 'review', 'fix', 'plan', 'workflow', 'run']
   if (builtInCommands.includes(commandName)) {
     // Execute via subprocess
     execSync(`bun run cli ${commandName}`, { stdio: 'inherit', shell: true } as any)
