@@ -36,6 +36,44 @@ export const providerModelSchema = z.object({
 export type ConfigRule = z.infer<typeof ruleSchema>
 export type ProviderConfig = z.infer<typeof providerConfigSchema>
 
+// Script configuration schema
+// Supports multiple formats for backward compatibility and new features
+export const scriptSchema = z.union([
+  // Type 1: Simple shell command (backward compatible)
+  z.string(),
+  // Type 2: Object with command and description (backward compatible)
+  z.object({
+    command: z.string(),
+    description: z.string(),
+  }),
+  // Type 3: Reference to dynamic workflow YAML
+  z
+    .object({
+      workflow: z.string(), // Path to .yml workflow file
+      description: z.string().optional(),
+      input: z.record(z.string(), z.any()).optional(), // Default workflow input
+    })
+    .strict(),
+  // Type 4: TypeScript script file (NEW)
+  z
+    .object({
+      script: z.string(), // Path to .ts file
+      description: z.string().optional(),
+      permissions: z
+        .object({
+          fs: z.enum(['read', 'write', 'none']).optional(),
+          network: z.boolean().optional(),
+          subprocess: z.boolean().optional(),
+        })
+        .optional(),
+      timeout: z.number().optional(), // Execution timeout in milliseconds
+      memory: z.number().optional(), // Memory limit in MB
+    })
+    .strict(),
+])
+
+export type ScriptConfig = z.infer<typeof scriptSchema>
+
 export const configSchema = z
   .object({
     prices: z
@@ -61,17 +99,7 @@ export const configSchema = z
     retryCount: z.number().int().min(0).optional(),
     requestTimeoutSeconds: z.number().int().positive().optional(),
     summaryThreshold: z.number().int().positive().optional(),
-    scripts: z
-      .record(
-        z.string(),
-        z.string().or(
-          z.object({
-            command: z.string(),
-            description: z.string(),
-          }),
-        ),
-      )
-      .optional(),
+    scripts: z.record(z.string(), scriptSchema).optional(),
     commands: z.record(z.string(), providerModelSchema).optional(),
     tools: z
       .object({

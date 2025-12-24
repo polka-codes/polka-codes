@@ -7,6 +7,7 @@ import { confirm as inquirerConfirm, select as inquirerSelect } from '@inquirer/
 import type {
   AgentWorkflowInput,
   MemoryProvider,
+  ScriptConfig,
   TodoItem,
   TodoProvider,
   ToolResponse,
@@ -45,7 +46,7 @@ import { UserCancelledError } from './errors'
 
 export type AgentContextParameters = {
   providerOptions?: Record<string, any>
-  scripts?: Record<string, string | { command: string; description: string }>
+  scripts?: Record<string, ScriptConfig>
   retryCount?: number
   requestTimeoutSeconds?: number
   usageMeter: UsageMeter

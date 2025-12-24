@@ -55,20 +55,20 @@ export const fixWorkflow: WorkflowFn<
     let checkCommand: string | undefined
     if (typeof check === 'string') {
       checkCommand = check
-    } else if (check) {
+    } else if (check && 'command' in check) {
       checkCommand = check.command
     }
 
     let testCommand: string | undefined
     if (typeof test === 'string') {
       testCommand = test
-    } else if (test) {
+    } else if (test && 'command' in test) {
       testCommand = test.command
     }
 
     if (typeof format === 'string') {
       formatCommand = format
-    } else if (format) {
+    } else if (format && 'command' in format) {
       formatCommand = format.command
     }
 
