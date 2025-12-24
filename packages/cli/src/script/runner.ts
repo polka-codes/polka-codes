@@ -12,6 +12,7 @@
 
 import { existsSync } from 'node:fs'
 import { relative, resolve } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import type { Logger, ScriptConfig } from '@polka-codes/core'
 import type { ExecutionContext } from '../runWorkflow'
 
@@ -206,12 +207,12 @@ export class ScriptRunner {
     try {
       // Execute with timeout
       const returnValue = await this.withTimeout(timeout, async () => {
-        // Clear require cache to allow script re-execution
+        // Use cache-busting query parameter for ESM module re-loading
         const absolutePath = resolve(process.cwd(), scriptPath)
-        delete require.cache[absolutePath]
+        const cacheBustUrl = `${pathToFileURL(absolutePath).href}?t=${Date.now()}`
 
         // Dynamic import of the script module
-        const scriptModule = await import(absolutePath)
+        const scriptModule = await import(cacheBustUrl)
 
         // Check if script exports a main function
         if (typeof scriptModule.main !== 'function') {

@@ -2,11 +2,11 @@
 
 import { execSync } from 'node:child_process'
 import { getProvider, loadConfig } from '@polka-codes/cli-shared'
-import type { Logger, ScriptConfig, UsageMeter } from '@polka-codes/core'
+import type { Logger, UsageMeter } from '@polka-codes/core'
 import type { Command } from 'commander'
 import { createLogger } from '../logger'
 import { runWorkflow } from '../runWorkflow'
-import { ScriptRunner } from '../script'
+import { executeScript } from '../script/executor'
 import { getUserInput } from '../utils/userInput'
 import {
   type EpicContext,
@@ -240,43 +240,9 @@ async function tryExecuteCommand(commandName: string, logger: Logger): Promise<b
   const config = await loadConfig()
   const script = config?.scripts?.[commandName]
   if (script) {
-    await executeScript(script, commandName, logger)
+    await executeScript(script, commandName, logger, [])
     return true
   }
 
   return false
-}
-
-/**
- * Execute a script (shell command, workflow, or TypeScript)
- */
-async function executeScript(script: ScriptConfig, name: string, logger: Logger) {
-  const runner = new ScriptRunner()
-
-  // Determine script type and execute
-  if (typeof script === 'string') {
-    // Shell command
-    execSync(script, { stdio: 'inherit', shell: true } as any)
-  } else if ('command' in script) {
-    // Shell command with description
-    execSync(script.command, { stdio: 'inherit', shell: true } as any)
-  } else if ('workflow' in script) {
-    // Dynamic workflow YAML
-    logger.error(`Error: workflow execution not yet implemented for '${name}'`)
-    logger.info('Workflow scripts will be supported in a future update.')
-  } else if ('script' in script) {
-    // TypeScript script
-    const result = await runner.execute({
-      scriptPath: script.script,
-      args: [],
-      context: {},
-      logger,
-      timeout: script.timeout,
-    })
-
-    if (!result.success && result.error) {
-      logger.error(`Script '${name}' failed: ${result.error.message}`)
-      process.exit(1)
-    }
-  }
 }
