@@ -57,9 +57,11 @@ program.parse()
 
 process.on('uncaughtException', (error) => {
   if (error instanceof Error && error.name === 'ExitPromptError') {
-    // do nothing
+    // User cancelled - exit gracefully
+    process.exit(0)
   } else {
-    // Rethrow unknown errors
-    throw error
+    // Log error and exit with code 1
+    console.error('Uncaught exception:', error)
+    process.exit(1)
   }
 })

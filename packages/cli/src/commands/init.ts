@@ -66,7 +66,7 @@ export const initCommand = new Command('init')
       existingConfig = readConfig(configPath)
     } catch (error) {
       logger.error(`Unable to parse config file: ${configPath}`, error)
-      process.exit(1)
+      throw error
     }
 
     const providerConfig = await configPrompt({})
