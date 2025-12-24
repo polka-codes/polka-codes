@@ -20,6 +20,7 @@ Polka Codes is a powerful TypeScript-based AI coding assistant framework that he
 - 🐛 **Automated Debugging**: Automatically fix failing tests or commands with the `fix` command.
 - 🤖 **AI-Assisted Git Workflow**: Generate commit messages and create pull requests with the `commit` and `pr` commands.
 - 🕵️ **Code Review**: Get AI-powered feedback on your pull requests and local changes, and even have the AI apply the fixes for you.
+- 🎯 **Custom Scripts**: Define and execute custom TypeScript scripts and shell commands with the `run` and `init` commands.
 - 🤝 **Multi-Agent System**: Specialized AI agents (Architect, Coder, etc.) collaborate on complex tasks like planning, coding, and fixing.
 - 🔧 **Simple Setup**: Quickly initialize your project configuration with `init`.
 - 🔄 **GitHub Integration**: A GitHub Action that allows you to run Polka Codes by mentioning it in pull requests and issues.
@@ -105,6 +106,111 @@ polka review --json
 ```
 
 For more information, see the [CLI README](packages/cli/README.md).
+
+## Custom Scripts
+
+Polka Codes supports defining and executing custom automation scripts in your `.polkacodes.yml` configuration file. This allows you to create reusable TypeScript scripts and shell commands for common development tasks.
+
+### Script Types
+
+You can define four types of scripts:
+
+1. **Simple Shell Command**: A quick one-liner
+2. **Command with Description**: A shell command with metadata
+3. **TypeScript Script**: An in-process TypeScript file with full access to Polka Codes APIs
+4. **Workflow Script**: A reference to a workflow YAML file
+
+### Configuration
+
+Add scripts to your `.polkacodes.yml`:
+
+```yaml
+scripts:
+  # Simple shell command
+  test: bun test
+
+  # Command with description
+  lint:
+    command: bun run lint
+    description: Run linter
+
+  # TypeScript script
+  deploy:
+    script: .polka-scripts/deploy.ts
+    description: Deploy to production
+    timeout: 300000  # 5 minutes
+    permissions:
+      fs: write
+      network: true
+```
+
+### Running Scripts
+
+```bash
+# List all available scripts
+polka run --list
+
+# Run a specific script
+polka run deploy
+
+# Run with arguments
+polka run deploy -- --production --force
+
+# Quick execution (when no epic context)
+polka test  # Runs the 'test' script
+```
+
+### Creating TypeScript Scripts
+
+Generate a new script template:
+
+```bash
+polka init script my-script
+```
+
+This creates `.polka-scripts/my-script.ts` with a template:
+
+```typescript
+import { code, commit } from '@polka-codes/cli'
+
+export async function main(args: string[]) {
+  console.log('Running script: my-script')
+  console.log('Arguments:', args)
+
+  // Your automation here
+  // await code({ task: 'Add feature', interactive: false })
+  // await commit({ all: true, context: 'Feature complete' })
+
+  console.log('Script completed successfully')
+}
+
+if (import.meta.main) {
+  main(process.argv.slice(2))
+}
+```
+
+### Script Permissions
+
+TypeScript scripts support declaring permissions (currently advisory for future sandboxing):
+
+```yaml
+scripts:
+  risky-script:
+    script: .polka-scripts/risky.ts
+    permissions:
+      fs: write        # read, write, or none
+      network: true     # true or false
+      subprocess: true  # true or false
+    timeout: 60000      # Execution timeout in milliseconds
+    memory: 512         # Memory limit in MB (64-8192)
+```
+
+**Important**: TypeScript scripts currently run in-process with full permissions. Permission declarations are advisory only for future sandboxing implementation.
+
+### Built-in Commands
+
+The following command names are reserved and cannot be used for custom scripts:
+- `code`, `commit`, `pr`, `review`, `fix`, `plan`, `workflow`, `run`, `init`, `meta`
 
 ## Project Structure
 
