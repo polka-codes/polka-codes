@@ -6,7 +6,7 @@ import type { Logger, UsageMeter } from '@polka-codes/core'
 import type { Command } from 'commander'
 import { createLogger } from '../logger'
 import { runWorkflow } from '../runWorkflow'
-import { executeScript } from '../script/executor'
+import { executeScript, ScriptExecutionFailedError } from '../script/executor'
 import { getUserInput } from '../utils/userInput'
 import {
   type EpicContext,
@@ -231,8 +231,10 @@ async function tryExecuteCommand(commandName: string, logger: Logger): Promise<b
   // Check built-in commands
   const builtInCommands = ['code', 'commit', 'pr', 'review', 'fix', 'plan', 'workflow', 'run']
   if (builtInCommands.includes(commandName)) {
-    // Execute via subprocess
-    execSync(`bun run cli ${commandName}`, { stdio: 'inherit', shell: true } as any)
+    // Use the current executable to run the command
+    const executable = process.argv[1] // The script being executed
+    const args = [commandName]
+    execSync(`"${executable}" ${args.join(' ')}`, { stdio: 'inherit', shell: true } as any)
     return true
   }
 
@@ -240,7 +242,14 @@ async function tryExecuteCommand(commandName: string, logger: Logger): Promise<b
   const config = await loadConfig()
   const script = config?.scripts?.[commandName]
   if (script) {
-    await executeScript(script, commandName, logger, [])
+    try {
+      await executeScript(script, commandName, logger, [])
+    } catch (error) {
+      if (error instanceof ScriptExecutionFailedError) {
+        process.exit(error.exitCode)
+      }
+      throw error
+    }
     return true
   }
 

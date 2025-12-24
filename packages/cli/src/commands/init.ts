@@ -96,8 +96,22 @@ if (import.meta.main) {
         script: scriptPath,
         description: `Custom script: ${name}`,
       }
-      // Note: This will reformat the config file and remove comments
-      writeFileSync(localConfigFileName, stringify(config))
+
+      // Append script to config file while preserving existing content
+      const configContent = readFileSync(localConfigFileName, 'utf-8')
+      let newContent = configContent
+
+      // Check if scripts section exists
+      if (!configContent.includes('scripts:')) {
+        // Add scripts section at the end
+        newContent = `${configContent.trimEnd()}\n\nscripts:\n  ${name}: ${scriptPath}\n`
+      } else {
+        // Append to existing scripts section
+        const scriptEntry = `\n  ${name}:\n    script: ${scriptPath}\n    description: Custom script: ${name}\n`
+        newContent = configContent.trimEnd() + scriptEntry
+      }
+
+      writeFileSync(localConfigFileName, newContent)
       logger.info(`Added script to config: ${localConfigFileName}`)
       logger.info(`Run with: polka run ${name}`)
     } catch (error) {

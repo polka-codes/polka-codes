@@ -4,6 +4,20 @@ import type { Logger, ScriptConfig } from '@polka-codes/core'
 import { ScriptRunner } from './runner'
 
 /**
+ * Error thrown when script execution fails
+ */
+export class ScriptExecutionFailedError extends Error {
+  constructor(
+    public scriptName: string,
+    public exitCode: number,
+    message?: string,
+  ) {
+    super(message || `Script '${scriptName}' failed with exit code ${exitCode}`)
+    this.name = 'ScriptExecutionFailedError'
+  }
+}
+
+/**
  * Execute a script configuration with the provided arguments.
  * This is a shared utility used by both the `run` and `meta` commands.
  *
@@ -11,6 +25,7 @@ import { ScriptRunner } from './runner'
  * @param name - The name of the script (for error messages)
  * @param logger - Logger instance for output
  * @param args - Arguments to pass to the script
+ * @throws {ScriptExecutionFailedError} When script execution fails
  */
 export async function executeScript(script: ScriptConfig, name: string, logger: Logger, args: string[] = []): Promise<void> {
   const runner = new ScriptRunner()
@@ -18,22 +33,20 @@ export async function executeScript(script: ScriptConfig, name: string, logger: 
   // Simple shell command string
   if (typeof script === 'string') {
     const fullCommand = args.length > 0 ? `${script} ${quoteArgs(args)}` : script
-    executeShellCommand(fullCommand)
+    executeShellCommand(fullCommand, name)
     return
   }
 
   // Command object with description
   if ('command' in script) {
     const fullCommand = args.length > 0 ? `${script.command} ${quoteArgs(args)}` : script.command
-    executeShellCommand(fullCommand)
+    executeShellCommand(fullCommand, name)
     return
   }
 
   // Workflow script
   if ('workflow' in script) {
-    logger.error(`Error: workflow execution not yet implemented for '${name}'`)
-    process.exit(1)
-    return
+    throw new ScriptExecutionFailedError(name, 1, `workflow execution not yet implemented for '${name}'`)
   }
 
   // TypeScript script
@@ -49,7 +62,7 @@ export async function executeScript(script: ScriptConfig, name: string, logger: 
 
     if (!result.success && result.error) {
       logger.error(`Script '${name}' failed: ${result.error.message}`)
-      process.exit(1)
+      throw new ScriptExecutionFailedError(name, 1, result.error.message)
     }
 
     return
@@ -60,15 +73,17 @@ export async function executeScript(script: ScriptConfig, name: string, logger: 
  * Execute a shell command using spawnSync with proper error handling.
  *
  * @param command - The command string to execute
+ * @param scriptName - Name of the script for error reporting
+ * @throws {ScriptExecutionFailedError} When command fails
  */
-function executeShellCommand(command: string): void {
+function executeShellCommand(command: string, scriptName: string): void {
   const result = spawnSync(command, {
     stdio: 'inherit',
     shell: true,
   })
 
   if (result.status !== 0) {
-    process.exit(result.status ?? 1)
+    throw new ScriptExecutionFailedError(scriptName, result.status ?? 1)
   }
 }
 

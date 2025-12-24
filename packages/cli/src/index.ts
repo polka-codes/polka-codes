@@ -57,7 +57,11 @@ program.addCommand(workflowCommand)
 
 addSharedOptions(program)
 
-program.parse()
+// Only parse command line arguments when running as main module
+// This prevents side effects when importing from custom scripts
+if (import.meta.main) {
+  program.parse()
+}
 
 process.on('uncaughtException', (error) => {
   if (error instanceof Error && error.name === 'ExitPromptError') {

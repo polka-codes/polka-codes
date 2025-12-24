@@ -12,7 +12,7 @@ import { loadConfig } from '@polka-codes/cli-shared'
 import type { Config, Logger, ScriptConfig } from '@polka-codes/core'
 import { Command } from 'commander'
 import { createLogger } from '../logger'
-import { executeScript } from '../script/executor'
+import { executeScript, ScriptExecutionFailedError } from '../script/executor'
 
 export const runCommand = new Command('run')
   .description('Run custom scripts')
@@ -52,7 +52,14 @@ export const runCommand = new Command('run')
     }
 
     // Execute the script
-    await executeScript(script, scriptName, logger, options.args || [])
+    try {
+      await executeScript(script, scriptName, logger, options.args || [])
+    } catch (error) {
+      if (error instanceof ScriptExecutionFailedError) {
+        process.exit(error.exitCode)
+      }
+      throw error
+    }
   })
 
 /**

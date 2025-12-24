@@ -171,6 +171,18 @@ export function validateScriptPermissions(script: ScriptConfig): void {
  * Executes TypeScript scripts by dynamically importing them as modules.
  * Scripts should export a `main(args: string[])` function.
  *
+ * **Important Limitations:**
+ *
+ * 1. **Synchronous Blocking**: The timeout mechanism uses `Promise.race()` which only
+ *    handles timeouts for asynchronous operations. If a script performs a synchronous
+ *    blocking operation (e.g., `while(true) {}`), the timeout will not trigger and the
+ *    process will hang indefinitely. This is a known limitation of in-process script
+ *    execution without using Worker threads or child processes.
+ *
+ * 2. **Path Resolution**: Script paths are resolved relative to `process.cwd()`. If the
+ *    CLI is run from a subdirectory, script paths from config may not resolve correctly.
+ *    The caller should ensure paths are absolute or relative to the correct working directory.
+ *
  * @example
  * ```typescript
  * const runner = new ScriptRunner()
