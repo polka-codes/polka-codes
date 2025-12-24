@@ -42,10 +42,12 @@ export const scriptSchema = z.union([
   // Type 1: Simple shell command (backward compatible)
   z.string(),
   // Type 2: Object with command and description (backward compatible)
-  z.object({
-    command: z.string(),
-    description: z.string(),
-  }),
+  z
+    .object({
+      command: z.string(),
+      description: z.string(),
+    })
+    .strict(),
   // Type 3: Reference to dynamic workflow YAML
   z
     .object({
@@ -66,8 +68,8 @@ export const scriptSchema = z.union([
           subprocess: z.boolean().optional(),
         })
         .optional(),
-      timeout: z.number().optional(), // Execution timeout in milliseconds
-      memory: z.number().optional(), // Memory limit in MB
+      timeout: z.number().int().positive().max(3600000).optional(), // Max 1 hour in milliseconds
+      memory: z.number().int().positive().min(64).max(8192).optional(), // 64MB-8GB in MB
     })
     .strict(),
 ])

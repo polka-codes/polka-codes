@@ -107,28 +107,35 @@ export interface ScriptExecutionResult {
  * @throws {ScriptValidationError} if validation fails
  */
 export function validateScriptPath(scriptPath: string, projectRoot: string = process.cwd()): void {
-  // Resolve to absolute path
-  const resolvedPath = resolve(projectRoot, scriptPath)
+  // Normalize and resolve to absolute paths
+  const normalizedRoot = resolve(projectRoot)
+  const normalizedScript = resolve(projectRoot, scriptPath)
 
   // Check if path is within project directory (prevent path traversal)
-  const relativePath = relative(projectRoot, resolvedPath)
-  if (relativePath.startsWith('..')) {
+  const relativePath = relative(normalizedRoot, normalizedScript)
+
+  // Check for path traversal attempts (.. segments)
+  if (relativePath.startsWith('..') || relativePath.includes('..')) {
     throw new ScriptValidationError(`Script path '${scriptPath}' is outside project directory`)
   }
 
   // Check if file exists
-  if (!existsSync(resolvedPath)) {
+  if (!existsSync(normalizedScript)) {
     throw new ScriptValidationError(`Script file not found: ${scriptPath}`)
   }
 
-  // Check file extension
-  if (!scriptPath.endsWith('.ts') && !scriptPath.endsWith('.yml')) {
+  // Check file extension (must be .ts or .yml)
+  if (!normalizedScript.endsWith('.ts') && !normalizedScript.endsWith('.yml')) {
     throw new ScriptValidationError(`Script must be .ts or .yml file: ${scriptPath}`)
   }
 }
 
 /**
  * Validates script permissions based on security configuration
+ *
+ * IMPORTANT: TypeScript scripts currently run with full process permissions.
+ * Permission declarations in the config are ADVISORY ONLY for future sandboxing.
+ * Scripts can access filesystem, network, and subprocesses regardless of declared permissions.
  *
  * @param script - Script configuration
  * @throws {ScriptValidationError} if permissions are invalid
