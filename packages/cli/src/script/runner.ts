@@ -232,6 +232,15 @@ export class ScriptRunner {
       logger.error(`Script execution failed: ${scriptPath}`)
       logger.error(executionError.message)
 
+      // Show stack trace in debug mode
+      if (executionError.stack) {
+        logger.debug('Stack trace:')
+        logger.debug(executionError.stack)
+      }
+
+      // Show helpful hint for debugging
+      logger.info(`💡 Tip: Run with --verbose=1 for more details`)
+
       return {
         success: false,
         error: executionError,

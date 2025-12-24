@@ -88,9 +88,30 @@ function listAvailableScripts(config: Config | undefined, logger: Logger) {
 
   logger.info('Available scripts:')
   for (const [name, scriptConfig] of Object.entries(scripts)) {
+    const type = getScriptType(scriptConfig)
+    const icon = type === 'ts' ? '⚡' : type === 'workflow' ? '🔄' : type === 'command' ? '💻' : '📜'
     const desc = getScriptDescription(scriptConfig)
-    logger.info(`  ${name}${desc ? ` - ${desc}` : ''}`)
+    logger.info(`  ${icon} ${name}${desc ? ` - ${desc}` : ''}`)
   }
+}
+
+/**
+ * Get the type of a script for display purposes
+ */
+function getScriptType(script: ScriptConfig): string {
+  if (typeof script === 'string') {
+    return 'shell'
+  }
+  if ('command' in script) {
+    return 'command'
+  }
+  if ('script' in script) {
+    return 'ts'
+  }
+  if ('workflow' in script) {
+    return 'workflow'
+  }
+  return 'unknown'
 }
 
 /**

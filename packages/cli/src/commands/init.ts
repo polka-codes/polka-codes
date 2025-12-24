@@ -25,6 +25,15 @@ async function createScript(name: string, logger: Logger, interactive: boolean) 
     throw new Error('Script name cannot contain slashes. Use a simple name (e.g., "deploy" not "utils/deploy")')
   }
 
+  // Check for conflicts with built-in commands
+  const BUILT_IN_COMMANDS = ['code', 'commit', 'pr', 'review', 'fix', 'plan', 'workflow', 'run', 'init', 'meta']
+  if (BUILT_IN_COMMANDS.includes(name)) {
+    throw new Error(
+      `Script name '${name}' conflicts with a built-in command. ` +
+        `Please choose a different name (e.g., '${name}-script' or 'my-${name}')`,
+    )
+  }
+
   const scriptDir = '.polka-scripts'
   const scriptPath = join(scriptDir, `${name}.ts`)
 
