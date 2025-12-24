@@ -229,7 +229,7 @@ export async function runMeta(task: string | undefined, command: Command) {
  */
 async function tryExecuteCommand(commandName: string, logger: Logger): Promise<boolean> {
   // Check built-in commands
-  const builtInCommands = ['code', 'commit', 'pr', 'review', 'fix', 'plan', 'workflow', 'run']
+  const builtInCommands = ['code', 'commit', 'pr', 'review', 'fix', 'plan', 'workflow', 'run', 'init']
   if (builtInCommands.includes(commandName)) {
     // Use the current executable to run the command
     const executable = process.argv[1] // The script being executed

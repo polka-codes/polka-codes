@@ -125,9 +125,9 @@ export function validateScriptPath(scriptPath: string, projectRoot: string = pro
     throw new ScriptValidationError(`Script file not found: ${scriptPath}`)
   }
 
-  // Check file extension (must be .ts or .yml)
-  if (!normalizedScript.endsWith('.ts') && !normalizedScript.endsWith('.yml')) {
-    throw new ScriptValidationError(`Script must be .ts or .yml file: ${scriptPath}`)
+  // Check file extension (must be .ts for ScriptRunner)
+  if (!normalizedScript.endsWith('.ts')) {
+    throw new ScriptValidationError(`Script must be .ts file: ${scriptPath}`)
   }
 }
 

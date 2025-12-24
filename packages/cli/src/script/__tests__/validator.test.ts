@@ -40,11 +40,13 @@ describe('validateScriptPath', () => {
     cleanup()
   })
 
-  it('should accept a valid YAML workflow path within project', () => {
+  it('should reject YAML workflow files (ScriptRunner only accepts TypeScript)', () => {
     setup()
     createTestFile('workflow.yml')
 
-    expect(() => validateScriptPath('test-scripts/workflow.yml', process.cwd())).not.toThrow()
+    expect(() => validateScriptPath('test-scripts/workflow.yml', process.cwd())).toThrow(
+      'Script validation failed: Script must be .ts file: test-scripts/workflow.yml',
+    )
 
     cleanup()
   })
@@ -66,7 +68,7 @@ describe('validateScriptPath', () => {
     createTestFile('invalid.js')
 
     expect(() => validateScriptPath('test-scripts/invalid.js', process.cwd())).toThrow(
-      'Script validation failed: Script must be .ts or .yml file: test-scripts/invalid.js',
+      'Script validation failed: Script must be .ts file: test-scripts/invalid.js',
     )
 
     cleanup()
