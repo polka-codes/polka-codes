@@ -7,11 +7,14 @@ const MAX_SKILL_SIZE = 10 * 1024 * 1024 // 10MB
 
 /**
  * Security validation patterns to detect suspicious content
+ *
+ * Note: Patterns use case-insensitive flag (/i) but NOT global (/g) to avoid
+ * stateful lastIndex issues when RegExp.test() is called multiple times.
  */
 const suspiciousPatterns = [
-  /<script[^>]*>[\s\S]*?<\/script>/gi, // Script tags (with dotAll for multiline)
-  /javascript:/gi, // JavaScript URLs
-  /on\w+\s*=/gi, // Event handlers (onclick, onload, etc.)
+  /<script[^>]*>[\s\S]*?<\/script>/i, // Script tags (with dotAll for multiline)
+  /javascript:/i, // JavaScript URLs
+  /on\w+\s*=/i, // Event handlers (onclick, onload, etc.)
 ]
 
 /**

@@ -144,11 +144,14 @@ skillsCommand
     for (const skill of skillsToValidate) {
       logger.info(`Validating ${skill.metadata.name}...`)
 
+      let skillHasErrors = false
+
       // Check metadata
       const errors = validateSkillMetadata(skill)
       for (const error of errors) {
         logger.error(`  ❌ ${error}`)
         hasErrors = true
+        skillHasErrors = true
       }
 
       // Check security
@@ -159,6 +162,7 @@ skillsCommand
         if (error instanceof Error) {
           logger.error(`  ❌ Security: ${error.message}`)
           hasErrors = true
+          skillHasErrors = true
         }
       }
 
@@ -169,8 +173,8 @@ skillsCommand
         totalWarnings++
       }
 
-      // No errors means valid
-      if (!hasErrors && errors.length === 0) {
+      // No errors for this skill means valid
+      if (!skillHasErrors) {
         logger.info(`  ✅ Valid`)
       }
 

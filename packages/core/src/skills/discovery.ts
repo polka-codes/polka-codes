@@ -188,7 +188,17 @@ export class SkillDiscoveryService {
   /**
    * Recursively load files from a directory into the files map
    */
-  private loadDirectoryFiles(dirPath: string, prefix: string, files: Map<string, string>): void {
+  private loadDirectoryFiles(dirPath: string, prefix: string, files: Map<string, string>, depth = 0, maxDepth = 10, maxFiles = 500): void {
+    // Prevent stack overflow from deep recursion
+    if (depth > maxDepth) {
+      return
+    }
+
+    // Prevent memory exhaustion from too many files
+    if (files.size >= maxFiles) {
+      return
+    }
+
     // Directories to ignore when loading skill files
     const ignoredDirectories = new Set([
       '.git',
@@ -214,6 +224,11 @@ export class SkillDiscoveryService {
     const entries = readdirSync(dirPath, { withFileTypes: true })
 
     for (const entry of entries) {
+      // Check file count limit before processing each entry
+      if (files.size >= maxFiles) {
+        break
+      }
+
       const filePath = join(dirPath, entry.name)
       const key = `${prefix}/${entry.name}`
 
@@ -224,7 +239,7 @@ export class SkillDiscoveryService {
         if (ignoredDirectories.has(entry.name)) {
           continue
         }
-        this.loadDirectoryFiles(filePath, key, files)
+        this.loadDirectoryFiles(filePath, key, files, depth + 1, maxDepth, maxFiles)
       }
     }
   }
