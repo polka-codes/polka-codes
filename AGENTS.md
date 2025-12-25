@@ -103,6 +103,75 @@ The workflow system is the foundation of how tasks are orchestrated:
 - AI interaction: `askFollowupQuestion`, `fetchUrl`
 - Memory: `readMemory`, `updateMemory`, `listMemoryTopics`
 - Todo management: `getTodoItem`, `updateTodoItem`, `listTodoItems`
+- Skills: `loadSkill`, `listSkills` (Agent Skills support)
+
+### Agent Skills System
+
+**Overview**: Agent Skills are modular, self-contained capabilities that extend AI agent functionality. Based on Anthropic's Agent Skills specification, they enable progressive disclosure and context-efficient specialization.
+
+**Skill Storage Locations** (priority order for conflicting names):
+1. `.claude/skills/` - Project skills (git-tracked, highest priority)
+2. `~/.claude/skills/` - Personal skills (user-specific)
+3. `node_modules/@polka-codes/skill-*/` - Plugin skills (npm packages, lowest priority)
+
+**Skill File Format**:
+```
+my-skill/
+├── SKILL.md              # Required: Metadata + instructions (YAML frontmatter + markdown)
+├── reference.md          # Optional: Detailed documentation
+├── examples.md           # Optional: Usage examples
+├── scripts/              # Optional: Executable utilities
+│   └── helper.py
+└── templates/            # Optional: File templates
+    └── config.yaml
+```
+
+**SKILL.md Format**:
+```yaml
+---
+name: react-component-generator
+description: Generate React components with TypeScript, Tailwind, and testing
+allowed-tools: [readFile, writeToFile, search]
+---
+
+# React Component Generator
+
+## Instructions
+When generating React components:
+1. Use TypeScript with strict type checking
+2. Apply Tailwind utility classes for styling
+3. Include prop-types interface exports
+```
+
+**Skill Discovery** (`packages/core/src/skills/discovery.ts`):
+- `SkillDiscoveryService`: Discovers skills from all three sources
+- Recursive directory loading with depth limits (max 10 levels, 500 files)
+- Directory ignore patterns: `.git`, `node_modules`, `dist`, `.next`, etc.
+- Metadata-only loading for efficiency (full content loaded on demand via `loadSkill`)
+
+**Skill Validation** (`packages/core/src/skills/validation.ts`):
+- Security validation: File size limits (1MB per file, 10MB total), suspicious pattern detection
+- Metadata validation: Name format, description length
+- Reference validation: Checks file references exist, warns about absolute paths
+
+**Skill Tools** (`packages/core/src/skills/tools/`):
+- `loadSkill(skillName: string)`: Loads full skill content and supporting files
+- `listSkills(filter?: string)`: Lists available skills with descriptions
+
+**Skill Context** (`packages/cli/src/skillIntegration.ts`):
+- `SkillContext`: Manages available skills, active skill, and loading history
+- `createSkillContext(cwd?)`: Initializes skill discovery for agent execution
+- `generateSkillsSystemPrompt(skills[])`: Generates system prompt section with skill metadata
+
+**CLI Commands**:
+- `bun cli skills list`: List all available skills
+- `bun cli skills validate <skill-name>`: Validate a skill's structure and security
+- `bun cli skills create <skill-name>`: Create a new skill scaffold
+
+**Integration with Workflows** (`packages/cli/src/runWorkflow.ts`):
+- Skill context automatically initialized in `runWorkflow()`
+- Available to all agents via `loadSkill` and `listSkills` tools
+- Skill metadata included in agent system prompt when skills are available
 
 ### Multi-Agent System
 
@@ -158,6 +227,7 @@ The workflow system is the foundation of how tasks are orchestrated:
 
 ## Code Conventions
 
+### General Guidelines
 - Use `#methodName` / `#fieldName` for private methods and fields
 - Use `bun` as the package manager
 - When adding new dependencies, cd to the package directory and run `bun add <dependency>`
@@ -172,9 +242,77 @@ The workflow system is the foundation of how tasks are orchestrated:
 - DO NOT use global variables unless absolutely necessary. Add justification as comment.
 - biome is used for linting and formatting. DO NOT use prettier or eslint
 - ToolInfo parameters MUST be z.object required by AI providers
-- DO NOT have conditional logic such as if-else or try-catch in unit tests. Use .rejects.toThrow() to test for errors.
+- DO NOT have conditional logic such as if-else or try-catch in unit tests. Use `.rejects.toThrow()` to test for errors.
 - Avoid creating temporary test scripts if possible. Use proper test to confirm the behavior.
 - Usage of typeof is code smell. Everything should be strongly typed. Exceptions are allowed but must be justified.
+
+### Testing Patterns
+
+**Snapshot Testing**: Use `.toMatchSnapshot()` for tool outputs and structured data:
+```typescript
+it('should generate correct tool response', async () => {
+  const result = await someTool({ input: 'test' }, mockContext)
+  expect(result).toMatchSnapshot()
+})
+```
+
+**Error Testing**: Use `.rejects.toThrow()` for error cases:
+```typescript
+it('should throw when input is invalid', async () => {
+  await expect(someTool({ input: null }, mockContext)).rejects.toThrow('Invalid input')
+})
+```
+
+**Test Structure**: Group related tests with `describe` blocks:
+```typescript
+describe('loadSkill', () => {
+  describe('when skill exists', () => {
+    it('should load skill content', async () => {
+      // Test implementation
+    })
+  })
+
+  describe('when skill does not exist', () => {
+    it('should return error response', async () => {
+      // Test implementation
+    })
+  })
+})
+```
+
+**Test Files**: Place test files next to source files with `.test.ts` suffix:
+```
+packages/cli/src/
+  tool-implementations.ts
+  tool-implementations.test.ts
+  skillIntegration.ts
+  skillIntegration.test.ts
+```
+
+### Security Considerations
+
+**Skill Validation**: Always validate skills before loading:
+- Check file size limits (1MB per file, 10MB total)
+- Scan for suspicious patterns (script tags, javascript: URLs, event handlers)
+- Validate file references exist and use relative paths
+- Verify metadata format (name, description length)
+
+**Input Validation**: Use Zod schemas for all tool inputs:
+```typescript
+const toolInfo: ToolInfo = {
+  name: 'myTool',
+  description: 'Does something',
+  inputSchema: z.object({
+    path: z.string(),
+    optional: z.string().nullish()
+  })
+}
+```
+
+**Code Execution**: Be careful with dynamic code execution:
+- Never execute untrusted code without sandboxing
+- Use `allowUnsafeCodeExecution: false` in dynamic workflows
+- Validate all file paths before reading/writing
 
 ## Important Implementation Notes
 
@@ -213,3 +351,114 @@ Workflows exit via `ExitReason`:
 - `{ type: 'UsageExceeded', messages }`: Budget/message limit reached
 
 The `object` field contains validated structured output when using `outputSchema`.
+
+### Type Safety Best Practices
+
+**Error Handling**: Always use `unknown` instead of `any` in catch blocks:
+```typescript
+// Correct
+try {
+  await someOperation()
+} catch (error: unknown) {
+  if (error instanceof Error) {
+    console.error(error.message)
+  } else {
+    console.error(String(error))
+  }
+}
+
+// Incorrect
+try {
+  await someOperation()
+} catch (error: any) {
+  console.error(error?.message) // Avoid this
+}
+```
+
+**Type Narrowing**: Use `instanceof` checks and type guards:
+```typescript
+if (error instanceof Error && error.name === 'AbortError') {
+  // Handle abort
+} else if (error && typeof error === 'object' && 'response' in error) {
+  const response = (error as { response: Response }).response
+  // Handle HTTP error
+}
+```
+
+**Tool Type Safety**: Use `ToolRegistry` for compile-time type safety:
+```typescript
+type MyTools = {
+  readFile: { input: { path: string }; output: { content: string | null } }
+  writeFile: { input: { path: string; content: string }; output: {} }
+}
+```
+
+**Avoid `any`**: Only use `any` when absolutely necessary for type assertions or when working with untyped external APIs. Prefer `unknown` for values of truly unknown type.
+
+## Troubleshooting
+
+### Common Issues
+
+**Skill Not Loading**:
+- Check skill is in correct directory (`.claude/skills/` or `~/.claude/skills/`)
+- Verify `SKILL.md` exists with valid YAML frontmatter
+- Check skill name matches directory name
+- Run `bun cli skills validate <skill-name>` to diagnose issues
+
+**Tool Execution Failures**:
+- Verify tool is registered in `ToolRegistry`
+- Check tool input matches Zod schema
+- Ensure `toolProvider` has required methods if using memory/todo tools
+- Check tool-specific model configuration in `.polkacodes.yml`
+
+**Workflow Composition Errors**:
+- Ensure `step` function is used for workflow calls
+- Verify `WorkflowContext` is passed correctly
+- Check that tools are available via `context.tools`
+- Validate input/output types match workflow signatures
+
+**TypeScript Compilation Errors**:
+- Run `bun typecheck` to see all type errors
+- Check for missing type imports
+- Verify `ToolRegistry` types match tool implementations
+- Ensure Zod schemas use `z.object()` for tool parameters
+
+**Agent Not Using Skills**:
+- Verify skill context is initialized in `runWorkflow()`
+- Check skill metadata is included in system prompt
+- Ensure agent has access to `loadSkill` and `listSkills` tools
+- Verify skill description clearly indicates when to use it
+
+**Memory/Todo Provider Errors**:
+- Check that `toolProvider` implements required interfaces
+- Verify provider methods are not `undefined` (Partial<> allows optional)
+- Ensure provider is correctly initialized in workflow setup
+- Check for async/await issues in provider implementations
+
+### Development Workflow
+
+**When Adding New Tools**:
+1. Define tool in `packages/core/src/tools/` with Zod schema
+2. Export from `packages/core/src/tools/index.ts`
+3. Add handler in `packages/cli/src/tool-implementations.ts`
+4. Add to `localToolHandlers` object
+5. Update tool registry if needed
+6. Write tests in `.test.ts` file
+7. Run `bun typecheck && bun test`
+
+**When Adding New Workflows**:
+1. Create workflow in `packages/cli/src/workflows/<name>.workflow.ts`
+2. Define input/output types and tool registry
+3. Use `agentWorkflow` for AI-driven workflows
+4. Compose sub-workflows with `step()` function
+5. Register command in `packages/cli/src/commands/`
+6. Update `runWorkflow.ts` if new context needed
+7. Test with `bun cli <command>`
+
+**When Adding New Skills**:
+1. Create skill directory in `.claude/skills/<name>/`
+2. Create `SKILL.md` with YAML frontmatter
+3. Add optional supporting files (reference.md, examples.md)
+4. Validate with `bun cli skills validate <name>`
+5. Test skill loading with `loadSkill` tool
+6. Update documentation if skill is for public use
