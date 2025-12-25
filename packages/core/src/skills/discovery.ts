@@ -213,6 +213,7 @@ export class SkillDiscoveryService {
       '.idea',
       'tmp',
       'temp',
+      '.DS_Store',
     ])
 
     // Check if the current directory (from prefix) should be ignored

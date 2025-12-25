@@ -19,7 +19,7 @@ import { getModel } from './getModel'
 import { getProviderOptions } from './getProviderOptions'
 import { type CliOptions, parseOptions } from './options'
 import prices from './prices'
-import { type AgentContextParameters, toolCall } from './tool-implementations'
+import { type AgentContextParameters, initializeSkillContext, toolCall } from './tool-implementations'
 import type { BaseWorkflowInput } from './workflows'
 
 /**
@@ -120,12 +120,16 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
     parameters: commandConfig.parameters,
   })
 
+  // Initialize skill context for Agent Skills support
+  const skillContext = await initializeSkillContext()
+
   const parameters: AgentContextParameters = {
     providerOptions,
     scripts: config.scripts,
     retryCount: config.retryCount,
     requestTimeoutSeconds: config.requestTimeoutSeconds,
     usageMeter: usage,
+    skillContext,
   }
 
   let workflowContext: WorkflowContext<TTools>
