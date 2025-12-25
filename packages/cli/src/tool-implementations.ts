@@ -31,6 +31,7 @@ import {
   removeFile,
   renameFile,
   replaceInFile,
+  SOURCE_ICONS,
   search,
   searchFiles,
   type TaskEvent,
@@ -532,7 +533,7 @@ async function listSkills(input: { filter?: string }, context: ToolCallContext):
     const result = await coreListSkills(input, context.parameters.skillContext)
     const skillsList = result.skills
       .map((skill: { name: string; description: string; source: string }) => {
-        const sourceIcon = skill.source === 'project' ? '📁' : skill.source === 'personal' ? '🏠' : '🔌'
+        const sourceIcon = SOURCE_ICONS[skill.source as keyof typeof SOURCE_ICONS]
         return `${sourceIcon} **${skill.name}**: ${skill.description}`
       })
       .join('\n')

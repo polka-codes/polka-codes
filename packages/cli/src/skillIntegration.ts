@@ -10,7 +10,7 @@
  */
 
 import type { Skill, SkillContext } from '@polka-codes/core'
-import { SkillDiscoveryService } from '@polka-codes/core'
+import { SkillDiscoveryService, SOURCE_ICONS } from '@polka-codes/core'
 
 /**
  * Generate a system prompt section describing available skills
@@ -24,7 +24,8 @@ export function generateSkillsSystemPrompt(skills: Skill[]): string {
   prompt += 'You have access to the following Agent Skills that provide specialized capabilities:\n\n'
 
   for (const skill of skills) {
-    const sourceLabel = skill.source === 'project' ? '📁 Project' : skill.source === 'personal' ? '🏠 Personal' : '🔌 Plugin'
+    const icon = SOURCE_ICONS[skill.source]
+    const sourceLabel = `${icon} ${skill.source.charAt(0).toUpperCase() + skill.source.slice(1)}`
     prompt += `### ${skill.metadata.name}\n`
     prompt += `${sourceLabel} - ${skill.metadata.description}\n\n`
 

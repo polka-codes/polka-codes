@@ -1,21 +1,7 @@
 import { join, normalize } from 'node:path'
+import { SKILL_LIMITS, SUSPICIOUS_PATTERNS } from './constants'
 import type { Skill } from './types'
 import { SkillValidationError } from './types'
-
-const MAX_FILE_SIZE = 1024 * 1024 // 1MB
-const MAX_SKILL_SIZE = 10 * 1024 * 1024 // 10MB
-
-/**
- * Security validation patterns to detect suspicious content
- *
- * Note: Patterns use case-insensitive flag (/i) but NOT global (/g) to avoid
- * stateful lastIndex issues when RegExp.test() is called multiple times.
- */
-const suspiciousPatterns = [
-  /<script[^>]*>[\s\S]*?<\/script>/i, // Script tags (with dotAll for multiline)
-  /javascript:/i, // JavaScript URLs
-  /on\w+\s*=/i, // Event handlers (onclick, onload, etc.)
-]
 
 /**
  * Validate a skill's security constraints
@@ -23,6 +9,8 @@ const suspiciousPatterns = [
  * @throws {SkillValidationError} if validation fails
  */
 export function validateSkillSecurity(skill: Skill): void {
+  const { MAX_FILE_SIZE, MAX_SKILL_SIZE } = SKILL_LIMITS
+
   // Check file sizes
   let totalSize = 0
 
@@ -61,7 +49,7 @@ export function validateSkillSecurity(skill: Skill): void {
  * Validate content for suspicious patterns
  */
 function validateContentSecurity(content: string, path: string): void {
-  for (const pattern of suspiciousPatterns) {
+  for (const pattern of SUSPICIOUS_PATTERNS) {
     if (pattern.test(content)) {
       throw new SkillValidationError('Suspicious content detected', path)
     }

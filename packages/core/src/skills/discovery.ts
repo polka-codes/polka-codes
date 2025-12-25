@@ -2,6 +2,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { parse } from 'yaml'
+import { IGNORED_DIRECTORIES, SKILL_ERROR_MESSAGES, SKILL_LIMITS } from './constants'
 import type { Skill, SkillContext, SkillMetadata } from './types'
 import { SkillDiscoveryError, skillMetadataSchema } from './types'
 
@@ -35,10 +36,28 @@ export class SkillDiscoveryService {
   async discoverAll(): Promise<Skill[]> {
     const skills: Skill[] = []
 
-    // Load with priority: project > personal > plugin
-    const projectSkills = await this.discoverInDirectory(this.projectSkillsDir, 'project')
-    const personalSkills = await this.discoverInDirectory(this.personalSkillsDir, 'personal')
-    const pluginSkills = await this.discoverPlugins()
+    // Load in parallel but handle failures gracefully
+    const results = await Promise.allSettled([
+      this.discoverInDirectory(this.projectSkillsDir, 'project'),
+      this.discoverInDirectory(this.personalSkillsDir, 'personal'),
+      this.discoverPlugins(),
+    ])
+
+    // Extract successful results
+    const projectSkills = results[0].status === 'fulfilled' ? results[0].value : []
+    const personalSkills = results[1].status === 'fulfilled' ? results[1].value : []
+    const pluginSkills = results[2].status === 'fulfilled' ? results[2].value : []
+
+    // Log errors if any failed
+    if (results[0].status === 'rejected') {
+      console.warn(`Failed to load project skills: ${results[0].reason}`)
+    }
+    if (results[1].status === 'rejected') {
+      console.warn(`Failed to load personal skills: ${results[1].reason}`)
+    }
+    if (results[2].status === 'rejected') {
+      console.warn(`Failed to load plugin skills: ${results[2].reason}`)
+    }
 
     // Filter out duplicates (project skills take priority)
     const seenNames = new Set<string>()
@@ -158,12 +177,12 @@ export class SkillDiscoveryService {
     const frontmatterRegex = /^---\n([\s\S]+?)\n---\n([\s\S]*)$/
     const match = content.match(frontmatterRegex)
 
-    if (!match) {
-      throw new SkillDiscoveryError('SKILL.md must begin with YAML frontmatter enclosed in ---', '')
+    if (!match || match.length < 3) {
+      throw new SkillDiscoveryError(SKILL_ERROR_MESSAGES.MISSING_FRONTMATTER, '')
     }
 
-    const frontmatter = match[1]
-    const instructions = match[2]
+    const frontmatter = match[1] ?? ''
+    const instructions = match[2] ?? ''
 
     try {
       const metadata = this.parseMetadata(frontmatter)
@@ -185,37 +204,22 @@ export class SkillDiscoveryService {
   /**
    * Recursively load files from a directory into the files map
    */
-  private loadDirectoryFiles(dirPath: string, prefix: string, files: Map<string, string>, depth = 0, maxDepth = 10, maxFiles = 500): void {
+  private loadDirectoryFiles(dirPath: string, prefix: string, files: Map<string, string>, depth = 0): void {
+    const { MAX_DEPTH, MAX_FILES } = SKILL_LIMITS
+
     // Prevent stack overflow from deep recursion
-    if (depth > maxDepth) {
+    if (depth > MAX_DEPTH) {
       return
     }
 
     // Prevent memory exhaustion from too many files
-    if (files.size >= maxFiles) {
+    if (files.size >= MAX_FILES) {
       return
     }
 
-    // Directories to ignore when loading skill files
-    const ignoredDirectories = new Set([
-      '.git',
-      'node_modules',
-      '.next',
-      '.turbo',
-      'dist',
-      'build',
-      'coverage',
-      '.cache',
-      '.vscode',
-      '.idea',
-      'tmp',
-      'temp',
-      '.DS_Store',
-    ])
-
     // Check if the current directory (from prefix) should be ignored
     const currentDirName = prefix.split('/').pop() ?? prefix
-    if (ignoredDirectories.has(currentDirName)) {
+    if (IGNORED_DIRECTORIES.includes(currentDirName as any)) {
       return
     }
 
@@ -223,7 +227,7 @@ export class SkillDiscoveryService {
 
     for (const entry of entries) {
       // Check file count limit before processing each entry
-      if (files.size >= maxFiles) {
+      if (files.size >= MAX_FILES) {
         break
       }
 
@@ -234,10 +238,10 @@ export class SkillDiscoveryService {
         files.set(key, readFileSync(filePath, 'utf-8'))
       } else if (entry.isDirectory()) {
         // Skip ignored directories
-        if (ignoredDirectories.has(entry.name)) {
+        if (IGNORED_DIRECTORIES.includes(entry.name as any)) {
           continue
         }
-        this.loadDirectoryFiles(filePath, key, files, depth + 1, maxDepth, maxFiles)
+        this.loadDirectoryFiles(filePath, key, files, depth + 1)
       }
     }
   }
