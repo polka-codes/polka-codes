@@ -499,10 +499,18 @@ const localToolHandlers = {
 }
 
 export async function toolCall(toolCall: ToolCall<CliToolRegistry>, context: ToolCallContext) {
+  // Check localToolHandlers first
   const handler = localToolHandlers[toolCall.tool]
   if (handler) {
     return handler(toolCall.input as any, context)
   }
+
+  // Check toolHandlers Map (for skill tools)
+  const toolHandler = toolHandlers.get(toolCall.tool as any)
+  if (toolHandler) {
+    return toolHandler.handler(context.toolProvider, toolCall.input as any)
+  }
+
   throw new Error(`Unknown tool: ${(toolCall as any).tool}`)
 }
 
