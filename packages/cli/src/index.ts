@@ -14,6 +14,7 @@ import { planCommand } from './commands/plan'
 import { prCommand } from './commands/pr'
 import { reviewCommand } from './commands/review'
 import { runCommand } from './commands/run'
+import { skillsCommand } from './commands/skills'
 import { workflowCommand } from './commands/workflow'
 import { addSharedOptions } from './options'
 
@@ -52,6 +53,9 @@ program.addCommand(fixCommand)
 
 // Run command
 program.addCommand(runCommand)
+
+// Skills command
+program.addCommand(skillsCommand)
 
 program.addCommand(workflowCommand)
 

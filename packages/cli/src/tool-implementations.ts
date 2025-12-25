@@ -8,6 +8,7 @@ import type {
   AgentWorkflowInput,
   MemoryProvider,
   ScriptConfig,
+  SkillContext,
   TodoItem,
   TodoProvider,
   ToolResponse,
@@ -41,8 +42,9 @@ import {
   writeToFile as writeToFileTool,
 } from '@polka-codes/core'
 import { streamText, type ToolSet } from 'ai'
-
+import { z } from 'zod'
 import { UserCancelledError } from './errors'
+import { createSkillContext, generateSkillsSystemPrompt } from './skillIntegration'
 
 export type AgentContextParameters = {
   providerOptions?: Record<string, any>
@@ -50,6 +52,7 @@ export type AgentContextParameters = {
   retryCount?: number
   requestTimeoutSeconds?: number
   usageMeter: UsageMeter
+  skillContext?: SkillContext
 }
 
 import {
@@ -501,4 +504,142 @@ export async function toolCall(toolCall: ToolCall<CliToolRegistry>, context: Too
     return handler(toolCall.input as any, context)
   }
   throw new Error(`Unknown tool: ${(toolCall as any).tool}`)
+}
+
+/**
+ * Create skill context for agent execution
+ */
+export async function initializeSkillContext(cwd?: string): Promise<SkillContext> {
+  return await createSkillContext(cwd)
+}
+
+/**
+ * Generate system prompt with available skills
+ */
+export function generateSystemPromptWithSkills(basePrompt: string, skillContext?: SkillContext): string {
+  if (!skillContext || skillContext.availableSkills.length === 0) {
+    return basePrompt
+  }
+
+  const skillsPrompt = generateSkillsSystemPrompt(skillContext.availableSkills)
+  return basePrompt + skillsPrompt
+}
+
+/**
+ * Load skill tool handler
+ */
+async function loadSkillTool(provider: any, args: Partial<Record<string, any>>): Promise<ToolResponse> {
+  const { loadSkill } = await import('@polka-codes/core')
+  const context = provider as ToolCallContext
+
+  if (!context.parameters.skillContext) {
+    return {
+      success: false,
+      message: {
+        type: 'error-text',
+        value: 'Skill context not initialized',
+      },
+    }
+  }
+
+  const input = { skillName: args.skillName as string }
+
+  try {
+    const result = await loadSkill(input, context.parameters.skillContext)
+    if (!result.success || !result.skill) {
+      return {
+        success: false,
+        message: {
+          type: 'error-text',
+          value: result.error ?? 'Failed to load skill',
+        },
+      }
+    }
+    return {
+      success: true,
+      message: {
+        type: 'text',
+        value: `Loaded skill '${result.skill.name}':\n\n${result.skill.content}\n\nAvailable files: ${result.skill.availableFiles.join(', ')}${result.warnings && result.warnings.length > 0 ? `\n\nWarnings:\n${result.warnings.join('\n')}` : ''}`,
+      },
+    }
+  } catch (error: any) {
+    return {
+      success: false,
+      message: {
+        type: 'error-text',
+        value: error?.message ?? String(error),
+      },
+    }
+  }
+}
+
+/**
+ * List skills tool handler
+ */
+async function listSkillsTool(provider: any, args: Partial<Record<string, any>>): Promise<ToolResponse> {
+  const { listSkills } = await import('@polka-codes/core')
+  const context = provider as ToolCallContext
+
+  if (!context.parameters.skillContext) {
+    return {
+      success: false,
+      message: {
+        type: 'error-text',
+        value: 'Skill context not initialized',
+      },
+    }
+  }
+
+  const input = { filter: args.filter as string | undefined }
+
+  try {
+    const result = await listSkills(input, context.parameters.skillContext)
+    const skillsList = result.skills
+      .map((skill: { name: string; description: string; source: string }) => {
+        const sourceIcon = skill.source === 'project' ? '📁' : skill.source === 'personal' ? '🏠' : '🔌'
+        return `${sourceIcon} **${skill.name}**: ${skill.description}`
+      })
+      .join('\n')
+
+    return {
+      success: true,
+      message: {
+        type: 'text',
+        value: `Found ${result.total} skill${result.total === 1 ? '' : 's'}:\n\n${skillsList}`,
+      },
+    }
+  } catch (error: any) {
+    return {
+      success: false,
+      message: {
+        type: 'error-text',
+        value: error?.message ?? String(error),
+      },
+    }
+  }
+}
+
+// Add skill tools to handlers
+const skillToolHandlers = [
+  {
+    name: 'loadSkill',
+    description: 'Load an Agent Skill to access its detailed instructions and capabilities',
+    parameters: z.object({
+      skillName: z.string().describe('Name of the skill to load'),
+    }),
+    handler: loadSkillTool,
+  },
+  {
+    name: 'listSkills',
+    description: 'List all available Agent Skills with optional filtering',
+    parameters: z.object({
+      filter: z.string().optional().describe('Optional filter string to search skills by name or description'),
+    }),
+    handler: listSkillsTool,
+  },
+] as const satisfies readonly FullToolInfo[]
+
+// Add skill tools to the tool handlers map
+for (const tool of skillToolHandlers) {
+  toolHandlers.set(tool.name as any, tool as FullToolInfo)
 }

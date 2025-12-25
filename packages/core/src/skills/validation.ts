@@ -78,7 +78,7 @@ export function validateSkillReferences(skill: Skill): string[] {
 
   if (externalRefs.length > 0 && !skill.metadata.description.toLowerCase().includes('external')) {
     warnings.push(
-      "Skill '" + skill.metadata.name + "' contains external references. " + "Consider adding 'external' to description for transparency.",
+      `Skill '${skill.metadata.name}' contains external references. Consider adding 'external' to description for transparency.`,
     )
   }
 
@@ -87,7 +87,7 @@ export function validateSkillReferences(skill: Skill): string[] {
 
   for (const path of absolutePaths) {
     if (!path.startsWith(skill.path) && !path.startsWith('/dev') && !path.startsWith('/proc')) {
-      warnings.push("Skill '" + skill.metadata.name + "' references absolute path '" + path + "'. " + 'Use relative paths instead.')
+      warnings.push(`Skill '${skill.metadata.name}' references absolute path '${path}'. Use relative paths instead.`)
     }
   }
 

@@ -17,6 +17,130 @@ import { runWorkflow } from '../runWorkflow'
 import { initWorkflow } from '../workflows/init.workflow'
 
 /**
+ * Create a new Agent Skill template
+ */
+async function createSkill(name: string, logger: Logger, interactive: boolean) {
+  // Validate skill name (same rules as Agent Skills spec)
+  const nameRegex = /^[a-z0-9-]+$/
+  if (!nameRegex.test(name)) {
+    throw new Error('Skill name must contain only lowercase letters, numbers, and hyphens. Example: "react-component-generator"')
+  }
+
+  if (name.length > 64) {
+    throw new Error('Skill name must be at most 64 characters')
+  }
+
+  // Check for conflicts with built-in commands
+  const BUILT_IN_COMMANDS = ['code', 'commit', 'pr', 'review', 'fix', 'plan', 'workflow', 'run', 'init', 'meta']
+  if (BUILT_IN_COMMANDS.includes(name)) {
+    throw new Error(
+      `Skill name '${name}' conflicts with a built-in command. ` + `Please choose a different name (e.g., '${name}-skill' or 'my-${name}')`,
+    )
+  }
+
+  const skillDir = join('.claude', 'skills', name)
+
+  // Check if skill already exists
+  if (existsSync(skillDir)) {
+    if (interactive) {
+      const proceed = await confirm({
+        message: `Skill '${name}' already exists. Overwrite?`,
+        default: false,
+      })
+      if (!proceed) {
+        logger.info('Skill creation cancelled')
+        return
+      }
+    } else {
+      throw new Error(`Skill already exists: ${skillDir}`)
+    }
+  }
+
+  // Create skill directory
+  mkdirSync(skillDir, { recursive: true })
+  logger.info(`Created skill directory: ${skillDir}`)
+
+  // Generate skill template
+  const template = generateSkillTemplate(name)
+  writeFileSync(join(skillDir, 'SKILL.md'), template)
+  logger.info(`Created SKILL.md`)
+
+  logger.info('')
+  logger.info(`Skill '${name}' created successfully!`)
+  logger.info('')
+  logger.info('Next steps:')
+  logger.info(`  1. Edit ${skillDir}/SKILL.md to add your instructions`)
+  logger.info(`  2. Add supporting files (reference.md, examples.md, etc.)`)
+  logger.info(`  3. Validate with: polka skills validate ${name}`)
+  logger.info(`  4. Test by asking Claude to use the skill`)
+}
+
+/**
+ * Generate skill template content
+ */
+function generateSkillTemplate(name: string): string {
+  const capitalizedName = name
+    .split('-')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+
+  return `---
+name: ${name}
+description: Brief description of what this skill does and when to use it. Include trigger terms like "when the user mentions..." or "for tasks involving..."
+---
+
+# ${capitalizedName}
+
+## Instructions
+
+Provide clear, step-by-step guidance for Claude here.
+
+### When to Use This Skill
+
+Use this skill when:
+- The user asks about [specific topics]
+- Working with [specific technologies/file types]
+- [other trigger conditions]
+
+### Step-by-Step Process
+
+1. First step
+2. Second step
+3. Continue as needed
+
+## Examples
+
+### Example 1: Simple usage
+
+\`\`\`
+Input: [user input example]
+Output: [expected response]
+\`\`\`
+
+## Best Practices
+
+- Tip 1
+- Tip 2
+- Tip 3
+
+## Troubleshooting
+
+### Common Issues
+
+**Problem**: Description of problem
+**Solution**: How to fix it
+
+## Resources
+
+Add additional files like:
+- \`reference.md\` - Detailed documentation
+- \`examples.md\` - More usage examples
+- \`scripts/\` - Helper scripts
+- \`templates/\` - File templates
+`
+}
+
+/**
  * Create a new TypeScript script template
  */
 async function createScript(name: string, logger: Logger, interactive: boolean) {
@@ -134,9 +258,9 @@ if (import.meta.main) {
 }
 
 export const initCommand = new Command('init')
-  .description('Initialize polkacodes configuration or generate scripts')
-  .argument('[type]', 'Type of resource to initialize (config, script)')
-  .argument('[name]', 'Name of the script (only for type=script)')
+  .description('Initialize polkacodes configuration, generate scripts, or create skills')
+  .argument('[type]', 'Type of resource to initialize (config, script, skill)')
+  .argument('[name]', 'Name of the script or skill (only for type=script|skill)')
   .option('-g, --global', 'Use global config')
   .action(async (type, name, options, command: Command) => {
     const globalOpts = (command.parent ?? command).opts()
@@ -146,6 +270,23 @@ export const initCommand = new Command('init')
     })
 
     const interactive = !yes
+
+    // Handle skill creation
+    if (type === 'skill') {
+      if (!name) {
+        logger.error('Error: Skill name is required when type=skill')
+        logger.info('Usage: polka init skill <skill-name>')
+        process.exit(1)
+      }
+      try {
+        await createSkill(name, logger, interactive)
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        logger.error(`Skill creation failed: ${message}`)
+        process.exit(1)
+      }
+      return
+    }
 
     // Handle script generation
     if (type === 'script') {
@@ -167,7 +308,7 @@ export const initCommand = new Command('init')
     // Original config initialization logic
     if (type && type !== 'config') {
       logger.error(`Error: Unknown type '${type}'`)
-      logger.info('Valid types: config, script')
+      logger.info('Valid types: config, script, skill')
       process.exit(1)
     }
 
