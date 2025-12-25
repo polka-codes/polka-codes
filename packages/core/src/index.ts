@@ -1,6 +1,7 @@
 export * from './Agent'
 export * from './Agent/backoff'
 export * from './config'
+export * from './skills'
 export * from './tool'
 export * from './tools'
 export { replaceInFile as replaceInFileHelper } from './tools/utils/replaceInFile'
