@@ -15,7 +15,6 @@ import type {
   UpdateTodoItemInput,
   UpdateTodoItemOutput,
   UsageMeter,
-  WorkflowContext,
 } from '@polka-codes/core'
 import {
   agentWorkflow,
@@ -102,9 +101,9 @@ type ToolCallContext = {
   parameters: AgentContextParameters
   model: LanguageModelV2
   agentCallback?: TaskEventCallback
-  toolProvider: any // ToolProvider
+  toolProvider: any
   yes?: boolean
-  workflowContext: WorkflowContext<any>
+  workflowContext: any
 }
 
 async function createPullRequest(input: { title: string; description: string }, _context: ToolCallContext) {
@@ -355,8 +354,8 @@ async function generateText(input: { messages: JsonModelMessage[]; tools: ToolSe
 
       const resp = await stream.response
       return resp.messages.map(toJsonModelMessage)
-    } catch (error: any) {
-      if (error.name === 'AbortError') {
+    } catch (error: unknown) {
+      if (error instanceof Error && error.name === 'AbortError') {
         if (repetitionDetected) {
           console.warn('Repetition detected, retrying...')
           continue
@@ -365,8 +364,8 @@ async function generateText(input: { messages: JsonModelMessage[]; tools: ToolSe
         console.warn(`Request timed out after ${requestTimeoutSeconds} seconds, retrying...`)
         continue
       }
-      if ('response' in error) {
-        const response: Response = error.response
+      if (error && typeof error === 'object' && 'response' in error) {
+        const response = (error as { response: Response }).response
         if (response.status === 429 || response.status >= 500) {
           console.debug(`Request failed with status ${response.status}, retrying...`)
           const backoff = computeRateLimitBackoffSeconds(i)
@@ -396,12 +395,12 @@ async function invokeTool(input: { toolName: string; input: any }, context: Tool
   try {
     const result = await tool.handler(context.toolProvider, input.input)
     return result
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
       message: {
         type: 'error-text',
-        value: error?.message ?? `${error}`,
+        value: error instanceof Error ? error.message : String(error),
       },
     }
   }
@@ -505,12 +504,12 @@ async function loadSkill(input: { skillName: string }, context: ToolCallContext)
         value: `Loaded skill '${result.skill.name}':\n\n${result.skill.content}\n\nAvailable files: ${result.skill.availableFiles.join(', ')}${result.warnings && result.warnings.length > 0 ? `\n\nWarnings:\n${result.warnings.join('\n')}` : ''}`,
       },
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
       message: {
         type: 'error-text',
-        value: error?.message ?? String(error),
+        value: error instanceof Error ? error.message : String(error),
       },
     }
   }
@@ -545,12 +544,12 @@ async function listSkills(input: { filter?: string }, context: ToolCallContext):
         value: `Found ${result.total} skill${result.total === 1 ? '' : 's'}:\n\n${skillsList}`,
       },
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
       message: {
         type: 'error-text',
-        value: error?.message ?? String(error),
+        value: error instanceof Error ? error.message : String(error),
       },
     }
   }
@@ -589,12 +588,12 @@ export async function toolCall(toolCall: ToolCall<CliToolRegistry>, context: Too
   }
 
   // Check toolHandlers Map (for skill tools)
-  const toolHandler = toolHandlers.get(toolCall.tool as any)
+  const toolHandler = toolHandlers.get(toolCall.tool as keyof ToolRegistry)
   if (toolHandler) {
     return toolHandler.handler(context.toolProvider, toolCall.input as any)
   }
 
-  throw new Error(`Unknown tool: ${(toolCall as any).tool}`)
+  throw new Error(`Unknown tool: ${toolCall.tool}`)
 }
 
 /**
