@@ -67,7 +67,7 @@ export interface ScriptRunnerOptions {
   /**
    * Execution context (for CLI options, etc.)
    */
-  context: Partial<ExecutionContext>
+  context: Partial<ExecutionContext> & { projectRoot?: string }
 
   /**
    * Logger instance for output
@@ -206,7 +206,7 @@ export class ScriptRunner {
    * @throws {ScriptExecutionError} if execution fails
    */
   async execute(options: ScriptRunnerOptions): Promise<ScriptExecutionResult> {
-    const { scriptPath, args, logger, timeout = 300000 } = options
+    const { scriptPath, args, logger, timeout = 300000, context } = options
 
     // Validate script path
     validateScriptPath(scriptPath)
@@ -219,8 +219,9 @@ export class ScriptRunner {
     try {
       // Execute with timeout
       const returnValue = await this.withTimeout(timeout, async () => {
-        // Use cache-busting query parameter for ESM module re-loading
-        const absolutePath = resolve(process.cwd(), scriptPath)
+        // Resolve script path relative to project root (where config was loaded)
+        const projectRoot = context.projectRoot || process.cwd()
+        const absolutePath = resolve(projectRoot, scriptPath)
         const cacheBustUrl = `${pathToFileURL(absolutePath).href}?t=${Date.now()}`
 
         // Dynamic import of the script module

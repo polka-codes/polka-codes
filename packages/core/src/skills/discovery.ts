@@ -219,7 +219,7 @@ export class SkillDiscoveryService {
 
     // Check if the current directory (from prefix) should be ignored
     const currentDirName = prefix.split('/').pop() ?? prefix
-    if (IGNORED_DIRECTORIES.includes(currentDirName as any)) {
+    if ((IGNORED_DIRECTORIES as readonly string[]).includes(currentDirName)) {
       return
     }
 
@@ -238,7 +238,7 @@ export class SkillDiscoveryService {
         files.set(key, readFileSync(filePath, 'utf-8'))
       } else if (entry.isDirectory()) {
         // Skip ignored directories
-        if (IGNORED_DIRECTORIES.includes(entry.name as any)) {
+        if ((IGNORED_DIRECTORIES as readonly string[]).includes(entry.name)) {
           continue
         }
         this.loadDirectoryFiles(filePath, key, files, depth + 1)

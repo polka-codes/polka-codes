@@ -228,11 +228,35 @@ if (import.meta.main) {
       // Check if scripts section exists
       if (!configContent.includes('scripts:')) {
         // Add scripts section at the end
-        newContent = `${configContent.trimEnd()}\n\nscripts:\n  ${name}: ${scriptPath}\n`
+        newContent = `${configContent.trimEnd()}\n\nscripts:\n  ${name}:\n    script: ${scriptPath}\n    description: Custom script: ${name}\n`
       } else {
-        // Append to existing scripts section
-        const scriptEntry = `\n  ${name}:\n    script: ${scriptPath}\n    description: Custom script: ${name}\n`
-        newContent = configContent.trimEnd() + scriptEntry
+        // Parse YAML to safely insert into scripts section
+        try {
+          const yaml = await import('yaml')
+          const parsed = yaml.parse(configContent)
+
+          if (!parsed.scripts) {
+            parsed.scripts = {}
+          }
+
+          parsed.scripts[name] = {
+            script: scriptPath,
+            description: `Custom script: ${name}`,
+          }
+
+          newContent = yaml.stringify(parsed, { indent: 2 })
+        } catch (parseError) {
+          // Fallback to string append if YAML parsing fails
+          logger.warn('Could not parse config file safely. Please add the script manually:')
+          logger.info(`  scripts:`)
+          logger.info(`    ${name}:`)
+          logger.info(`      script: ${scriptPath}`)
+          logger.info(`      description: Custom script: ${name}`)
+          if (parseError instanceof Error) {
+            logger.debug(`Error: ${parseError.message}`)
+          }
+          return
+        }
       }
 
       writeFileSync(localConfigFileName, newContent)

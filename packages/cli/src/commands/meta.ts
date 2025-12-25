@@ -232,9 +232,10 @@ async function tryExecuteCommand(commandName: string, logger: Logger): Promise<b
   const builtInCommands = ['code', 'commit', 'pr', 'review', 'fix', 'plan', 'workflow', 'run', 'init']
   if (builtInCommands.includes(commandName)) {
     // Use the current executable to run the command
-    const executable = process.argv[1] // The script being executed
+    const runtime = process.argv[0] // The node/bun runtime
+    const script = process.argv[1] // The script being executed
     const args = [commandName]
-    execSync(`"${executable}" ${args.join(' ')}`, { stdio: 'inherit', shell: true } as any)
+    execSync(`"${runtime}" "${script}" ${args.join(' ')}`, { stdio: 'inherit', shell: true } as any)
     return true
   }
 
