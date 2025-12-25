@@ -3,7 +3,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { parse } from 'yaml'
 import type { Skill, SkillContext, SkillMetadata } from './types'
-import { SkillDiscoveryError } from './types'
+import { SkillDiscoveryError, skillMetadataSchema } from './types'
 
 /**
  * Service for discovering and loading Agent Skills from filesystem
@@ -178,9 +178,6 @@ export class SkillDiscoveryService {
    * Parse and validate YAML frontmatter
    */
   private parseMetadata(frontmatter: string): SkillMetadata {
-    // Import skillMetadataSchema lazily to avoid circular dependency
-    const { skillMetadataSchema } = require('./types')
-
     const parsed = parse(frontmatter)
     return skillMetadataSchema.parse(parsed)
   }

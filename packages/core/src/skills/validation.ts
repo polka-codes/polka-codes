@@ -1,4 +1,4 @@
-import { join } from 'node:path'
+import { join, normalize } from 'node:path'
 import type { Skill } from './types'
 import { SkillValidationError } from './types'
 
@@ -108,13 +108,16 @@ export function validateSkillReferences(skill: Skill): string[] {
     if (match) {
       const [, , filepath] = match
 
-      // Skip external URLs
-      if (filepath.startsWith('http://') || filepath.startsWith('https://')) {
+      // Skip external URLs and anchor links
+      if (filepath.startsWith('http://') || filepath.startsWith('https://') || filepath.startsWith('#')) {
         continue
       }
 
+      // Normalize the filepath to handle ./prefix and redundant slashes
+      const normalizedPath = normalize(filepath).replace(/^\.?\//, '')
+
       // Check if referenced file exists
-      if (!skill.files.has(filepath) && !filepath.startsWith('#')) {
+      if (!skill.files.has(normalizedPath)) {
         warnings.push(`Referenced file not found: ${filepath}`)
       }
     }
