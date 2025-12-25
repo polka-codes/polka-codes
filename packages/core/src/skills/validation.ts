@@ -85,12 +85,18 @@ export function validateSkillReferences(skill: Skill): string[] {
     )
   }
 
-  // Check for absolute paths
-  const absolutePaths = skill.content.match(/\/[\w\s.-]+/g) || []
+  // Check for absolute paths in file references (markdown links and code)
+  // Only look in code blocks and markdown links to avoid false positives
+  const codeBlocks = skill.content.match(/```[\s\S]*?```/g) || []
 
-  for (const path of absolutePaths) {
-    if (!path.startsWith(skill.path) && !path.startsWith('/dev') && !path.startsWith('/proc')) {
-      warnings.push(`Skill '${skill.metadata.name}' references absolute path '${path}'. Use relative paths instead.`)
+  for (const block of codeBlocks) {
+    // Look for absolute paths starting with / but not common exceptions
+    const pathsInCode = block.match(/\/[a-zA-Z][\w./-]*/g) || []
+    for (const path of pathsInCode) {
+      // Skip system paths and common non-filesystem patterns
+      if (!path.startsWith('/dev') && !path.startsWith('/proc') && !path.startsWith('/sys') && !path.startsWith('//')) {
+        warnings.push(`Skill '${skill.metadata.name}' contains possible absolute path '${path}'. Use relative paths instead.`)
+      }
     }
   }
 

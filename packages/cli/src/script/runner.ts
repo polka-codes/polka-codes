@@ -115,8 +115,8 @@ export function validateScriptPath(scriptPath: string, projectRoot: string = pro
   // Check if path is within project directory (prevent path traversal)
   const relativePath = relative(normalizedRoot, normalizedScript)
 
-  // Check for path traversal attempts (.. segments)
-  if (relativePath.startsWith('..') || relativePath.includes('..')) {
+  // Check for path traversal attempts (.. segments at start or in path components)
+  if (relativePath.startsWith('..')) {
     throw new ScriptValidationError(`Script path '${scriptPath}' is outside project directory`)
   }
 
