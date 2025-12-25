@@ -189,6 +189,28 @@ export class SkillDiscoveryService {
    * Recursively load files from a directory into the files map
    */
   private loadDirectoryFiles(dirPath: string, prefix: string, files: Map<string, string>): void {
+    // Directories to ignore when loading skill files
+    const ignoredDirectories = new Set([
+      '.git',
+      'node_modules',
+      '.next',
+      '.turbo',
+      'dist',
+      'build',
+      'coverage',
+      '.cache',
+      '.vscode',
+      '.idea',
+      'tmp',
+      'temp',
+    ])
+
+    // Check if the current directory (from prefix) should be ignored
+    const currentDirName = prefix.split('/').pop() ?? prefix
+    if (ignoredDirectories.has(currentDirName)) {
+      return
+    }
+
     const entries = readdirSync(dirPath, { withFileTypes: true })
 
     for (const entry of entries) {
@@ -198,6 +220,10 @@ export class SkillDiscoveryService {
       if (entry.isFile()) {
         files.set(key, readFileSync(filePath, 'utf-8'))
       } else if (entry.isDirectory()) {
+        // Skip ignored directories
+        if (ignoredDirectories.has(entry.name)) {
+          continue
+        }
         this.loadDirectoryFiles(filePath, key, files)
       }
     }
