@@ -236,9 +236,12 @@ export class ScriptRunner {
         const absolutePath = resolve(projectRoot, scriptPath)
 
         // Cache busting ensures we reload the script on each execution
-        // Note: This is safe for CLI commands that run once and exit.
-        // If this runner is used in long-running processes, consider using
-        // a WeakMap or explicit cache invalidation to avoid memory leaks.
+        // WARNING: This creates a new module entry in the cache on each execution.
+        // For CLI commands that run once and exit, this is acceptable and ensures
+        // scripts are reloaded without process restart. However, in long-running
+        // processes (watch mode, daemon), this will cause memory leaks as each unique
+        // URL creates an uncached module entry. If used in long-running processes,
+        // implement explicit cache clearing or use a different strategy.
         const cacheBustUrl = `${pathToFileURL(absolutePath).href}?t=${Date.now()}`
 
         // Dynamic import of the script module

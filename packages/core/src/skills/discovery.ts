@@ -39,6 +39,9 @@ const BINARY_EXTENSIONS = [
 
 /**
  * Check if a file is likely binary based on its extension
+ *
+ * This is a simple check based on file extensions. For more reliable detection,
+ * consider reading the first few bytes and checking for null bytes.
  */
 function isBinaryFile(filename: string): boolean {
   const ext = filename.toLowerCase().slice(filename.lastIndexOf('.'))
@@ -285,7 +288,8 @@ export class SkillDiscoveryService {
       }
 
       const filePath = join(dirPath, entry.name)
-      const key = `${prefix}/${entry.name}`
+      // Normalize key to avoid double slashes
+      const key = `${prefix}/${entry.name}`.replace(/\/+/g, '/')
 
       if (entry.isFile()) {
         // Skip binary files to avoid corruption
