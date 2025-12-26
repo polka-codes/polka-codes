@@ -74,10 +74,9 @@ description: A test skill
       writeFileSync(join(skillDir, 'large.txt'), 'x'.repeat(2 * 1024 * 1024))
 
       const service = new SkillDiscoveryService({ cwd: testDir })
-      const skill = await service.loadSkill(join(skillsDir, 'test'), 'project')
 
-      expect(() => validateSkillSecurity(skill)).toThrow(SkillValidationError)
-      expect(() => validateSkillSecurity(skill)).toThrow(/large.txt.*exceeds size limit/)
+      // File size is now checked during loadSkill, not during validation
+      await expect(service.loadSkill(join(skillsDir, 'test'), 'project')).rejects.toThrow('File size exceeds limit')
     })
 
     it('should reject skills with oversized total size', async () => {

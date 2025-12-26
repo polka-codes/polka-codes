@@ -189,6 +189,12 @@ export function validateScriptPermissions(script: ScriptConfig, logger?: { warn:
  *    CLI is run from a subdirectory, script paths from config may not resolve correctly.
  *    The caller should ensure paths are absolute or relative to the correct working directory.
  *
+ * 3. **Module Caching**: Cache busting via timestamp query parameters only invalidates
+ *    the entry point script. If a script imports other local modules, those dependencies
+ *    remain cached across executions. This is acceptable for CLI commands that run once
+ *    and exit, but could cause stale code issues in long-running processes. For CLI use,
+ *    this ensures scripts are reloaded on each execution without requiring process restart.
+ *
  * @example
  * ```typescript
  * const runner = new ScriptRunner()
