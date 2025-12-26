@@ -314,6 +314,135 @@ const toolInfo: ToolInfo = {
 - Use `allowUnsafeCodeExecution: false` in dynamic workflows
 - Validate all file paths before reading/writing
 
+### Error Handling Best Practices
+
+**Principles**:
+- **Prefer explicit error types**: Use custom error classes for domain-specific errors
+- **Avoid unnecessary catch blocks**: Let errors propagate to the appropriate handler
+- **Handle specific errors**: Catch only the errors you can handle, rethrow others
+- **Use unknown not any**: Always type catch blocks as `unknown` for type safety
+
+**When to Catch Errors**:
+
+1. **Graceful Degradation**: When a failure should be logged and operation continued:
+```typescript
+// Good: Catch specific errors, log, and continue
+for (const item of items) {
+  try {
+    await processItem(item)
+  } catch (error) {
+    if (error instanceof ProcessingError) {
+      console.warn(`Failed to process ${item}: ${error.message}`)
+      continue
+    }
+    throw error // Rethrow unexpected errors
+  }
+}
+```
+
+2. **Error Translation**: When converting between error types for API boundaries:
+```typescript
+// Good: Translate error to domain-specific type
+try {
+  await fs.readFile(path)
+} catch (error: unknown) {
+  if (error && typeof error === 'object' && 'code' in error) {
+    if (error.code === 'ENOENT') {
+      return null // Expected case
+    }
+  }
+  throw error // Rethrow unexpected errors
+}
+```
+
+3. **Tool/Function Boundaries**: When returning structured errors instead of throwing:
+```typescript
+// Good: Tools return structured responses
+async function invokeTool(input: unknown): Promise<ToolResponse> {
+  try {
+    const result = await toolHandler(input)
+    return { success: true, data: result }
+  } catch (error: unknown) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    }
+  }
+}
+```
+
+**When NOT to Catch Errors**:
+
+1. **Simple Error Wrapping**: Don't catch just to rethrow a different type:
+```typescript
+// Bad: Unnecessary wrapping
+try {
+  const result = await someOperation()
+} catch (error) {
+  throw new CustomError(error.message)
+}
+
+// Good: Let the original error propagate
+const result = await someOperation()
+```
+
+2. **User Interaction**: Don't catch library errors just to convert to a custom error:
+```typescript
+// Bad: Unnecessary conversion
+try {
+  return await inquirerConfirm({ message })
+} catch (_e) {
+  throw new UserCancelledError()
+}
+
+// Good: Let library errors propagate naturally
+return await inquirerConfirm({ message })
+```
+
+3. **Swallowing All Errors**: Never catch and ignore all errors:
+```typescript
+// Bad: Swallows all errors including permission issues
+try {
+  return await fs.readFile(path)
+} catch {
+  return null
+}
+
+// Good: Only handle expected errors
+try {
+  return await fs.readFile(path)
+} catch (error: unknown) {
+  if (error && typeof error === 'object' && 'code' in error) {
+    if (error.code === 'ENOENT' || error.code === 'EISDIR') {
+      return null
+    }
+  }
+  throw error
+}
+```
+
+**Type-Safe Error Handling**:
+```typescript
+// Always use unknown in catch blocks
+try {
+  await operation()
+} catch (error: unknown) {
+  // Type guard before accessing error properties
+  if (error instanceof Error) {
+    console.error(error.message)
+  } else if (error && typeof error === 'object') {
+    // Check for specific error codes
+    if ('code' in error && error.code === 'ENOENT') {
+      console.warn('File not found')
+    } else {
+      console.error(String(error))
+    }
+  } else {
+    console.error(String(error))
+  }
+}
+```
+
 ## Important Implementation Notes
 
 ### Workflow Composition
@@ -354,26 +483,7 @@ The `object` field contains validated structured output when using `outputSchema
 
 ### Type Safety Best Practices
 
-**Error Handling**: Always use `unknown` instead of `any` in catch blocks:
-```typescript
-// Correct
-try {
-  await someOperation()
-} catch (error: unknown) {
-  if (error instanceof Error) {
-    console.error(error.message)
-  } else {
-    console.error(String(error))
-  }
-}
-
-// Incorrect
-try {
-  await someOperation()
-} catch (error: any) {
-  console.error(error?.message) // Avoid this
-}
-```
+**Error Handling**: See [Error Handling Best Practices](#error-handling-best-practices) above for comprehensive guidance on when and how to catch errors.
 
 **Type Narrowing**: Use `instanceof` checks and type guards:
 ```typescript
