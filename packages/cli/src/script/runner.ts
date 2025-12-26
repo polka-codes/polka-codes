@@ -125,9 +125,12 @@ export function validateScriptPath(scriptPath: string, projectRoot: string = pro
     throw new ScriptValidationError(`Script file not found: ${scriptPath}`)
   }
 
-  // Check file extension (must be .ts for ScriptRunner)
-  if (!normalizedScript.endsWith('.ts')) {
-    throw new ScriptValidationError(`Script must be .ts file: ${scriptPath}`)
+  // Check file extension (Bun supports .ts, .js, .mjs, .cjs)
+  const validExtensions = ['.ts', '.js', '.mjs', '.cjs']
+  const hasValidExtension = validExtensions.some((ext) => normalizedScript.endsWith(ext))
+
+  if (!hasValidExtension) {
+    throw new ScriptValidationError(`Script must be a .ts, .js, .mjs, or .cjs file: ${scriptPath}`)
   }
 }
 
@@ -141,13 +144,16 @@ export function validateScriptPath(scriptPath: string, projectRoot: string = pro
  * @param script - Script configuration
  * @throws {ScriptValidationError} if permissions are invalid
  */
-export function validateScriptPermissions(script: ScriptConfig): void {
+export function validateScriptPermissions(script: ScriptConfig, logger?: { warn: (message: string) => void }): void {
   if (typeof script === 'string' || 'command' in script || 'workflow' in script) {
     // These types don't have permission checks
     return
   }
 
   if ('script' in script && script.permissions) {
+    // Warn user that permissions are advisory only
+    logger?.warn('Script permissions are currently advisory only. Scripts run with full process permissions.')
+
     // Validate permission values
     const { fs, network, subprocess } = script.permissions
 

@@ -90,29 +90,29 @@ export function validateSkillReferences(skill: Skill): string[] {
 
   // Validate that referenced files exist
   // Use a more robust regex that handles nested parentheses in URLs
-  const fileRefs = skill.content.match(/\[[^\]]+\]\(([^)]+(?:\([^)]*\)[^)]*)*)\)/g) || []
+  const linkRegex = /\[[^\]]+\]\(([^)]+(?:\([^)]*\)[^)]*)*)\)/g
+  let match: RegExpExecArray | null
 
-  for (const ref of fileRefs) {
-    const match = ref.match(/\[([^\]]+)\]\(([^)]+)\)/)
-    if (match) {
-      const [, , filepath] = match
+  match = linkRegex.exec(skill.content)
+  while (match !== null) {
+    const filepath = match[1]
+    match = linkRegex.exec(skill.content)
 
-      // Skip external URLs and anchor links
-      if (filepath.startsWith('http://') || filepath.startsWith('https://') || filepath.startsWith('#')) {
-        continue
-      }
+    // Skip external URLs and anchor links
+    if (filepath.startsWith('http://') || filepath.startsWith('https://') || filepath.startsWith('#')) {
+      continue
+    }
 
-      // Normalize the filepath to handle ./prefix and redundant slashes
-      // Then convert backslashes to forward slashes for consistent lookup
-      // (discovery.ts always uses forward slashes in map keys)
-      const normalizedPath = normalize(filepath)
-        .replace(/^\.?\//, '')
-        .replace(/\\/g, '/')
+    // Normalize the filepath to handle ./prefix and redundant slashes
+    // Then convert backslashes to forward slashes for consistent lookup
+    // (discovery.ts always uses forward slashes in map keys)
+    const normalizedPath = normalize(filepath)
+      .replace(/^\.?\//, '')
+      .replace(/\\/g, '/')
 
-      // Check if referenced file exists
-      if (!skill.files.has(normalizedPath)) {
-        warnings.push(`Referenced file not found: ${filepath}`)
-      }
+    // Check if referenced file exists
+    if (!skill.files.has(normalizedPath)) {
+      warnings.push(`Referenced file not found: ${filepath}`)
     }
   }
 

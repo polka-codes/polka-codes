@@ -40,12 +40,12 @@ describe('validateScriptPath', () => {
     cleanup()
   })
 
-  it('should reject YAML workflow files (ScriptRunner only accepts TypeScript)', () => {
+  it('should reject YAML workflow files (ScriptRunner accepts .ts, .js, .mjs, .cjs)', () => {
     setup()
     createTestFile('workflow.yml')
 
     expect(() => validateScriptPath('test-scripts/workflow.yml', process.cwd())).toThrow(
-      'Script validation failed: Script must be .ts file: test-scripts/workflow.yml',
+      'Script validation failed: Script must be a .ts, .js, .mjs, or .cjs file: test-scripts/workflow.yml',
     )
 
     cleanup()
@@ -65,11 +65,38 @@ describe('validateScriptPath', () => {
 
   it('should reject files with invalid extensions', () => {
     setup()
-    createTestFile('invalid.js')
+    createTestFile('invalid.py')
 
-    expect(() => validateScriptPath('test-scripts/invalid.js', process.cwd())).toThrow(
-      'Script validation failed: Script must be .ts file: test-scripts/invalid.js',
+    expect(() => validateScriptPath('test-scripts/invalid.py', process.cwd())).toThrow(
+      'Script validation failed: Script must be a .ts, .js, .mjs, or .cjs file: test-scripts/invalid.py',
     )
+
+    cleanup()
+  })
+
+  it('should accept .js files', () => {
+    setup()
+    createTestFile('valid.js')
+
+    expect(() => validateScriptPath('test-scripts/valid.js', process.cwd())).not.toThrow()
+
+    cleanup()
+  })
+
+  it('should accept .mjs files', () => {
+    setup()
+    createTestFile('valid.mjs')
+
+    expect(() => validateScriptPath('test-scripts/valid.mjs', process.cwd())).not.toThrow()
+
+    cleanup()
+  })
+
+  it('should accept .cjs files', () => {
+    setup()
+    createTestFile('valid.cjs')
+
+    expect(() => validateScriptPath('test-scripts/valid.cjs', process.cwd())).not.toThrow()
 
     cleanup()
   })
