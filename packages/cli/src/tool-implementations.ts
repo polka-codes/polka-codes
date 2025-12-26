@@ -22,6 +22,7 @@ import {
   computeRateLimitBackoffSeconds,
   listSkills as coreListSkills,
   loadSkill as coreLoadSkill,
+  readSkillFile as coreReadSkillFile,
   executeCommand as executeCommandTool,
   type FullToolInfo,
   fetchUrl,
@@ -547,8 +548,6 @@ async function listSkills(input: { filter?: string }, context: ToolCallContext):
 }
 
 async function readSkillFile(input: { skillName: string; filename: string }, context: ToolCallContext): Promise<ToolResponse> {
-  const { readSkillFile: coreReadSkillFile } = await import('@polka-codes/core')
-
   if (!context.parameters.skillContext) {
     return {
       success: false,

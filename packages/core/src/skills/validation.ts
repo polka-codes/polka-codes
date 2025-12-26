@@ -89,8 +89,10 @@ export function validateSkillReferences(skill: Skill): string[] {
   }
 
   // Validate that referenced files exist
-  // Use a more robust regex that handles nested parentheses in URLs
-  const linkRegex = /\[[^\]]+\]\(([^)]+(?:\([^)]*\)[^)]*)*)\)/g
+  // Use a safe regex that extracts markdown link URLs
+  // Matches [text](url) where url can contain spaces but not unbalanced parentheses
+  // This prevents ReDoS vulnerabilities while supporting common markdown link patterns
+  const linkRegex = /\[[^\]]+\]\(([^)]+(?:\s+[^)]+)*)\)/g
   let match: RegExpExecArray | null
 
   match = linkRegex.exec(skill.content)

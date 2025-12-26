@@ -142,16 +142,20 @@ export class SkillDiscoveryService {
         const skill = await this.loadSkill(skillPath, source)
         skills.push(skill)
       } catch (error) {
-        if (error instanceof SkillDiscoveryError || error instanceof ZodError) {
-          let message = error.message
-          if (error instanceof ZodError) {
-            message = error.issues[0]?.message ?? 'Invalid skill metadata'
-          }
-          const path = error instanceof SkillDiscoveryError ? error.path : skillPath
-          console.warn(`Warning: ${message} (path: ${path})`)
-        } else {
-          throw error
+        // Log all errors and continue to discover other skills
+        let message = 'Unknown error'
+        let path = skillPath
+
+        if (error instanceof SkillDiscoveryError) {
+          message = error.message
+          path = error.path
+        } else if (error instanceof ZodError) {
+          message = error.issues[0]?.message ?? 'Invalid skill metadata'
+        } else if (error instanceof Error) {
+          message = error.message
         }
+
+        console.warn(`Warning: Failed to load skill at ${path}: ${message}`)
       }
     }
 
