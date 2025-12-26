@@ -20,6 +20,8 @@ import {
   agentWorkflow,
   askFollowupQuestion,
   computeRateLimitBackoffSeconds,
+  listSkills as coreListSkills,
+  loadSkill as coreLoadSkill,
   executeCommand as executeCommandTool,
   type FullToolInfo,
   fetchUrl,
@@ -467,8 +469,6 @@ async function runAgent(input: AgentWorkflowInput, context: ToolCallContext) {
 }
 
 async function loadSkill(input: { skillName: string }, context: ToolCallContext): Promise<ToolResponse> {
-  const { loadSkill: coreLoadSkill } = await import('@polka-codes/core')
-
   if (!context.parameters.skillContext) {
     return {
       success: false,
@@ -509,8 +509,6 @@ async function loadSkill(input: { skillName: string }, context: ToolCallContext)
 }
 
 async function listSkills(input: { filter?: string }, context: ToolCallContext): Promise<ToolResponse> {
-  const { listSkills: coreListSkills } = await import('@polka-codes/core')
-
   if (!context.parameters.skillContext) {
     return {
       success: false,
@@ -623,7 +621,7 @@ export async function toolCall(toolCall: ToolCall<CliToolRegistry>, context: Too
     return handler(toolCall.input as any, context)
   }
 
-  // Check toolHandlers Map (for skill tools)
+  // Check toolHandlers Map (for core/registered tools)
   const toolHandler = toolHandlers.get(toolCall.tool as keyof ToolRegistry)
   if (toolHandler) {
     return toolHandler.handler(context.toolProvider, toolCall.input as any)
