@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs'
 import { readdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { parse } from 'yaml'
+import { ZodError } from 'zod'
 import { IGNORED_DIRECTORIES, SKILL_ERROR_MESSAGES, SKILL_LIMITS } from './constants'
 import type { Skill, SkillContext, SkillMetadata } from './types'
 import { SkillDiscoveryError, skillMetadataSchema } from './types'
@@ -101,8 +102,10 @@ export class SkillDiscoveryService {
         const skill = await this.loadSkill(skillPath, source)
         skills.push(skill)
       } catch (error) {
-        if (error instanceof SkillDiscoveryError) {
-          console.warn(`Warning: ${error.message} (path: ${error.path})`)
+        if (error instanceof SkillDiscoveryError || error instanceof ZodError) {
+          const message = error instanceof ZodError ? (error.errors?.[0]?.message ?? 'Invalid skill metadata') : error.message
+          const path = error instanceof SkillDiscoveryError ? error.path : skillPath
+          console.warn(`Warning: ${message} (path: ${path})`)
         } else {
           throw error
         }
@@ -188,13 +191,8 @@ export class SkillDiscoveryService {
     const frontmatter = match[1] ?? ''
     const instructions = match[2] ?? ''
 
-    try {
-      const metadata = this.parseMetadata(frontmatter)
-      return { metadata, content: instructions }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      throw new SkillDiscoveryError(`Invalid frontmatter: ${message}`, '')
-    }
+    const metadata = this.parseMetadata(frontmatter)
+    return { metadata, content: instructions }
   }
 
   /**

@@ -152,13 +152,8 @@ async function confirm(input: { message: string }, context: ToolCallContext) {
 
   // to allow ora to fully stop the spinner so inquirer can takeover the cli window
   await new Promise((resolve) => setTimeout(resolve, 50))
-  try {
-    process.stderr.write('\u0007')
-    const result = await inquirerConfirm({ message: input.message })
-    return result
-  } catch (_e) {
-    throw new UserCancelledError()
-  }
+  process.stderr.write('\u0007')
+  return await inquirerConfirm({ message: input.message })
 }
 
 async function input(input: { message: string; default: string }, context: ToolCallContext) {
@@ -186,13 +181,8 @@ async function select(input: { message: string; choices: { name: string; value: 
 
   // to allow ora to fully stop the spinner so inquirer can takeover the cli window
   await new Promise((resolve) => setTimeout(resolve, 50))
-  try {
-    process.stderr.write('\u0007')
-    const result = await inquirerSelect({ message: input.message, choices: input.choices })
-    return result
-  } catch (_e) {
-    throw new UserCancelledError()
-  }
+  process.stderr.write('\u0007')
+  return await inquirerSelect({ message: input.message, choices: input.choices })
 }
 
 async function writeToFile(input: { path: string; content: string }) {
@@ -204,12 +194,14 @@ async function writeToFile(input: { path: string; content: string }) {
 
 async function readFile(input: { path: string }) {
   try {
-    const content = await fs.readFile(input.path, 'utf8')
-    return content
-  } catch {
-    // return null if file doesn't exist or can't be read
+    return await fs.readFile(input.path, 'utf8')
+  } catch (error: unknown) {
+    // Return null for file not found errors, rethrow others
+    if (error && typeof error === 'object' && 'code' in error && (error.code === 'ENOENT' || error.code === 'EISDIR')) {
+      return null
+    }
+    throw error
   }
-  return null
 }
 
 async function executeCommand(input: { command: string; shell?: boolean; pipe?: boolean; args?: string[] }) {
