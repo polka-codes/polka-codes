@@ -9,6 +9,18 @@ import type { Skill, SkillContext, SkillMetadata } from './types'
 import { SkillDiscoveryError, skillMetadataSchema } from './types'
 
 /**
+ * PERFORMANCE CONSIDERATION
+ *
+ * The current implementation eagerly loads all skill files into memory during
+ * discovery. This means every CLI command reads the full content of all skills
+ * from disk, which can cause performance degradation with many skills.
+ *
+ * Future optimization: Implement lazy loading where discoverAll() only reads
+ * SKILL.md metadata, and full skill content is loaded on-demand when the loadSkill
+ * tool is called. This would significantly improve CLI startup time.
+ */
+
+/**
  * List of binary file extensions that should not be loaded as text
  */
 const BINARY_EXTENSIONS = [

@@ -8,6 +8,15 @@
  * - Timeout enforcement
  * - Error handling with stack traces
  * - Security validation
+ *
+ * **IMPORTANT: Memory Limitation**
+ * This runner uses cache busting (?t=timestamp) to ensure scripts are reloaded
+ * on each execution. This creates a new module entry in Bun's module cache
+ * every time a script runs. For CLI commands (which exit after one run),
+ * this is acceptable. However, in long-running processes (watch mode,
+ * daemon, server), this will cause memory leaks as each execution creates
+ * new uncached module entries. Do NOT use this runner in long-running
+ * processes without implementing a proper cache management strategy.
  */
 
 import { existsSync } from 'node:fs'
