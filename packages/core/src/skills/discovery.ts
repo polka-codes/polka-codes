@@ -191,6 +191,7 @@ export class SkillDiscoveryService {
 
     // Load additional files
     const files = new Map<string, string>()
+    let totalSize = 0
     const entries = await readdir(skillPath, { withFileTypes: true })
 
     for (const entry of entries) {
@@ -212,11 +213,20 @@ export class SkillDiscoveryService {
           throw new SkillDiscoveryError(`File size exceeds limit (${fileSize} > ${SKILL_LIMITS.MAX_FILE_SIZE}): ${entry.name}`, skillPath)
         }
 
+        // Track cumulative size to prevent resource exhaustion
+        totalSize += fileSize
+        if (totalSize > SKILL_LIMITS.MAX_SKILL_SIZE) {
+          throw new SkillDiscoveryError(
+            `Total skill size exceeds limit (${totalSize} > ${SKILL_LIMITS.MAX_SKILL_SIZE}): ${skillPath}`,
+            skillPath,
+          )
+        }
+
         const fileContent = await readFile(filePath, 'utf-8')
         files.set(entry.name, fileContent)
       } else if (entry.isDirectory()) {
         // Recursively load directory contents
-        await this.loadDirectoryFiles(filePath, entry.name, files)
+        await this.loadDirectoryFiles(filePath, entry.name, files, 0, { value: totalSize })
       }
     }
 
@@ -259,8 +269,15 @@ export class SkillDiscoveryService {
 
   /**
    * Recursively load files from a directory into the files map
+   * @param totalSizeRef Reference to track cumulative size (updated in place)
    */
-  private async loadDirectoryFiles(dirPath: string, prefix: string, files: Map<string, string>, depth = 0): Promise<void> {
+  private async loadDirectoryFiles(
+    dirPath: string,
+    prefix: string,
+    files: Map<string, string>,
+    depth = 0,
+    totalSizeRef: { value: number },
+  ): Promise<void> {
     const { MAX_DEPTH, MAX_FILES } = SKILL_LIMITS
 
     // Prevent stack overflow from deep recursion
@@ -303,6 +320,15 @@ export class SkillDiscoveryService {
           throw new SkillDiscoveryError(`File size exceeds limit (${fileSize} > ${SKILL_LIMITS.MAX_FILE_SIZE}): ${key}`, dirPath)
         }
 
+        // Track cumulative size to prevent resource exhaustion
+        totalSizeRef.value += fileSize
+        if (totalSizeRef.value > SKILL_LIMITS.MAX_SKILL_SIZE) {
+          throw new SkillDiscoveryError(
+            `Total skill size exceeds limit (${totalSizeRef.value} > ${SKILL_LIMITS.MAX_SKILL_SIZE}): ${dirPath}`,
+            dirPath,
+          )
+        }
+
         const content = await readFile(filePath, 'utf-8')
         files.set(key, content)
       } else if (entry.isDirectory()) {
@@ -310,7 +336,7 @@ export class SkillDiscoveryService {
         if ((IGNORED_DIRECTORIES as readonly string[]).includes(entry.name)) {
           continue
         }
-        await this.loadDirectoryFiles(filePath, key, files, depth + 1)
+        await this.loadDirectoryFiles(filePath, key, files, depth + 1, totalSizeRef)
       }
     }
   }
