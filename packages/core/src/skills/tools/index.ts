@@ -2,3 +2,4 @@
 
 export * from './listSkills'
 export * from './loadSkill'
+export * from './readSkillFile'

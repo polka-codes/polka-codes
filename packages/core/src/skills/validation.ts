@@ -89,7 +89,8 @@ export function validateSkillReferences(skill: Skill): string[] {
   }
 
   // Validate that referenced files exist
-  const fileRefs = skill.content.match(/\[([^\]]+)\]\(([^)]+)\)/g) || []
+  // Use a more robust regex that handles nested parentheses in URLs
+  const fileRefs = skill.content.match(/\[[^\]]+\]\(([^)]+(?:\([^)]*\)[^)]*)*)\)/g) || []
 
   for (const ref of fileRefs) {
     const match = ref.match(/\[([^\]]+)\]\(([^)]+)\)/)

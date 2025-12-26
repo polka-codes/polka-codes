@@ -89,20 +89,28 @@ function executeShellCommand(command: string, scriptName: string): void {
 
 /**
  * Quote shell arguments to preserve spaces and special characters.
- * Uses POSIX-style single quoting for safety and consistency.
+ * Uses platform-appropriate quoting for cross-platform compatibility.
  *
- * **Platform Compatibility Note**: This function uses POSIX single quotes which work
- * on Unix-like systems (Linux, macOS) but are not recognized by cmd.exe on Windows.
- * Windows users may encounter issues with arguments containing spaces or special
- * characters. Consider using a cross-platform quoting library for full Windows support.
+ * On Windows (cmd.exe), arguments with spaces are wrapped in double quotes.
+ * On Unix-like systems, uses POSIX single quoting.
  *
  * @param args - Array of argument strings
  * @returns Quoted arguments string
  */
 function quoteArgs(args: string[]): string {
+  const isWindows = process.platform === 'win32'
+
   return args
     .map((arg) => {
-      // Use single quotes and escape any existing single quotes
+      // For Windows cmd.exe
+      if (isWindows) {
+        // Double quotes are used on Windows
+        // Escape existing double quotes and backslashes
+        const escaped = arg.replace(/(\\*)"/g, '$1$1\\"').replace(/(\\*)$/, '$1$1')
+        return `"${escaped}"`
+      }
+
+      // For Unix-like systems, use single quotes
       return `'${arg.replace(/'/g, "'\\''")}'`
     })
     .join(' ')

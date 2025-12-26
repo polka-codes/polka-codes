@@ -556,6 +556,48 @@ async function listSkills(input: { filter?: string }, context: ToolCallContext):
   }
 }
 
+async function readSkillFile(input: { skillName: string; filename: string }, context: ToolCallContext): Promise<ToolResponse> {
+  const { readSkillFile: coreReadSkillFile } = await import('@polka-codes/core')
+
+  if (!context.parameters.skillContext) {
+    return {
+      success: false,
+      message: {
+        type: 'error-text',
+        value: 'Skill context not initialized',
+      },
+    }
+  }
+
+  try {
+    const result = await coreReadSkillFile(input, context.parameters.skillContext)
+    if (!result.success || !result.content) {
+      return {
+        success: false,
+        message: {
+          type: 'error-text',
+          value: result.error ?? 'Failed to read skill file',
+        },
+      }
+    }
+    return {
+      success: true,
+      message: {
+        type: 'text',
+        value: result.content,
+      },
+    }
+  } catch (error: unknown) {
+    return {
+      success: false,
+      message: {
+        type: 'error-text',
+        value: error instanceof Error ? error.message : String(error),
+      },
+    }
+  }
+}
+
 const localToolHandlers = {
   runAgent,
   createPullRequest,
@@ -579,6 +621,7 @@ const localToolHandlers = {
   updateTodoItem,
   loadSkill,
   listSkills,
+  readSkillFile,
 }
 
 export async function toolCall(toolCall: ToolCall<CliToolRegistry>, context: ToolCallContext) {
