@@ -228,6 +228,11 @@ export class ScriptRunner {
         // Resolve script path relative to project root (where config was loaded)
         const projectRoot = context.projectRoot || process.cwd()
         const absolutePath = resolve(projectRoot, scriptPath)
+
+        // Cache busting ensures we reload the script on each execution
+        // Note: This is safe for CLI commands that run once and exit.
+        // If this runner is used in long-running processes, consider using
+        // a WeakMap or explicit cache invalidation to avoid memory leaks.
         const cacheBustUrl = `${pathToFileURL(absolutePath).href}?t=${Date.now()}`
 
         // Dynamic import of the script module

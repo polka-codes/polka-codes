@@ -11,6 +11,7 @@ import type { Logger } from '@polka-codes/core'
 import { Command } from 'commander'
 import { set } from 'lodash-es'
 import { stringify } from 'yaml'
+import { BUILT_IN_COMMANDS, type BuiltInCommand } from '../builtin-commands'
 import { configPrompt } from '../configPrompt'
 import { createLogger } from '../logger'
 import { runWorkflow } from '../runWorkflow'
@@ -31,8 +32,7 @@ async function createSkill(name: string, logger: Logger, interactive: boolean) {
   }
 
   // Check for conflicts with built-in commands
-  const BUILT_IN_COMMANDS = ['code', 'commit', 'pr', 'review', 'fix', 'plan', 'workflow', 'run', 'init', 'meta']
-  if (BUILT_IN_COMMANDS.includes(name)) {
+  if (BUILT_IN_COMMANDS.includes(name as BuiltInCommand)) {
     throw new Error(
       `Skill name '${name}' conflicts with a built-in command. ` + `Please choose a different name (e.g., '${name}-skill' or 'my-${name}')`,
     )
@@ -150,8 +150,7 @@ async function createScript(name: string, logger: Logger, interactive: boolean) 
   }
 
   // Check for conflicts with built-in commands
-  const BUILT_IN_COMMANDS = ['code', 'commit', 'pr', 'review', 'fix', 'plan', 'workflow', 'run', 'init', 'meta']
-  if (BUILT_IN_COMMANDS.includes(name)) {
+  if (BUILT_IN_COMMANDS.includes(name as BuiltInCommand)) {
     throw new Error(
       `Script name '${name}' conflicts with a built-in command. ` +
         `Please choose a different name (e.g., '${name}-script' or 'my-${name}')`,

@@ -4,6 +4,7 @@ import { execSync } from 'node:child_process'
 import { getProvider, loadConfig } from '@polka-codes/cli-shared'
 import type { Logger, UsageMeter } from '@polka-codes/core'
 import type { Command } from 'commander'
+import { BUILT_IN_COMMANDS, type BuiltInCommand } from '../builtin-commands'
 import { createLogger } from '../logger'
 import { runWorkflow } from '../runWorkflow'
 import { executeScript, ScriptExecutionFailedError } from '../script/executor'
@@ -229,8 +230,7 @@ export async function runMeta(task: string | undefined, command: Command) {
  */
 async function tryExecuteCommand(commandName: string, logger: Logger): Promise<boolean> {
   // Check built-in commands
-  const builtInCommands = ['code', 'commit', 'pr', 'review', 'fix', 'plan', 'workflow', 'run', 'init']
-  if (builtInCommands.includes(commandName)) {
+  if (BUILT_IN_COMMANDS.includes(commandName as BuiltInCommand)) {
     // Use the current executable to run the command
     const runtime = process.argv[0] // The node/bun runtime
     const script = process.argv[1] // The script being executed
