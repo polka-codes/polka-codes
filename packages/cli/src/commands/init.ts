@@ -159,13 +159,15 @@ async function createScript(name: string, logger: Logger, interactive: boolean) 
   }
 
   const scriptDir = '.polka-scripts'
-  const scriptPath = join(scriptDir, `${name}.ts`)
+  // Use forward slashes for config (cross-platform), actual path for file operations
+  const scriptPathConfig = `${scriptDir}/${name}.ts`
+  const scriptPathActual = join(scriptDir, `${name}.ts`)
 
   // Check if script already exists
-  if (existsSync(scriptPath)) {
+  if (existsSync(scriptPathActual)) {
     if (interactive) {
       const proceed = await confirm({
-        message: `Script '${scriptPath}' already exists. Overwrite?`,
+        message: `Script '${scriptPathActual}' already exists. Overwrite?`,
         default: false,
       })
       if (!proceed) {
@@ -173,7 +175,7 @@ async function createScript(name: string, logger: Logger, interactive: boolean) 
         return
       }
     } else {
-      throw new Error(`Script already exists: ${scriptPath}`)
+      throw new Error(`Script already exists: ${scriptPathActual}`)
     }
   }
 
@@ -206,8 +208,8 @@ if (import.meta.main) {
 `
 
   // Write script file
-  writeFileSync(scriptPath, template)
-  logger.info(`Created script: ${scriptPath}`)
+  writeFileSync(scriptPathActual, template)
+  logger.info(`Created script: ${scriptPathActual}`)
 
   // Add to config if it exists
   if (existsSync(localConfigFileName)) {
@@ -217,7 +219,7 @@ if (import.meta.main) {
         config.scripts = {}
       }
       config.scripts[name] = {
-        script: scriptPath,
+        script: scriptPathConfig,
         description: `Custom script: ${name}`,
       }
 
@@ -228,7 +230,7 @@ if (import.meta.main) {
       // Check if scripts section exists
       if (!configContent.includes('scripts:')) {
         // Add scripts section at the end
-        newContent = `${configContent.trimEnd()}\n\nscripts:\n  ${name}:\n    script: ${scriptPath}\n    description: Custom script: ${name}\n`
+        newContent = `${configContent.trimEnd()}\n\nscripts:\n  ${name}:\n    script: ${scriptPathConfig}\n    description: Custom script: ${name}\n`
       } else {
         // Parse YAML to safely insert into scripts section
         try {
@@ -240,7 +242,7 @@ if (import.meta.main) {
           }
 
           parsed.scripts[name] = {
-            script: scriptPath,
+            script: scriptPathConfig,
             description: `Custom script: ${name}`,
           }
 
@@ -250,7 +252,7 @@ if (import.meta.main) {
           logger.warn('Could not parse config file safely. Please add the script manually:')
           logger.info(`  scripts:`)
           logger.info(`    ${name}:`)
-          logger.info(`      script: ${scriptPath}`)
+          logger.info(`      script: ${scriptPathConfig}`)
           logger.info(`      description: Custom script: ${name}`)
           if (parseError instanceof Error) {
             logger.debug(`Error: ${parseError.message}`)
@@ -266,7 +268,7 @@ if (import.meta.main) {
       logger.warn('Could not update config file. Add the script manually:')
       logger.info(`  scripts:`)
       logger.info(`    ${name}:`)
-      logger.info(`      script: ${scriptPath}`)
+      logger.info(`      script: ${scriptPathConfig}`)
       logger.info(`      description: Custom script: ${name}`)
       if (error instanceof Error) {
         logger.debug(`Error: ${error.message}`)
@@ -276,7 +278,7 @@ if (import.meta.main) {
     logger.info(`Tip: Add this script to your .polkacodes.yml:`)
     logger.info(`  scripts:`)
     logger.info(`    ${name}:`)
-    logger.info(`      script: ${scriptPath}`)
+    logger.info(`      script: ${scriptPathConfig}`)
     logger.info(`      description: Custom script: ${name}`)
   }
 }

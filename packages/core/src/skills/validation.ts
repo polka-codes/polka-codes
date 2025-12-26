@@ -103,7 +103,11 @@ export function validateSkillReferences(skill: Skill): string[] {
       }
 
       // Normalize the filepath to handle ./prefix and redundant slashes
-      const normalizedPath = normalize(filepath).replace(/^\.?\//, '')
+      // Then convert backslashes to forward slashes for consistent lookup
+      // (discovery.ts always uses forward slashes in map keys)
+      const normalizedPath = normalize(filepath)
+        .replace(/^\.?\//, '')
+        .replace(/\\/g, '/')
 
       // Check if referenced file exists
       if (!skill.files.has(normalizedPath)) {

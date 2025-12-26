@@ -46,6 +46,13 @@ export const fixWorkflow: WorkflowFn<
   const summaries: string[] = []
   let formatCommand: string | undefined
 
+  // Helper function to build script invocation command
+  const buildScriptCommand = (scriptName: string): string => {
+    const runtime = process.argv[0]
+    const script = process.argv[1]
+    return `"${runtime}" "${script}" run ${scriptName}`
+  }
+
   if (!command) {
     const config = await loadConfig()
     const check = config?.scripts?.check
@@ -59,7 +66,7 @@ export const fixWorkflow: WorkflowFn<
       checkCommand = check.command
     } else if (check && 'script' in check) {
       // For TypeScript scripts, invoke via CLI
-      checkCommand = `polka run check`
+      checkCommand = buildScriptCommand('check')
     } else if (check && 'workflow' in check) {
       // Workflows not yet supported for fix workflow
       logger.warn('Workflow scripts are not yet supported in fix workflow')
@@ -72,7 +79,7 @@ export const fixWorkflow: WorkflowFn<
       testCommand = test.command
     } else if (test && 'script' in test) {
       // For TypeScript scripts, invoke via CLI
-      testCommand = `polka run test`
+      testCommand = buildScriptCommand('test')
     } else if (test && 'workflow' in test) {
       // Workflows not yet supported for fix workflow
       logger.warn('Workflow scripts are not yet supported in fix workflow')
@@ -84,7 +91,7 @@ export const fixWorkflow: WorkflowFn<
       formatCommand = format.command
     } else if (format && 'script' in format) {
       // For TypeScript scripts, invoke via CLI
-      formatCommand = `polka run format`
+      formatCommand = buildScriptCommand('format')
     } else if (format && 'workflow' in format) {
       // Workflows not yet supported for fix workflow
       logger.warn('Workflow scripts are not yet supported in fix workflow')
