@@ -123,25 +123,13 @@ export function validateSkillReferences(skill: Skill): string[] {
 
 /**
  * Validate a skill's metadata
+ * Note: Zod already validates name format, max length, and description max length
+ * This function only validates requirements not covered by Zod
  */
 export function validateSkillMetadata(skill: Skill): string[] {
   const errors: string[] = []
 
-  // Name validation (already validated by Zod, but double-check)
-  if (!skill.metadata.name.match(/^[a-z0-9-]+$/)) {
-    errors.push(`Invalid name format: ${skill.metadata.name}`)
-  }
-
-  if (skill.metadata.name.length > 64) {
-    errors.push(`Name too long: ${skill.metadata.name.length} > 64`)
-  }
-
-  // Description validation
-  if (skill.metadata.description.length > 1024) {
-    errors.push(`Description too long: ${skill.metadata.description.length} > 1024`)
-  }
-
-  // Check that description is meaningful
+  // Check that description is meaningful (Zod doesn't validate min length)
   if (skill.metadata.description.length < 20) {
     errors.push(`Description too short: ${skill.metadata.description.length} < 20`)
   }

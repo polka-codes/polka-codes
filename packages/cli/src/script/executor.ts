@@ -18,61 +18,6 @@ export class ScriptExecutionFailedError extends Error {
 }
 
 /**
- * Execute a script configuration with the provided arguments.
- * This is a shared utility used by both the `run` and `meta` commands.
- *
- * @param script - The script configuration to execute
- * @param name - The name of the script (for error messages)
- * @param logger - Logger instance for output
- * @param args - Arguments to pass to the script
- * @throws {ScriptExecutionFailedError} When script execution fails
- */
-export async function executeScript(script: ScriptConfig, name: string, logger: Logger, args: string[] = []): Promise<void> {
-  const runner = new ScriptRunner()
-
-  // Validate script permissions before execution
-  validateScriptPermissions(script, logger)
-
-  // Simple shell command string
-  if (typeof script === 'string') {
-    const fullCommand = args.length > 0 ? `${script} ${quoteArgs(args)}` : script
-    executeShellCommand(fullCommand, name)
-    return
-  }
-
-  // Command object with description
-  if ('command' in script) {
-    const fullCommand = args.length > 0 ? `${script.command} ${quoteArgs(args)}` : script.command
-    executeShellCommand(fullCommand, name)
-    return
-  }
-
-  // Workflow script
-  if ('workflow' in script) {
-    throw new ScriptExecutionFailedError(name, 1, `workflow execution not yet implemented for '${name}'`)
-  }
-
-  // TypeScript script
-  if ('script' in script) {
-    const scriptPath = script.script
-    const result = await runner.execute({
-      scriptPath,
-      args,
-      context: {}, // Context is currently unused but reserved for future use
-      logger,
-      timeout: script.timeout,
-    })
-
-    if (!result.success && result.error) {
-      logger.error(`Script '${name}' failed: ${result.error.message}`)
-      throw new ScriptExecutionFailedError(name, 1, result.error.message)
-    }
-
-    return
-  }
-}
-
-/**
  * Execute a shell command using spawnSync with proper error handling.
  *
  * @param command - The command string to execute
@@ -117,4 +62,73 @@ function quoteArgs(args: string[]): string {
       return `'${arg.replace(/'/g, "'\\''")}'`
     })
     .join(' ')
+}
+
+/**
+ * Strategy pattern for script execution
+ */
+type ScriptExecutor = (script: ScriptConfig, name: string, args: string[], logger: Logger, runner: ScriptRunner) => Promise<void>
+
+// String command executor
+const executeStringCommand: ScriptExecutor = async (script, name, args, _logger) => {
+  const fullCommand = args.length > 0 ? `${script} ${quoteArgs(args)}` : (script as string)
+  executeShellCommand(fullCommand, name)
+}
+
+// Command object executor
+const executeCommandObject: ScriptExecutor = async (script, name, args, _logger) => {
+  const fullCommand =
+    args.length > 0 ? `${(script as { command: string }).command} ${quoteArgs(args)}` : (script as { command: string }).command
+  executeShellCommand(fullCommand, name)
+}
+
+// TypeScript script executor
+const executeTypeScriptScript: ScriptExecutor = async (script, name, args, logger, runner) => {
+  const scriptPath = (script as { script: string; timeout?: number }).script
+  const result = await runner.execute({
+    scriptPath,
+    args,
+    context: {}, // Reserved for future use
+    logger,
+    timeout: (script as { timeout?: number }).timeout,
+  })
+
+  if (!result.success && result.error) {
+    logger.error(`Script '${name}' failed: ${result.error.message}`)
+    throw new ScriptExecutionFailedError(name, 1, result.error.message)
+  }
+}
+
+/**
+ * Execute a script configuration with the provided arguments.
+ * This is a shared utility used by both the `run` and `meta` commands.
+ *
+ * @param script - The script configuration to execute
+ * @param name - The name of the script (for error messages)
+ * @param logger - Logger instance for output
+ * @param args - Arguments to pass to the script
+ * @throws {ScriptExecutionFailedError} When script execution fails
+ */
+export async function executeScript(script: ScriptConfig, name: string, logger: Logger, args: string[] = []): Promise<void> {
+  const runner = new ScriptRunner()
+
+  // Validate script permissions before execution
+  validateScriptPermissions(script, logger)
+
+  // Determine script type and use appropriate executor
+  const scriptType = typeof script === 'string' ? 'string' : Object.keys(script)[0]
+
+  const executors: Record<string, ScriptExecutor> = {
+    string: executeStringCommand,
+    command: executeCommandObject,
+    script: executeTypeScriptScript,
+  }
+
+  const executor = executors[scriptType]
+
+  if (!executor) {
+    throw new ScriptExecutionFailedError(name, 1, `workflow execution not yet implemented for '${name}'`)
+  }
+
+  await executor(script, name, args, logger, runner)
 }

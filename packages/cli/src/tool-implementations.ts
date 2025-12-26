@@ -469,35 +469,22 @@ async function runAgent(input: AgentWorkflowInput, context: ToolCallContext) {
   return await agentWorkflow(input, context.workflowContext)
 }
 
-async function loadSkill(input: { skillName: string }, context: ToolCallContext): Promise<ToolResponse> {
+/**
+ * Wrapper for skill tool operations that handles context validation and error handling
+ */
+async function withSkillContext<T>(
+  context: ToolCallContext,
+  fn: (skillContext: SkillContext) => Promise<ToolResponse>,
+): Promise<ToolResponse> {
   if (!context.parameters.skillContext) {
     return {
       success: false,
-      message: {
-        type: 'error-text',
-        value: 'Skill context not initialized',
-      },
+      message: { type: 'error-text', value: 'Skill context not initialized' },
     }
   }
 
   try {
-    const result = await coreLoadSkill(input, context.parameters.skillContext)
-    if (!result.success || !result.skill) {
-      return {
-        success: false,
-        message: {
-          type: 'error-text',
-          value: result.error ?? 'Failed to load skill',
-        },
-      }
-    }
-    return {
-      success: true,
-      message: {
-        type: 'text',
-        value: `Loaded skill '${result.skill.name}':\n\n${result.skill.content}\n\nAvailable files: ${result.skill.availableFiles.join(', ')}${result.warnings && result.warnings.length > 0 ? `\n\nWarnings:\n${result.warnings.join('\n')}` : ''}`,
-      },
-    }
+    return await fn(context.parameters.skillContext)
   } catch (error: unknown) {
     return {
       success: false,
@@ -509,19 +496,28 @@ async function loadSkill(input: { skillName: string }, context: ToolCallContext)
   }
 }
 
-async function listSkills(input: { filter?: string }, context: ToolCallContext): Promise<ToolResponse> {
-  if (!context.parameters.skillContext) {
+async function loadSkill(input: { skillName: string }, context: ToolCallContext): Promise<ToolResponse> {
+  return withSkillContext(context, async (skillContext) => {
+    const result = await coreLoadSkill(input, skillContext)
+    if (!result.success || !result.skill) {
+      return {
+        success: false,
+        message: { type: 'error-text', value: result.error ?? 'Failed to load skill' },
+      }
+    }
     return {
-      success: false,
+      success: true,
       message: {
-        type: 'error-text',
-        value: 'Skill context not initialized',
+        type: 'text',
+        value: `Loaded skill '${result.skill.name}':\n\n${result.skill.content}\n\nAvailable files: ${result.skill.availableFiles.join(', ')}${result.warnings && result.warnings.length > 0 ? `\n\nWarnings:\n${result.warnings.join('\n')}` : ''}`,
       },
     }
-  }
+  })
+}
 
-  try {
-    const result = await coreListSkills(input, context.parameters.skillContext)
+async function listSkills(input: { filter?: string }, context: ToolCallContext): Promise<ToolResponse> {
+  return withSkillContext(context, async (skillContext) => {
+    const result = await coreListSkills(input, skillContext)
     const skillsList = result.skills
       .map((skill: { name: string; description: string; source: string }) => {
         const sourceIcon = SOURCE_ICONS[skill.source as keyof typeof SOURCE_ICONS]
@@ -536,55 +532,23 @@ async function listSkills(input: { filter?: string }, context: ToolCallContext):
         value: `Found ${result.total} skill${result.total === 1 ? '' : 's'}:\n\n${skillsList}`,
       },
     }
-  } catch (error: unknown) {
-    return {
-      success: false,
-      message: {
-        type: 'error-text',
-        value: error instanceof Error ? error.message : String(error),
-      },
-    }
-  }
+  })
 }
 
 async function readSkillFile(input: { skillName: string; filename: string }, context: ToolCallContext): Promise<ToolResponse> {
-  if (!context.parameters.skillContext) {
-    return {
-      success: false,
-      message: {
-        type: 'error-text',
-        value: 'Skill context not initialized',
-      },
-    }
-  }
-
-  try {
-    const result = await coreReadSkillFile(input, context.parameters.skillContext)
+  return withSkillContext(context, async (skillContext) => {
+    const result = await coreReadSkillFile(input, skillContext)
     if (!result.success || !result.content) {
       return {
         success: false,
-        message: {
-          type: 'error-text',
-          value: result.error ?? 'Failed to read skill file',
-        },
+        message: { type: 'error-text', value: result.error ?? 'Failed to read skill file' },
       }
     }
     return {
       success: true,
-      message: {
-        type: 'text',
-        value: result.content,
-      },
+      message: { type: 'text', value: result.content },
     }
-  } catch (error: unknown) {
-    return {
-      success: false,
-      message: {
-        type: 'error-text',
-        value: error instanceof Error ? error.message : String(error),
-      },
-    }
-  }
+  })
 }
 
 const localToolHandlers = {
