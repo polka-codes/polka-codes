@@ -103,7 +103,10 @@ export class SkillDiscoveryService {
         skills.push(skill)
       } catch (error) {
         if (error instanceof SkillDiscoveryError || error instanceof ZodError) {
-          const message = error instanceof ZodError ? (error.errors?.[0]?.message ?? 'Invalid skill metadata') : error.message
+          let message = error.message
+          if (error instanceof ZodError) {
+            message = error.issues[0]?.message ?? 'Invalid skill metadata'
+          }
           const path = error instanceof SkillDiscoveryError ? error.path : skillPath
           console.warn(`Warning: ${message} (path: ${path})`)
         } else {
