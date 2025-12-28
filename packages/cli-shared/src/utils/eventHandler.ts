@@ -10,13 +10,13 @@ const globalToolCallStats = new Map<string, ToolStat>()
 // Create a console-like object that writes to a stream
 function createStreamConsole(stdout: Writable, stderr: Writable) {
   return {
-    log: (...args: any[]) => stdout.write(args.map(String).join(' ') + '\n'),
-    info: (...args: any[]) => stdout.write(args.map(String).join(' ') + '\n'),
-    warn: (...args: any[]) => stderr.write(args.map(String).join(' ') + '\n'),
-    error: (...args: any[]) => stderr.write(args.map(String).join(' ') + '\n'),
+    log: (...args: any[]) => stdout.write(`${args.map(String).join(' ')}\n`),
+    info: (...args: any[]) => stdout.write(`${args.map(String).join(' ')}\n`),
+    warn: (...args: any[]) => stderr.write(`${args.map(String).join(' ')}\n`),
+    error: (...args: any[]) => stderr.write(`${args.map(String).join(' ')}\n`),
     table: (data: any[]) => {
       // Simple table formatting - fallback for console.table
-      stdout.write(JSON.stringify(data, null, 2) + '\n')
+      stdout.write(`${JSON.stringify(data, null, 2)}\n`)
     },
   }
 }

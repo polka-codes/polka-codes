@@ -256,6 +256,11 @@ export interface ReviewCodeOptions extends BaseOptions {
   pr?: number
 
   /**
+   * Specific files to review (if not provided, reviews all changes)
+   */
+  files?: string[]
+
+  /**
    * Additional context for the review
    */
   context?: string
@@ -283,13 +288,14 @@ export interface ReviewCodeOptions extends BaseOptions {
  * ```
  */
 export async function reviewCode(options: ReviewCodeOptions = {}): Promise<ReviewResult | undefined> {
-  const { pr, context: reviewContext, interactive, onUsage, ...context } = options
+  const { pr, files, context: reviewContext, interactive, onUsage, ...context } = options
 
   const verbose = context.silent ? -1 : (context.verbose ?? 0)
   const logger = createLogger({ verbose })
 
   const workflowInput: ReviewWorkflowInput = {
     pr,
+    files,
     context: reviewContext,
   }
 

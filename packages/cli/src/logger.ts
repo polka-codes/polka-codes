@@ -5,10 +5,10 @@ import type { Logger } from '@polka-codes/core'
 
 function createStreamConsole(stdout: Writable, stderr: Writable) {
   return {
-    log: (...args: any[]) => stdout.write(args.map(String).join(' ') + '\n'),
-    info: (...args: any[]) => stdout.write(args.map(String).join(' ') + '\n'),
-    warn: (...args: any[]) => stderr.write(args.map(String).join(' ') + '\n'),
-    error: (...args: any[]) => stderr.write(args.map(String).join(' ') + '\n'),
+    log: (...args: any[]) => stdout.write(`${args.map(String).join(' ')}\n`),
+    info: (...args: any[]) => stdout.write(`${args.map(String).join(' ')}\n`),
+    warn: (...args: any[]) => stderr.write(`${args.map(String).join(' ')}\n`),
+    error: (...args: any[]) => stderr.write(`${args.map(String).join(' ')}\n`),
   }
 }
 

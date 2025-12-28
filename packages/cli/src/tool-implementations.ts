@@ -472,7 +472,7 @@ async function runAgent(input: AgentWorkflowInput, context: ToolCallContext) {
 /**
  * Wrapper for skill tool operations that handles context validation and error handling
  */
-async function withSkillContext<T>(
+async function withSkillContext<_T>(
   context: ToolCallContext,
   fn: (skillContext: SkillContext) => Promise<ToolResponse>,
 ): Promise<ToolResponse> {
