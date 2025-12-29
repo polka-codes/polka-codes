@@ -17,6 +17,8 @@ import { merge } from 'lodash-es'
 import { AuthenticationError, ModelAccessError, ProviderError, QuotaExceededError, UserCancelledError } from './errors'
 import { getModel } from './getModel'
 import { getProviderOptions } from './getProviderOptions'
+import { McpError } from './mcp/errors'
+import { McpManager } from './mcp/manager'
 import { type CliOptions, parseOptions } from './options'
 import prices from './prices'
 import { type AgentContextParameters, initializeSkillContext, toolCall } from './tool-implementations'
@@ -54,6 +56,9 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
   if (config.tools?.search) {
     additionalTools.search = search
   }
+
+  // Initialize MCP manager if MCP servers are configured
+  const mcpManager = new McpManager(logger)
 
   const finalWorkflowInput: TInput & BaseWorkflowInput = {
     ...workflowInput,
@@ -130,6 +135,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
     requestTimeoutSeconds: config.requestTimeoutSeconds,
     usageMeter: usage,
     skillContext,
+    mcpManager,
   }
 
   let workflowContext: WorkflowContext<TTools>
@@ -160,6 +166,16 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
   }
 
   try {
+    // Connect to MCP servers inside the try block to ensure cleanup
+    if (config.mcpServers && Object.keys(config.mcpServers).length > 0) {
+      await mcpManager.connectToServers(config.mcpServers)
+      const mcpTools = mcpManager.getFullToolInfos()
+      if (mcpTools.length > 0) {
+        additionalTools.mcpTools = mcpTools
+        logger.info(`Loaded ${mcpTools.length} MCP tools`)
+      }
+    }
+
     logger.info('Running workflow...')
     const output = await workflow(finalWorkflowInput, workflowContext)
     logger.info('\n\nWorkflow completed successfully.')
@@ -220,6 +236,17 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
           messages: [],
         },
       })
+    } else if (error instanceof McpError) {
+      // Handle all MCP errors
+      logger.error(`\n❌ MCP Error: ${error.message}`)
+      onEvent({
+        kind: TaskEventKind.EndTask,
+        exitReason: {
+          type: 'Error',
+          error: { message: error.message, stack: error.stack },
+          messages: [],
+        },
+      })
     } else {
       // Generic error handling
       const errorMessage = error?.message || 'Unknown error'
@@ -237,6 +264,8 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
     logger.info(usage.getUsageText())
     return undefined
   } finally {
+    // Disconnect MCP servers
+    await mcpManager.disconnectAll()
     logGlobalToolCallStats(process.stderr)
   }
 }

@@ -76,6 +76,31 @@ export const scriptSchema = z.union([
 
 export type ScriptConfig = z.infer<typeof scriptSchema>
 
+// MCP server configuration schema
+export const mcpServerConfigSchema = z
+  .object({
+    command: z.string(),
+    args: z.array(z.string()).optional(),
+    env: z.record(z.string(), z.string()).optional(),
+    tools: z
+      .record(
+        z.string(),
+        z.boolean().or(
+          z
+            .object({
+              provider: z.string().optional(),
+              model: z.string().optional(),
+              parameters: z.record(z.string(), z.unknown()).optional(),
+            })
+            .strict(),
+        ),
+      )
+      .optional(),
+  })
+  .strict()
+
+export type McpServerConfig = z.infer<typeof mcpServerConfigSchema>
+
 export const configSchema = z
   .object({
     prices: z
@@ -108,6 +133,7 @@ export const configSchema = z
         search: providerModelSchema.or(z.boolean()).optional(),
       })
       .optional(),
+    mcpServers: z.record(z.string(), mcpServerConfigSchema).optional(),
     rules: z.array(ruleSchema).optional().or(z.string()).optional(),
     excludeFiles: z.array(z.string()).optional(),
   })

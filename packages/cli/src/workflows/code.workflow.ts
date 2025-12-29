@@ -129,6 +129,9 @@ export const codeWorkflow: WorkflowFn<
   if (additionalTools?.search) {
     agentTools.push(additionalTools.search)
   }
+  if (additionalTools?.mcpTools) {
+    agentTools.push(...additionalTools.mcpTools)
+  }
 
   const res = await step('implement', async () => {
     const defaultContext = await getDefaultContext('code')

@@ -13,6 +13,7 @@ export type BaseWorkflowInput = {
   interactive: boolean
   additionalTools: {
     search?: FullToolInfo
+    mcpTools?: FullToolInfo[]
   }
 }
 

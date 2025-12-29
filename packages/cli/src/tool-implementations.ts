@@ -52,6 +52,8 @@ import {
   QuotaExceededError,
   UserCancelledError,
 } from './errors'
+import { McpError } from './mcp/errors'
+import type { McpManager } from './mcp/manager'
 import { createSkillContext, generateSkillsSystemPrompt } from './skillIntegration'
 
 export type AgentContextParameters = {
@@ -61,6 +63,7 @@ export type AgentContextParameters = {
   requestTimeoutSeconds?: number
   usageMeter: UsageMeter
   skillContext?: SkillContext
+  mcpManager?: McpManager // MCP manager for MCP server connections
 }
 
 import {
@@ -636,6 +639,21 @@ export async function toolCall(toolCall: ToolCall<CliToolRegistry>, context: Too
   const handler = localToolHandlers[toolCall.tool]
   if (handler) {
     return handler(toolCall.input as any, context)
+  }
+
+  // Check MCP tools
+  if (context.parameters.mcpManager?.hasTool(toolCall.tool as string)) {
+    const input = typeof toolCall.input === 'object' && toolCall.input !== null && !Array.isArray(toolCall.input) ? toolCall.input : {}
+    try {
+      return await context.parameters.mcpManager.callTool(toolCall.tool as string, input as Record<string, unknown>)
+    } catch (error) {
+      // McpError should bubble up to the workflow level for proper handling
+      if (error instanceof McpError) {
+        throw error
+      }
+      // Other errors are returned as strings so the agent can see them and recover
+      return `Error: ${error instanceof Error ? error.message : String(error)}`
+    }
   }
 
   // Check toolHandlers Map (for core/registered tools)

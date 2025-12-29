@@ -164,6 +164,9 @@ export const fixWorkflow: WorkflowFn<
       if (additionalTools?.search) {
         agentTools.push(additionalTools.search)
       }
+      if (additionalTools?.mcpTools) {
+        agentTools.push(...additionalTools.mcpTools)
+      }
 
       return await agentWorkflow(
         {
