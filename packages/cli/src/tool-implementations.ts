@@ -645,14 +645,29 @@ export async function toolCall(toolCall: ToolCall<CliToolRegistry>, context: Too
   if (context.parameters.mcpManager?.hasTool(toolCall.tool as string)) {
     const input = typeof toolCall.input === 'object' && toolCall.input !== null && !Array.isArray(toolCall.input) ? toolCall.input : {}
     try {
-      return await context.parameters.mcpManager.callTool(toolCall.tool as string, input as Record<string, unknown>)
+      const result = await context.parameters.mcpManager.callTool(toolCall.tool as string, input as Record<string, unknown>)
+      // Wrap result in ToolResponse format
+      const value = typeof result === 'string' ? result : result == null ? '' : JSON.stringify(result, null, 2)
+      return {
+        success: true,
+        message: {
+          type: 'text',
+          value,
+        },
+      }
     } catch (error) {
       // McpError should bubble up to the workflow level for proper handling
       if (error instanceof McpError) {
         throw error
       }
-      // Other errors are returned as strings so the agent can see them and recover
-      return `Error: ${error instanceof Error ? error.message : String(error)}`
+      // Other errors are returned as ToolResponse so the agent can see them and recover
+      return {
+        success: false,
+        message: {
+          type: 'error-text',
+          value: `Error: ${error instanceof Error ? error.message : String(error)}`,
+        },
+      }
     }
   }
 
