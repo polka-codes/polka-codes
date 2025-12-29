@@ -14,7 +14,7 @@ import {
   type WorkflowTools,
 } from '@polka-codes/core'
 import { merge } from 'lodash-es'
-import { UserCancelledError } from './errors'
+import { AuthenticationError, ModelAccessError, ProviderError, QuotaExceededError, UserCancelledError } from './errors'
 import { getModel } from './getModel'
 import { getProviderOptions } from './getProviderOptions'
 import { type CliOptions, parseOptions } from './options'
@@ -167,17 +167,73 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
     return output
   } catch (e) {
     const error = e as any
-    onEvent({
-      kind: TaskEventKind.EndTask,
-      exitReason: {
-        type: 'Error',
-        error: { message: error.message, stack: error.stack },
-        messages: [],
-      },
-    })
+
+    // Handle different error types with appropriate messaging
     if (error instanceof UserCancelledError) {
       logger.warn('Workflow cancelled by user.')
+      onEvent({
+        kind: TaskEventKind.EndTask,
+        exitReason: {
+          type: 'Exit',
+          message: error.message,
+          messages: [],
+        },
+      })
+    } else if (error instanceof QuotaExceededError) {
+      logger.error(`\n❌ Error: ${error.message}`)
+      onEvent({
+        kind: TaskEventKind.EndTask,
+        exitReason: {
+          type: 'Error',
+          error: { message: error.message, stack: error.stack },
+          messages: [],
+        },
+      })
+    } else if (error instanceof AuthenticationError) {
+      logger.error(`\n❌ Authentication Error: ${error.message}`)
+      onEvent({
+        kind: TaskEventKind.EndTask,
+        exitReason: {
+          type: 'Error',
+          error: { message: error.message, stack: error.stack },
+          messages: [],
+        },
+      })
+    } else if (error instanceof ModelAccessError) {
+      logger.error(`\n❌ Model Access Error: ${error.message}`)
+      onEvent({
+        kind: TaskEventKind.EndTask,
+        exitReason: {
+          type: 'Error',
+          error: { message: error.message, stack: error.stack },
+          messages: [],
+        },
+      })
+    } else if (error instanceof ProviderError) {
+      // Handle all other provider errors
+      logger.error(`\n❌ Provider Error: ${error.message}`)
+      onEvent({
+        kind: TaskEventKind.EndTask,
+        exitReason: {
+          type: 'Error',
+          error: { message: error.message, stack: error.stack },
+          messages: [],
+        },
+      })
+    } else {
+      // Generic error handling
+      const errorMessage = error?.message || 'Unknown error'
+      logger.error(`\n❌ Error: ${errorMessage}`)
+      onEvent({
+        kind: TaskEventKind.EndTask,
+        exitReason: {
+          type: 'Error',
+          error: { message: errorMessage, stack: error?.stack },
+          messages: [],
+        },
+      })
     }
+
     logger.info(usage.getUsageText())
     return undefined
   } finally {

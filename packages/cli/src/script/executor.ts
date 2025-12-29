@@ -116,7 +116,13 @@ export async function executeScript(script: ScriptConfig, name: string, logger: 
   validateScriptPermissions(script, logger)
 
   // Determine script type and use appropriate executor
-  const scriptType = typeof script === 'string' ? 'string' : Object.keys(script)[0]
+  let scriptType = 'string'
+  if (typeof script !== 'string') {
+    if ('script' in script) scriptType = 'script'
+    else if ('command' in script) scriptType = 'command'
+    else if ('workflow' in script) scriptType = 'workflow'
+    else scriptType = Object.keys(script)[0]
+  }
 
   const executors: Record<string, ScriptExecutor> = {
     string: executeStringCommand,

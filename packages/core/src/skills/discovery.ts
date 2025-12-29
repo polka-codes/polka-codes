@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { parse } from 'yaml'
 import { ZodError } from 'zod'
 import { IGNORED_DIRECTORIES, SKILL_ERROR_MESSAGES, SKILL_LIMITS } from './constants'
-import type { Skill, SkillContext, SkillMetadata } from './types'
+import type { Skill, SkillContext, SkillMetadata, SkillReference } from './types'
 import { SkillDiscoveryError, skillMetadataSchema } from './types'
 
 /**
@@ -87,8 +87,8 @@ export class SkillDiscoveryService {
    * Discover all available skills from all sources
    * Removes duplicates (project skills take priority over personal/plugin)
    */
-  async discoverAll(): Promise<Skill[]> {
-    const skills: Skill[] = []
+  async discoverAll(): Promise<SkillReference[]> {
+    const skills: SkillReference[] = []
 
     // Load in parallel but handle failures gracefully
     const results = await Promise.allSettled([
@@ -130,12 +130,12 @@ export class SkillDiscoveryService {
   /**
    * Discover skills in a specific directory
    */
-  async discoverInDirectory(dir: string, source: 'personal' | 'project' | 'plugin'): Promise<Skill[]> {
+  async discoverInDirectory(dir: string, source: 'personal' | 'project' | 'plugin'): Promise<SkillReference[]> {
     if (!existsSync(dir)) {
       return []
     }
 
-    const skills: Skill[] = []
+    const skills: SkillReference[] = []
     const entries = await readdir(dir, { withFileTypes: true })
 
     for (const entry of entries) {
@@ -151,8 +151,15 @@ export class SkillDiscoveryService {
       }
 
       try {
-        const skill = await this.loadSkill(skillPath, source)
-        skills.push(skill)
+        // Only load metadata
+        const content = await readFile(skillMdPath, 'utf-8')
+        const { metadata } = this.parseSkillMd(content)
+
+        skills.push({
+          metadata,
+          path: skillPath,
+          source,
+        })
       } catch (error) {
         // Log all errors and continue to discover other skills
         let message = 'Unknown error'
@@ -177,8 +184,8 @@ export class SkillDiscoveryService {
   /**
    * Discover skills from plugin directories (node_modules)
    */
-  async discoverPlugins(): Promise<Skill[]> {
-    const skills: Skill[] = []
+  async discoverPlugins(): Promise<SkillReference[]> {
+    const skills: SkillReference[] = []
 
     for (const pluginDir of this.pluginSkillsDirs) {
       if (!existsSync(pluginDir)) {
@@ -371,6 +378,11 @@ export class SkillDiscoveryService {
       activeSkill: null,
       availableSkills,
       skillLoadingHistory: [],
+      loadSkill: async (name: string) => {
+        const ref = availableSkills.find((s) => s.metadata.name === name)
+        if (!ref) return null
+        return this.loadSkill(ref.path, ref.source)
+      },
     }
   }
 }

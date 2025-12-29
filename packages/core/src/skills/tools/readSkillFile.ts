@@ -33,13 +33,22 @@ export type ReadSkillFileOutput = z.infer<typeof ReadSkillFileOutputSchema>
 export async function readSkillFile(input: ReadSkillFileInput, context: SkillContext): Promise<ReadSkillFileOutput> {
   const { skillName, filename } = input
 
-  // Find the skill
-  const skill = context.availableSkills.find((s) => s.metadata.name === skillName)
+  // Check if active skill matches
+  let skill = context.activeSkill && context.activeSkill.metadata.name === skillName ? context.activeSkill : null
+
+  // If not active, try to load it
+  if (!skill) {
+    try {
+      skill = await context.loadSkill(skillName)
+    } catch (_error) {
+      // Ignore load error, will be handled by null check
+    }
+  }
 
   if (!skill) {
     return {
       success: false,
-      error: `Skill '${skillName}' not found`,
+      error: `Skill '${skillName}' not found or could not be loaded. Use loadSkill first.`,
     }
   }
 

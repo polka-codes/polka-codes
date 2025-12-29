@@ -234,18 +234,19 @@ if (import.meta.main) {
         // Parse YAML to safely insert into scripts section
         try {
           const yaml = await import('yaml')
-          const parsed = yaml.parse(configContent)
+          // Use parseDocument to preserve comments
+          const doc = yaml.parseDocument(configContent)
 
-          if (!parsed.scripts) {
-            parsed.scripts = {}
+          if (!doc.has('scripts')) {
+            doc.set('scripts', {})
           }
 
-          parsed.scripts[name] = {
+          doc.setIn(['scripts', name], {
             script: scriptPathConfig,
             description: `Custom script: ${name}`,
-          }
+          })
 
-          newContent = yaml.stringify(parsed, { indent: 2 })
+          newContent = doc.toString()
         } catch (parseError) {
           // Fallback to string append if YAML parsing fails
           logger.warn('Could not parse config file safely. Please add the script manually:')

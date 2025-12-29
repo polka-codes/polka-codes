@@ -45,7 +45,7 @@ Instructions here
 
       expect(skills).toHaveLength(1)
       expect(skills[0].metadata.name).toBe('test-skill')
-      expect(skills[0].content).toContain('Instructions here')
+      // Content is not loaded during discovery
     })
 
     it('should reject skills with invalid names', async () => {
@@ -94,8 +94,11 @@ See [reference.md](reference.md)
       })
       const skills = await service.discoverInDirectory(projectSkillsDir, 'project')
 
-      expect(skills[0].files.has('reference.md')).toBe(true)
-      expect(skills[0].files.get('reference.md')).toContain('# Reference')
+      // Load skill to check files
+      const skill = await service.loadSkill(skills[0].path, skills[0].source)
+
+      expect(skill.files.has('reference.md')).toBe(true)
+      expect(skill.files.get('reference.md')).toContain('# Reference')
     })
 
     it('should load files in subdirectories', async () => {
@@ -120,7 +123,10 @@ description: Test
       })
       const skills = await service.discoverInDirectory(projectSkillsDir, 'project')
 
-      expect(skills[0].files.has('scripts/helper.sh')).toBe(true)
+      // Load skill to check files
+      const skill = await service.loadSkill(skills[0].path, skills[0].source)
+
+      expect(skill.files.has('scripts/helper.sh')).toBe(true)
     })
 
     it('should skip directories without SKILL.md', async () => {

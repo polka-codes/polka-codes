@@ -16,25 +16,13 @@ export const skillMetadataSchema = z.object({
 export type SkillMetadata = z.infer<typeof skillMetadataSchema>
 
 /**
- * Represents a loaded Agent Skill with all its content
+ * Represents a reference to a discovered skill (metadata only)
  */
-export interface Skill {
+export interface SkillReference {
   /**
    * Parsed metadata from SKILL.md frontmatter
    */
   metadata: SkillMetadata
-
-  /**
-   * Main instructions content (SKILL.md without frontmatter)
-   */
-  content: string
-
-  /**
-   * Additional files bundled with the skill
-   * Key is relative path from skill directory (e.g., "reference.md", "scripts/helper.py")
-   * Value is file content
-   */
-  files: Map<string, string>
 
   /**
    * Absolute path to the skill directory on disk
@@ -48,6 +36,23 @@ export interface Skill {
 }
 
 /**
+ * Represents a loaded Agent Skill with all its content
+ */
+export interface Skill extends SkillReference {
+  /**
+   * Main instructions content (SKILL.md without frontmatter)
+   */
+  content: string
+
+  /**
+   * Additional files bundled with the skill
+   * Key is relative path from skill directory (e.g., "reference.md", "scripts/helper.py")
+   * Value is file content
+   */
+  files: Map<string, string>
+}
+
+/**
  * Context object passed to agents and tools for skill operations
  */
 export interface SkillContext {
@@ -57,14 +62,19 @@ export interface SkillContext {
   activeSkill: Skill | null
 
   /**
-   * All available skills discovered from all sources
+   * All available skills discovered from all sources (metadata only)
    */
-  availableSkills: Skill[]
+  availableSkills: SkillReference[]
 
   /**
    * History of skills loaded during the session (for debugging/telemetry)
    */
   skillLoadingHistory: string[]
+
+  /**
+   * Load a skill by name
+   */
+  loadSkill: (name: string) => Promise<Skill | null>
 }
 
 /**

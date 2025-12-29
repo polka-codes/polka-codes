@@ -44,12 +44,6 @@ skillsCommand
       const sourceIcon = SOURCE_ICONS[skill.source]
       logger.info(`${sourceIcon} ${skill.metadata.name}`)
       logger.info(`   ${skill.metadata.description}`)
-
-      // Show additional info
-      const fileCount = skill.files.size
-      if (fileCount > 0) {
-        logger.info(`   ${fileCount} additional file${fileCount !== 1 ? 's' : ''}`)
-      }
       logger.info('')
     }
   })
@@ -65,11 +59,20 @@ skillsCommand
 
     const service = new SkillDiscoveryService({ cwd: process.cwd() })
     const skills = await service.discoverAll()
-    const skill = skills.find((s) => s.metadata.name === skillName)
+    const skillRef = skills.find((s) => s.metadata.name === skillName)
 
-    if (!skill) {
+    if (!skillRef) {
       logger.error(`Skill '${skillName}' not found`)
       logger.info('Run "polka skills list" to see available skills')
+      process.exit(1)
+    }
+
+    let skill: Awaited<ReturnType<SkillDiscoveryService['loadSkill']>>
+    try {
+      skill = await service.loadSkill(skillRef.path, skillRef.source)
+    } catch (error) {
+      logger.error(`Failed to load skill '${skillName}': ${error instanceof Error ? error.message : String(error)}`)
+      logger.info(`Please check the skill file at: ${skillRef.path}`)
       process.exit(1)
     }
 
@@ -137,9 +140,9 @@ skillsCommand
     const service = new SkillDiscoveryService({ cwd: process.cwd() })
     const skills = await service.discoverAll()
 
-    const skillsToValidate = skillName ? skills.filter((s) => s.metadata.name === skillName) : skills
+    const skillRefsToValidate = skillName ? skills.filter((s) => s.metadata.name === skillName) : skills
 
-    if (skillsToValidate.length === 0) {
+    if (skillRefsToValidate.length === 0) {
       logger.error(`No skill${skillName ? ` '${skillName}'` : 's'} found`)
       process.exit(1)
     }
@@ -147,41 +150,47 @@ skillsCommand
     let hasErrors = false
     let totalWarnings = 0
 
-    for (const skill of skillsToValidate) {
-      logger.info(`Validating ${skill.metadata.name}...`)
+    for (const skillRef of skillRefsToValidate) {
+      logger.info(`Validating ${skillRef.metadata.name}...`)
 
       let skillHasErrors = false
 
-      // Check metadata
-      const errors = validateSkillMetadata(skill)
-      for (const error of errors) {
-        logger.error(`  ❌ ${error}`)
-        hasErrors = true
-        skillHasErrors = true
-      }
-
-      // Check security
       try {
-        validateSkillSecurity(skill)
-        logger.info(`  ✅ Security validation passed`)
-      } catch (error) {
-        if (error instanceof Error) {
-          logger.error(`  ❌ Security: ${error.message}`)
+        const skill = await service.loadSkill(skillRef.path, skillRef.source)
+
+        // Check metadata
+        const errors = validateSkillMetadata(skill)
+        for (const error of errors) {
+          logger.error(`  ❌ ${error}`)
           hasErrors = true
           skillHasErrors = true
         }
-      }
 
-      // Check references
-      const warnings = validateSkillReferences(skill)
-      for (const warning of warnings) {
-        logger.warn(`  ⚠️  ${warning}`)
-        totalWarnings++
-      }
+        // Check security
+        try {
+          validateSkillSecurity(skill)
+          logger.info(`  ✅ Security validation passed`)
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error)
+          logger.error(`  ❌ Security: ${errorMessage}`)
+          hasErrors = true
+          skillHasErrors = true
+        }
 
-      // No errors for this skill means valid
-      if (!skillHasErrors) {
-        logger.info(`  ✅ Valid`)
+        // Check references
+        const warnings = validateSkillReferences(skill)
+        for (const warning of warnings) {
+          logger.warn(`  ⚠️  ${warning}`)
+          totalWarnings++
+        }
+
+        // No errors for this skill means valid
+        if (!skillHasErrors) {
+          logger.info(`  ✅ Valid`)
+        }
+      } catch (error) {
+        logger.error(`  ❌ Failed to load skill: ${error instanceof Error ? error.message : String(error)}`)
+        hasErrors = true
       }
 
       logger.info('')

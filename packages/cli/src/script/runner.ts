@@ -16,7 +16,8 @@
  * this is acceptable. However, in long-running processes (watch mode,
  * daemon, server), this will cause memory leaks as each execution creates
  * new uncached module entries. Do NOT use this runner in long-running
- * processes without implementing a proper cache management strategy.
+ * processes (like packages/runner) without implementing a proper cache
+ * management strategy.
  */
 
 import { existsSync } from 'node:fs'

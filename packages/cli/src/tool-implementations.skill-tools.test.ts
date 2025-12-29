@@ -43,6 +43,7 @@ description: ${description}
         availableSkills: [],
         activeSkill: null,
         skillLoadingHistory: [],
+        loadSkill: async () => null,
       })
       expect(result).toBe(basePrompt)
     })

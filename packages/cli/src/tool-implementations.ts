@@ -45,7 +45,13 @@ import {
   writeToFile as writeToFileTool,
 } from '@polka-codes/core'
 import { streamText, type ToolSet } from 'ai'
-import { UserCancelledError } from './errors'
+import {
+  createProviderErrorFromStatus,
+  MaxRetriesExceededError,
+  ProviderTimeoutError,
+  QuotaExceededError,
+  UserCancelledError,
+} from './errors'
 import { createSkillContext, generateSkillsSystemPrompt } from './skillIntegration'
 
 export type AgentContextParameters = {
@@ -276,17 +282,21 @@ async function generateText(input: { messages: JsonModelMessage[]; tools: ToolSe
     throw new Error('Model not found in context')
   }
 
-  if (context.parameters.usageMeter.isLimitExceeded().result) {
+  // Check usage limits
+  const limitResult = context.parameters.usageMeter.isLimitExceeded()
+  if (limitResult.result) {
     agentCallback?.({
       kind: TaskEventKind.UsageExceeded,
     })
-    throw new Error('Usage limit exceeded')
+    throw new QuotaExceededError(model.provider, model.modelId, context.parameters.usageMeter.usage.cost, limitResult.maxCost)
   }
 
   const { retryCount = 5, requestTimeoutSeconds = 90 } = context.parameters
 
   // Convert messages and apply cache control
   const messages = applyCacheControl(input.messages.map(fromJsonModelMessage), model.provider, model.modelId)
+
+  let lastError: Error | undefined
 
   for (let i = 0; i < retryCount; i++) {
     const abortController = new AbortController()
@@ -344,37 +354,81 @@ async function generateText(input: { messages: JsonModelMessage[]; tools: ToolSe
 
       await stream.consumeStream({
         onError: (error) => {
+          // Log stream errors but don't throw - let the main error handler deal with it
           console.error('Error in stream:', error)
+          lastError = error instanceof Error ? error : new Error(String(error))
         },
       })
 
       const resp = await stream.response
       return resp.messages.map(toJsonModelMessage)
     } catch (error: unknown) {
+      // Handle AbortError (timeouts and repetition)
       if (error instanceof Error && error.name === 'AbortError') {
         if (repetitionDetected) {
           console.warn('Repetition detected, retrying...')
+          lastError = new Error('Repetition detected in model output')
           continue
         }
         // This is a timeout
         console.warn(`Request timed out after ${requestTimeoutSeconds} seconds, retrying...`)
+        lastError = new ProviderTimeoutError(model.provider, model.modelId, requestTimeoutSeconds)
         continue
       }
+
+      // Handle HTTP errors
       if (error && typeof error === 'object' && 'response' in error) {
-        const response = (error as { response: Response }).response
-        if (response.status === 429 || response.status >= 500) {
-          console.debug(`Request failed with status ${response.status}, retrying...`)
+        const errorWithResponse = error as { response: Response }
+        const response = errorWithResponse.response
+        const statusCode = response.status
+
+        // Create appropriate error based on status code
+        const providerError = createProviderErrorFromStatus(
+          model.provider,
+          model.modelId,
+          statusCode,
+          error instanceof Error ? error : undefined,
+        )
+
+        // Only retry if error is retryable
+        if (providerError.retryable && (statusCode === 429 || statusCode >= 500)) {
+          console.warn(`${providerError.message} (attempt ${i + 1}/${retryCount})`)
+          lastError = providerError
+
           const backoff = computeRateLimitBackoffSeconds(i)
+          console.debug(`Waiting ${backoff}s before retry...`)
           await new Promise((resolve) => setTimeout(resolve, backoff * 1000))
           continue
         }
+
+        // Non-retryable HTTP error - throw immediately
+        throw providerError
       }
-      throw error
+
+      // Handle other errors
+      if (error instanceof Error) {
+        // Check for network errors
+        if (error.message.includes('ECONNREFUSED') || error.message.includes('ENOTFOUND') || error.message.includes('ETIMEDOUT')) {
+          console.warn(`Network error: ${error.message}, retrying...`)
+          lastError = error
+          continue
+        }
+
+        // Unknown error - save and continue to retry
+        console.warn(`Unexpected error: ${error.message}, retrying...`)
+        lastError = error
+        continue
+      }
+
+      // Non-Error throwable
+      lastError = new Error(String(error))
     } finally {
       clearTimeout(timeout)
     }
   }
-  throw new Error(`Failed to get a response from the model after ${retryCount} retries.`)
+
+  // All retries exhausted
+  throw new MaxRetriesExceededError(model.provider, model.modelId, retryCount, lastError || new Error('Unknown error'))
 }
 
 async function invokeTool(input: { toolName: string; input: any }, context: ToolCallContext): Promise<ToolResponse> {

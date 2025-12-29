@@ -40,10 +40,10 @@ export type LoadSkillOutput = z.infer<typeof LoadSkillOutputSchema>
 export async function loadSkill(input: LoadSkillInput, context: SkillContext): Promise<LoadSkillOutput> {
   const { skillName } = input
 
-  // Find the skill
-  const skill = context.availableSkills.find((s) => s.metadata.name === skillName)
+  // Find the skill reference
+  const skillRef = context.availableSkills.find((s) => s.metadata.name === skillName)
 
-  if (!skill) {
+  if (!skillRef) {
     return {
       success: false,
       error: `Skill '${skillName}' not found`,
@@ -51,6 +51,16 @@ export async function loadSkill(input: LoadSkillInput, context: SkillContext): P
   }
 
   try {
+    // Load the full skill
+    const skill = await context.loadSkill(skillName)
+
+    if (!skill) {
+      return {
+        success: false,
+        error: `Failed to load skill '${skillName}'`,
+      }
+    }
+
     // Validate security
     validateSkillSecurity(skill)
 
