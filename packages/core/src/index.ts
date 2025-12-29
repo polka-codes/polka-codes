@@ -1,6 +1,7 @@
 export * from './Agent'
 export * from './Agent/backoff'
 export * from './config'
+export * from './fs'
 export * from './skills'
 export * from './skills/tools'
 export * from './tool'
