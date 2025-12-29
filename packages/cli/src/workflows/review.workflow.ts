@@ -19,6 +19,7 @@ import {
 
 export type ReviewWorkflowInput = {
   pr?: number
+  range?: string
   context?: string
   files?: string[]
 }
@@ -28,7 +29,7 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput,
   context,
 ) => {
   const { step, tools, logger } = context
-  const { pr, context: userContext, files } = input
+  const { pr, range, context: userContext, files } = input
   let changeInfo: ReviewToolInput | undefined
 
   // Get git root to normalize file paths
@@ -139,6 +140,53 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput,
       pullRequestDescription: prDetails.body,
       commitMessages,
       changedFiles,
+      context: userContext,
+    }
+  } else if (range) {
+    await step(`Reviewing git range '${range}'...`, async () => {})
+
+    const allRangeChangedFiles = await step('Getting file changes...', async () => {
+      const diffResult = await tools.executeCommand({
+        command: 'git',
+        args: ['--no-pager', 'diff', '--name-status', '--no-color', range],
+      })
+      if (diffResult.exitCode !== 0) {
+        logger.warn('Warning: Could not retrieve file changes list')
+        return []
+      }
+      const files = parseGitDiffNameStatus(diffResult.stdout)
+
+      const statResult = await tools.executeCommand({
+        command: 'git',
+        args: ['--no-pager', 'diff', '--numstat', '--no-color', range],
+      })
+      if (statResult.exitCode === 0) {
+        const stats = parseGitDiffNumStat(statResult.stdout)
+        for (const file of files) {
+          if (stats[file.path]) {
+            file.insertions = stats[file.path].insertions
+            file.deletions = stats[file.path].deletions
+          }
+        }
+      }
+      return files
+    })
+
+    const rangeChangedFiles = filterAndWarn(allRangeChangedFiles, `range '${range}'`)
+
+    printChangedFiles(logger, rangeChangedFiles)
+
+    // Get commit messages for the range
+    const logResult = await tools.executeCommand({
+      command: 'git',
+      args: ['log', '--format=%B', range],
+    })
+    const commitMessages = logResult.exitCode === 0 ? logResult.stdout.trim() : ''
+
+    changeInfo = {
+      commitRange: range,
+      changedFiles: rangeChangedFiles,
+      commitMessages,
       context: userContext,
     }
   } else {

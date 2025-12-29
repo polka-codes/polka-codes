@@ -256,6 +256,11 @@ export interface ReviewCodeOptions extends BaseOptions {
   pr?: number
 
   /**
+   * Git range to review (e.g., "HEAD~3..HEAD", "origin/main..HEAD")
+   */
+  range?: string
+
+  /**
    * Specific files to review (if not provided, reviews all changes)
    */
   files?: string[]
@@ -288,13 +293,14 @@ export interface ReviewCodeOptions extends BaseOptions {
  * ```
  */
 export async function reviewCode(options: ReviewCodeOptions = {}): Promise<ReviewResult | undefined> {
-  const { pr, files, context: reviewContext, interactive, onUsage, ...context } = options
+  const { pr, range, files, context: reviewContext, interactive, onUsage, ...context } = options
 
   const verbose = context.silent ? -1 : (context.verbose ?? 0)
   const logger = createLogger({ verbose })
 
   const workflowInput: ReviewWorkflowInput = {
     pr,
+    range,
     files,
     context: reviewContext,
   }

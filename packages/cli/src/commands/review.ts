@@ -17,6 +17,7 @@ export const reviewCommand = new Command('review')
     }
     return parsedValue
   })
+  .option('--range <range>', 'Git range to review (e.g., HEAD~3..HEAD, origin/main..HEAD)')
   .option('--context <context>', 'Additional context for the review')
   .option('--json', 'Output the review in JSON format', false)
   .option('-y, --yes', 'Automatically apply review feedback', false)
@@ -36,8 +37,12 @@ export const reviewCommand = new Command('review')
     1,
   )
   .action(
-    async (files: string[], options: { pr?: number; context?: string; json: boolean; yes: boolean; loop: number }, command: Command) => {
-      const { json, pr, context: contextOption, loop: maxIterations, yes: yesOption } = options
+    async (
+      files: string[],
+      options: { pr?: number; range?: string; context?: string; json: boolean; yes: boolean; loop: number },
+      command: Command,
+    ) => {
+      const { json, pr, range, context: contextOption, loop: maxIterations, yes: yesOption } = options
       const yes = maxIterations > 1 || yesOption
       let changesAppliedInThisIteration = false
 
@@ -68,6 +73,7 @@ export const reviewCommand = new Command('review')
 
         const reviewResult = await reviewCode({
           pr,
+          range,
           files: filesToReview.length > 0 ? filesToReview : undefined,
           context,
           interactive: !yes && !json,
