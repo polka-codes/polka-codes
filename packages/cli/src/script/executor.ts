@@ -20,6 +20,13 @@ export class ScriptExecutionFailedError extends Error {
 /**
  * Execute a shell command using spawnSync with proper error handling.
  *
+ * SECURITY: This function uses shell execution for complex commands.
+ * The command strings come from trusted configuration files (polka.codes.json),
+ * not from user input. This is acceptable since:
+ * 1. Commands are defined by developers in config files
+ * 2. The tool itself requires explicit permissions (--allow-read, --allow-run, etc.)
+ * 3. There's no user-supplied input that could lead to injection
+ *
  * @param command - The command string to execute
  * @param scriptName - Name of the script for error reporting
  * @throws {ScriptExecutionFailedError} When command fails

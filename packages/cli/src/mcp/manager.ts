@@ -304,6 +304,26 @@ export class McpManager {
   private convertProperty(propDef: Record<string, unknown>): z.ZodTypeAny {
     const type = propDef.type
 
+    // Handle enum type
+    if (propDef.enum && Array.isArray(propDef.enum)) {
+      const enumValues = propDef.enum
+      // z.enum requires at least one value and all values must be strings
+      if (enumValues.length > 0 && enumValues.every((v) => typeof v === 'string')) {
+        return z.enum(enumValues as [string, ...string[]])
+      }
+      // For empty enums or non-string enums, fall back to z.any()
+    }
+
+    // Handle const type
+    if (propDef.const !== undefined) {
+      const constValue = propDef.const
+      // z.literal only accepts string, number, boolean, or null as const values
+      if (typeof constValue === 'string' || typeof constValue === 'number' || typeof constValue === 'boolean' || constValue === null) {
+        return z.literal(constValue as string | number | boolean | null)
+      }
+      // For other const values (objects, arrays), fall back to z.any()
+    }
+
     switch (type) {
       case 'string':
         return z.string()
@@ -324,6 +344,10 @@ export class McpManager {
         }
         return z.record(z.string(), z.any())
       default:
+        // Log unsupported types for debugging
+        if (this.logger) {
+          this.logger.debug(`Unsupported JSON Schema type: ${type}, falling back to z.any()`)
+        }
         return z.any()
     }
   }

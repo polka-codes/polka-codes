@@ -164,10 +164,19 @@ export class McpClient implements IMcpClient {
         throw new McpProtocolError(this.serverName, 'Invalid response from resources/read')
       }
 
-      const result = response as { contents?: Array<{ text?: string }> }
+      const result = response as { contents?: Array<{ text?: string; blob?: string }> }
 
       if (!result.contents || !Array.isArray(result.contents) || result.contents.length === 0) {
         throw new McpProtocolError(this.serverName, 'resources/read did not return any content')
+      }
+
+      // Check for binary content (blob)
+      const hasBinaryContent = result.contents.some((c) => c.blob !== undefined)
+      if (hasBinaryContent) {
+        throw new McpProtocolError(
+          this.serverName,
+          'Binary resources (blob) are not currently supported. Only text resources are supported.',
+        )
       }
 
       // Concatenate all text content

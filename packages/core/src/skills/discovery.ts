@@ -50,14 +50,64 @@ const BINARY_EXTENSIONS = [
 ]
 
 /**
- * Check if a file is likely binary based on its extension
+ * Check if a file is likely binary based on its extension.
  *
- * This is a simple check based on file extensions. For more reliable detection,
- * consider reading the first few bytes and checking for null bytes.
+ * For performance, this is a fast check based on known binary extensions.
+ * Files without known extensions are assumed to be text and will be read.
+ * If reading fails with encoding errors, the file will be skipped.
+ *
+ * @param filename - The filename to check
+ * @returns true if the file has a known binary extension
  */
 function isBinaryFile(filename: string): boolean {
   const ext = filename.toLowerCase().slice(filename.lastIndexOf('.'))
   return BINARY_EXTENSIONS.includes(ext)
+}
+
+/**
+ * Check if a buffer contains binary content by looking for null bytes.
+ * This is a simple heuristic that works for most binary files.
+ *
+ * @param buffer - The buffer to check
+ * @returns true if the buffer appears to contain binary data
+ */
+function isBinaryContent(buffer: Buffer): boolean {
+  // Check for null bytes in the first 8KB (common in binary files)
+  const checkLength = Math.min(buffer.length, 8192)
+  for (let i = 0; i < checkLength; i++) {
+    if (buffer[i] === 0) {
+      return true
+    }
+  }
+  return false
+}
+
+/**
+ * Try to read a file as UTF-8 text, returning null if it appears to be binary.
+ * This handles binary files that don't have known extensions by checking content.
+ *
+ * @param filePath - The path to the file to read
+ * @returns The file content as a string, or null if it appears to be binary
+ */
+async function tryReadTextFile(filePath: string): Promise<string | null> {
+  try {
+    // First, read as a buffer to check for binary content
+    const buffer = await readFile(filePath)
+
+    // Check if the file contains binary content
+    if (isBinaryContent(buffer)) {
+      return null
+    }
+
+    // If not binary, decode as UTF-8
+    return buffer.toString('utf-8')
+  } catch (error) {
+    // If reading fails (e.g., directory), skip it
+    if (error && typeof error === 'object' && 'code' in error && (error.code === 'EINVAL' || error.code === 'EISDIR')) {
+      return null
+    }
+    throw error
+  }
 }
 
 /**
@@ -236,16 +286,22 @@ export class SkillDiscoveryService {
           throw new SkillDiscoveryError(`File size exceeds limit (${fileSize} > ${SKILL_LIMITS.MAX_FILE_SIZE}): ${entry.name}`, skillPath)
         }
 
-        const fileContent = await readFile(filePath, 'utf-8')
-
-        // Track cumulative size to prevent resource exhaustion
-        totalSize += fileContent.length
-        if (totalSize > SKILL_LIMITS.MAX_SKILL_SIZE) {
+        // Check if we would exceed the total skill size limit
+        if (totalSize + fileSize > SKILL_LIMITS.MAX_SKILL_SIZE) {
           throw new SkillDiscoveryError(
-            `Total skill size exceeds limit (${totalSize} > ${SKILL_LIMITS.MAX_SKILL_SIZE}): ${skillPath}`,
+            `Total skill size exceeds limit (${totalSize + fileSize} > ${SKILL_LIMITS.MAX_SKILL_SIZE}): ${skillPath}`,
             skillPath,
           )
         }
+
+        const fileContent = await tryReadTextFile(filePath)
+        if (fileContent === null) {
+          // Skip binary files - don't count them towards total size
+          continue
+        }
+
+        // Track cumulative size to prevent resource exhaustion
+        totalSize += fileSize
 
         files.set(entry.name, fileContent)
       } else if (entry.isDirectory()) {
@@ -345,16 +401,23 @@ export class SkillDiscoveryService {
           throw new SkillDiscoveryError(`File size exceeds limit (${fileSize} > ${SKILL_LIMITS.MAX_FILE_SIZE}): ${key}`, dirPath)
         }
 
-        // Track cumulative size to prevent resource exhaustion
-        totalSize += fileSize
-        if (totalSize > SKILL_LIMITS.MAX_SKILL_SIZE) {
+        // Check if we would exceed the total skill size limit
+        if (totalSize + fileSize > SKILL_LIMITS.MAX_SKILL_SIZE) {
           throw new SkillDiscoveryError(
-            `Total skill size exceeds limit (${totalSize} > ${SKILL_LIMITS.MAX_SKILL_SIZE}): ${dirPath}`,
+            `Total skill size exceeds limit (${totalSize + fileSize} > ${SKILL_LIMITS.MAX_SKILL_SIZE}): ${dirPath}`,
             dirPath,
           )
         }
 
-        const content = await readFile(filePath, 'utf-8')
+        const content = await tryReadTextFile(filePath)
+        if (content === null) {
+          // Skip binary files - don't count them towards total size
+          continue
+        }
+
+        // Track cumulative size to prevent resource exhaustion
+        totalSize += fileSize
+
         files.set(key, content)
       } else if (entry.isDirectory()) {
         // Skip ignored directories

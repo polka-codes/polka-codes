@@ -28,6 +28,7 @@ Polka Codes is a powerful TypeScript-based AI coding assistant framework that he
 - ⚡ **Type Safety**: Fully typed with TypeScript for a better developer experience.
 - 🧪 **Thoroughly Tested**: Comprehensive test suite using `bun:test` with snapshot testing.
 - 🤖 **Multiple AI Providers**: Supports Google Vertex, DeepSeek (recommended), Anthropic Claude, Ollama, and OpenRouter.
+- 🔌 **MCP Support**: Consume tools from external MCP servers and expose your workflows via MCP server.
 
 ## Quick Start
 
@@ -211,6 +212,72 @@ scripts:
 
 The following command names are reserved and cannot be used for custom scripts:
 - `code`, `commit`, `pr`, `review`, `fix`, `plan`, `workflow`, `run`, `init`, `meta`
+
+## MCP Integration
+
+Polka Codes supports the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) for both consuming external tools and exposing your own workflows as MCP tools.
+
+### Consuming MCP Tools
+
+You can configure external MCP servers in your `.polkacodes.yml` to make their tools available to AI agents:
+
+```yaml
+mcpServers:
+  filesystem:
+    command: npx
+    args: ["-y", "@modelcontextprotocol/server-filesystem", "/allowed/path"]
+    tools:
+      read_file: true
+      write_file: true
+    # Optionally configure specific AI provider for tools
+    # provider: anthropic
+    # model: claude-3-5-sonnet-20241022
+
+  database:
+    command: /path/to/custom-server
+    env:
+      DATABASE_URL: "postgresql://..."
+```
+
+When MCP servers are configured, their tools are automatically exposed to AI agents in the `code`, `fix`, `plan`, and `task` workflows. Tools are named with the pattern `{serverName}/{toolName}` (e.g., `filesystem/read_file`).
+
+### Exposing Workflows via MCP Server
+
+Polka Codes can also run as an MCP server, exposing your high-level workflows to MCP-compatible clients like Claude Desktop, Continue.dev, and others.
+
+Start the MCP server:
+
+```bash
+polka mcp-server
+```
+
+The server exposes these workflow tools:
+- `code`: Execute coding tasks
+- `review`: Review code changes
+- `plan`: Create implementation plans
+- `fix`: Fix failing tests or commands
+- `epic`: Decompose large features into tasks
+- `commit`: Generate commit messages
+
+Example Claude Desktop configuration:
+
+```json
+{
+  "mcpServers": {
+    "polka-codes": {
+      "command": "polka",
+      "args": ["mcp-server"],
+      "env": {
+        "POLKA_API_PROVIDER": "google-vertex",
+        "POLKA_MODEL": "gemini-2.0-flash-exp",
+        "POLKA_API_KEY": "your-api-key"
+      }
+    }
+  }
+}
+```
+
+For detailed MCP usage instructions and configuration options, see [MCP_GUIDE.md](MCP_GUIDE.md).
 
 ## Project Structure
 
