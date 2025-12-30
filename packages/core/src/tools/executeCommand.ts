@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import type { FullToolInfo, ToolHandler, ToolInfo } from '../tool'
 import type { CommandProvider } from './provider'
+import { createProviderError, preprocessBoolean } from './utils'
 
 export const toolInfo = {
   name: 'executeCommand',
@@ -14,14 +15,7 @@ export const toolInfo = {
         .describe('The exact command to run  (valid for the current OS). It must be correctly formatted and free of harmful instructions.')
         .meta({ usageValue: 'your-command-here' }),
       requiresApproval: z
-        .preprocess((val) => {
-          if (typeof val === 'string') {
-            const lower = val.toLowerCase()
-            if (lower === 'false') return false
-            if (lower === 'true') return true
-          }
-          return val
-        }, z.boolean().optional().default(false))
+        .preprocess(preprocessBoolean, z.boolean().optional().default(false))
         .describe(
           'Set to `true` for commands that install/uninstall software, modify or delete files, change system settings, perform network operations, or have other side effects. Use `false` for safe, read-only, or purely local development actions (e.g., listing files, make a build, running tests).',
         )
@@ -42,13 +36,7 @@ export const toolInfo = {
 
 export const handler: ToolHandler<typeof toolInfo, CommandProvider> = async (provider, args) => {
   if (!provider.executeCommand) {
-    return {
-      success: false,
-      message: {
-        type: 'error-text',
-        value: 'Not possible to execute command. Abort.',
-      },
-    }
+    return createProviderError('execute command. Abort')
   }
 
   const { command, requiresApproval } = toolInfo.parameters.parse(args)
