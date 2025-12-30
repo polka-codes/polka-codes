@@ -58,13 +58,17 @@ export function createPolkaCodesServerTools(): McpServerTool[] {
     },
     {
       name: 'review',
-      description: 'Review code changes (local changes, branch diff, or pull request)',
+      description: 'Review code changes (local changes, branch diff, git range, or pull request)',
       inputSchema: {
         type: 'object',
         properties: {
           pr: {
             type: 'number',
             description: 'Pull request number to review (optional)',
+          },
+          range: {
+            type: 'string',
+            description: 'Git range to review (e.g., HEAD~3..HEAD, origin/main..HEAD) (optional)',
           },
           files: {
             type: 'array',
@@ -81,9 +85,9 @@ export function createPolkaCodesServerTools(): McpServerTool[] {
         required: [],
       },
       handler: async (args: Record<string, unknown>) => {
-        const { pr, files, context } = args as { pr?: number; files?: string[]; context?: string }
+        const { pr, range, files, context } = args as { pr?: number; range?: string; files?: string[]; context?: string }
         // This would integrate with the actual review workflow
-        return JSON.stringify({ pr, files, context, status: 'Workflow execution not yet implemented' }, null, 2)
+        return JSON.stringify({ pr, range, files, context, status: 'Workflow execution not yet implemented' }, null, 2)
       },
     },
     {
