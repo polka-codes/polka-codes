@@ -76,7 +76,6 @@ export async function runWorkflowCommand(task: string | undefined, _options: any
   let dynamicRunner: ReturnType<typeof createDynamicWorkflow>
   try {
     dynamicRunner = createDynamicWorkflow(workflowDef, {
-      allowUnsafeCodeExecution: false,
       toolInfo: tools,
       builtInWorkflows: {
         plan: planWorkflow,

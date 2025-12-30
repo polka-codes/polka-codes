@@ -23,7 +23,7 @@ export function createTool<T extends Record<string, unknown>>(
   return {
     ...toolInfo,
     handler,
-  } as FullToolInfo
+  } as unknown as FullToolInfo
 }
 
 /**
