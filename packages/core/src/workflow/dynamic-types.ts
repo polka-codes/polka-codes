@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+export type ValidationResult = { success: true } | { success: false; errors: string[] }
+
 export const WorkflowInputDefinitionSchema = z.object({
   id: z.string(),
   description: z.string().nullish(),
@@ -70,6 +72,18 @@ export const ContinueStepSchema = z.object({
 })
 
 /**
+ * Try/catch block - error handling
+ */
+export const TryCatchStepSchema = z.object({
+  id: z.string(),
+  try: z.object({
+    trySteps: z.array(z.lazy(() => WorkflowControlFlowStepSchema)),
+    catchSteps: z.array(z.lazy(() => WorkflowControlFlowStepSchema)),
+  }),
+  output: z.string().nullish(),
+})
+
+/**
  * Any step that can appear in a workflow's steps array
  * Can be a basic step, control flow, or jump statement
  */
@@ -79,6 +93,7 @@ export const WorkflowControlFlowStepSchema: any = z.union([
   IfElseStepSchema,
   BreakStepSchema,
   ContinueStepSchema,
+  TryCatchStepSchema,
 ])
 
 /**
@@ -101,6 +116,7 @@ export type WhileLoopStep = z.infer<typeof WhileLoopStepSchema>
 export type IfElseStep = z.infer<typeof IfElseStepSchema>
 export type BreakStep = z.infer<typeof BreakStepSchema>
 export type ContinueStep = z.infer<typeof ContinueStepSchema>
+export type TryCatchStep = z.infer<typeof TryCatchStepSchema>
 export type WorkflowControlFlowStep = z.infer<typeof WorkflowControlFlowStepSchema>
 export type WorkflowDefinition = z.infer<typeof WorkflowDefinitionSchema>
 export type WorkflowFile = z.infer<typeof WorkflowFileSchema>

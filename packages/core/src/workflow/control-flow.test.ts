@@ -24,7 +24,7 @@ describe('Dynamic Workflow Control Flow', () => {
         warn: (_msg: string) => {},
         error: (_msg: string) => {},
       },
-      step: async (name: string, fn: () => Promise<any>) => {
+      step: async (_name: string, fn: () => Promise<any>) => {
         stepCount++
         return await fn()
       },
@@ -59,14 +59,14 @@ describe('Dynamic Workflow Control Flow', () => {
         },
       }
 
-      const workflow = createDynamicWorkflow(workflowDef, {
+      const _workflow = createDynamicWorkflow(workflowDef, {
         toolInfo: mockToolInfo,
       })
 
-      const context = createMockContext()
+      const _context = createMockContext()
 
       // Mock the step execution to return incremented count
-      const mockRunInternal = async () => {
+      const _mockRunInternal = async () => {
         return { count: 3 }
       }
 
@@ -102,7 +102,7 @@ describe('Dynamic Workflow Control Flow', () => {
         },
       }
 
-      const workflow = createDynamicWorkflow(workflowDef, {
+      const _workflow = createDynamicWorkflow(workflowDef, {
         toolInfo: mockToolInfo,
       })
 
@@ -142,7 +142,7 @@ describe('Dynamic Workflow Control Flow', () => {
         },
       }
 
-      const workflow = createDynamicWorkflow(workflowDef, {
+      const _workflow = createDynamicWorkflow(workflowDef, {
         toolInfo: mockToolInfo,
       })
 
@@ -178,7 +178,7 @@ describe('Dynamic Workflow Control Flow', () => {
         },
       }
 
-      const workflow = createDynamicWorkflow(workflowDef, {
+      const _workflow = createDynamicWorkflow(workflowDef, {
         toolInfo: mockToolInfo,
       })
 
@@ -218,7 +218,7 @@ describe('Dynamic Workflow Control Flow', () => {
         },
       }
 
-      const workflow = createDynamicWorkflow(workflowDef, {
+      const _workflow = createDynamicWorkflow(workflowDef, {
         toolInfo: mockToolInfo,
       })
 
@@ -253,7 +253,7 @@ describe('Dynamic Workflow Control Flow', () => {
         },
       }
 
-      const workflow = createDynamicWorkflow(workflowDef, {
+      const _workflow = createDynamicWorkflow(workflowDef, {
         toolInfo: mockToolInfo,
       })
 
@@ -295,7 +295,7 @@ describe('Dynamic Workflow Control Flow', () => {
         },
       }
 
-      const workflow = createDynamicWorkflow(workflowDef, {
+      const _workflow = createDynamicWorkflow(workflowDef, {
         toolInfo: mockToolInfo,
       })
 
@@ -341,7 +341,7 @@ describe('Dynamic Workflow Control Flow', () => {
         },
       }
 
-      const workflow = createDynamicWorkflow(workflowDef, {
+      const _workflow = createDynamicWorkflow(workflowDef, {
         toolInfo: mockToolInfo,
       })
 

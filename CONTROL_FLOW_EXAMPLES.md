@@ -10,6 +10,7 @@ The following control flow constructs are now supported:
 2. **If/Else Branches** - Conditionally execute different steps
 3. **Break Statement** - Exit a loop early
 4. **Continue Statement** - Skip to the next iteration of a loop
+5. **Try/Catch Blocks** - Error handling with recovery
 
 ## While Loops
 
@@ -248,3 +249,70 @@ Failed to evaluate condition: input.value > max. Error: max is not defined
 ```
 
 Make sure all variables in your conditions exist in `input` or `state`.
+
+## Try/Catch Blocks
+
+Handle errors gracefully and provide recovery steps.
+
+```yaml
+steps:
+  - id: riskyOperation
+    try:
+      trySteps:
+        - id: attemptTask
+          task: "Attempt a risky operation"
+          tools: ["internet"]
+      catchSteps:
+        - id: handleError
+          task: "Handle the error gracefully"
+          output: fallbackResult
+    output: result
+```
+
+When any step in `trySteps` throws an error:
+- Execution stops immediately
+- The error is logged
+- All steps in `catchSteps` are executed
+- The output from the last catch step becomes the try/catch result
+
+### Error Logging
+
+Errors caught by try/catch blocks are logged with the workflow context:
+
+```
+[ControlFlow] Try/catch 'riskyOperation' caught error: [error message]
+```
+
+This helps with debugging while allowing the workflow to continue.
+
+### Nested Try/Catch
+
+You can nest try/catch blocks for fine-grained error handling:
+
+```yaml
+steps:
+  - id: outerTry
+    try:
+      trySteps:
+        - id: innerTry
+          try:
+            trySteps:
+              - id: dangerousStep
+                task: "Perform dangerous operation"
+            catchSteps:
+              - id: innerRecovery
+                task: "Recover from inner error"
+      catchSteps:
+        - id: outerRecovery
+          task: "Recover from outer error"
+```
+
+## Validation
+
+Dynamic workflows are validated at parse time for:
+
+1. **Empty workflows** - Workflows must have at least one step
+2. **Break/continue placement** - Break/continue must be inside loops
+3. **Structure** - All control flow structures must be properly formed
+
+Validation errors prevent workflows from running and provide clear error messages.
