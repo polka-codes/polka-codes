@@ -1,191 +1,32 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
-import { dirname } from 'node:path'
+import { readFile } from 'node:fs/promises'
 import {
   askFollowupQuestion,
   createDynamicWorkflow,
   type DynamicWorkflowRegistry,
-  executeCommand,
   type FullToolInfo,
-  fetchUrl,
-  generateWorkflowCodeWorkflow,
-  generateWorkflowDefinitionWorkflow,
   listFiles,
   parseDynamicWorkflowDefinition,
-  readBinaryFile,
-  readFile as readFileTool,
-  removeFile,
-  renameFile,
-  replaceInFile,
-  searchFiles,
-  type WorkflowFile,
   type WorkflowFn,
-  writeToFile,
 } from '@polka-codes/core'
 import { Command } from 'commander'
-import { stringify } from 'yaml'
 import { createLogger } from '../logger'
 import { runWorkflow } from '../runWorkflow'
-import { type BaseWorkflowInput, codeWorkflow, commitWorkflow, fixWorkflow, planWorkflow, prWorkflow, reviewWorkflow } from '../workflows'
-
-async function saveWorkflowFile(path: string, workflow: WorkflowFile) {
-  await mkdir(dirname(path), { recursive: true })
-  await writeFile(path, stringify(workflow))
-}
-
-function clearWorkflowCode(workflowDef: WorkflowFile) {
-  for (const wf of Object.values(workflowDef.workflows)) {
-    for (const step of wf.steps) {
-      step.code = undefined
-    }
-  }
-}
+import { type BaseWorkflowInput, commitWorkflow, fixWorkflow, planWorkflow, prWorkflow, reviewWorkflow } from '../workflows'
 
 export async function runWorkflowCommand(task: string | undefined, _options: any, command: Command) {
   const globalOpts = (command.parent ?? command).opts()
   const { verbose } = globalOpts
   const logger = createLogger({ verbose })
 
-  const { file, regenerate, create, workflow: workflowName } = command.opts()
+  const { file, workflow: workflowName } = command.opts()
 
   if (!file) {
     logger.error('Error: Workflow file is required. Use -f or --file.')
     return
   }
 
-  // Tools available to the dynamic workflow
-  const tools: FullToolInfo[] = [
-    readFileTool,
-    writeToFile,
-    replaceInFile,
-    searchFiles,
-    listFiles,
-    executeCommand,
-    fetchUrl,
-    readBinaryFile,
-    removeFile,
-    renameFile,
-    askFollowupQuestion,
-  ]
-
-  const availableTools = tools.map((t) => ({ name: t.name, description: t.description }))
-
-  const builtInWorkflowInfo = [
-    {
-      name: 'plan',
-      description: 'Create an implementation plan. Input: { task: string, mode?: "interactive" | "confirm" | "noninteractive" }',
-    },
-    {
-      name: 'code',
-      description: 'Implement code. Input: { task: string, mode?: "interactive" | "noninteractive", additionalInstructions?: string }',
-    },
-    {
-      name: 'fix',
-      description: 'Fix issues. Input: { command?: string, task?: string, prompt?: string }',
-    },
-    {
-      name: 'review',
-      description: 'Review code changes. Input: { pr?: number, context?: string }',
-    },
-    {
-      name: 'commit',
-      description: 'Commit changes. Input: { all?: boolean, context?: string }',
-    },
-    {
-      name: 'pr',
-      description: 'Create a pull request. Input: { context?: string }',
-    },
-  ]
-
-  const isCreate = !!create
-  const isUpdate = !!regenerate
-
-  if (isCreate) {
-    if (!task) {
-      logger.error('Error: Task is required for creating a workflow.')
-      return
-    }
-
-    logger.info('Generating workflow definition...')
-    const defResult = await runWorkflow(
-      generateWorkflowDefinitionWorkflow,
-      { prompt: task, availableTools, builtInWorkflows: builtInWorkflowInfo },
-      { commandName: 'workflow', context: globalOpts, logger },
-    )
-
-    if (!defResult) {
-      logger.error('Failed to generate workflow definition.')
-      return
-    }
-
-    logger.info('Generating workflow code...')
-    const codeResult = await runWorkflow(
-      generateWorkflowCodeWorkflow,
-      { workflow: defResult, builtInWorkflows: builtInWorkflowInfo },
-      { commandName: 'workflow', context: globalOpts, logger },
-    )
-
-    if (!codeResult) {
-      logger.error('Failed to generate workflow code.')
-      return
-    }
-
-    await saveWorkflowFile(file, codeResult)
-    logger.info(`Workflow saved to '${file}'.`)
-    return
-  }
-
-  if (isUpdate) {
-    let workflowDef: WorkflowFile | undefined
-    try {
-      const content = await readFile(file, 'utf-8')
-      const res = parseDynamicWorkflowDefinition(content)
-      if (!res.success) {
-        throw new Error(res.error)
-      }
-      workflowDef = res.definition
-    } catch (e) {
-      logger.error(`Error reading or parsing file '${file}': ${e}`)
-      return
-    }
-
-    if (task) {
-      logger.info('Updating workflow definition...')
-      const updatePrompt = `Current workflow definition:\n${JSON.stringify(workflowDef, null, 2)}\n\nUpdate request: ${task}\n\nReturn the updated workflow definition.`
-      const defResult = await runWorkflow(
-        generateWorkflowDefinitionWorkflow,
-        { prompt: updatePrompt, availableTools, builtInWorkflows: builtInWorkflowInfo },
-        { commandName: 'workflow', context: globalOpts, logger },
-      )
-
-      if (!defResult) {
-        logger.error('Failed to update workflow definition.')
-        return
-      }
-      workflowDef = defResult
-    } else {
-      logger.info('Clearing existing code for regeneration...')
-      clearWorkflowCode(workflowDef)
-    }
-
-    logger.info('Generating workflow code...')
-    const codeResult = await runWorkflow(
-      generateWorkflowCodeWorkflow,
-      { workflow: workflowDef, builtInWorkflows: builtInWorkflowInfo },
-      { commandName: 'workflow', context: globalOpts, logger },
-    )
-
-    if (!codeResult) {
-      logger.error('Failed to generate workflow code.')
-      return
-    }
-
-    await saveWorkflowFile(file, codeResult)
-    logger.info(`Workflow saved to '${file}'.`)
-    return
-  }
-
-  // Execute Mode
-  logger.info(`Executing workflow from '${file}'...`)
+  // Read and parse workflow file
+  logger.info(`Loading workflow from '${file}'...`)
   let content: string
   try {
     content = await readFile(file, 'utf-8')
@@ -193,8 +34,6 @@ export async function runWorkflowCommand(task: string | undefined, _options: any
     logger.error(`Error reading file '${file}': ${e}`)
     return
   }
-
-  logger.warn('Warning: allowUnsafeCodeExecution is enabled. This workflow has full access to your system.')
 
   const parsedResult = parseDynamicWorkflowDefinition(content)
   if (!parsedResult.success) {
@@ -231,14 +70,16 @@ export async function runWorkflowCommand(task: string | undefined, _options: any
     logger.info(`Using workflow '${workflowId}'`)
   }
 
+  // Create dynamic workflow runner
+  const tools: FullToolInfo[] = [listFiles, askFollowupQuestion]
+
   let dynamicRunner: ReturnType<typeof createDynamicWorkflow>
   try {
     dynamicRunner = createDynamicWorkflow(workflowDef, {
-      allowUnsafeCodeExecution: true,
+      allowUnsafeCodeExecution: false,
       toolInfo: tools,
       builtInWorkflows: {
         plan: planWorkflow,
-        code: codeWorkflow,
         fix: fixWorkflow,
         review: reviewWorkflow,
         commit: commitWorkflow,
@@ -273,10 +114,8 @@ export async function runWorkflowCommand(task: string | undefined, _options: any
 }
 
 export const workflowCommand = new Command('workflow')
-  .description('Generate, manage, and run custom workflows.')
-  .argument('[task]', 'The task description for generating the workflow.')
-  .option('-f, --file <path>', 'Path to the workflow file')
+  .description('Run custom workflows.')
+  .argument('[task]', 'The task input for the workflow.')
+  .option('-f, --file <path>', 'Path to the workflow file (required)')
   .option('-w, --workflow <name>', 'The name of the workflow to run')
-  .option('--create', 'Create a new workflow')
-  .option('--regenerate', 'Regenerate the code for the workflow')
   .action(runWorkflowCommand)

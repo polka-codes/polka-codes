@@ -10,7 +10,6 @@ export { replaceInFile as replaceInFileHelper } from './tools/utils/replaceInFil
 export * from './UsageMeter'
 export * from './workflow/agent.workflow'
 export * from './workflow/dynamic'
-export * from './workflow/dynamic-generator.workflow'
 export * from './workflow/dynamic-types'
 export * from './workflow/json-ai-types'
 export * from './workflow/types'

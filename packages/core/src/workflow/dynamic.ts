@@ -66,11 +66,6 @@ export type DynamicWorkflowRunnerOptions = {
    */
   maxToolRoundTrips?: number
   /**
-   * Opt-in to execute persisted step `code` strings.
-   * When false, steps without code must be agent-executed.
-   */
-  allowUnsafeCodeExecution?: boolean
-  /**
    * Customize per-step system prompt for agent-executed steps.
    */
   stepSystemPrompt?: (args: { workflowId: string; step: WorkflowStepDefinition; input: any; state: any }) => string
@@ -84,10 +79,6 @@ export type DynamicWorkflowRunnerOptions = {
    */
   builtInWorkflows?: Record<string, WorkflowFn<any, any, any>>
 }
-
-type CompiledStepFn<TTools extends ToolRegistry> = (ctx: DynamicStepRuntimeContext<TTools>) => Promise<any>
-
-const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor as new (arg1: string, arg2: string) => (ctx: any) => Promise<any>
 
 function validateAndApplyDefaults(workflowId: string, workflow: WorkflowDefinition, input: Record<string, any>): Record<string, any> {
   if (!workflow.inputs || workflow.inputs.length === 0) {
@@ -130,39 +121,6 @@ function createRunWorkflowFn<TTools extends ToolRegistry>(args: {
   return async (subWorkflowId: string, subInput?: Record<string, any>) => {
     const mergedInput = { ...args.input, ...args.state, ...(subInput ?? {}) }
     return await args.runInternal(subWorkflowId, mergedInput, args.context, args.state)
-  }
-}
-
-function compileStep<TTools extends ToolRegistry>(
-  stepDef: WorkflowStepDefinition,
-  workflowId: string,
-  compiledSteps: Map<string, CompiledStepFn<TTools>>,
-): CompiledStepFn<TTools> {
-  const key = `${workflowId}.${stepDef.id}`
-  const existing = compiledSteps.get(key)
-  if (existing) {
-    return existing
-  }
-
-  if (!stepDef.code) {
-    throw new Error(`Step '${stepDef.id}' in workflow '${workflowId}' has no code`)
-  }
-
-  try {
-    const fn = new AsyncFunction('ctx', stepDef.code) as CompiledStepFn<TTools>
-    compiledSteps.set(key, fn)
-    return fn
-  } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error)
-    const codePreview = stepDef.code.length > 200 ? `${stepDef.code.substring(0, 200)}...` : stepDef.code
-    throw new Error(
-      `Failed to compile code for step '${stepDef.id}' in workflow '${workflowId}':\n` +
-        `  Error: ${errorMsg}\n` +
-        `  Code:\n${codePreview
-          .split('\n')
-          .map((line) => `    ${line}`)
-          .join('\n')}`,
-    )
   }
 }
 
@@ -352,7 +310,6 @@ async function executeStepWithTimeout<TTools extends ToolRegistry>(
   state: Record<string, any>,
   context: WorkflowContext<TTools>,
   options: DynamicWorkflowRunnerOptions,
-  compiledSteps: Map<string, CompiledStepFn<TTools>>,
   runInternal: (
     workflowId: string,
     input: Record<string, any>,
@@ -361,38 +318,6 @@ async function executeStepWithTimeout<TTools extends ToolRegistry>(
   ) => Promise<any>,
 ): Promise<any> {
   const executeStepLogic = async (): Promise<any> => {
-    if (stepDef.code && options.allowUnsafeCodeExecution) {
-      context.logger.debug(`[Step] Executing step '${stepDef.id}' with compiled code`)
-      const fn = compileStep(stepDef, workflowId, compiledSteps)
-      const runWorkflow = createRunWorkflowFn({ input, state, context, runInternal })
-
-      const agentTools: Record<string, (input: any) => Promise<any>> = {}
-      if (options.toolInfo) {
-        for (const tool of options.toolInfo) {
-          if (typeof (context.tools as any)[tool.name] === 'function') {
-            agentTools[tool.name] = (context.tools as any)[tool.name]
-          }
-        }
-      }
-
-      const runtimeCtx: DynamicStepRuntimeContext<TTools> = {
-        workflowId,
-        stepId: stepDef.id,
-        input,
-        state,
-        tools: context.tools,
-        logger: context.logger,
-        step: context.step,
-        runWorkflow,
-        toolInfo: options.toolInfo,
-        agentTools,
-      }
-
-      const result = await fn(runtimeCtx)
-      context.logger.debug(`[Step] Compiled code execution completed for step '${stepDef.id}'`)
-      return result
-    }
-
     context.logger.debug(`[Step] Executing step '${stepDef.id}' with agent`)
     const result = await executeStepWithAgent(stepDef, workflowId, input, state, context, options, runInternal)
     context.logger.debug(`[Step] Agent execution completed for step '${stepDef.id}'`)
@@ -427,7 +352,6 @@ async function executeStep<TTools extends ToolRegistry>(
   state: Record<string, any>,
   context: WorkflowContext<TTools>,
   options: DynamicWorkflowRunnerOptions,
-  compiledSteps: Map<string, CompiledStepFn<TTools>>,
   runInternal: (
     workflowId: string,
     input: Record<string, any>,
@@ -435,7 +359,7 @@ async function executeStep<TTools extends ToolRegistry>(
     inheritedState: Record<string, any>,
   ) => Promise<any>,
 ): Promise<any> {
-  const result = await executeStepWithTimeout(stepDef, workflowId, input, state, context, options, compiledSteps, runInternal)
+  const result = await executeStepWithTimeout(stepDef, workflowId, input, state, context, options, runInternal)
 
   // Validate output against schema if provided
   if (stepDef.outputSchema) {
@@ -476,8 +400,6 @@ export function createDynamicWorkflow<TTools extends ToolRegistry = DynamicWorkf
     definition = res.definition
   }
 
-  const compiledSteps = new Map<string, CompiledStepFn<TTools>>()
-
   const runInternal = async (
     workflowId: string,
     input: Record<string, any>,
@@ -517,7 +439,7 @@ export function createDynamicWorkflow<TTools extends ToolRegistry = DynamicWorkf
       context.logger.debug(`[Workflow] Current state keys: ${Object.keys(state).join(', ')}`)
 
       lastOutput = await context.step(stepName, async () => {
-        return await executeStep(stepDef, workflowId, validatedInput, state, context, options, compiledSteps, runInternal)
+        return await executeStep(stepDef, workflowId, validatedInput, state, context, options, runInternal)
       })
 
       const outputKey = stepDef.output ?? stepDef.id
