@@ -4,13 +4,15 @@
  * MCP Server type definitions
  */
 
+import type { McpInputSchema } from '../mcp/shared-types'
+
 /**
  * Tool that can be exposed via MCP server
  */
 export interface McpServerTool {
   name: string
   description: string
-  inputSchema: Record<string, unknown>
+  inputSchema: McpInputSchema
   handler: (args: Record<string, unknown>) => Promise<unknown>
 }
 
@@ -26,7 +28,7 @@ export interface McpServerResource {
 }
 
 /**
- * MCP Server configuration
+ * MCP Server configuration (for running polka-codes as an MCP server)
  */
 export interface McpServerConfig {
   serverInfo: {

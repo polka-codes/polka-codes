@@ -3,6 +3,7 @@
 export * from './client'
 export * from './errors'
 export * from './manager'
+export * from './shared-types'
 export * from './tools'
 export * from './transport'
 export * from './types'
