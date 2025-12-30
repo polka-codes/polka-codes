@@ -284,23 +284,20 @@ export class McpManager {
       required.push(...schema.required)
     }
 
-    // Build the object schema
-    let objectSchema: any = z.object(properties)
-
-    // Make non-required fields optional
-    if (required.length > 0) {
-      const optionalSchema: Record<string, z.ZodTypeAny> = {}
-      for (const [key, value] of Object.entries(properties)) {
-        if (!required.includes(key)) {
-          optionalSchema[key] = value.optional()
-        } else {
-          optionalSchema[key] = value
-        }
+    // Build the object schema with proper optionality
+    // In JSON Schema, properties are optional by default
+    // In Zod, properties are required by default, so we must mark them optional
+    const finalSchema: Record<string, z.ZodTypeAny> = {}
+    for (const [key, value] of Object.entries(properties)) {
+      // Only make it optional if it's NOT in the required list
+      if (required.includes(key)) {
+        finalSchema[key] = value
+      } else {
+        finalSchema[key] = value.optional()
       }
-      objectSchema = z.object(optionalSchema)
     }
 
-    return objectSchema
+    return z.object(finalSchema)
   }
 
   /**

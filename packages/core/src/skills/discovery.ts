@@ -99,8 +99,14 @@ async function tryReadTextFile(filePath: string, fs: FileSystemProvider): Promis
       return null
     }
 
-    // If not binary, decode as UTF-8
-    return new TextDecoder().decode(buffer)
+    // If not binary, decode as UTF-8 with fatal mode to catch invalid UTF-8 sequences
+    // This ensures binary files that pass the null-byte check are still detected
+    try {
+      return new TextDecoder('utf-8', { fatal: true }).decode(buffer)
+    } catch (_decodeError) {
+      // Invalid UTF-8 sequence detected, treat as binary
+      return null
+    }
   } catch (error) {
     // If reading fails (e.g., directory), skip it
     if (error && typeof error === 'object' && 'code' in error && (error.code === 'EINVAL' || error.code === 'EISDIR')) {

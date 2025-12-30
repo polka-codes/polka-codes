@@ -157,17 +157,24 @@ export class StdioTransport extends EventEmitter {
 
     // Try to parse messages using Content-Length framing first
     while (this.buffer.length > 0) {
-      // Check for Content-Length header format
-      const contentLengthMatch = this.buffer.match(/^Content-Length:\s*(\d+)\r?\n\r?\n/i)
+      // Check for Content-Length header format (not anchored to start for robustness)
+      const contentLengthMatch = this.buffer.match(/Content-Length:\s*(\d+)\r?\n\r?\n/i)
 
       if (contentLengthMatch) {
         const contentLength = Number.parseInt(contentLengthMatch[1], 10)
-        const headerEnd = contentLengthMatch[0].length
+        const matchStart = contentLengthMatch.index ?? 0
+        const headerEnd = matchStart + contentLengthMatch[0].length
         const totalLength = headerEnd + contentLength
 
+        // If we have enough data, extract the message
         if (this.buffer.length >= totalLength) {
-          const messageData = this.buffer.slice(headerEnd, totalLength)
-          this.buffer = this.buffer.slice(totalLength)
+          // Skip any data before the header
+          if (matchStart > 0) {
+            this.buffer = this.buffer.slice(matchStart)
+          }
+
+          const messageData = this.buffer.slice(contentLengthMatch[0].length, contentLengthMatch[0].length + contentLength)
+          this.buffer = this.buffer.slice(totalLength - matchStart)
 
           try {
             const message: JsonRpcMessage = JSON.parse(messageData)
