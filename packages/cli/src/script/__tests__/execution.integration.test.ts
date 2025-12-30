@@ -27,11 +27,12 @@ describe('Script Execution Integration Tests', () => {
     writeFileSync(
       join(scriptsDir, 'test-script.ts'),
       `
-import { code } from '@polka-codes/cli'
+import type { ScriptContext } from '@polka-codes/cli'
 
-export async function main(args: string[]) {
-  console.log('Test script executed')
-  console.log('Args:', args.join(' '))
+export async function main(args: string[], context: ScriptContext) {
+  const { logger } = context
+  logger.info('Test script executed')
+  logger.info('Args:', args.join(' '))
 
   return {
     success: true,
@@ -41,7 +42,7 @@ export async function main(args: string[]) {
 }
 
 if (import.meta.main) {
-  main(process.argv.slice(2))
+  main(process.argv.slice(2), { logger: console, projectRoot: process.cwd() })
 }
 `,
     )
@@ -50,14 +51,17 @@ if (import.meta.main) {
     writeFileSync(
       join(scriptsDir, 'timeout-script.ts'),
       `
-export async function main(args: string[]) {
-  console.log('Starting long operation...')
+import type { ScriptContext } from '@polka-codes/cli'
+
+export async function main(args: string[], context: ScriptContext) {
+  const { logger } = context
+  logger.info('Starting long operation...')
   await new Promise(resolve => setTimeout(resolve, 10000))
   return { done: true }
 }
 
 if (import.meta.main) {
-  main(process.argv.slice(2))
+  main(process.argv.slice(2), { logger: console, projectRoot: process.cwd() })
 }
 `,
     )
@@ -66,12 +70,14 @@ if (import.meta.main) {
     writeFileSync(
       join(scriptsDir, 'error-script.ts'),
       `
-export async function main(args: string[]) {
+import type { ScriptContext } from '@polka-codes/cli'
+
+export async function main(args: string[], context: ScriptContext) {
   throw new Error('Intentional test error')
 }
 
 if (import.meta.main) {
-  main(process.argv.slice(2))
+  main(process.argv.slice(2), { logger: console, projectRoot: process.cwd() })
 }
 `,
     )

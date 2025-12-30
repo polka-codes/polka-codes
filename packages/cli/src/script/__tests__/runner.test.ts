@@ -45,8 +45,8 @@ describe('ScriptRunner', () => {
     createTestScript(
       'valid.ts',
       `
-      export async function main(args: string[]) {
-        return { success: true, args }
+      export async function main(args: string[], context: any) {
+        return { success: true, args, hasLogger: !!context.logger }
       }
     `,
     )
@@ -59,7 +59,7 @@ describe('ScriptRunner', () => {
     })
 
     expect(result.success).toBe(true)
-    expect(result.returnValue).toEqual({ success: true, args: ['--test'] })
+    expect(result.returnValue).toEqual({ success: true, args: ['--test'], hasLogger: true })
 
     cleanup()
   })
@@ -92,7 +92,7 @@ describe('ScriptRunner', () => {
     createTestScript(
       'error.ts',
       `
-      export async function main(args: string[]) {
+      export async function main(args: string[], context: any) {
         throw new Error('Test error')
       }
     `,
@@ -116,7 +116,7 @@ describe('ScriptRunner', () => {
     createTestScript(
       'timeout.ts',
       `
-      export async function main(args: string[]) {
+      export async function main(args: string[], context: any) {
         await new Promise(resolve => setTimeout(resolve, 10000))
         return 'done'
       }
