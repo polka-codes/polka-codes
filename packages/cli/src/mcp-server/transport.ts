@@ -32,23 +32,57 @@ export class McpServerTransport extends EventEmitter {
 
   /**
    * Handle incoming data from stdin
+   * Supports both Content-Length header framing and newline-delimited messages
    */
   private handleData(data: string): void {
     this.buffer += data
 
-    // Process complete messages (separated by newlines)
-    const lines = this.buffer.split('\n')
-    this.buffer = lines.pop() || ''
+    // Try to parse messages using Content-Length framing first
+    while (this.buffer.length > 0) {
+      // Check for Content-Length header format
+      const contentLengthMatch = this.buffer.match(/^Content-Length:\s*(\d+)\r?\n\r?\n/i)
 
-    for (const line of lines) {
-      if (!line.trim()) continue
+      if (contentLengthMatch) {
+        const contentLength = Number.parseInt(contentLengthMatch[1], 10)
+        const headerEnd = contentLengthMatch[0].length
+        const totalLength = headerEnd + contentLength
 
-      try {
-        const message = JSON.parse(line)
-        this.emit('message', message)
-      } catch (_error) {
-        this.emit('error', new Error(`Failed to parse message: ${line}`))
+        if (this.buffer.length >= totalLength) {
+          const messageData = this.buffer.slice(headerEnd, totalLength)
+          this.buffer = this.buffer.slice(totalLength)
+
+          try {
+            const message = JSON.parse(messageData)
+            this.emit('message', message)
+          } catch (_error) {
+            this.emit('error', new Error(`Failed to parse message: ${messageData}`))
+          }
+          continue
+        } else {
+          // Need more data
+          break
+        }
       }
+
+      // Fall back to newline-delimited parsing (for compatibility)
+      const newlineIndex = this.buffer.indexOf('\n')
+      if (newlineIndex !== -1) {
+        const line = this.buffer.slice(0, newlineIndex)
+        this.buffer = this.buffer.slice(newlineIndex + 1)
+
+        if (!line.trim()) continue
+
+        try {
+          const message = JSON.parse(line)
+          this.emit('message', message)
+        } catch (_error) {
+          this.emit('error', new Error(`Failed to parse message: ${line}`))
+        }
+        continue
+      }
+
+      // No complete message found
+      break
     }
   }
 

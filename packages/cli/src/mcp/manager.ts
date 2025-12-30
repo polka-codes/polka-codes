@@ -216,11 +216,16 @@ export class McpManager {
       try {
         zodSchema = this.jsonSchemaToZod(tool.inputSchema)
       } catch (error) {
-        // If schema conversion fails, use a generic object schema
+        // If schema conversion fails, skip the tool rather than using a dangerous fallback
+        const errorMessage = error instanceof Error ? error.message : String(error)
         if (this.logger) {
-          this.logger.warn(`Failed to convert schema for MCP tool '${fullToolName}': ${error}`)
+          this.logger.error(
+            `Skipping MCP tool '${fullToolName}' due to schema conversion error: ${errorMessage}. ` +
+              `The tool may have unsupported JSON Schema features. ` +
+              `Please report this if the tool should be supported.`,
+          )
         }
-        zodSchema = z.object({}) as any
+        continue // Skip this tool entirely
       }
 
       const description = tool.description || `MCP tool: ${fullToolName}`
