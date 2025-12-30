@@ -95,7 +95,10 @@ const executeTypeScriptScript: ScriptExecutor = async (script, name, args, logge
   const result = await runner.execute({
     scriptPath,
     args,
-    context: {}, // Reserved for future use
+    context: {
+      projectRoot: process.cwd(), // Provide project root to scripts
+      // Additional context can be added here in the future
+    },
     logger,
     timeout: (script as { timeout?: number }).timeout,
   })

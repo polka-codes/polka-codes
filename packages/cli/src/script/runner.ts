@@ -111,6 +111,27 @@ export interface ScriptExecutionResult {
 }
 
 /**
+ * Script context passed to main function
+ * Provides scripts with access to logger, config, and project info
+ */
+export interface ScriptContext {
+  /**
+   * Logger instance for output
+   */
+  logger: Logger
+
+  /**
+   * Project root directory
+   */
+  projectRoot: string
+
+  /**
+   * Additional context from execution environment
+   */
+  [key: string]: unknown
+}
+
+/**
  * Validates that a script path is safe to execute
  *
  * @param scriptPath - Path to the script file
@@ -185,7 +206,7 @@ export function validateScriptPermissions(script: ScriptConfig, logger?: { warn:
  * In-process script runner for TypeScript files
  *
  * Executes TypeScript scripts by dynamically importing them as modules.
- * Scripts should export a `main(args: string[])` function.
+ * Scripts should export a `main(args: string[], context: ScriptContext)` function.
  *
  * **Important Limitations:**
  *
@@ -209,11 +230,19 @@ export function validateScriptPermissions(script: ScriptConfig, logger?: { warn:
  *
  * @example
  * ```typescript
+ * // Script file (scripts/deploy.ts):
+ * export async function main(args: string[], context: ScriptContext) {
+ *   const { logger, projectRoot } = context
+ *   logger.info('Deploying...')
+ *   // Use logger and projectRoot as needed
+ * }
+ *
+ * // Execution:
  * const runner = new ScriptRunner()
  * const result = await runner.execute({
  *   scriptPath: './scripts/deploy.ts',
  *   args: ['--production'],
- *   context: {},
+ *   context: { projectRoot: '/path/to/project' },
  *   logger: createLogger({ verbose: 1 }),
  *   timeout: 60000
  * })
@@ -261,11 +290,21 @@ export class ScriptRunner {
 
         // Check if script exports a main function
         if (typeof scriptModule.main !== 'function') {
-          throw new ScriptExecutionError(scriptPath, new Error(`Script must export a 'main(args: string[])' function`))
+          throw new ScriptExecutionError(
+            scriptPath,
+            new Error(`Script must export a 'main(args: string[], context: ScriptContext)' function`),
+          )
         }
 
-        // Execute the main function
-        return await scriptModule.main(args)
+        // Build script context with logger and project root
+        const scriptContext: ScriptContext = {
+          logger,
+          projectRoot,
+          ...context, // Spread additional context (config, etc.)
+        }
+
+        // Execute the main function with args and context
+        return await scriptModule.main(args, scriptContext)
       })
 
       logger.debug(`Script completed successfully: ${scriptPath}`)

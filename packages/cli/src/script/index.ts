@@ -2,6 +2,7 @@
 
 export { executeScript } from './executor'
 export {
+  type ScriptContext,
   ScriptExecutionError,
   type ScriptExecutionResult,
   ScriptRunner,
