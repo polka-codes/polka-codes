@@ -87,7 +87,7 @@ export const TryCatchStepSchema = z.object({
  * Any step that can appear in a workflow's steps array
  * Can be a basic step, control flow, or jump statement
  */
-export const WorkflowControlFlowStepSchema: any = z.union([
+export const WorkflowControlFlowStepSchema = z.union([
   WorkflowStepDefinitionSchema,
   WhileLoopStepSchema,
   IfElseStepSchema,

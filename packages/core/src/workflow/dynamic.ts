@@ -4,7 +4,12 @@ import { parseJsonFromMarkdown } from '../Agent/parseJsonFromMarkdown'
 import type { FullToolInfo, ToolResponseResult } from '../tool'
 import { type AgentToolRegistry, agentWorkflow } from './agent.workflow'
 import {
+  type BreakStep,
+  type ContinueStep,
+  type IfElseStep,
+  type TryCatchStep,
   type ValidationResult,
+  type WhileLoopStep,
   type WorkflowControlFlowStep,
   type WorkflowDefinition,
   type WorkflowFile,
@@ -46,9 +51,6 @@ export function validateWorkflowFile(definition: WorkflowFile): ValidationResult
       continue
     }
 
-    // Collect all workflow IDs for circular reference check
-    const _allWorkflowIds = new Set(Object.keys(definition.workflows))
-
     // Check for break/continue outside loops
     const checkBreakOutsideLoop = (steps: WorkflowControlFlowStep[], inLoop: boolean, path: string): void => {
       for (const step of steps) {
@@ -58,22 +60,19 @@ export function validateWorkflowFile(definition: WorkflowFile): ValidationResult
           }
         }
         if (isWhileLoopStep(step)) {
-          const whileStep = step as any
-          checkBreakOutsideLoop(whileStep.while.steps, true, `${path}/${whileStep.id}`)
+          checkBreakOutsideLoop(step.while.steps, true, `${path}/${step.id}`)
         }
         if (isIfElseStep(step)) {
-          const ifElseStep = step as any
-          if (ifElseStep.if.thenBranch) {
-            checkBreakOutsideLoop(ifElseStep.if.thenBranch, inLoop, `${path}/${ifElseStep.id}/then`)
+          if (step.if.thenBranch) {
+            checkBreakOutsideLoop(step.if.thenBranch, inLoop, `${path}/${step.id}/then`)
           }
-          if (ifElseStep.if.elseBranch) {
-            checkBreakOutsideLoop(ifElseStep.if.elseBranch, inLoop, `${path}/${ifElseStep.id}/else`)
+          if (step.if.elseBranch) {
+            checkBreakOutsideLoop(step.if.elseBranch, inLoop, `${path}/${step.id}/else`)
           }
         }
         if (isTryCatchStep(step)) {
-          const tryCatchStep = step as any
-          checkBreakOutsideLoop(tryCatchStep.try.trySteps, inLoop, `${path}/${tryCatchStep.id}/try`)
-          checkBreakOutsideLoop(tryCatchStep.try.catchSteps, inLoop, `${path}/${tryCatchStep.id}/catch`)
+          checkBreakOutsideLoop(step.try.trySteps, inLoop, `${path}/${step.id}/try`)
+          checkBreakOutsideLoop(step.try.catchSteps, inLoop, `${path}/${step.id}/catch`)
         }
       }
     }
@@ -84,22 +83,19 @@ export function validateWorkflowFile(definition: WorkflowFile): ValidationResult
     const findRunWorkflowCalls = (steps: WorkflowControlFlowStep[], path: string): void => {
       for (const step of steps) {
         if (isWhileLoopStep(step)) {
-          const whileStep = step as any
-          findRunWorkflowCalls(whileStep.while.steps, `${path}/${whileStep.id}`)
+          findRunWorkflowCalls(step.while.steps, `${path}/${step.id}`)
         }
         if (isIfElseStep(step)) {
-          const ifElseStep = step as any
-          if (ifElseStep.if.thenBranch) {
-            findRunWorkflowCalls(ifElseStep.if.thenBranch, `${path}/${ifElseStep.id}/then`)
+          if (step.if.thenBranch) {
+            findRunWorkflowCalls(step.if.thenBranch, `${path}/${step.id}/then`)
           }
-          if (ifElseStep.if.elseBranch) {
-            findRunWorkflowCalls(ifElseStep.if.elseBranch, `${path}/${ifElseStep.id}/else`)
+          if (step.if.elseBranch) {
+            findRunWorkflowCalls(step.if.elseBranch, `${path}/${step.id}/else`)
           }
         }
         if (isTryCatchStep(step)) {
-          const tryCatchStep = step as any
-          findRunWorkflowCalls(tryCatchStep.try.trySteps, `${path}/${tryCatchStep.id}/try`)
-          findRunWorkflowCalls(tryCatchStep.try.catchSteps, `${path}/${tryCatchStep.id}/catch`)
+          findRunWorkflowCalls(step.try.trySteps, `${path}/${step.id}/try`)
+          findRunWorkflowCalls(step.try.catchSteps, `${path}/${step.id}/catch`)
         }
       }
     }
@@ -365,7 +361,7 @@ async function executeStepWithAgent<TTools extends ToolRegistry>(
         }
         try {
           const output = await runWorkflow(subWorkflowId, subInput)
-          const jsonResult: ToolResponseResult = { type: 'json', value: output as any }
+          const jsonResult: ToolResponseResult = { type: 'json', value: output }
           return { success: true, message: jsonResult }
         } catch (error) {
           return {
@@ -417,7 +413,9 @@ async function executeStepWithAgent<TTools extends ToolRegistry>(
     throw new Error(`Agent step '${stepDef.id}' in workflow '${workflowId}' exceeded usage limits (tokens or rounds)`)
   }
 
-  throw new Error(`Agent step '${stepDef.id}' in workflow '${workflowId}' exited unexpectedly with type: ${(result as any).type}`)
+  // Exhaustive check: TypeScript should ensure all result types are handled above
+  const _exhaustiveCheck: never = result
+  throw new Error(`Agent step '${stepDef.id}' in workflow '${workflowId}' exited unexpectedly with unhandled type`)
 }
 
 async function executeStepWithTimeout<TTools extends ToolRegistry>(
@@ -508,35 +506,35 @@ async function executeStep<TTools extends ToolRegistry>(
 /**
  * Check if a step is a break statement
  */
-function isBreakStep(step: WorkflowControlFlowStep): boolean {
-  return typeof step === 'object' && step !== null && 'break' in step && (step as any).break === true
+function isBreakStep(step: WorkflowControlFlowStep): step is BreakStep {
+  return typeof step === 'object' && step !== null && 'break' in step && step.break === true
 }
 
 /**
  * Check if a step is a continue statement
  */
-function isContinueStep(step: WorkflowControlFlowStep): boolean {
-  return typeof step === 'object' && step !== null && 'continue' in step && (step as any).continue === true
+function isContinueStep(step: WorkflowControlFlowStep): step is ContinueStep {
+  return typeof step === 'object' && step !== null && 'continue' in step && step.continue === true
 }
 
 /**
  * Check if a step is a while loop
  */
-function isWhileLoopStep(step: WorkflowControlFlowStep): boolean {
+function isWhileLoopStep(step: WorkflowControlFlowStep): step is WhileLoopStep {
   return typeof step === 'object' && step !== null && 'while' in step
 }
 
 /**
  * Check if a step is an if/else branch
  */
-function isIfElseStep(step: WorkflowControlFlowStep): boolean {
+function isIfElseStep(step: WorkflowControlFlowStep): step is IfElseStep {
   return typeof step === 'object' && step !== null && 'if' in step
 }
 
 /**
  * Check if a step is a try/catch block
  */
-function isTryCatchStep(step: WorkflowControlFlowStep): boolean {
+function isTryCatchStep(step: WorkflowControlFlowStep): step is TryCatchStep {
   return typeof step === 'object' && step !== null && 'try' in step
 }
 
@@ -609,10 +607,9 @@ async function executeControlFlowStep<TTools extends ToolRegistry>(
 
   // Handle while loop
   if (isWhileLoopStep(step)) {
-    const whileStep = step as any
-    context.logger.info(`[ControlFlow] Executing while loop '${whileStep.id}'`)
-    context.logger.debug(`[ControlFlow] Condition: ${whileStep.while.condition}`)
-    context.logger.debug(`[ControlFlow] Loop body has ${whileStep.while.steps.length} step(s)`)
+    context.logger.info(`[ControlFlow] Executing while loop '${step.id}'`)
+    context.logger.debug(`[ControlFlow] Condition: ${step.while.condition}`)
+    context.logger.debug(`[ControlFlow] Loop body has ${step.while.steps.length} step(s)`)
 
     let iterationCount = 0
     const maxIterations = 1000 // Safety limit to prevent infinite loops
@@ -621,20 +618,20 @@ async function executeControlFlowStep<TTools extends ToolRegistry>(
     while (true) {
       iterationCount++
       if (iterationCount > maxIterations) {
-        throw new Error(`While loop '${whileStep.id}' in workflow '${workflowId}' exceeded maximum iteration limit of ${maxIterations}`)
+        throw new Error(`While loop '${step.id}' in workflow '${workflowId}' exceeded maximum iteration limit of ${maxIterations}`)
       }
 
       // Evaluate condition
-      const conditionResult = evaluateCondition(whileStep.while.condition, input, state)
-      context.logger.debug(`[ControlFlow] While loop '${whileStep.id}' iteration ${iterationCount}: condition = ${conditionResult}`)
+      const conditionResult = evaluateCondition(step.while.condition, input, state)
+      context.logger.debug(`[ControlFlow] While loop '${step.id}' iteration ${iterationCount}: condition = ${conditionResult}`)
 
       if (!conditionResult) {
-        context.logger.info(`[ControlFlow] While loop '${whileStep.id}' terminated after ${iterationCount - 1} iteration(s)`)
+        context.logger.info(`[ControlFlow] While loop '${step.id}' terminated after ${iterationCount - 1} iteration(s)`)
         break
       }
 
       // Execute loop body steps
-      for (const bodyStep of whileStep.while.steps) {
+      for (const bodyStep of step.while.steps) {
         const { result, shouldBreak, shouldContinue } = await executeControlFlowStep(
           bodyStep,
           workflowId,
@@ -649,13 +646,13 @@ async function executeControlFlowStep<TTools extends ToolRegistry>(
         )
 
         if (shouldBreak) {
-          context.logger.debug(`[ControlFlow] Breaking from while loop '${whileStep.id}'`)
+          context.logger.debug(`[ControlFlow] Breaking from while loop '${step.id}'`)
           breakFlag.value = false
           return { result: loopResult, shouldBreak: false, shouldContinue: false }
         }
 
         if (shouldContinue) {
-          context.logger.debug(`[ControlFlow] Continuing to next iteration of while loop '${whileStep.id}'`)
+          context.logger.debug(`[ControlFlow] Continuing to next iteration of while loop '${step.id}'`)
           continueFlag.value = false
           break
         }
@@ -669,30 +666,29 @@ async function executeControlFlowStep<TTools extends ToolRegistry>(
     }
 
     // Store loop output if specified
-    const outputKey = whileStep.output ?? whileStep.id
+    const outputKey = step.output ?? step.id
     state[outputKey] = loopResult
-    context.logger.debug(`[ControlFlow] While loop '${whileStep.id}' stored output as '${outputKey}'`)
+    context.logger.debug(`[ControlFlow] While loop '${step.id}' stored output as '${outputKey}'`)
 
     return { result: loopResult, shouldBreak: false, shouldContinue: false }
   }
 
   // Handle if/else branch
   if (isIfElseStep(step)) {
-    const ifElseStep = step as any
-    context.logger.info(`[ControlFlow] Executing if/else branch '${ifElseStep.id}'`)
-    context.logger.debug(`[ControlFlow] Condition: ${ifElseStep.if.condition}`)
-    context.logger.debug(`[ControlFlow] Then branch has ${ifElseStep.if.thenBranch.length} step(s)`)
-    if (ifElseStep.if.elseBranch) {
-      context.logger.debug(`[ControlFlow] Else branch has ${ifElseStep.if.elseBranch.length} step(s)`)
+    context.logger.info(`[ControlFlow] Executing if/else branch '${step.id}'`)
+    context.logger.debug(`[ControlFlow] Condition: ${step.if.condition}`)
+    context.logger.debug(`[ControlFlow] Then branch has ${step.if.thenBranch.length} step(s)`)
+    if (step.if.elseBranch) {
+      context.logger.debug(`[ControlFlow] Else branch has ${step.if.elseBranch.length} step(s)`)
     }
 
-    const conditionResult = evaluateCondition(ifElseStep.if.condition, input, state)
-    context.logger.debug(`[ControlFlow] If/else '${ifElseStep.id}' condition = ${conditionResult}`)
+    const conditionResult = evaluateCondition(step.if.condition, input, state)
+    context.logger.debug(`[ControlFlow] If/else '${step.id}' condition = ${conditionResult}`)
 
-    const branchSteps = conditionResult ? ifElseStep.if.thenBranch : (ifElseStep.if.elseBranch ?? [])
-    const branchName = conditionResult ? 'then' : ifElseStep.if.elseBranch ? 'else' : 'else (empty)'
+    const branchSteps = conditionResult ? step.if.thenBranch : (step.if.elseBranch ?? [])
+    const branchName = conditionResult ? 'then' : step.if.elseBranch ? 'else' : 'else (empty)'
 
-    context.logger.info(`[ControlFlow] Taking '${branchName}' branch of '${ifElseStep.id}'`)
+    context.logger.info(`[ControlFlow] Taking '${branchName}' branch of '${step.id}'`)
 
     let branchResult: any
 
@@ -723,26 +719,25 @@ async function executeControlFlowStep<TTools extends ToolRegistry>(
     }
 
     // Store branch output if specified
-    const outputKey = ifElseStep.output ?? ifElseStep.id
+    const outputKey = step.output ?? step.id
     state[outputKey] = branchResult
-    context.logger.debug(`[ControlFlow] If/else '${ifElseStep.id}' stored output as '${outputKey}'`)
+    context.logger.debug(`[ControlFlow] If/else '${step.id}' stored output as '${outputKey}'`)
 
     return { result: branchResult, shouldBreak: false, shouldContinue: false }
   }
 
   // Handle try/catch block
   if (isTryCatchStep(step)) {
-    const tryCatchStep = step as any
-    context.logger.info(`[ControlFlow] Executing try/catch block '${tryCatchStep.id}'`)
-    context.logger.debug(`[ControlFlow] Try block has ${tryCatchStep.try.trySteps.length} step(s)`)
-    context.logger.debug(`[ControlFlow] Catch block has ${tryCatchStep.try.catchSteps.length} step(s)`)
+    context.logger.info(`[ControlFlow] Executing try/catch block '${step.id}'`)
+    context.logger.debug(`[ControlFlow] Try block has ${step.try.trySteps.length} step(s)`)
+    context.logger.debug(`[ControlFlow] Catch block has ${step.try.catchSteps.length} step(s)`)
 
     let tryResult: any
     let caughtError: Error | undefined
 
     try {
       // Execute try steps
-      for (const tryStep of tryCatchStep.try.trySteps) {
+      for (const tryStep of step.try.trySteps) {
         const { result } = await executeControlFlowStep(
           tryStep,
           workflowId,
@@ -764,18 +759,18 @@ async function executeControlFlowStep<TTools extends ToolRegistry>(
       }
 
       // Store try/catch output if specified
-      const outputKey = tryCatchStep.output ?? tryCatchStep.id
+      const outputKey = step.output ?? step.id
       state[outputKey] = tryResult
-      context.logger.debug(`[ControlFlow] Try/catch '${tryCatchStep.id}' completed successfully`)
+      context.logger.debug(`[ControlFlow] Try/catch '${step.id}' completed successfully`)
 
       return { result: tryResult, shouldBreak: false, shouldContinue: false }
     } catch (error) {
       caughtError = error instanceof Error ? error : new Error(String(error))
-      context.logger.warn(`[ControlFlow] Try/catch '${tryCatchStep.id}' caught error: ${caughtError.message}`)
+      context.logger.warn(`[ControlFlow] Try/catch '${step.id}' caught error: ${caughtError.message}`)
 
       // Execute catch steps
       let catchResult: any
-      for (const catchStep of tryCatchStep.try.catchSteps) {
+      for (const catchStep of step.try.catchSteps) {
         const { result } = await executeControlFlowStep(
           catchStep,
           workflowId,
@@ -797,9 +792,9 @@ async function executeControlFlowStep<TTools extends ToolRegistry>(
       }
 
       // Store try/catch output if specified
-      const outputKey = tryCatchStep.output ?? tryCatchStep.id
+      const outputKey = step.output ?? step.id
       state[outputKey] = catchResult
-      context.logger.debug(`[ControlFlow] Try/catch '${tryCatchStep.id}' stored catch result as '${outputKey}'`)
+      context.logger.debug(`[ControlFlow] Try/catch '${step.id}' stored catch result as '${outputKey}'`)
 
       return { result: catchResult, shouldBreak: false, shouldContinue: false }
     }
@@ -835,6 +830,8 @@ export function createDynamicWorkflow<TTools extends ToolRegistry = DynamicWorkf
       const builtIn = options.builtInWorkflows?.[workflowId]
       if (builtIn) {
         context.logger.info(`[Workflow] Delegating to built-in workflow '${workflowId}'`)
+        // Built-in workflows are typed as WorkflowFn<any, any, any>, so we need to cast context
+        // TODO: Improve built-in workflow typing to preserve context type constraints
         return await builtIn(input, context as any)
       }
       throw new Error(`Workflow '${workflowId}' not found`)
