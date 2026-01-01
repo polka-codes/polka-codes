@@ -21,7 +21,7 @@
     "@ai-sdk/deepseek": "^1.0.31",
     "@ai-sdk/google": "^2.0.45",
     "@ai-sdk/google-vertex": "^3.0.87",
-    "@ai-sdk/openai": "^2.0.80",
+    "@ai-sdk/openai": "^3.0.2",
     "@ai-sdk/provider": "^2.0.0",
     "@ai-sdk/provider-utils": "^3.0.18",
     "@inquirer/prompts": "^8.0.2",
