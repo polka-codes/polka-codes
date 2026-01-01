@@ -22,7 +22,7 @@
     "@ai-sdk/google": "^2.0.45",
     "@ai-sdk/google-vertex": "^3.0.87",
     "@ai-sdk/openai": "^2.0.80",
-    "@ai-sdk/provider": "^2.0.0",
+    "@ai-sdk/provider": "^3.0.1",
     "@ai-sdk/provider-utils": "^3.0.18",
     "@inquirer/prompts": "^8.0.2",
     "@openrouter/ai-sdk-provider": "^1.5.0",
