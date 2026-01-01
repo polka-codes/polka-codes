@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "@ai-sdk/google-vertex": "^3.0.87",
-    "@ai-sdk/provider": "^2.0.0",
+    "@ai-sdk/provider": "^3.0.1",
     "@ai-sdk/provider-utils": "^3.0.18",
     "@inquirer/prompts": "^8.0.2",
     "@polka-codes/core": "workspace:*",
