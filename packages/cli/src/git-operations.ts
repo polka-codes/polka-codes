@@ -1,5 +1,21 @@
 import type { Logger, WorkflowTools } from '@polka-codes/core'
 
+/**
+ * Validate git parameters to prevent command injection
+ * Allows only safe characters: alphanumeric, dots, hyphens, underscores, slashes, spaces, and common git symbols
+ */
+function validateGitParam(param: string, paramName: string): void {
+  // Allow: alphanumeric, dots, hyphens, underscores, forward slashes, @, :, ~, ^, and spaces
+  // This covers branch names, refs, commit hashes, ranges, and file paths
+  const safePattern = /^[a-zA-Z0-9._\-/@:~^ \s]+$/
+
+  if (!safePattern.test(param)) {
+    throw new Error(
+      `Invalid ${paramName}: contains potentially unsafe characters. Only alphanumeric, ., -, _, /, @, :, ~, ^, and spaces are allowed.`,
+    )
+  }
+}
+
 export interface FileChange {
   path: string
   status: string
@@ -18,6 +34,10 @@ export class GitOperations {
    * Get file changes for a git range (commit, branch, or PR reference)
    */
   async getFileChanges(range?: string): Promise<FileChange[]> {
+    if (range) {
+      validateGitParam(range, 'range')
+    }
+
     const command = range ? `git --no-pager diff --name-status --no-color ${range}` : 'git --no-pager diff --name-status --no-color HEAD'
 
     const diffResult = await this.tools.executeCommand({
@@ -147,6 +167,8 @@ export class GitOperations {
    * Checkout a branch
    */
   async checkoutBranch(branchName: string): Promise<void> {
+    validateGitParam(branchName, 'branchName')
+
     const result = await this.tools.executeCommand({
       command: `git checkout ${branchName}`,
       requiresApproval: true,
@@ -161,6 +183,8 @@ export class GitOperations {
    * Create and checkout a new branch
    */
   async createAndCheckoutBranch(branchName: string): Promise<void> {
+    validateGitParam(branchName, 'branchName')
+
     const result = await this.tools.executeCommand({
       command: `git checkout -b ${branchName}`,
       requiresApproval: true,
@@ -175,8 +199,10 @@ export class GitOperations {
    * Get commit messages for a range
    */
   async getCommitMessages(range: string): Promise<string> {
+    validateGitParam(range, 'range')
+
     const result = await this.tools.executeCommand({
-      command: `git log --format=%s%n%b --- ${range}`,
+      command: `git log --format=%s%n%b ${range}`,
       requiresApproval: false,
     })
 
@@ -225,6 +251,10 @@ export class GitOperations {
    * Enrich files with numstats (insertions/deletions)
    */
   private async enrichWithNumStats(files: FileChange[], range?: string): Promise<void> {
+    if (range) {
+      validateGitParam(range, 'range')
+    }
+
     const command = range ? `git --no-pager diff --numstat --no-color ${range}` : 'git --no-pager diff --numstat --no-color HEAD'
 
     const statResult = await this.tools.executeCommand({
@@ -248,6 +278,11 @@ export class GitOperations {
    */
   private async getNumStats(args: string[]): Promise<Record<string, { insertions: number; deletions: number }>> {
     try {
+      // Validate each arg to prevent command injection
+      for (const arg of args) {
+        validateGitParam(arg, 'git argument')
+      }
+
       const command = `git --no-pager diff ${args.join(' ')} --no-color`
       const result = await this.tools.executeCommand({
         command,
