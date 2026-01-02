@@ -1,6 +1,7 @@
-import { execSync } from 'node:child_process'
+import { exec } from 'node:child_process'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
+import { promisify } from 'node:util'
 import { Command } from 'commander'
 import { loadConfig } from '../agent/config'
 import { AutonomousAgent } from '../agent/orchestrator'
@@ -30,25 +31,33 @@ export async function runAgent(goal: string | undefined, options: any, _command:
 
   // Create minimal tools implementation for agent context
   // The agent needs executeCommand for safety checks and readFile for goal decomposition
+  const asyncExec = promisify(exec)
+
   const tools = {
-    executeCommand: async ({ command, requiresApproval }: { command: string; requiresApproval: boolean }) => {
-      if (requiresApproval && !options.yes) {
-        throw new Error(`Command requires approval: ${command}`)
+    executeCommand: async (input: { command: string; args?: string[]; shell?: boolean }) => {
+      // Build command from input
+      let fullCommand: string
+      if (input.args && input.args.length > 0) {
+        // Use args array - safer
+        fullCommand = `${input.command} ${input.args.join(' ')}`
+      } else {
+        // Use full command string or shell mode
+        fullCommand = input.command
       }
 
       try {
-        const stdout = execSync(command, { encoding: 'utf-8', cwd: workingDir })
-        return { exitCode: 0, stdout, stderr: '' }
+        const { stdout, stderr } = await asyncExec(fullCommand, { cwd: workingDir })
+        return { exitCode: 0, stdout, stderr }
       } catch (error: any) {
         return {
-          exitCode: error.status || 1,
+          exitCode: error.code || 1,
           stdout: error.stdout || '',
           stderr: error.stderr || error.message,
         }
       }
     },
 
-    readFile: async ({ filePath }: { filePath: string }) => {
+    readFile: async ({ path: filePath }: { path: string }) => {
       const fullPath = path.resolve(workingDir, filePath)
       const content = await fs.readFile(fullPath, 'utf-8')
       return { content }
@@ -59,7 +68,7 @@ export async function runAgent(goal: string | undefined, options: any, _command:
     logger,
     workingDir,
     stateDir,
-    sessionId: sessionId as any, // Temporary - should be number
+    sessionId,
     tools,
     env: process.env,
   }

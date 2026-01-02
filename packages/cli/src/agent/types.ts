@@ -696,7 +696,7 @@ export interface WorkflowContext {
   workingDir: string
 
   /** Session ID */
-  sessionId: number
+  sessionId: string
 
   /** Config */
   config?: AgentConfig

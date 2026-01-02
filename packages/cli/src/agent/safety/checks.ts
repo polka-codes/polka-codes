@@ -67,7 +67,7 @@ export class SafetyChecker {
     try {
       const result = await this.tools.executeCommand({
         command: 'git status --porcelain',
-        requiresApproval: false,
+        shell: true,
       })
 
       const hasChanges = result.stdout.trim().length > 0
@@ -139,7 +139,7 @@ export class SafetyChecker {
     try {
       const result = await this.tools.executeCommand({
         command: 'git branch --show-current',
-        requiresApproval: false,
+        shell: true,
       })
 
       const currentBranch = result.stdout.trim()

@@ -265,10 +265,10 @@ Return your response as a JSON object following the provided schema.`
     const context: string[] = []
 
     try {
-      // Get project structure
+      // Get project structure using git ls-files (cross-platform)
       const pkgResult = await this.context.tools.executeCommand({
-        command: 'find',
-        args: ['src', '-name', '*.ts', '-not', '-path', '*/node_modules/*', '-not', '-path', '*/dist/*'],
+        command: 'git ls-files "src/**/*.ts" | head -20',
+        shell: true,
       })
 
       const files = pkgResult.stdout.split('\n').filter(Boolean).slice(0, 20) // First 20 files
