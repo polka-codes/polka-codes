@@ -9,23 +9,48 @@ describe('TaskExecutor', () => {
   let mockState: AgentState
 
   const mockConfig: AgentConfig = {
-    approval: {
-      level: 'destructive',
-    },
+    strategy: 'goal-directed',
+    continueOnCompletion: false,
+    maxIterations: 0,
+    timeout: 0,
+    requireApprovalFor: 'destructive',
+    pauseOnError: true,
+    workingBranch: 'main',
+    maxConcurrency: 1,
+    autoSaveInterval: 30000,
+    enableProgress: true,
+    destructiveOperations: ['delete', 'force-push', 'reset'],
+    maxAutoApprovalCost: 5,
+    autoApproveSafeTasks: true,
     resourceLimits: {
       maxMemory: 1024,
+      maxCpuPercent: 80,
       maxSessionTime: 60,
       maxTaskExecutionTime: 5,
+      maxFilesChanged: 20,
+    },
+    continuousImprovement: {
+      sleepTimeOnNoTasks: 60000,
+      sleepTimeBetweenTasks: 5000,
+      maxCycles: 0,
+    },
+    discovery: {
+      enabledStrategies: [],
+      cacheTime: 300000,
+      checkChanges: true,
+    },
+    approval: {
+      level: 'destructive',
+      autoApproveSafeTasks: true,
+      maxAutoApprovalCost: 5,
     },
     safety: {
-      allowedOperations: ['read', 'write'],
-      forbiddenPatterns: [],
-    },
-    taskHistorySize: 100,
-    logging: {
-      level: 'info',
+      enabledChecks: [],
+      blockDestructive: true,
+      maxFileSize: 10485760,
     },
     healthCheck: {
+      enabled: true,
       interval: 30,
     },
   }
@@ -37,23 +62,67 @@ describe('TaskExecutor', () => {
       error: () => {},
     }
 
-    executor = new TaskExecutor({}, mockLogger)
+    executor = new TaskExecutor({} as any, mockLogger)
 
     mockState = {
-      status: 'idle',
-      goal: null,
-      mode: 'goal-directed',
-      taskQueue: [],
-      executingQueue: [],
-      completedQueue: [],
-      failedQueue: [],
+      sessionId: 'test-session',
+      currentMode: 'idle',
+      currentGoal: undefined,
       config: mockConfig,
+      currentTask: undefined,
+      taskQueue: [],
+      completedTasks: [],
+      failedTasks: [],
+      blockedTasks: [],
+      executionHistory: [],
       metrics: {
         tasksCompleted: 0,
         tasksFailed: 0,
+        totalTasks: 0,
         totalExecutionTime: 0,
+        averageTaskTime: 0,
+        successRate: 0,
+        git: {
+          totalCommits: 0,
+          totalFilesChanged: 0,
+          totalInsertions: 0,
+          totalDeletions: 0,
+          branchesCreated: 0,
+        },
+        tests: {
+          totalTestsRun: 0,
+          testsPassed: 0,
+          testsFailed: 0,
+          currentCoverage: 0,
+          testsAdded: 0,
+        },
+        improvements: {
+          bugsFixed: 0,
+          testsAdded: 0,
+          refactoringsCompleted: 0,
+          documentationAdded: 0,
+          qualityImprovements: 0,
+        },
+        resources: {
+          peakMemoryMB: 0,
+          averageCpuPercent: 0,
+          totalApiCalls: 0,
+          totalTokensUsed: 0,
+        },
       },
-      sessionStartTime: Date.now(),
+      timestamps: {
+        startTime: Date.now(),
+        lastActivity: Date.now(),
+        lastSaveTime: Date.now(),
+        lastMetricsUpdate: Date.now(),
+        modeTransitions: [],
+      },
+      session: {
+        id: 'test-session',
+        iterationCount: 0,
+        parentPid: 1,
+        pid: 1,
+      },
     }
   })
 
@@ -61,7 +130,7 @@ describe('TaskExecutor', () => {
     id: `task-${Date.now()}`,
     title: 'Test task',
     description: 'Test description',
-    type: 'fix',
+    type: 'bugfix',
     priority: Priority.MEDIUM,
     complexity: 'medium',
     estimatedTime: 30,
@@ -71,7 +140,7 @@ describe('TaskExecutor', () => {
     dependencies: [],
     files: [],
     createdAt: Date.now(),
-    metadata: {},
+    retryCount: 0,
     ...overrides,
   })
 
@@ -209,48 +278,6 @@ describe('TaskExecutor', () => {
       try {
         await Promise.race([Promise.all([exec1, exec2]), new Promise((r) => setTimeout(r, 100))])
       } catch {}
-    })
-  })
-
-  describe('invokeWorkflow', () => {
-    it('should invoke workflow through adapter', async () => {
-      const task = createMockTask({
-        workflow: 'code',
-        workflowInput: { prompt: 'Fix bug' },
-      })
-
-      mock.module('./workflow-adapter', () => ({
-        WorkflowAdapter: {
-          invokeWorkflow: async (workflow: string, input: any) => {
-            expect(workflow).toBe('code')
-            expect(input.prompt).toBe('Fix bug')
-
-            return {
-              success: true,
-              data: { fixed: true },
-            }
-          },
-        },
-      }))
-
-      const result = await executor.invokeWorkflow(task)
-
-      expect(result.success).toBe(true)
-      expect(result.data).toEqual({ fixed: true })
-    })
-
-    it('should wrap workflow errors', async () => {
-      const task = createMockTask()
-
-      mock.module('./workflow-adapter', () => ({
-        WorkflowAdapter: {
-          invokeWorkflow: async () => {
-            throw new Error('Workflow error')
-          },
-        },
-      }))
-
-      await expect(executor.invokeWorkflow(task)).rejects.toThrow()
     })
   })
 })

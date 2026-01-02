@@ -39,6 +39,7 @@ describe('AgentConfig', () => {
     const base = DEFAULT_AGENT_CONFIG
     const override: Partial<AgentConfig> = {
       resourceLimits: {
+        ...base.resourceLimits,
         maxMemory: 4096,
       },
     }
@@ -70,7 +71,7 @@ describe('State Transitions', () => {
     expect(STATE_TRANSITIONS).toBeInstanceOf(Array)
     expect(STATE_TRANSITIONS.length).toBeGreaterThan(0)
 
-    STATE_TRANSITIONS.forEach((transition) => {
+    STATE_TRANSITIONS.forEach((transition: any) => {
       expect(transition.from).toBeDefined()
       expect(transition.to).toBeDefined()
       expect(transition.label).toBeDefined()
