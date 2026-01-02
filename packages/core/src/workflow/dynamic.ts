@@ -106,10 +106,10 @@ function convertJsonSchemaToZod(schema: JsonSchema): z.ZodTypeAny {
 
       // Handle additionalProperties
       if (schema.additionalProperties === true) {
-        objectSchema = objectSchema.and(z.any()) as z.ZodObject<any, any, any, any>
+        objectSchema = objectSchema.and(z.any()) as any
       } else if (typeof schema.additionalProperties === 'object') {
         const additionalSchema = convertJsonSchemaToZod(schema.additionalProperties as JsonSchema)
-        objectSchema = objectSchema.and(z.record(additionalSchema)) as z.ZodObject<any, any, any, any>
+        objectSchema = objectSchema.and(z.record(z.string(), additionalSchema)) as any
       }
 
       return objectSchema
@@ -1084,20 +1084,21 @@ async function executeControlFlowStep<TTools extends ToolRegistry>(
 
   // Handle if/else branch
   if (isIfElseStep(step)) {
-    context.logger.info(`[ControlFlow] Executing if/else branch '${step.id}'`)
-    context.logger.debug(`[ControlFlow] Condition: ${step.if.condition}`)
-    context.logger.debug(`[ControlFlow] Then branch has ${step.if.thenBranch.length} step(s)`)
-    if (step.if.elseBranch) {
-      context.logger.debug(`[ControlFlow] Else branch has ${step.if.elseBranch.length} step(s)`)
+    const ifStep = step as IfElseStep
+    context.logger.info(`[ControlFlow] Executing if/else branch '${ifStep.id}'`)
+    context.logger.debug(`[ControlFlow] Condition: ${ifStep.if.condition}`)
+    context.logger.debug(`[ControlFlow] Then branch has ${ifStep.if.thenBranch.length} step(s)`)
+    if (ifStep.if.elseBranch) {
+      context.logger.debug(`[ControlFlow] Else branch has ${ifStep.if.elseBranch.length} step(s)`)
     }
 
-    const conditionResult = evaluateCondition(step.if.condition, input, state, options.allowUnsafeCodeExecution)
-    context.logger.debug(`[ControlFlow] If/else '${step.id}' condition = ${conditionResult}`)
+    const conditionResult = evaluateCondition(ifStep.if.condition, input, state, options.allowUnsafeCodeExecution)
+    context.logger.debug(`[ControlFlow] If/else '${ifStep.id}' condition = ${conditionResult}`)
 
-    const branchSteps = conditionResult ? step.if.thenBranch : (step.if.elseBranch ?? [])
-    const branchName = conditionResult ? 'then' : step.if.elseBranch ? 'else' : 'else (empty)'
+    const branchSteps = conditionResult ? ifStep.if.thenBranch : (ifStep.if.elseBranch ?? [])
+    const branchName = conditionResult ? 'then' : ifStep.if.elseBranch ? 'else' : 'else (empty)'
 
-    context.logger.info(`[ControlFlow] Taking '${branchName}' branch of '${step.id}'`)
+    context.logger.info(`[ControlFlow] Taking '${branchName}' branch of '${ifStep.id}'`)
 
     let branchResult: any
 
@@ -1128,27 +1129,28 @@ async function executeControlFlowStep<TTools extends ToolRegistry>(
     }
 
     // Store branch output if specified
-    const outputKey = step.output ?? step.id
+    const outputKey = ifStep.output ?? ifStep.id
     state[outputKey] = branchResult
-    context.logger.debug(`[ControlFlow] If/else '${step.id}' stored output as '${outputKey}'`)
+    context.logger.debug(`[ControlFlow] If/else '${ifStep.id}' stored output as '${outputKey}'`)
 
     return { result: branchResult, shouldBreak: false, shouldContinue: false }
   }
 
   // Handle try/catch block
   if (isTryCatchStep(step)) {
-    context.logger.info(`[ControlFlow] Executing try/catch block '${step.id}'`)
-    context.logger.debug(`[ControlFlow] Try block has ${step.try.trySteps.length} step(s)`)
-    context.logger.debug(`[ControlFlow] Catch block has ${step.try.catchSteps.length} step(s)`)
+    const tryStep = step as TryCatchStep
+    context.logger.info(`[ControlFlow] Executing try/catch block '${tryStep.id}'`)
+    context.logger.debug(`[ControlFlow] Try block has ${tryStep.try.trySteps.length} step(s)`)
+    context.logger.debug(`[ControlFlow] Catch block has ${tryStep.try.catchSteps.length} step(s)`)
 
     let tryResult: any
     let caughtError: Error | undefined
 
     try {
       // Execute try steps
-      for (const tryStep of step.try.trySteps) {
+      for (const tryStepItem of tryStep.try.trySteps) {
         const { result } = await executeControlFlowStep(
-          tryStep,
+          tryStepItem,
           workflowId,
           input,
           state,
@@ -1161,27 +1163,27 @@ async function executeControlFlowStep<TTools extends ToolRegistry>(
         )
 
         // Store output if specified
-        storeStepOutput(tryStep, result, state)
+        storeStepOutput(tryStepItem, result, state)
 
         // Last result becomes try result
         tryResult = result
       }
 
       // Store try/catch output if specified
-      const outputKey = step.output ?? step.id
+      const outputKey = tryStep.output ?? tryStep.id
       state[outputKey] = tryResult
-      context.logger.debug(`[ControlFlow] Try/catch '${step.id}' completed successfully`)
+      context.logger.debug(`[ControlFlow] Try/catch '${tryStep.id}' completed successfully`)
 
       return { result: tryResult, shouldBreak: false, shouldContinue: false }
     } catch (error) {
       caughtError = error instanceof Error ? error : new Error(String(error))
-      context.logger.warn(`[ControlFlow] Try/catch '${step.id}' caught error: ${caughtError.message}`)
+      context.logger.warn(`[ControlFlow] Try/catch '${tryStep.id}' caught error: ${caughtError.message}`)
 
       // Execute catch steps
       let catchResult: any
-      for (const catchStep of step.try.catchSteps) {
+      for (const catchStepItem of tryStep.try.catchSteps) {
         const { result } = await executeControlFlowStep(
-          catchStep,
+          catchStepItem,
           workflowId,
           input,
           state,
@@ -1194,16 +1196,16 @@ async function executeControlFlowStep<TTools extends ToolRegistry>(
         )
 
         // Store output if specified
-        storeStepOutput(catchStep, result, state)
+        storeStepOutput(catchStepItem, result, state)
 
         // Last result becomes catch result
         catchResult = result
       }
 
       // Store try/catch output if specified
-      const outputKey = step.output ?? step.id
+      const outputKey = tryStep.output ?? tryStep.id
       state[outputKey] = catchResult
-      context.logger.debug(`[ControlFlow] Try/catch '${step.id}' stored catch result as '${outputKey}'`)
+      context.logger.debug(`[ControlFlow] Try/catch '${tryStep.id}' caught error and executed catch block`)
 
       return { result: catchResult, shouldBreak: false, shouldContinue: false }
     }

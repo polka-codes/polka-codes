@@ -35,7 +35,7 @@ export const WorkflowStepDefinitionSchema = z.object({
 /**
  * While loop - repeats steps while condition is true
  */
-export const WhileLoopStepSchema = z.object({
+export const WhileLoopStepSchema: any = z.object({
   id: z.string(),
   while: z.object({
     condition: z.string().describe('JavaScript expression that evaluates to true/false'),
@@ -47,7 +47,7 @@ export const WhileLoopStepSchema = z.object({
 /**
  * If/else branch - conditionally executes steps
  */
-export const IfElseStepSchema = z.object({
+export const IfElseStepSchema: any = z.object({
   id: z.string(),
   if: z.object({
     condition: z.string().describe('JavaScript expression that evaluates to true/false'),
@@ -87,7 +87,7 @@ export const TryCatchStepSchema = z.object({
  * Any step that can appear in a workflow's steps array
  * Can be a basic step, control flow, or jump statement
  */
-export const WorkflowControlFlowStepSchema = z.union([
+export const WorkflowControlFlowStepSchema: any = z.union([
   WorkflowStepDefinitionSchema,
   WhileLoopStepSchema,
   IfElseStepSchema,
