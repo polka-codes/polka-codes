@@ -2,7 +2,7 @@
  * Core type definitions for the autonomous agent system
  */
 
-import type { Logger } from '@polka-codes/core'
+import type { Logger, WorkflowTools } from '@polka-codes/core'
 
 /**
  * Agent operation modes with explicit state machine
@@ -687,7 +687,7 @@ export interface WorkflowContext {
   logger: Logger
 
   /** Tools */
-  tools: any
+  tools: WorkflowTools<any>
 
   /** State directory */
   stateDir: string

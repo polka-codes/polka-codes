@@ -31,7 +31,7 @@ export async function runAgent(goal: string | undefined, options: any, _command:
     workingDir,
     stateDir,
     sessionId: sessionId as any, // Temporary - should be number
-    tools: [], // Will be populated by workflows
+    tools: {} as any, // Will be populated by workflows
     env: process.env,
   }
 

@@ -103,9 +103,10 @@ const executeTypeScriptScript: ScriptExecutor = async (script, name, args, logge
     timeout: (script as { timeout?: number }).timeout,
   })
 
-  if (!result.success && result.error) {
-    logger.error(`Script '${name}' failed: ${result.error.message}`)
-    throw new ScriptExecutionFailedError(name, 1, result.error.message)
+  if (!result.success) {
+    const errorMsg = result.error?.message || 'Unknown error'
+    logger.error(`Script '${name}' failed: ${errorMsg}`)
+    throw new ScriptExecutionFailedError(name, 1, errorMsg)
   }
 }
 

@@ -50,6 +50,12 @@ export class ApprovalManager {
    * Request user approval for a task
    */
   async requestApproval(task: Task): Promise<ApprovalDecision> {
+    // Check if running in an interactive terminal
+    if (!process.stdin.isTTY) {
+      this.logger.warn(`⚠️  Not running in an interactive terminal - auto-rejecting task: ${task.title}`)
+      return { approved: false, reason: 'Non-interactive environment (no TTY)' }
+    }
+
     this.logger.info(`\n${'═'.repeat(60)}`)
     this.logger.info(`🤖 Approval Required: ${task.title}`)
     this.logger.info('═'.repeat(60))

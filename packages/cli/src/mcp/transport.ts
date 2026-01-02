@@ -179,8 +179,10 @@ export class StdioTransport extends EventEmitter {
           try {
             const message: JsonRpcMessage = JSON.parse(messageData)
             this.processMessage(message)
-          } catch (_error) {
-            this.emit('error', new Error(`Failed to parse MCP message: ${messageData}`))
+          } catch (error) {
+            // Log parse errors instead of emitting to avoid unhandled error events
+            console.warn(`[MCP Transport] Failed to parse message: ${messageData.slice(0, 100)}...`)
+            console.debug(`[MCP Transport] Parse error:`, error)
           }
           continue
         } else {
@@ -200,8 +202,10 @@ export class StdioTransport extends EventEmitter {
         try {
           const message: JsonRpcMessage = JSON.parse(line)
           this.processMessage(message)
-        } catch (_error) {
-          this.emit('error', new Error(`Failed to parse MCP message: ${line}`))
+        } catch (error) {
+          // Log parse errors instead of emitting to avoid unhandled error events
+          console.warn(`[MCP Transport] Failed to parse message: ${line.slice(0, 100)}...`)
+          console.debug(`[MCP Transport] Parse error:`, error)
         }
         continue
       }

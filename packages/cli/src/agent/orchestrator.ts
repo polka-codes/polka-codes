@@ -387,6 +387,10 @@ export class AutonomousAgent {
           completedTasks++
         } else {
           failedTasks++
+          // Stop execution on task failure to prevent cascading errors
+          const error = new Error('Task failed, stopping execution to prevent cascading errors')
+          this.logger.error('[Run]', error)
+          throw error
         }
       }
     }
