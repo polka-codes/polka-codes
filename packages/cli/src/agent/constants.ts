@@ -22,6 +22,11 @@ export const WORKFLOW_MAPPING: Record<TaskType, WorkflowName> = {
   security: 'fix',
   optimization: 'code',
   other: 'plan',
+  plan: 'plan',
+  task: 'code',
+  delete: 'code',
+  'force-push': 'code',
+  reset: 'code',
 }
 
 /**

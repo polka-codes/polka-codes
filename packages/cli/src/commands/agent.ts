@@ -21,7 +21,7 @@ export async function runAgent(goal: string | undefined, options: any, _command:
   const config = await loadConfig(options, options.config)
 
   // Create workflow context
-  const logger = createLogger()
+  const logger = createLogger({ verbose: options.verbose || 0 })
   const workingDir = process.cwd()
   const stateDir = path.join(workingDir, '.polka', 'agent-state')
   const sessionId = `agent-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
@@ -30,7 +30,7 @@ export async function runAgent(goal: string | undefined, options: any, _command:
     logger,
     workingDir,
     stateDir,
-    sessionId,
+    sessionId: sessionId as any, // Temporary - should be number
     tools: [], // Will be populated by workflows
     env: process.env,
   }
