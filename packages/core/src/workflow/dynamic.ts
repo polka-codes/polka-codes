@@ -19,6 +19,114 @@ import {
 import type { Logger, StepFn, ToolRegistry, WorkflowContext, WorkflowFn, WorkflowTools } from './workflow'
 
 /**
+ * JSON Schema type to Zod type mapping
+ */
+type JsonSchemaType = 'string' | 'number' | 'integer' | 'boolean' | 'object' | 'array' | 'null'
+
+interface JsonSchema {
+  type?: JsonSchemaType | JsonSchemaType[]
+  enum?: any[]
+  properties?: Record<string, JsonSchema>
+  required?: string[]
+  items?: JsonSchema
+  additionalProperties?: boolean | JsonSchema
+  description?: string
+  [key: string]: any
+}
+
+/**
+ * Convert a JSON Schema to a Zod schema
+ * Supports a subset of JSON SchemaDraft 7
+ */
+function convertJsonSchemaToZod(schema: JsonSchema): z.ZodTypeAny {
+  // Handle enum types
+  if (schema.enum) {
+    return z.enum(schema.enum.map((v: any) => String(v)))
+  }
+
+  // Handle union types (type: ["string", "null"])
+  if (Array.isArray(schema.type)) {
+    const types = schema.type
+    if (types.includes('null') && types.length === 2) {
+      const nonNullType = types.find((t) => t !== 'null')
+      if (nonNullType === 'string') return z.string().nullable()
+      if (nonNullType === 'number') return z.number().nullable()
+      if (nonNullType === 'integer')
+        return z
+          .number()
+          .refine((val) => Number.isInteger(val))
+          .nullable()
+      if (nonNullType === 'boolean') return z.boolean().nullable()
+      if (nonNullType === 'object') {
+        // Handle object with nullable - need to preserve properties
+        const shape: Record<string, z.ZodTypeAny> = {}
+        if (schema.properties) {
+          for (const [propName, propSchema] of Object.entries(schema.properties)) {
+            const propZod = convertJsonSchemaToZod(propSchema as JsonSchema)
+            const isRequired = schema.required?.includes(propName)
+            shape[propName] = isRequired ? propZod : propZod.optional()
+          }
+        }
+        return z.object(shape).nullable()
+      }
+      if (nonNullType === 'array') return z.array(z.any()).nullable()
+    }
+    // Fallback for complex unions
+    return z.any()
+  }
+
+  const type = schema.type as JsonSchemaType
+
+  switch (type) {
+    case 'string':
+      return z.string()
+    case 'number':
+      return z.number()
+    case 'integer':
+      // Zod v4 doesn't have .int(), use custom validation
+      return z.number().refine((val) => Number.isInteger(val), { message: 'Expected an integer' })
+    case 'boolean':
+      return z.boolean()
+    case 'null':
+      return z.null()
+    case 'object': {
+      const shape: Record<string, z.ZodTypeAny> = {}
+
+      // Convert properties
+      if (schema.properties) {
+        for (const [propName, propSchema] of Object.entries(schema.properties)) {
+          const propZod = convertJsonSchemaToZod(propSchema as JsonSchema)
+          // Check if property is required
+          const isRequired = schema.required?.includes(propName)
+          shape[propName] = isRequired ? propZod : propZod.optional()
+        }
+      }
+
+      let objectSchema = z.object(shape)
+
+      // Handle additionalProperties
+      if (schema.additionalProperties === true) {
+        objectSchema = objectSchema.and(z.any()) as z.ZodObject<any, any, any, any>
+      } else if (typeof schema.additionalProperties === 'object') {
+        const additionalSchema = convertJsonSchemaToZod(schema.additionalProperties as JsonSchema)
+        objectSchema = objectSchema.and(z.record(additionalSchema)) as z.ZodObject<any, any, any, any>
+      }
+
+      return objectSchema
+    }
+    case 'array': {
+      if (!schema.items) {
+        return z.array(z.any())
+      }
+      const itemSchema = convertJsonSchemaToZod(schema.items as JsonSchema)
+      return z.array(itemSchema)
+    }
+    default:
+      return z.any()
+  }
+}
+
+/**
  * Tool groups that can be used in step.tools arrays.
  * - "readonly": File reading operations only
  * - "readwrite": Full file system access
@@ -479,20 +587,20 @@ async function executeStep<TTools extends ToolRegistry>(
   // Validate output against schema if provided
   if (stepDef.outputSchema) {
     try {
-      const _schema = z.any() // TODO: Convert outputSchema to Zod schema
-      // For now, we'll just validate that it's a valid JSON structure
-      if (typeof stepDef.outputSchema === 'object') {
-        context.logger.debug(`[Step] Validating output for step '${stepDef.id}' against schema`)
-        // Basic validation: ensure result matches expected type
-        if (stepDef.outputSchema.type === 'object') {
-          if (typeof result !== 'object' || result === null || Array.isArray(result)) {
-            throw new Error(`Expected object output, got ${Array.isArray(result) ? 'array' : result === null ? 'null' : typeof result}`)
-          }
-        }
-        if (stepDef.outputSchema.type === 'array' && !Array.isArray(result)) {
-          throw new Error(`Expected array output, got ${typeof result}`)
-        }
+      context.logger.debug(`[Step] Validating output for step '${stepDef.id}' against schema`)
+
+      // Convert JSON Schema to Zod schema
+      const zodSchema = convertJsonSchemaToZod(stepDef.outputSchema)
+
+      // Validate the result
+      const validationResult = zodSchema.safeParse(result)
+
+      if (!validationResult.success) {
+        const errorDetails = validationResult.error.issues.map((e) => `  - ${e.path.join('.') || 'root'}: ${e.message}`).join('\n')
+        throw new Error(`Output does not match expected schema:\n${errorDetails}`)
       }
+
+      context.logger.debug(`[Step] Output validation successful for step '${stepDef.id}'`)
     } catch (error) {
       throw new Error(
         `Step '${stepDef.id}' in workflow '${workflowId}' output validation failed: ${error instanceof Error ? error.message : String(error)}`,
