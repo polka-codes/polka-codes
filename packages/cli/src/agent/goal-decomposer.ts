@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { runAgentWithSchema } from '../workflows/agent-builder'
+import { type CliWorkflowContext, runAgentWithSchema } from '../workflows/agent-builder'
 import { WORKFLOW_MAPPING } from './constants'
 import type { GoalDecompositionResult, Task, TaskComplexity, WorkflowContext } from './types'
 import { Priority } from './types'
@@ -31,7 +31,7 @@ const GoalDecompositionSchema = z.object({
  * Decomposes a high-level goal into actionable tasks
  */
 export class GoalDecomposer {
-  constructor(private context: WorkflowContext) {}
+  constructor(private context: WorkflowContext | CliWorkflowContext) {}
 
   /**
    * Decompose goal into implementation plan
@@ -43,7 +43,7 @@ export class GoalDecomposer {
     const codebaseContext = await this.gatherCodebaseContext()
 
     // Use agent to decompose goal
-    const result = await runAgentWithSchema(this.context, {
+    const result = await runAgentWithSchema(this.context as CliWorkflowContext, {
       systemPrompt: this.buildSystemPrompt(),
       userMessage: this.buildDecompositionPrompt(goal, codebaseContext),
       schema: GoalDecompositionSchema,
@@ -268,13 +268,13 @@ Return your response as a JSON object following the provided schema.`
       // Get project structure
       const pkgResult = await this.context.tools.executeCommand({
         command: 'find',
-        args: ['src', '-name', '*.ts', '-not', '-path', '*/node_modules/*', '-not', '-path', '*/dist/*'].split(' '),
+        args: ['src', '-name', '*.ts', '-not', '-path', '*/node_modules/*', '-not', '-path', '*/dist/*'],
       })
 
       const files = pkgResult.stdout.split('\n').filter(Boolean).slice(0, 20) // First 20 files
       if (files.length > 0) {
         context.push(`**Project Structure (first 20 files):**`)
-        context.push(files.map((f) => `- ${f}`).join('\n'))
+        context.push(files.map((f: string) => `- ${f}`).join('\n'))
       }
     } catch (_error) {
       // Failed to get structure, continue without it
@@ -283,12 +283,14 @@ Return your response as a JSON object following the provided schema.`
     try {
       // Get package.json info
       const pkgContent = await this.context.tools.readFile({ path: 'package.json' })
-      const pkg = JSON.parse(pkgContent)
+      if (pkgContent) {
+        const pkg = JSON.parse(pkgContent)
 
-      context.push(`**Package:** ${pkg.name}`)
-      context.push(`**Version:** ${pkg.version}`)
-      if (pkg.description) {
-        context.push(`**Description:** ${pkg.description}`)
+        context.push(`**Package:** ${pkg.name}`)
+        context.push(`**Version:** ${pkg.version}`)
+        if (pkg.description) {
+          context.push(`**Description:** ${pkg.description}`)
+        }
       }
     } catch (_error) {
       // No package.json, continue without it

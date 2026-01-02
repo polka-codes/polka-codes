@@ -200,14 +200,20 @@ export class AutonomousAgent {
       // 1. Goal decomposition
       this.logger.info('[Run] Phase 1: Decomposing goal...')
 
-      const tasks = await this.goalDecomposer.decompose(state.currentGoal)
+      const decomposition = await this.goalDecomposer.decompose(state.currentGoal)
 
-      this.logger.info(`[Run] ✅ Generated ${tasks.length} task(s)`)
+      this.logger.info(`[Run] ✅ Generated ${decomposition.tasks.length} task(s)`)
+
+      // Log the high-level plan
+      if (decomposition.highLevelPlan) {
+        this.logger.info('[Run] High-level plan:')
+        this.logger.info(decomposition.highLevelPlan)
+      }
 
       // 2. Safety check
       this.logger.info('[Run] Phase 2: Checking safety...')
 
-      const safetyResult = await this.safetyChecker.checkTasks(tasks)
+      const safetyResult = await this.safetyChecker.checkTasks(decomposition.tasks)
 
       if (!safetyResult.safe) {
         const violations = safetyResult.failed.map((f) => f.message).join(', ')
@@ -219,7 +225,7 @@ export class AutonomousAgent {
       // 3. Create plan
       this.logger.info('[Run] Phase 3: Creating execution plan...')
 
-      const plan = this.taskPlanner.createPlan(state.currentGoal, tasks)
+      const plan = this.taskPlanner.createPlan(state.currentGoal, decomposition.tasks)
 
       this.logger.info(`[Run] ✅ Plan created: ${plan.executionOrder.length} phase(s)`)
       this.logger.info(`[Run] Estimated time: ${plan.estimatedTime}min`)

@@ -1,5 +1,5 @@
-import type { WorkflowExecutionResult } from '../types'
 import { WorkflowInvocationError } from './errors'
+import type { WorkflowExecutionResult } from './types'
 
 /**
  * Adapts existing workflow outputs to WorkflowExecutionResult format
@@ -24,7 +24,6 @@ export class WorkflowAdapter {
           success: true,
           data: result,
           output: result.summaries.join('\n'),
-          filesModified: result.filesChanged,
         }
       } else {
         return {
@@ -54,7 +53,7 @@ export class WorkflowAdapter {
         return {
           success: true,
           data: result,
-          output: result.summary || 'Fix applied',
+          output: result.summaries.join('\n') || 'Fix applied',
         }
       } else {
         return {
@@ -90,8 +89,8 @@ export class WorkflowAdapter {
       return {
         success: true,
         data: result,
-        output: `Plan created with ${result.plan?.tasks?.length || 0} tasks`,
-        filesModified: result.filesChanged,
+        output: result.plan || 'Plan created',
+        filesModified: result.files.map((f) => f.path),
       }
     } catch (error) {
       throw new WorkflowInvocationError(
@@ -111,17 +110,11 @@ export class WorkflowAdapter {
 
       const result = await reviewWorkflow(input, context)
 
-      if (result.success) {
-        return {
-          success: true,
-          data: result,
-          output: result.summary || 'Review complete',
-        }
-      } else {
-        return {
-          success: false,
-          error: new Error(result.reason || 'Review workflow failed'),
-        }
+      // Review workflow always returns successfully
+      return {
+        success: true,
+        data: result,
+        output: result.overview || 'Review complete',
       }
     } catch (error) {
       throw new WorkflowInvocationError(
@@ -141,17 +134,18 @@ export class WorkflowAdapter {
 
       const result = await commitWorkflow(input, context)
 
-      if (result.success) {
+      // Commit workflow returns string | void
+      if (typeof result === 'string') {
         return {
           success: true,
           data: result,
-          output: `Committed: ${result.summary}`,
-          filesModified: result.filesChanged,
+          output: `Committed: ${result}`,
         }
       } else {
         return {
-          success: false,
-          error: new Error(result.reason || 'Commit workflow failed'),
+          success: true,
+          data: null,
+          output: 'Commit workflow completed',
         }
       }
     } catch (error) {
@@ -172,17 +166,11 @@ export class WorkflowAdapter {
 
       const result = await epicWorkflow(input, context)
 
-      if (result.success) {
-        return {
-          success: true,
-          data: result,
-          output: result.summary || 'Epic complete',
-        }
-      } else {
-        return {
-          success: false,
-          error: new Error(result.reason || 'Epic workflow failed'),
-        }
+      // Epic workflow returns void
+      return {
+        success: true,
+        data: null,
+        output: 'Epic workflow completed',
       }
     } catch (error) {
       // Epic workflow might not exist
@@ -230,10 +218,7 @@ export class WorkflowAdapter {
     })
 
     try {
-      return (await Promise.race([
-        WorkflowAdapter.invokeWorkflow(workflowName, input, context),
-        timeoutPromise,
-      ])) as Promise<WorkflowExecutionResult>
+      return await Promise.race([WorkflowAdapter.invokeWorkflow(workflowName, input, context), timeoutPromise])
     } catch (error) {
       if (error instanceof Error && error.message.includes('timed out')) {
         return {

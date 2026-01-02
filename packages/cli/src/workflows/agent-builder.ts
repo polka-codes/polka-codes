@@ -17,7 +17,7 @@ import type { z } from 'zod'
 import type { CliToolRegistry } from '../workflow-tools'
 
 // Re-export with proper type
-type CliWorkflowContext = WorkflowContext<CliToolRegistry>
+export type CliWorkflowContext = WorkflowContext<CliToolRegistry>
 
 export interface AgentToolConfig {
   includeInteractive?: boolean

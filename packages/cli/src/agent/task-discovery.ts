@@ -167,6 +167,7 @@ export class TaskDiscoveryEngine {
           dependencies: [],
           files: [],
           createdAt: Date.now(),
+          retryCount: 0,
           metadata: {
             source: 'discovery',
             errorType: 'typescript',
@@ -206,6 +207,7 @@ export class TaskDiscoveryEngine {
           dependencies: [],
           files: [],
           createdAt: Date.now(),
+          retryCount: 0,
           metadata: {
             source: 'discovery',
             errorType: 'build',
@@ -263,6 +265,7 @@ export class TaskDiscoveryEngine {
           dependencies: [],
           files: [],
           createdAt: Date.now(),
+          retryCount: 0,
           metadata: {
             source: 'discovery',
             errorType: 'test',
@@ -315,6 +318,7 @@ export class TaskDiscoveryEngine {
         dependencies: [],
         files: [],
         createdAt: Date.now(),
+        retryCount: 0,
         metadata: {
           source: 'discovery',
           errorType: 'typescript',
@@ -369,6 +373,7 @@ export class TaskDiscoveryEngine {
           dependencies: [],
           files,
           createdAt: Date.now(),
+          retryCount: 0,
           metadata: {
             source: 'discovery',
             errorType: 'lint',

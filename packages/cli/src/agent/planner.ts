@@ -27,6 +27,13 @@ export class TaskPlanner {
     // Generate high-level plan text
     const highLevelPlan = this.generateHighLevelPlan(goal, withDependencies)
 
+    // Convert dependency array to Record format
+    const dependencyGraph: Record<string, string[]> = {}
+    const depArray = this.extractDependencyGraph(withDependencies)
+    for (const dep of depArray) {
+      dependencyGraph[dep.taskId] = dep.dependsOn
+    }
+
     return {
       goal,
       highLevelPlan,
@@ -34,7 +41,7 @@ export class TaskPlanner {
       executionOrder,
       estimatedTime,
       risks,
-      dependencies: this.extractDependencyGraph(withDependencies),
+      dependencies: dependencyGraph,
     }
   }
 

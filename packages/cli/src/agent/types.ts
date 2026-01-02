@@ -726,6 +726,36 @@ export interface DiscoveryStrategy {
 }
 
 /**
+ * Goal decomposition result
+ */
+export interface GoalDecompositionResult {
+  /** Original goal */
+  goal: string
+
+  /** Identified requirements */
+  requirements: string[]
+
+  /** High-level implementation plan */
+  highLevelPlan: string
+
+  /** Decomposed tasks */
+  tasks: Task[]
+
+  /** Estimated overall complexity */
+  estimatedComplexity: TaskComplexity
+
+  /** Task dependencies */
+  dependencies: Array<{
+    taskId: string
+    dependsOn: string[]
+    type: 'hard' | 'soft'
+  }>
+
+  /** Identified risks */
+  risks: string[]
+}
+
+/**
  * Execution plan
  */
 export interface Plan {
