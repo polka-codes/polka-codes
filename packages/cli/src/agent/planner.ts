@@ -55,9 +55,9 @@ function createExecutionPhases(tasks: Task[], context: WorkflowContext): string[
     }
 
     if (readyTasks.length === 0) {
-      // Circular dependency or missing dependency
-      context.logger.warn('[Planner] No ready tasks - possible circular dependency')
-      break
+      // Circular dependency or missing dependency - throw error instead of returning partial plan
+      const remainingTasks = tasks.filter((t) => !completed.has(t.id)).map((t) => `${t.title} (deps: ${t.dependencies.join(', ')})`)
+      throw new Error(`Circular dependency detected or missing dependencies. Remaining tasks: ${remainingTasks.join(', ')}`)
     }
 
     // Add to phases and mark as completed

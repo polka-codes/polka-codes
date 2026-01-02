@@ -1,3 +1,4 @@
+import { execSync } from 'node:child_process'
 import * as path from 'node:path'
 import { Command } from 'commander'
 import { loadConfig } from '../agent/config'
@@ -26,12 +27,33 @@ export async function runAgent(goal: string | undefined, options: any, _command:
   const stateDir = path.join(workingDir, '.polka', 'agent-state')
   const sessionId = `agent-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 
+  // Create minimal tools implementation for agent context
+  // The agent needs executeCommand for safety checks
+  const tools = {
+    executeCommand: async ({ command, requiresApproval }: { command: string; requiresApproval: boolean }) => {
+      if (requiresApproval && !options.yes) {
+        throw new Error(`Command requires approval: ${command}`)
+      }
+
+      try {
+        const stdout = execSync(command, { encoding: 'utf-8', cwd: workingDir })
+        return { exitCode: 0, stdout, stderr: '' }
+      } catch (error: any) {
+        return {
+          exitCode: error.status || 1,
+          stdout: error.stdout || '',
+          stderr: error.stderr || error.message,
+        }
+      }
+    },
+  } as any
+
   const context = {
     logger,
     workingDir,
     stateDir,
     sessionId: sessionId as any, // Temporary - should be number
-    tools: {} as any, // Will be populated by workflows
+    tools,
     env: process.env,
   }
 

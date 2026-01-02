@@ -66,8 +66,8 @@ export class SafetyChecker {
   private async checkUncommittedChanges(task: Task): Promise<any> {
     try {
       const result = await this.tools.executeCommand({
-        command: 'git',
-        args: ['status', '--porcelain'],
+        command: 'git status --porcelain',
+        requiresApproval: false,
       })
 
       const hasChanges = result.stdout.trim().length > 0
@@ -101,7 +101,16 @@ export class SafetyChecker {
    * Check for critical files
    */
   private async checkCriticalFiles(task: Task): Promise<any> {
-    const criticalPatterns = ['package.json', 'tsconfig.json', '.env', '.gitignore', 'yarn.lock', 'package-lock.json']
+    const criticalPatterns = [
+      'package.json',
+      'tsconfig.json',
+      '.env',
+      '.gitignore',
+      'yarn.lock',
+      'package-lock.json',
+      'bun.lock',
+      'bun.lockb',
+    ]
 
     const affectedCritical = task.files.filter((file) => criticalPatterns.some((pattern) => file.includes(pattern)))
 
@@ -129,8 +138,8 @@ export class SafetyChecker {
   private async checkWorkingBranch(task: Task): Promise<any> {
     try {
       const result = await this.tools.executeCommand({
-        command: 'git',
-        args: ['branch', '--show-current'],
+        command: 'git branch --show-current',
+        requiresApproval: false,
       })
 
       const currentBranch = result.stdout.trim()
