@@ -696,3 +696,29 @@ export interface DiscoveryStrategy {
   /** Should check for changes before running */
   checkChanges?: boolean
 }
+
+/**
+ * Execution plan
+ */
+export interface Plan {
+  /** Goal to achieve */
+  goal: string
+
+  /** High-level plan description */
+  highLevelPlan: string
+
+  /** Tasks in the plan */
+  tasks: Task[]
+
+  /** Execution order (phases of task IDs) */
+  executionOrder: string[][]
+
+  /** Estimated total time (minutes) */
+  estimatedTime: number
+
+  /** Identified risks */
+  risks: string[]
+
+  /** Dependency graph */
+  dependencies: Record<string, string[]>
+}

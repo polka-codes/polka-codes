@@ -2,7 +2,8 @@ import { TaskExecutor } from './executor'
 import { TaskPlanner } from './planner'
 import type { AgentStateManager } from './state-manager'
 import { TaskDiscoveryEngine } from './task-discovery'
-import type { Plan, WorkflowContext } from './types'
+import { TaskPrioritizer } from './task-prioritizer'
+import type { Plan, Task, WorkflowContext } from './types'
 
 /**
  * Continuous improvement loop
@@ -20,6 +21,7 @@ export class ContinuousImprovementLoop {
   private discovery: TaskDiscoveryEngine
   private planner: TaskPlanner
   private executor: TaskExecutor
+  private prioritizer: TaskPrioritizer
   private running: boolean = false
   private iterationCount: number = 0
 
@@ -31,6 +33,7 @@ export class ContinuousImprovementLoop {
     this.discovery = new TaskDiscoveryEngine(context)
     this.planner = new TaskPlanner(context)
     this.executor = new TaskExecutor(context, context.logger)
+    this.prioritizer = new TaskPrioritizer()
   }
 
   /**
@@ -96,8 +99,19 @@ export class ContinuousImprovementLoop {
 
       this.context.logger.info(`[Continuous] Discovered ${tasks.length} task(s)`)
 
-      // 2. Create plan
-      const plan = this.planner.createPlan('Continuous improvement', tasks)
+      // 2. Prioritize tasks dynamically
+      const prioritizedTasks = this.prioritizer.prioritizeTasks(tasks, tasks)
+
+      this.context.logger.info(`[Continuous] Prioritized ${prioritizedTasks.length} task(s)`)
+
+      // Log high priority tasks
+      const highPriority = this.prioritizer.getCriticalTasks(prioritizedTasks)
+      if (highPriority.length > 0) {
+        this.context.logger.info(`[Continuous] Critical tasks: ${highPriority.map((t) => t.title).join(', ')}`)
+      }
+
+      // 3. Create plan
+      const plan = this.planner.createPlan('Continuous improvement', prioritizedTasks)
 
       this.context.logger.info(`[Continuous] Plan created with ${plan.executionOrder.length} phase(s)`)
 
@@ -139,7 +153,7 @@ export class ContinuousImprovementLoop {
           return
         }
 
-        const task = plan.tasks.find((t) => t.id === taskId)
+        const task = plan.tasks.find((t: Task) => t.id === taskId)
         if (!task) {
           this.context.logger.warn(`[Continuous] Task not found: ${taskId}`)
           continue
@@ -148,6 +162,11 @@ export class ContinuousImprovementLoop {
         try {
           // Get current state
           const state = await this.stateManager.getState()
+
+          if (!state) {
+            this.context.logger.error('[Continuous] State is null')
+            continue
+          }
 
           // Execute task
           const result = await this.executor.execute(task, state)
@@ -158,12 +177,23 @@ export class ContinuousImprovementLoop {
             // Move task from queue to completed
             await this.stateManager.moveTask(task.id, 'queue', 'completed')
 
+            // Record success for prioritization learning
+            this.prioritizer.recordExecution(task.id, true)
+
+            // Record file changes
+            for (const file of task.files) {
+              this.prioritizer.recordFileChange(file)
+            }
+
             completedTasks++
           } else {
             this.context.logger.error(`[Continuous] ❌ ${task.title}`, result.error)
 
             // Move task from queue to failed
             await this.stateManager.moveTask(task.id, 'queue', 'failed')
+
+            // Record failure for prioritization learning
+            this.prioritizer.recordExecution(task.id, false)
           }
         } catch (error) {
           this.context.logger.error(`[Continuous] ❌ ${task.title}`, error as Error)
