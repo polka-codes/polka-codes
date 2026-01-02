@@ -1,0 +1,36 @@
+/**
+ * Autonomous Agent Module
+ *
+ * This module provides an autonomous agent system for the Polka Codes CLI.
+ * It can work in two modes:
+ * - Goal-directed: Takes a high-level goal and breaks it down into executable tasks
+ * - Continuous improvement: Automatically discovers and fixes issues in the codebase
+ */
+
+// Configuration
+export * from './config'
+export * from './constants'
+export * from './errors'
+export { TaskExecutor } from './executor'
+export { GoalDecomposer } from './goal-decomposer'
+export { HealthMonitor } from './health-monitor'
+export { ContinuousImprovementLoop } from './improvement-loop'
+export { AgentLogger } from './logger'
+export { MetricsCollector } from './metrics'
+// Main orchestrator
+export { AutonomousAgent } from './orchestrator'
+export { TaskPlanner } from './planner'
+export { ResourceMonitor } from './resource-monitor'
+// Safety systems
+export { ApprovalManager } from './safety/approval'
+export { SafetyChecker } from './safety/checks'
+export { InterruptHandler } from './safety/interrupt'
+export { SessionManager } from './session'
+// Core components
+export { AgentStateManager } from './state-manager'
+export { TaskDiscoveryEngine } from './task-discovery'
+export { TaskHistory } from './task-history'
+// Core types and constants
+export * from './types'
+// Phase 2: Execution components
+export { WorkflowAdapter } from './workflow-adapter'
