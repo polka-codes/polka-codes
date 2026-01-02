@@ -11,11 +11,16 @@ export const WORKFLOW_MAPPING: Record<TaskType, WorkflowName> = {
   feature: 'plan',
   bugfix: 'fix',
   refactor: 'code',
+  refactoring: 'code',
   test: 'code',
+  testing: 'code',
   docs: 'code',
+  documentation: 'code',
   review: 'review',
   commit: 'commit',
   analysis: 'plan',
+  security: 'fix',
+  optimization: 'code',
   other: 'plan',
 }
 

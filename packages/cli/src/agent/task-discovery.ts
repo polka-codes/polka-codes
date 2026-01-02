@@ -1,6 +1,7 @@
 import { execSync } from 'node:child_process'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
+import { AdvancedDiscoveryStrategies } from './advanced-discovery'
 import { Priority } from './constants'
 import type { Task, WorkflowContext } from './types'
 
@@ -33,8 +34,8 @@ export class TaskDiscoveryEngine {
   /**
    * Discover tasks in the codebase
    */
-  async discover(options: { useCache?: boolean } = {}): Promise<Task[]> {
-    const { useCache = true } = options
+  async discover(options: { useCache?: boolean; includeAdvanced?: boolean } = {}): Promise<Task[]> {
+    const { useCache = true, includeAdvanced = false } = options
 
     this.context.logger.info('[Discovery] Scanning codebase for issues...')
 
@@ -68,7 +69,34 @@ export class TaskDiscoveryEngine {
     const lintIssues = await this.discoverLintIssues()
     tasks.push(...lintIssues)
 
-    // 5. Cache results if git state is stable
+    // 5. Advanced discovery strategies (optional, enabled via flag or config)
+    if (includeAdvanced) {
+      this.context.logger.info('[Discovery] Running advanced discovery strategies...')
+
+      try {
+        // Security analysis (always enabled in advanced mode)
+        const securityIssues = await AdvancedDiscoveryStrategies.securityStrategy.execute(this.context)
+        tasks.push(...securityIssues)
+
+        // Test coverage analysis
+        const testCoverageGaps = await AdvancedDiscoveryStrategies.testCoverageStrategy.execute(this.context)
+        tasks.push(...testCoverageGaps)
+
+        // Optional strategies (disabled by default as they can be noisy)
+        const refactoringTasks = await AdvancedDiscoveryStrategies.refactoringStrategy.execute(this.context)
+        tasks.push(...refactoringTasks)
+
+        const documentationTasks = await AdvancedDiscoveryStrategies.documentationStrategy.execute(this.context)
+        tasks.push(...documentationTasks)
+
+        const performanceTasks = await AdvancedDiscoveryStrategies.performanceStrategy.execute(this.context)
+        tasks.push(...performanceTasks)
+      } catch (error) {
+        this.context.logger.warn('[Discovery] Advanced strategies failed', error as Error)
+      }
+    }
+
+    // 6. Cache results if git state is stable
     await this.saveToCache(tasks)
 
     this.context.logger.info(`[Discovery] Found ${tasks.length} tasks`)

@@ -45,7 +45,21 @@ export type TaskComplexity = 'low' | 'medium' | 'high'
 /**
  * Task types supported by the agent
  */
-export type TaskType = 'feature' | 'bugfix' | 'refactor' | 'test' | 'docs' | 'review' | 'commit' | 'analysis' | 'other'
+export type TaskType =
+  | 'feature'
+  | 'bugfix'
+  | 'refactor'
+  | 'refactoring'
+  | 'test'
+  | 'testing'
+  | 'docs'
+  | 'documentation'
+  | 'review'
+  | 'commit'
+  | 'analysis'
+  | 'security'
+  | 'optimization'
+  | 'other'
 
 /**
  * Task execution status
