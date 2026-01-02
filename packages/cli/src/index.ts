@@ -4,6 +4,7 @@ globalThis.AI_SDK_LOG_WARNINGS = false
 import 'dotenv/config'
 import { Command } from 'commander'
 import { version } from '../package.json'
+import { agentCommand } from './commands/agent'
 import { codeCommand } from './commands/code'
 import { commitCommand } from './commands/commit'
 import { epicCommand } from './commands/epic'
@@ -30,6 +31,9 @@ program.argument('[task]', 'The task to execute').action((task, _options, comman
 
 // Init command
 program.addCommand(initCommand)
+
+// Agent command
+program.addCommand(agentCommand)
 
 // Commit command
 program.addCommand(commitCommand)

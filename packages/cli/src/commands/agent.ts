@@ -1,19 +1,19 @@
 import * as path from 'node:path'
-import { createLogger } from '@polka-codes/core'
-import type { Command } from 'commander'
+import { Command } from 'commander'
 import { loadConfig } from '../agent/config'
 import { AutonomousAgent } from '../agent/orchestrator'
+import { createLogger } from '../logger'
 
 /**
  * Autonomous agent command
  *
  * Usage:
- *   bun run autonomous "Add user authentication"           # Goal-directed mode
- *   bun run autonomous --continuous                       # Continuous improvement mode
- *   bun run autonomous --preset conservative "Fix tests"  # Use preset configuration
+ *   bun run agent "Add user authentication"           # Goal-directed mode
+ *   bun run agent --continuous                       # Continuous improvement mode
+ *   bun run agent --preset conservative "Fix tests"  # Use preset configuration
  */
-export async function runAutonomous(goal: string | undefined, options: any, _command: Command) {
-  console.log('🤖 Autonomous Agent')
+export async function runAgent(goal: string | undefined, options: any, _command: Command) {
+  console.log('🤖 Polka Agent')
   console.log('='.repeat(60))
   console.log('')
 
@@ -51,7 +51,7 @@ export async function runAutonomous(goal: string | undefined, options: any, _com
     } else {
       if (!goal) {
         console.error('❌ Error: Goal is required for goal-directed mode')
-        console.error('Usage: bun run autonomous "your goal here"')
+        console.error('Usage: bun run agent "your goal here"')
         console.error('')
         console.error('Or use --continuous for autonomous improvement mode')
         await agent.cleanup()
@@ -87,21 +87,16 @@ export async function runAutonomous(goal: string | undefined, options: any, _com
   }
 }
 
-/**
- * Configure autonomous command options
- */
-export function configureAutonomousCommand(_program: Command, command: Command): void {
-  command
-    .description('Run autonomous agent (experimental)')
-    .argument('[goal]', 'Goal to achieve', '')
-    .option('--continuous', 'Run in continuous improvement mode')
-    .option('--preset <name>', 'Configuration preset', 'balanced')
-    .option('--config <path>', 'Configuration file path')
-    .option('-y, --yes', 'Auto-approve all tasks')
-    .option('--max-iterations <n>', 'Maximum iterations in continuous mode', '0')
-    .option('--require-approval <level>', 'Approval level (none|destructive|commits|all)', 'destructive')
-    .option('--timeout <minutes>', 'Session timeout in minutes', '0')
-    .option('--dry-run', 'Show plan without executing')
-    .option('--stop', 'Stop running agent')
-    .action(runAutonomous)
-}
+export const agentCommand = new Command('agent')
+  .description('Run autonomous agent (experimental)')
+  .argument('[goal]', 'Goal to achieve', '')
+  .option('--continuous', 'Run in continuous improvement mode')
+  .option('--preset <name>', 'Configuration preset', 'balanced')
+  .option('--config <path>', 'Configuration file path')
+  .option('-y, --yes', 'Auto-approve all tasks')
+  .option('--max-iterations <n>', 'Maximum iterations in continuous mode', '0')
+  .option('--require-approval <level>', 'Approval level (none|destructive|commits|all)', 'destructive')
+  .option('--timeout <minutes>', 'Session timeout in minutes', '0')
+  .option('--dry-run', 'Show plan without executing')
+  .option('--stop', 'Stop running agent')
+  .action(runAgent)
