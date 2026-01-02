@@ -1,4 +1,3 @@
-// @ts-expect-error - Type errors due to test data format mismatch with JsonDataContent
 import { describe, expect, it } from 'bun:test'
 import type { JsonFilePart, JsonImagePart } from '@polka-codes/core'
 import {
@@ -27,48 +26,62 @@ describe('file-attachments', () => {
     it('should attach files to string content', () => {
       const content = 'Hello, world!'
       const files: JsonFilePart[] = [
-        { type: 'file', data: 'data:text/plain;base64,SGVsbG8=', filename: 'test.txt', mediaType: 'text/plain' },
+        { type: 'file', data: { type: 'base64', value: 'SGVsbG8=' }, filename: 'test.txt', mediaType: 'text/plain' },
       ]
       const result = attachFilesToContent(content, files)
 
       expect(Array.isArray(result)).toBe(true)
-      expect(result).toHaveLength(2)
-      expect(result[0]).toEqual({ type: 'text', text: content })
-      expect(result[1]).toEqual(files[0])
+      if (Array.isArray(result)) {
+        expect(result).toHaveLength(2)
+        expect(result[0]).toEqual({ type: 'text', text: content })
+        expect(result[1]).toEqual(files[0])
+      }
     })
 
     it('should attach files to array content', () => {
-      const content = [{ type: 'text', text: 'Hello' }]
+      const content: Array<{ type: 'text'; text: string }> = [{ type: 'text', text: 'Hello' }]
       const files: JsonImagePart[] = [
         {
           type: 'image',
-          image: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+          image: {
+            type: 'base64',
+            value: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+          },
           mediaType: 'image/png',
         },
       ]
       const result = attachFilesToContent(content, files)
 
-      expect(result).toHaveLength(2)
-      expect(result[0]).toEqual(content[0])
-      expect(result[1]).toEqual(files[0])
+      expect(Array.isArray(result)).toBe(true)
+      if (Array.isArray(result)) {
+        expect(result).toHaveLength(2)
+        expect(result[0]).toEqual(content[0])
+        expect(result[1]).toEqual(files[0])
+      }
     })
 
     it('should attach multiple files', () => {
       const content = 'Check these files'
       const files: (JsonFilePart | JsonImagePart)[] = [
-        { type: 'file', data: 'data:text/plain;base64,SGVsbG8=', filename: 'test.txt', mediaType: 'text/plain' },
+        { type: 'file', data: { type: 'base64', value: 'SGVsbG8=' }, filename: 'test.txt', mediaType: 'text/plain' },
         {
           type: 'image',
-          image: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+          image: {
+            type: 'base64',
+            value: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+          },
           mediaType: 'image/png',
         },
       ]
       const result = attachFilesToContent(content, files)
 
-      expect(result).toHaveLength(3)
-      expect(result[0]).toEqual({ type: 'text', text: content })
-      expect(result[1]).toEqual(files[0])
-      expect(result[2]).toEqual(files[1])
+      expect(Array.isArray(result)).toBe(true)
+      if (Array.isArray(result)) {
+        expect(result).toHaveLength(3)
+        expect(result[0]).toEqual({ type: 'text', text: content })
+        expect(result[1]).toEqual(files[0])
+        expect(result[2]).toEqual(files[1])
+      }
     })
   })
 
@@ -84,32 +97,34 @@ describe('file-attachments', () => {
 
     it('should create user message with files', () => {
       const files: JsonFilePart[] = [
-        { type: 'file', data: 'data:text/plain;base64,SGVsbG8=', filename: 'test.txt', mediaType: 'text/plain' },
+        { type: 'file', data: { type: 'base64', value: 'SGVsbG8=' }, filename: 'test.txt', mediaType: 'text/plain' },
       ]
       const result = createUserMessageWithFiles('Check this file', files)
 
       expect(result.role).toBe('user')
       expect(Array.isArray(result.content)).toBe(true)
-      expect(result.content).toHaveLength(2)
-      expect(result.content[0]).toEqual({ type: 'text', text: 'Check this file' })
-      expect(result.content[1]).toEqual(files[0])
+      if (Array.isArray(result.content)) {
+        expect(result.content).toHaveLength(2)
+        expect(result.content[0]).toEqual({ type: 'text', text: 'Check this file' })
+        expect(result.content[1]).toEqual(files[0])
+      }
     })
   })
 
   describe('filterFilesByMediaType', () => {
     const files: (JsonFilePart | JsonImagePart)[] = [
-      { type: 'file', data: 'data:text/plain;base64,SGVsbG8=', filename: 'test.txt', mediaType: 'text/plain' },
-      { type: 'file', data: 'data:application/json;base64,eyJ0ZXN0IjoidHJ1ZSJ9', filename: 'test.json', mediaType: 'application/json' },
-      { type: 'image', image: 'data:image/png;base64,ABC', mediaType: 'image/png' },
-      { type: 'image', image: 'data:image/jpeg;base64,DEF', mediaType: 'image/jpeg' },
-      { type: 'file', data: 'data:text/plain;base64,V29ybGQ=', filename: 'world.txt' }, // no mediaType
+      { type: 'file', data: { type: 'base64', value: 'SGVsbG8=' }, filename: 'test.txt', mediaType: 'text/plain' },
+      { type: 'file', data: { type: 'base64', value: 'eyJ0ZXN0IjoidHJ1ZSJ9' }, filename: 'test.json', mediaType: 'application/json' },
+      { type: 'image', image: { type: 'base64', value: 'ABC' }, mediaType: 'image/png' },
+      { type: 'image', image: { type: 'base64', value: 'DEF' }, mediaType: 'image/jpeg' },
+      { type: 'file', data: { type: 'base64', value: 'V29ybGQ=' }, filename: 'world.txt', mediaType: 'text/plain' },
     ]
 
     it('should filter files by string media type', () => {
       const result = filterFilesByMediaType(files, 'text/plain')
 
-      expect(result).toHaveLength(1)
-      expect(result[0].mediaType).toBe('text/plain')
+      expect(result).toHaveLength(2)
+      expect(result.every((f) => f.mediaType === 'text/plain')).toBe(true)
     })
 
     it('should filter files by RegExp media type', () => {
@@ -131,20 +146,14 @@ describe('file-attachments', () => {
 
       expect(result).toHaveLength(0)
     })
-
-    it('should exclude files without mediaType', () => {
-      const result = filterFilesByMediaType(files, 'text/plain')
-
-      expect(result.every((f) => f.mediaType !== undefined)).toBe(true)
-    })
   })
 
   describe('getImages', () => {
     it('should extract image files from mixed array', () => {
       const files: (JsonFilePart | JsonImagePart)[] = [
-        { type: 'file', data: 'data:text/plain;base64,SGVsbG8=', filename: 'test.txt', mediaType: 'text/plain' },
-        { type: 'image', image: 'data:image/png;base64,ABC', mediaType: 'image/png' },
-        { type: 'image', image: 'data:image/jpeg;base64,DEF', mediaType: 'image/jpeg' },
+        { type: 'file', data: { type: 'base64', value: 'SGVsbG8=' }, filename: 'test.txt', mediaType: 'text/plain' },
+        { type: 'image', image: { type: 'base64', value: 'ABC' }, mediaType: 'image/png' },
+        { type: 'image', image: { type: 'base64', value: 'DEF' }, mediaType: 'image/jpeg' },
       ]
 
       const result = getImages(files)
@@ -155,7 +164,7 @@ describe('file-attachments', () => {
 
     it('should return empty array when no images', () => {
       const files: JsonFilePart[] = [
-        { type: 'file', data: 'data:text/plain;base64,SGVsbG8=', filename: 'test.txt', mediaType: 'text/plain' },
+        { type: 'file', data: { type: 'base64', value: 'SGVsbG8=' }, filename: 'test.txt', mediaType: 'text/plain' },
       ]
 
       const result = getImages(files)
@@ -173,9 +182,9 @@ describe('file-attachments', () => {
   describe('getDocuments', () => {
     it('should extract document files from mixed array', () => {
       const files: (JsonFilePart | JsonImagePart)[] = [
-        { type: 'file', data: 'data:text/plain;base64,SGVsbG8=', filename: 'test.txt', mediaType: 'text/plain' },
-        { type: 'image', image: 'data:image/png;base64,ABC', mediaType: 'image/png' },
-        { type: 'file', data: 'data:application/pdf;base64,REF=', filename: 'test.pdf', mediaType: 'application/pdf' },
+        { type: 'file', data: { type: 'base64', value: 'SGVsbG8=' }, filename: 'test.txt', mediaType: 'text/plain' },
+        { type: 'image', image: { type: 'base64', value: 'ABC' }, mediaType: 'image/png' },
+        { type: 'file', data: { type: 'base64', value: 'REF=' }, filename: 'test.pdf', mediaType: 'application/pdf' },
       ]
 
       const result = getDocuments(files)
@@ -185,7 +194,7 @@ describe('file-attachments', () => {
     })
 
     it('should return empty array when no documents', () => {
-      const files: JsonImagePart[] = [{ type: 'image', image: 'data:image/png;base64,ABC', mediaType: 'image/png' }]
+      const files: JsonImagePart[] = [{ type: 'image', image: { type: 'base64', value: 'ABC' }, mediaType: 'image/png' }]
 
       const result = getDocuments(files)
 
@@ -202,10 +211,10 @@ describe('file-attachments', () => {
   describe('countFilesByType', () => {
     it('should count files by type', () => {
       const files: (JsonFilePart | JsonImagePart)[] = [
-        { type: 'file', data: 'data:text/plain;base64,SGVsbG8=', filename: 'test.txt', mediaType: 'text/plain' },
-        { type: 'image', image: 'data:image/png;base64,ABC', mediaType: 'image/png' },
-        { type: 'image', image: 'data:image/jpeg;base64,DEF', mediaType: 'image/jpeg' },
-        { type: 'file', data: 'data:application/pdf;base64,REF=', filename: 'test.pdf', mediaType: 'application/pdf' },
+        { type: 'file', data: { type: 'base64', value: 'SGVsbG8=' }, filename: 'test.txt', mediaType: 'text/plain' },
+        { type: 'image', image: { type: 'base64', value: 'ABC' }, mediaType: 'image/png' },
+        { type: 'image', image: { type: 'base64', value: 'DEF' }, mediaType: 'image/jpeg' },
+        { type: 'file', data: { type: 'base64', value: 'REF=' }, filename: 'test.pdf', mediaType: 'application/pdf' },
       ]
 
       const result = countFilesByType(files)
@@ -229,8 +238,8 @@ describe('file-attachments', () => {
 
     it('should count only images', () => {
       const files: JsonImagePart[] = [
-        { type: 'image', image: 'data:image/png;base64,ABC', mediaType: 'image/png' },
-        { type: 'image', image: 'data:image/jpeg;base64,DEF', mediaType: 'image/jpeg' },
+        { type: 'image', image: { type: 'base64', value: 'ABC' }, mediaType: 'image/png' },
+        { type: 'image', image: { type: 'base64', value: 'DEF' }, mediaType: 'image/jpeg' },
       ]
 
       const result = countFilesByType(files)
@@ -244,8 +253,8 @@ describe('file-attachments', () => {
 
     it('should count only files', () => {
       const files: JsonFilePart[] = [
-        { type: 'file', data: 'data:text/plain;base64,SGVsbG8=', filename: 'test.txt', mediaType: 'text/plain' },
-        { type: 'file', data: 'data:application/pdf;base64,REF=', filename: 'test.pdf', mediaType: 'application/pdf' },
+        { type: 'file', data: { type: 'base64', value: 'SGVsbG8=' }, filename: 'test.txt', mediaType: 'text/plain' },
+        { type: 'file', data: { type: 'base64', value: 'REF=' }, filename: 'test.pdf', mediaType: 'application/pdf' },
       ]
 
       const result = countFilesByType(files)

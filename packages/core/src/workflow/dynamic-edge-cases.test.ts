@@ -1,8 +1,31 @@
-// @ts-expect-error - ValidationResult.errors property access issues
 import { describe, expect, it } from 'bun:test'
 import type { FullToolInfo } from '../tool'
+import type { DynamicWorkflowParseResult } from './dynamic'
 import { createDynamicWorkflow, parseDynamicWorkflowDefinition, validateWorkflowFile } from './dynamic'
-import type { WorkflowFile } from './dynamic-types'
+import type { ValidationResult, WorkflowFile } from './dynamic-types'
+import type { StepFn } from './workflow'
+
+// Type guards for ValidationResult
+type ValidationFailure = Extract<ValidationResult, { success: false }>
+type ValidationSuccess = Extract<ValidationResult, { success: true }>
+
+function asValidationFailure(result: ValidationResult): ValidationFailure {
+  if (result.success) {
+    throw new Error('Expected validation failure but got success')
+  }
+  return result
+}
+
+// Type guards for DynamicWorkflowParseResult
+type ParseFailure = Extract<DynamicWorkflowParseResult, { success: false }>
+type ParseSuccess = Extract<DynamicWorkflowParseResult, { success: true }>
+
+function asParseFailure(result: DynamicWorkflowParseResult): ParseFailure {
+  if (result.success) {
+    throw new Error('Expected parse failure but got success')
+  }
+  return result
+}
 
 describe('Dynamic Workflow Edge Cases', () => {
   const mockToolInfo: FullToolInfo[] = [
@@ -26,8 +49,8 @@ describe('Dynamic Workflow Edge Cases', () => {
       }
 
       const result = validateWorkflowFile(workflowDef)
-      expect(result.success).toBe(false)
-      expect(result.errors).toContain("Workflow 'empty' has no steps")
+      const failure = asValidationFailure(result)
+      expect(failure.errors).toContain("Workflow 'empty' has no steps")
     })
 
     it('should reject break statement outside loop', () => {
@@ -46,8 +69,8 @@ describe('Dynamic Workflow Edge Cases', () => {
       }
 
       const result = validateWorkflowFile(workflowDef)
-      expect(result.success).toBe(false)
-      expect(result.errors[0]).toContain('break/continue outside of a loop')
+      const failure = asValidationFailure(result)
+      expect(failure.errors[0]).toContain('break/continue outside of a loop')
     })
 
     it('should reject continue statement outside loop', () => {
@@ -66,8 +89,8 @@ describe('Dynamic Workflow Edge Cases', () => {
       }
 
       const result = validateWorkflowFile(workflowDef)
-      expect(result.success).toBe(false)
-      expect(result.errors[0]).toContain('break/continue outside of a loop')
+      const failure = asValidationFailure(result)
+      expect(failure.errors[0]).toContain('break/continue outside of a loop')
     })
 
     it('should accept break inside while loop', () => {
@@ -133,8 +156,8 @@ describe('Dynamic Workflow Edge Cases', () => {
       }
 
       const result = validateWorkflowFile(workflowDef)
-      expect(result.success).toBe(false)
-      expect(result.errors[0]).toContain('break/continue outside of a loop')
+      const failure = asValidationFailure(result)
+      expect(failure.errors[0]).toContain('break/continue outside of a loop')
     })
 
     it('should accept break inside if/else inside while loop', () => {
@@ -180,8 +203,8 @@ workflows:
 `
 
       const result = parseDynamicWorkflowDefinition(invalidYaml)
-      expect(result.success).toBe(false)
-      expect(result.error).toBeDefined()
+      const failure = asParseFailure(result)
+      expect(failure.error).toBeDefined()
     })
 
     it('should reject workflow with missing required fields', () => {
@@ -192,8 +215,8 @@ workflows:
 `
 
       const result = parseDynamicWorkflowDefinition(invalidWorkflow)
-      expect(result.success).toBe(false)
-      expect(result.error).toContain('task')
+      const failure = asParseFailure(result)
+      expect(failure.error).toContain('task')
     })
   })
 
@@ -431,6 +454,14 @@ workflows:
         toolInfo: mockToolInfo,
       })
 
+      const mockStep: StepFn = async (name, optionsOrFn, fn?) => {
+        const actualFn = fn || optionsOrFn
+        if (typeof actualFn === 'function') {
+          return await actualFn()
+        }
+        throw new Error('Expected function')
+      }
+
       const mockContext = {
         tools: {} as any,
         logger: {
@@ -439,7 +470,7 @@ workflows:
           warn: (_msg: string) => {},
           error: (_msg: string) => {},
         },
-        step: async (_name: string, fn: () => Promise<any>) => await fn(),
+        step: mockStep,
       }
 
       await expect(workflow('nonexistent', {}, mockContext)).rejects.toThrow("Workflow 'nonexistent' not found")

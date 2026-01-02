@@ -1,4 +1,3 @@
-// @ts-expect-error - Zod type parameter and unknown type issues in test assertions
 import { describe, expect, it } from 'bun:test'
 import { z } from 'zod'
 
@@ -83,14 +82,14 @@ function convertJsonSchemaToZod(schema: JsonSchema): z.ZodTypeAny {
         }
       }
 
-      let objectSchema = z.object(shape)
+      let objectSchema: z.ZodTypeAny = z.object(shape)
 
       // Handle additionalProperties
       if (schema.additionalProperties === true) {
-        objectSchema = objectSchema.and(z.any()) as z.ZodObject<any, any, any, any>
+        objectSchema = objectSchema.and(z.any())
       } else if (typeof schema.additionalProperties === 'object') {
         const additionalSchema = convertJsonSchemaToZod(schema.additionalProperties as JsonSchema)
-        objectSchema = objectSchema.and(z.record(additionalSchema)) as z.ZodObject<any, any, any, any>
+        objectSchema = objectSchema.and(z.record(z.string(), additionalSchema))
       }
 
       return objectSchema
@@ -201,8 +200,11 @@ describe('JSON Schema to Zod Conversion', () => {
         { id: 'test', value: 42 },
         { id: 'another', value: 100 },
       ])
-      expect(result).toHaveLength(2)
-      expect(result[0].id).toBe('test')
+      // Define expected schema type for assertion
+      type ArrayItem = { id: string; value: number }
+      const items = result as ArrayItem[]
+      expect(items).toHaveLength(2)
+      expect(items[0].id).toBe('test')
       expect(() => zodSchema.parse([{ id: 'test' }])).toThrow()
     })
 
