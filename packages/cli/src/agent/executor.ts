@@ -5,8 +5,14 @@ import { WorkflowAdapter } from './workflow-adapter'
 
 /**
  * Executes tasks by invoking appropriate workflows
+ *
+ * Features:
+ * - Timeout protection with AbortController
+ * - Proper workflow cancellation on timeout
+ * - Manual task cancellation support
  */
 export class TaskExecutor {
+  private abortControllers: Map<string, AbortController> = new Map()
   private taskTimeouts: Map<string, NodeJS.Timeout> = new Map()
 
   constructor(
@@ -16,6 +22,8 @@ export class TaskExecutor {
 
   /**
    * Execute a task with timeout protection
+   *
+   * Uses AbortController to properly cancel the workflow if timeout occurs
    */
   async execute(task: Task, state: AgentState): Promise<WorkflowExecutionResult> {
     this.logger.info(`[Executor] Executing task ${task.id}: ${task.title}`)
@@ -24,7 +32,7 @@ export class TaskExecutor {
     const timeoutMs = state.config.resourceLimits.maxTaskExecutionTime * 60 * 1000
 
     try {
-      // Execute with timeout
+      // Execute with timeout and cancellation support
       const result = await this.executeTaskInternal(task, timeoutMs)
 
       this.logger.info(`[Executor] Task ${task.id} completed`)
@@ -40,23 +48,21 @@ export class TaskExecutor {
   }
 
   /**
-   * Execute task with timeout wrapper
+   * Execute task with timeout wrapper and proper cancellation
    *
-   * NOTE: This implementation uses Promise.race which does NOT cancel the underlying
-   * workflow when a timeout occurs. The workflow will continue running in the background.
-   * This is a known limitation - proper cancellation would require AbortController support
-   * throughout the workflow execution chain.
-   *
-   * For now, this is acceptable because:
-   * 1. Timeouts are set conservatively high (default 30 minutes)
-   * 2. The orchestrator will mark the task as failed and continue
-   * 3. Background workflows will eventually complete or fail on their own
-   *
-   * TODO: Implement proper cancellation with AbortController
+   * This implementation uses AbortController to properly cancel the workflow
+   * when a timeout occurs or manual cancellation is requested.
    */
   private async executeTaskInternal(task: Task, timeoutMs: number): Promise<WorkflowExecutionResult> {
+    // Create AbortController for this task
+    const abortController = new AbortController()
+    this.abortControllers.set(task.id, abortController)
+
+    // Set up timeout
     const timeoutPromise = new Promise<never>((_, reject) => {
       const timeoutId = setTimeout(() => {
+        // Abort the workflow before rejecting
+        abortController.abort()
         reject(new TaskExecutionError(task.id, `Task timed out after ${timeoutMs}ms`))
       }, timeoutMs)
 
@@ -64,28 +70,49 @@ export class TaskExecutor {
     })
 
     try {
-      const result = await Promise.race([this.invokeWorkflow(task), timeoutPromise])
+      // Race between workflow execution and timeout
+      const result = await Promise.race([this.invokeWorkflow(task, abortController.signal), timeoutPromise])
 
       return result
     } finally {
+      // Cleanup
       const timeoutId = this.taskTimeouts.get(task.id)
       if (timeoutId) {
         clearTimeout(timeoutId)
         this.taskTimeouts.delete(task.id)
       }
+
+      // Only abort if not already aborted
+      if (!abortController.signal.aborted) {
+        abortController.abort()
+      }
+      this.abortControllers.delete(task.id)
     }
   }
 
   /**
-   * Invoke workflow for task
+   * Invoke workflow for task with AbortSignal
+   *
+   * The AbortSignal is passed to the workflow adapter, which propagates
+   * it through the workflow execution chain for proper cancellation support.
    */
-  private async invokeWorkflow(task: Task): Promise<WorkflowExecutionResult> {
+  private async invokeWorkflow(task: Task, signal: AbortSignal): Promise<WorkflowExecutionResult> {
     try {
-      // Use workflow adapter to invoke appropriate workflow
-      const result = await WorkflowAdapter.invokeWorkflow(task.workflow, task.workflowInput, this.context)
+      // Check if already aborted before starting
+      if (signal.aborted) {
+        throw new TaskExecutionError(task.id, 'Task was cancelled before execution')
+      }
+
+      // Use workflow adapter to invoke appropriate workflow with abort signal
+      const result = await WorkflowAdapter.invokeWorkflow(task.workflow, task.workflowInput, this.context, signal)
 
       return result
     } catch (error) {
+      // Check if error is due to abort
+      if (signal.aborted) {
+        throw new TaskExecutionError(task.id, 'Task was cancelled')
+      }
+
       throw new TaskExecutionError(
         task.id,
         error instanceof Error ? error.message : String(error),
@@ -96,24 +123,63 @@ export class TaskExecutor {
 
   /**
    * Cancel running task
+   *
+   * Aborts the task's workflow and clears its timeout
    */
   cancel(taskId: string): boolean {
+    const abortController = this.abortControllers.get(taskId)
     const timeoutId = this.taskTimeouts.get(taskId)
-    if (timeoutId) {
-      clearTimeout(timeoutId)
-      this.taskTimeouts.delete(taskId)
+
+    if (abortController) {
+      // Abort the workflow
+      abortController.abort()
+      this.abortControllers.delete(taskId)
+
+      // Clear the timeout
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+        this.taskTimeouts.delete(taskId)
+      }
+
+      this.logger.info(`[Executor] Task ${taskId} cancelled`)
       return true
     }
+
     return false
   }
 
   /**
    * Cancel all tasks
+   *
+   * Aborts all running workflows and clears all timeouts
    */
   cancelAll(): void {
+    this.logger.info(`[Executor] Cancelling all tasks (${this.abortControllers.size} running)`)
+
+    // Abort all controllers
+    for (const [taskId, controller] of this.abortControllers) {
+      controller.abort()
+    }
+    this.abortControllers.clear()
+
+    // Clear all timeouts
     for (const timeoutId of this.taskTimeouts.values()) {
       clearTimeout(timeoutId)
     }
     this.taskTimeouts.clear()
+  }
+
+  /**
+   * Check if a task is currently running
+   */
+  isRunning(taskId: string): boolean {
+    return this.abortControllers.has(taskId)
+  }
+
+  /**
+   * Get number of currently running tasks
+   */
+  getRunningCount(): number {
+    return this.abortControllers.size
   }
 }

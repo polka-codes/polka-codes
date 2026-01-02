@@ -181,21 +181,43 @@ export class WorkflowAdapter {
   /**
    * Generic workflow invoker
    * Routes to the appropriate adapter based on workflow name
+   *
+   * @param workflowName - The name of the workflow to invoke
+   * @param input - Input data for the workflow
+   * @param context - Workflow context (logger, tools, etc.)
+   * @param signal - Optional AbortSignal for cancellation
    */
-  static async invokeWorkflow(workflowName: string, input: any, context: any): Promise<WorkflowExecutionResult> {
+  static async invokeWorkflow(workflowName: string, input: any, context: any, signal?: AbortSignal): Promise<WorkflowExecutionResult> {
+    // Check if operation was aborted before starting
+    if (signal?.aborted) {
+      throw new WorkflowInvocationError(workflowName, 'Workflow was cancelled before execution')
+    }
+
+    // Create a wrapped context that can check abort status
+    const wrappedContext = signal
+      ? {
+          ...context,
+          checkAbort: () => {
+            if (signal.aborted) {
+              throw new WorkflowInvocationError(workflowName, 'Workflow was cancelled')
+            }
+          },
+        }
+      : context
+
     switch (workflowName) {
       case 'code':
-        return WorkflowAdapter.adaptCodeWorkflow(input, context)
+        return WorkflowAdapter.adaptCodeWorkflow(input, wrappedContext)
       case 'fix':
-        return WorkflowAdapter.adaptFixWorkflow(input, context)
+        return WorkflowAdapter.adaptFixWorkflow(input, wrappedContext)
       case 'plan':
-        return WorkflowAdapter.adaptPlanWorkflow(input, context)
+        return WorkflowAdapter.adaptPlanWorkflow(input, wrappedContext)
       case 'review':
-        return WorkflowAdapter.adaptReviewWorkflow(input, context)
+        return WorkflowAdapter.adaptReviewWorkflow(input, wrappedContext)
       case 'commit':
-        return WorkflowAdapter.adaptCommitWorkflow(input, context)
+        return WorkflowAdapter.adaptCommitWorkflow(input, wrappedContext)
       case 'epic':
-        return WorkflowAdapter.adaptEpicWorkflow(input, context)
+        return WorkflowAdapter.adaptEpicWorkflow(input, wrappedContext)
       default:
         throw new WorkflowInvocationError(workflowName, `Unknown workflow: ${workflowName}`)
     }

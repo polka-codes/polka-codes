@@ -1,5 +1,6 @@
+import * as readline from 'node:readline'
 import type { Logger } from '@polka-codes/core'
-import type { ApprovalDecision, ApprovalLevel, Task } from '../types'
+import type { ApprovalDecision, ApprovalLevel, PlanApprovalRequest, Task } from '../types'
 import { Priority } from '../types'
 
 /**
@@ -118,5 +119,91 @@ export class ApprovalManager {
     }
 
     return false
+  }
+
+  /**
+   * Request user approval for a plan
+   *
+   * Displays the plan details and asks the user to approve or reject it.
+   * This is used before executing a multi-task plan.
+   *
+   * @param request - Plan approval request with all plan details
+   * @returns Approval decision with approved flag and optional reason
+   */
+  async requestPlanApproval(request: PlanApprovalRequest): Promise<ApprovalDecision> {
+    // Check if running in an interactive terminal
+    if (!process.stdin.isTTY) {
+      this.logger.warn(`⚠️  Not running in an interactive terminal - auto-rejecting plan: ${request.goal}`)
+      return { approved: false, reason: 'Non-interactive environment (no TTY)' }
+    }
+
+    // Display plan header
+    this.logger.info(`\n${'═'.repeat(60)}`)
+    this.logger.info(`📋 Plan Approval Required`)
+    this.logger.info('═'.repeat(60))
+
+    // Display goal
+    this.logger.info(`\n🎯 Goal: ${request.goal}`)
+
+    // Display task summary
+    this.logger.info(`\n📝 Tasks: ${request.tasks.length} tasks in ${request.executionOrder.length} phase(s)`)
+    for (let i = 0; i < request.executionOrder.length; i++) {
+      const phase = request.executionOrder[i]
+      this.logger.info(`   Phase ${i + 1}: ${phase.length} task(s)`)
+    }
+
+    // Display task details
+    this.logger.info(`\n📋 Task List:`)
+    for (let i = 0; i < request.tasks.length; i++) {
+      const task = request.tasks[i]
+      const priorityLabel = Priority[task.priority] || task.priority
+      this.logger.info(`   ${i + 1}. [${priorityLabel}] ${task.title}`)
+      this.logger.info(`      ${task.description}`)
+    }
+
+    // Display estimated time
+    const timeInMinutes = Math.round(request.estimatedTime)
+    this.logger.info(`\n⏱️  Estimated Time: ${timeInMinutes} minutes`)
+
+    // Display risks if any
+    if (request.risks.length > 0) {
+      this.logger.info(`\n⚠️  Risks:`)
+      for (const risk of request.risks) {
+        this.logger.info(`   - ${risk}`)
+      }
+    }
+
+    // Ask for approval
+    this.logger.info(`\n${'═'.repeat(60)}`)
+
+    const answer = await this.askQuestion('Do you want to proceed with this plan? (yes/no): ')
+
+    if (answer.toLowerCase() === 'yes' || answer.toLowerCase() === 'y') {
+      this.logger.info('✅ Plan approved - proceeding with execution\n')
+      return { approved: true }
+    } else {
+      this.logger.info('❌ Plan rejected - stopping execution\n')
+      return { approved: false, reason: 'User rejected the plan' }
+    }
+  }
+
+  /**
+   * Ask a question via stdin/stdout
+   *
+   * @param query - Question to display
+   * @returns User's answer
+   */
+  private async askQuestion(query: string): Promise<string> {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    })
+
+    return new Promise((resolve) => {
+      rl.question(query, (answer) => {
+        rl.close()
+        resolve(answer.trim())
+      })
+    })
   }
 }

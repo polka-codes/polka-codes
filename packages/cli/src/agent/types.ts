@@ -634,6 +634,29 @@ export interface ApprovalDecision {
 }
 
 /**
+ * Plan approval request
+ */
+export interface PlanApprovalRequest {
+  /** Plan ID */
+  planId: string
+
+  /** Goal to achieve */
+  goal: string
+
+  /** Tasks in the plan */
+  tasks: Task[]
+
+  /** Estimated execution time (minutes) */
+  estimatedTime: number
+
+  /** Identified risks */
+  risks: string[]
+
+  /** Execution order (phases) */
+  executionOrder: string[][]
+}
+
+/**
  * Error handling result
  */
 export interface ErrorHandlingResult {

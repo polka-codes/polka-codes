@@ -231,13 +231,24 @@ export class AutonomousAgent {
       // 4. Request approval
       this.logger.info('[Run] Phase 4: Requesting approval...')
 
-      // TEMPORARY: Auto-approve plans for initial release
-      // TODO: Implement proper plan approval flow using ApprovalManager
-      // Bypassing this.approvalManager.requestApproval() until user approval workflow is ready
-      const approved = true
+      // Generate a unique plan ID
+      const planId = `plan-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 
-      if (!approved) {
-        this.logger.info('[Run] ❌ Plan not approved, stopping')
+      // Create plan approval request
+      const approvalRequest = {
+        planId,
+        goal: state.currentGoal,
+        tasks: plan.tasks,
+        estimatedTime: plan.estimatedTime,
+        risks: plan.risks,
+        executionOrder: plan.executionOrder,
+      }
+
+      // Request approval from user
+      const decision = await this.approvalManager.requestPlanApproval(approvalRequest)
+
+      if (!decision.approved) {
+        this.logger.info(`[Run] ❌ Plan not approved: ${decision.reason || 'No reason provided'}`)
         await this.stateManager.updateState({ currentMode: 'idle' })
         return
       }
