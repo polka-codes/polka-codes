@@ -160,7 +160,7 @@ export class TaskPrioritizer {
   /**
    * Calculate priority adjustment score
    */
-  private calculateAdjustment(task: Task, factors: PriorityFactors): number {
+  private calculateAdjustment(_task: Task, factors: PriorityFactors): number {
     let adjustment = 0
 
     // Failed before (+200)

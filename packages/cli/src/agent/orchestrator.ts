@@ -4,10 +4,10 @@ import { AgentStatusError, SafetyViolationError } from './errors'
 import { TaskExecutor } from './executor'
 import { GoalDecomposer } from './goal-decomposer'
 import { HealthMonitor } from './health-monitor'
-import { ContinuousImprovementLoop } from './improvement-loop'
+import { createContinuousImprovementLoop } from './improvement-loop'
 import { AgentLogger } from './logger'
 import { MetricsCollector } from './metrics'
-import { TaskPlanner } from './planner'
+import { createTaskPlanner } from './planner'
 import { ResourceMonitor } from './resource-monitor'
 import { ApprovalManager } from './safety/approval'
 import { SafetyChecker } from './safety/checks'
@@ -33,9 +33,7 @@ import type { AgentConfig, AgentState, Plan, WorkflowContext } from './types'
  */
 export class AutonomousAgent {
   private stateManager: AgentStateManager
-  private sessionManager: SessionManager
   private resourceMonitor: ResourceMonitor
-  private healthMonitor: HealthMonitor
   private taskHistory: TaskHistory
   private logger: AgentLogger
   private metrics: MetricsCollector
@@ -43,9 +41,9 @@ export class AutonomousAgent {
   private safetyChecker: SafetyChecker
   private interruptHandler: InterruptHandler
   private goalDecomposer: GoalDecomposer
-  private taskPlanner: TaskPlanner
+  private taskPlanner: ReturnType<typeof createTaskPlanner>
   private taskExecutor: TaskExecutor
-  private improvementLoop?: ContinuousImprovementLoop
+  private improvementLoop?: ReturnType<typeof createContinuousImprovementLoop>
 
   private initialized: boolean = false
   private sessionId: string
@@ -81,7 +79,7 @@ export class AutonomousAgent {
     this.safetyChecker = new SafetyChecker(this.logger, context.tools)
     this.interruptHandler = new InterruptHandler(this.logger, this)
     this.goalDecomposer = new GoalDecomposer(context)
-    this.taskPlanner = new TaskPlanner(context)
+    this.taskPlanner = createTaskPlanner(context)
     this.taskExecutor = new TaskExecutor(context, context.logger)
   }
 
@@ -300,7 +298,7 @@ export class AutonomousAgent {
     })
 
     // Create and start continuous loop
-    this.improvementLoop = new ContinuousImprovementLoop(this.context, this.stateManager, this.sessionId)
+    this.improvementLoop = createContinuousImprovementLoop(this.context, this.stateManager, this.sessionId)
 
     try {
       await this.improvementLoop.start()

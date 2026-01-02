@@ -17,8 +17,7 @@ describe('GoalDecomposer', () => {
       debug: () => {},
     },
     tools: mockTools as any,
-    sessionId: 123,
-    env: {},
+    step: {} as any,
   }
 
   let decomposer: GoalDecomposer

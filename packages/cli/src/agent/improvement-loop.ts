@@ -1,9 +1,19 @@
 import { TaskExecutor } from './executor'
-import { TaskPlanner } from './planner'
 import type { AgentStateManager } from './state-manager'
-import { TaskDiscoveryEngine } from './task-discovery'
 import { TaskPrioritizer } from './task-prioritizer'
 import type { Plan, Task, WorkflowContext } from './types'
+
+/**
+ * Continuous improvement loop state
+ */
+interface ContinuousImprovementLoopState {
+  discovery: any
+  planner: any
+  executor: TaskExecutor
+  prioritizer: TaskPrioritizer
+  running: boolean
+  iterationCount: number
+}
 
 /**
  * Continuous improvement loop
@@ -17,126 +27,40 @@ import type { Plan, Task, WorkflowContext } from './types'
  *
  * CRITICAL v2.1 fix: Does NOT exit when no tasks found
  */
-export class ContinuousImprovementLoop {
-  private discovery: TaskDiscoveryEngine
-  private planner: TaskPlanner
-  private executor: TaskExecutor
-  private prioritizer: TaskPrioritizer
-  private running: boolean = false
-  private iterationCount: number = 0
+export interface ContinuousImprovementLoop {
+  start(): Promise<void>
+  stop(): Promise<void>
+  getIterationCount(): number
+  isRunning(): boolean
+}
 
-  constructor(
-    private context: WorkflowContext,
-    private stateManager: AgentStateManager,
-    _sessionId: string,
-  ) {
-    this.discovery = new TaskDiscoveryEngine(context)
-    this.planner = new TaskPlanner(context)
-    this.executor = new TaskExecutor(context, context.logger)
-    this.prioritizer = new TaskPrioritizer()
-  }
+export function createContinuousImprovementLoop(
+  context: WorkflowContext,
+  stateManager: AgentStateManager,
+  _sessionId: string,
+): ContinuousImprovementLoop {
+  const { createTaskDiscoveryEngine } = require('./task-discovery')
+  const { createTaskPlanner } = require('./planner')
 
-  /**
-   * Start continuous improvement loop
-   */
-  async start(): Promise<void> {
-    if (this.running) {
-      throw new Error('Loop already running')
-    }
-
-    this.running = true
-    this.iterationCount = 0
-
-    this.context.logger.info('[Continuous] Starting continuous improvement loop...')
-    this.context.logger.info('[Continuous] Press Ctrl+C to stop')
-
-    // Main loop
-    while (this.running) {
-      await this.iteration()
-
-      // Check if should stop
-      if (!this.running) {
-        break
-      }
-
-      // Wait before next iteration (with exponential backoff)
-      await this.waitBetweenIterations()
-    }
-
-    this.context.logger.info('[Continuous] Loop stopped')
-  }
-
-  /**
-   * Stop the loop
-   */
-  async stop(): Promise<void> {
-    this.context.logger.info('[Continuous] Stopping loop...')
-    this.running = false
-    this.executor.cancelAll()
-  }
-
-  /**
-   * Single iteration of continuous improvement
-   */
-  private async iteration(): Promise<void> {
-    this.iterationCount++
-    this.context.logger.info(`[Continuous] Iteration #${this.iterationCount}`)
-
-    try {
-      // 1. Discover tasks
-      const tasks = await this.discovery.discover({ useCache: true })
-
-      if (tasks.length === 0) {
-        this.context.logger.info('[Continuous] No tasks discovered')
-
-        // CRITICAL v2.1: Don't exit, increase backoff and continue
-        this.discovery.increaseBackoff()
-        return
-      }
-
-      // Tasks found - reset backoff
-      this.discovery.resetBackoff()
-
-      this.context.logger.info(`[Continuous] Discovered ${tasks.length} task(s)`)
-
-      // 2. Prioritize tasks dynamically
-      const prioritizedTasks = this.prioritizer.prioritizeTasks(tasks, tasks)
-
-      this.context.logger.info(`[Continuous] Prioritized ${prioritizedTasks.length} task(s)`)
-
-      // Log high priority tasks
-      const highPriority = this.prioritizer.getCriticalTasks(prioritizedTasks)
-      if (highPriority.length > 0) {
-        this.context.logger.info(`[Continuous] Critical tasks: ${highPriority.map((t) => t.title).join(', ')}`)
-      }
-
-      // 3. Create plan
-      const plan = this.planner.createPlan('Continuous improvement', prioritizedTasks)
-
-      this.context.logger.info(`[Continuous] Plan created with ${plan.executionOrder.length} phase(s)`)
-
-      // 3. Execute plan
-      await this.executePlan(plan)
-
-      this.context.logger.info(`[Continuous] Iteration #${this.iterationCount} complete`)
-    } catch (error) {
-      this.context.logger.error('[Continuous] Iteration failed', error as Error)
-
-      // Continue running even on error (with backoff)
-      this.discovery.increaseBackoff()
-    }
+  const state: ContinuousImprovementLoopState = {
+    discovery: createTaskDiscoveryEngine(context),
+    planner: createTaskPlanner(context),
+    executor: new TaskExecutor(context, context.logger),
+    prioritizer: new TaskPrioritizer(),
+    running: false,
+    iterationCount: 0,
   }
 
   /**
    * Execute a plan phase by phase
    */
-  private async executePlan(plan: Plan): Promise<void> {
-    this.context.logger.info(`[Continuous] Executing plan: ${plan.highLevelPlan}`)
+  async function executePlan(plan: Plan): Promise<void> {
+    context.logger.info(`[Continuous] Executing plan: ${plan.highLevelPlan}`)
 
     let completedTasks = 0
 
     // Add all tasks to the queue first
-    await this.stateManager.updateState({
+    await stateManager.updateState({
       taskQueue: plan.tasks,
     })
 
@@ -144,81 +68,133 @@ export class ContinuousImprovementLoop {
     for (let i = 0; i < plan.executionOrder.length; i++) {
       const phase = plan.executionOrder[i]
 
-      this.context.logger.info(`[Continuous] Phase ${i + 1}/${plan.executionOrder.length} (${phase.length} task(s))`)
+      context.logger.info(`[Continuous] Phase ${i + 1}/${plan.executionOrder.length} (${phase.length} task(s))`)
 
       // Execute tasks in phase (could be parallel in future)
       for (const taskId of phase) {
-        if (!this.running) {
-          this.context.logger.info('[Continuous] Stopping mid-phase')
+        if (!state.running) {
+          context.logger.info('[Continuous] Stopping mid-phase')
           return
         }
 
         const task = plan.tasks.find((t: Task) => t.id === taskId)
         if (!task) {
-          this.context.logger.warn(`[Continuous] Task not found: ${taskId}`)
+          context.logger.warn(`[Continuous] Task not found: ${taskId}`)
           continue
         }
 
         try {
           // Get current state
-          const state = await this.stateManager.getState()
+          const currentState = await stateManager.getState()
 
-          if (!state) {
-            this.context.logger.error('[Continuous] State is null')
+          if (!currentState) {
+            context.logger.error('[Continuous] State is null')
             continue
           }
 
           // Execute task
-          const result = await this.executor.execute(task, state)
+          const result = await state.executor.execute(task, currentState)
 
           if (result.success) {
-            this.context.logger.info(`[Continuous] ✅ ${task.title}`)
+            context.logger.info(`[Continuous] ✅ ${task.title}`)
 
             // Move task from queue to completed
-            await this.stateManager.moveTask(task.id, 'queue', 'completed')
+            await stateManager.moveTask(task.id, 'queue', 'completed')
 
             // Record success for prioritization learning
-            this.prioritizer.recordExecution(task.id, true)
+            state.prioritizer.recordExecution(task.id, true)
 
             // Record file changes
             for (const file of task.files) {
-              this.prioritizer.recordFileChange(file)
+              state.prioritizer.recordFileChange(file)
             }
 
             completedTasks++
           } else {
-            this.context.logger.error(`[Continuous] ❌ ${task.title}`, result.error)
+            context.logger.error(`[Continuous] ❌ ${task.title}`, result.error)
 
             // Move task from queue to failed
-            await this.stateManager.moveTask(task.id, 'queue', 'failed')
+            await stateManager.moveTask(task.id, 'queue', 'failed')
 
             // Record failure for prioritization learning
-            this.prioritizer.recordExecution(task.id, false)
+            state.prioritizer.recordExecution(task.id, false)
           }
         } catch (error) {
-          this.context.logger.error(`[Continuous] ❌ ${task.title}`, error as Error)
+          context.logger.error(`[Continuous] ❌ ${task.title}`, error as Error)
 
           // Move task from queue to failed
-          await this.stateManager.moveTask(task.id, 'queue', 'failed')
+          await stateManager.moveTask(task.id, 'queue', 'failed')
         }
       }
     }
 
-    this.context.logger.info(`[Continuous] Plan execution complete: ${completedTasks}/${plan.tasks.length} task(s) succeeded`)
+    context.logger.info(`[Continuous] Plan execution complete: ${completedTasks}/${plan.tasks.length} task(s) succeeded`)
+  }
+
+  /**
+   * Single iteration of continuous improvement
+   */
+  async function iteration(): Promise<void> {
+    state.iterationCount++
+    context.logger.info(`[Continuous] Iteration #${state.iterationCount}`)
+
+    try {
+      // 1. Discover tasks
+      const tasks = await state.discovery.discover({ useCache: true })
+
+      if (tasks.length === 0) {
+        context.logger.info('[Continuous] No tasks discovered')
+
+        // CRITICAL v2.1: Don't exit, increase backoff and continue
+        state.discovery.increaseBackoff()
+        return
+      }
+
+      // Tasks found - reset backoff
+      state.discovery.resetBackoff()
+
+      context.logger.info(`[Continuous] Discovered ${tasks.length} task(s)`)
+
+      // 2. Prioritize tasks dynamically
+      const prioritizedTasks = state.prioritizer.prioritizeTasks(tasks, tasks)
+
+      context.logger.info(`[Continuous] Prioritized ${prioritizedTasks.length} task(s)`)
+
+      // Log high priority tasks
+      const highPriority = state.prioritizer.getCriticalTasks(prioritizedTasks)
+      if (highPriority.length > 0) {
+        context.logger.info(`[Continuous] Critical tasks: ${highPriority.map((t) => t.title).join(', ')}`)
+      }
+
+      // 3. Create plan
+      const plan = state.planner.createPlan('Continuous improvement', prioritizedTasks)
+
+      context.logger.info(`[Continuous] Plan created with ${plan.executionOrder.length} phase(s)`)
+
+      // 3. Execute plan
+      await executePlan(plan)
+
+      context.logger.info(`[Continuous] Iteration #${state.iterationCount} complete`)
+    } catch (error) {
+      context.logger.error('[Continuous] Iteration failed', error as Error)
+
+      // Continue running even on error (with backoff)
+      state.discovery.increaseBackoff()
+    }
   }
 
   /**
    * Wait between iterations with exponential backoff
    */
-  private async waitBetweenIterations(): Promise<void> {
-    const seconds = this.discovery.getBackoffSeconds()
+  async function waitBetweenIterations(): Promise<void> {
+    const seconds = state.discovery.getBackoffSeconds()
 
-    this.context.logger.info(`[Continuous] Waiting ${seconds}s before next iteration...`)
+    context.logger.info(`[Continuous] Waiting ${seconds}s before next iteration...`)
 
     // Wait in 1-second increments to check for interrupts
     for (let i = 0; i < seconds; i++) {
-      if (!this.running) {
-        this.context.logger.info('[Continuous] Wait interrupted')
+      if (!state.running) {
+        context.logger.info('[Continuous] Wait interrupted')
         return
       }
 
@@ -226,17 +202,58 @@ export class ContinuousImprovementLoop {
     }
   }
 
-  /**
-   * Get iteration count
-   */
-  getIterationCount(): number {
-    return this.iterationCount
-  }
+  return {
+    /**
+     * Start continuous improvement loop
+     */
+    async start(): Promise<void> {
+      if (state.running) {
+        throw new Error('Loop already running')
+      }
 
-  /**
-   * Check if currently running
-   */
-  isRunning(): boolean {
-    return this.running
+      state.running = true
+      state.iterationCount = 0
+
+      context.logger.info('[Continuous] Starting continuous improvement loop...')
+      context.logger.info('[Continuous] Press Ctrl+C to stop')
+
+      // Main loop
+      while (state.running) {
+        await iteration()
+
+        // Check if should stop
+        if (!state.running) {
+          break
+        }
+
+        // Wait before next iteration (with exponential backoff)
+        await waitBetweenIterations()
+      }
+
+      context.logger.info('[Continuous] Loop stopped')
+    },
+
+    /**
+     * Stop the loop
+     */
+    async stop(): Promise<void> {
+      context.logger.info('[Continuous] Stopping loop...')
+      state.running = false
+      state.executor.cancelAll()
+    },
+
+    /**
+     * Get iteration count
+     */
+    getIterationCount(): number {
+      return state.iterationCount
+    },
+
+    /**
+     * Check if currently running
+     */
+    isRunning(): boolean {
+      return state.running
+    },
   }
 }

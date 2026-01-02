@@ -29,7 +29,7 @@ export class AdvancedDiscoveryStrategies {
     enabled: false, // Disabled by default - can be noisy
     checkChanges: true,
     execute: async (context) => this.discoverRefactoringOpportunities(context),
-    priority: (task) => ({ priority: Priority.LOW, reason: 'Code quality improvement' }),
+    priority: (_task) => ({ priority: Priority.LOW, reason: 'Code quality improvement' }),
   }
 
   /**
@@ -46,7 +46,7 @@ export class AdvancedDiscoveryStrategies {
     enabled: false, // Disabled by default - can be noisy
     checkChanges: true,
     execute: async (context) => this.discoverDocumentationGaps(context),
-    priority: (task) => ({ priority: Priority.TRIVIAL, reason: 'Documentation improvement' }),
+    priority: (_task) => ({ priority: Priority.TRIVIAL, reason: 'Documentation improvement' }),
   }
 
   /**
@@ -64,7 +64,7 @@ export class AdvancedDiscoveryStrategies {
     enabled: true,
     checkChanges: true,
     execute: async (context) => this.discoverSecurityIssues(context),
-    priority: (task) => ({ priority: Priority.CRITICAL, reason: 'Security vulnerability' }),
+    priority: (_task) => ({ priority: Priority.CRITICAL, reason: 'Security vulnerability' }),
   }
 
   /**
@@ -81,7 +81,7 @@ export class AdvancedDiscoveryStrategies {
     enabled: true,
     checkChanges: true,
     execute: async (context) => this.discoverTestCoverageGaps(context),
-    priority: (task) => ({ priority: Priority.MEDIUM, reason: 'Improve test coverage' }),
+    priority: (_task) => ({ priority: Priority.MEDIUM, reason: 'Improve test coverage' }),
   }
 
   /**
@@ -99,7 +99,7 @@ export class AdvancedDiscoveryStrategies {
     enabled: false, // Disabled by default - requires analysis
     checkChanges: true,
     execute: async (context) => this.discoverPerformanceIssues(context),
-    priority: (task) => ({ priority: Priority.MEDIUM, reason: 'Performance improvement' }),
+    priority: (_task) => ({ priority: Priority.MEDIUM, reason: 'Performance improvement' }),
   }
 
   /**

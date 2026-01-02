@@ -164,7 +164,7 @@ export class WorkflowAdapter {
     try {
       const { epicWorkflow } = await import('../workflows/epic.workflow')
 
-      const result = await epicWorkflow(input, context)
+      const _result = await epicWorkflow(input, context)
 
       // Epic workflow returns void
       return {
