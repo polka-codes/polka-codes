@@ -53,6 +53,23 @@ export const AgentConfigSchema = z.object({
   continuousImprovement: ContinuousImprovementConfigSchema.default(DEFAULT_AGENT_CONFIG.continuousImprovement),
   discovery: DiscoveryConfigSchema.default(DEFAULT_AGENT_CONFIG.discovery),
   preset: z.string().optional(),
+  stateDir: z.string().optional(),
+  approval: z.object({
+    level: z.enum(['none', 'destructive', 'commits', 'all']).default('destructive'),
+    autoApproveSafeTasks: z.boolean().default(true),
+    maxAutoApprovalCost: z.number().int().nonnegative().default(5),
+  }),
+  safety: z.object({
+    enabledChecks: z.array(z.string()).default([]),
+    blockDestructive: z.boolean().default(true),
+    maxFileSize: z.number().int().positive().default(10485760),
+  }),
+  healthCheck: z
+    .object({
+      enabled: z.boolean().default(false),
+      interval: z.number().int().positive().default(60000),
+    })
+    .optional(),
 })
 
 /**
@@ -72,10 +89,10 @@ export function isValidAgentConfig(config: unknown): config is AgentConfig {
  */
 export function validateConfig(config: unknown): AgentConfig {
   try {
-    return AgentConfigSchema.parse(config)
+    return AgentConfigSchema.parse(config) as AgentConfig
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const errors = error.errors.map((e) => `${e.path.join('.')}: ${e.message}`)
+      const errors = error.issues.map((e: any) => `${e.path.join('.')}: ${e.message}`)
       throw new ConfigValidationError('Configuration validation failed', errors)
     }
     throw error
@@ -126,6 +143,14 @@ export function mergeConfig(base: AgentConfig, override: Partial<AgentConfig>): 
     discovery: {
       ...base.discovery,
       ...(override.discovery || {}),
+    },
+    approval: {
+      ...base.approval,
+      ...(override.approval || {}),
+    },
+    safety: {
+      ...base.safety,
+      ...(override.safety || {}),
     },
   }
 }

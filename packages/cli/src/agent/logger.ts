@@ -164,6 +164,27 @@ export class AgentLogger {
   }
 
   /**
+   * Standard info log
+   */
+  info(message: string, ...args: any[]): void {
+    this.logger.info(message, ...args)
+  }
+
+  /**
+   * Standard warn log
+   */
+  warn(message: string, ...args: any[]): void {
+    this.logger.warn(message, ...args)
+  }
+
+  /**
+   * Standard debug log
+   */
+  debug(message: string, ...args: any[]): void {
+    this.logger.debug(message, ...args)
+  }
+
+  /**
    * Write log entry to file
    */
   private async writeToFile(entry: any): Promise<void> {

@@ -38,6 +38,29 @@ export class SafetyChecker {
   }
 
   /**
+   * Check multiple tasks
+   */
+  async checkTasks(tasks: Task[]): Promise<SafetyCheckResult> {
+    const allChecks: any[] = []
+    const allFailed: any[] = []
+    const allWarnings: any[] = []
+
+    for (const task of tasks) {
+      const result = await this.preExecutionCheck(task)
+      allChecks.push(...result.checks)
+      allFailed.push(...result.failed)
+      allWarnings.push(...result.warnings)
+    }
+
+    return {
+      safe: allFailed.length === 0,
+      checks: allChecks,
+      failed: allFailed,
+      warnings: allWarnings,
+    }
+  }
+
+  /**
    * Check for uncommitted changes
    */
   private async checkUncommittedChanges(task: Task): Promise<any> {

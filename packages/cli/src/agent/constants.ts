@@ -93,6 +93,16 @@ export const DEFAULT_AGENT_CONFIG: AgentConfig = {
     cacheTime: 300000, // 5 minutes
     checkChanges: true,
   },
+  approval: {
+    level: 'destructive',
+    autoApproveSafeTasks: true,
+    maxAutoApprovalCost: 5,
+  },
+  safety: {
+    enabledChecks: [],
+    blockDestructive: true,
+    maxFileSize: 10485760, // 10MB
+  },
 }
 
 /**

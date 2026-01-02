@@ -60,6 +60,11 @@ export type TaskType =
   | 'security'
   | 'optimization'
   | 'other'
+  | 'plan'
+  | 'task'
+  | 'delete'
+  | 'force-push'
+  | 'reset'
 
 /**
  * Task execution status
@@ -133,6 +138,29 @@ export interface AgentConfig {
 
   /** Configuration preset name (if loaded from preset) */
   preset?: string
+
+  /** State directory path */
+  stateDir?: string
+
+  /** Approval configuration */
+  approval: {
+    level: ApprovalLevel
+    autoApproveSafeTasks: boolean
+    maxAutoApprovalCost: number
+  }
+
+  /** Safety configuration */
+  safety: {
+    enabledChecks: string[]
+    blockDestructive: boolean
+    maxFileSize: number
+  }
+
+  /** Health check configuration */
+  healthCheck?: {
+    enabled: boolean
+    interval: number
+  }
 }
 
 /**
