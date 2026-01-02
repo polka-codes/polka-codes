@@ -1,19 +1,52 @@
 import type { Logger, WorkflowTools } from '@polka-codes/core'
 
 /**
- * Validate git parameters to prevent command injection
- * Allows only safe characters: alphanumeric, dots, hyphens, underscores, slashes, spaces, and common git symbols
+ * Validate git branch/ref parameters to prevent command injection
+ * Branch names cannot contain spaces or special shell characters
  */
-function validateGitParam(param: string, paramName: string): void {
-  // Allow: alphanumeric, dots, hyphens, underscores, forward slashes, @, :, ~, ^, and spaces
-  // This covers branch names, refs, commit hashes, ranges, and file paths
+function validateBranchName(param: string, paramName: string): void {
+  // Git branch names: alphanumeric, dots, hyphens, underscores, forward slashes
+  // No spaces allowed in branch names
+  const safePattern = /^[a-zA-Z0-9._\-/]+$/
+
+  if (!safePattern.test(param)) {
+    throw new Error(`Invalid ${paramName}: contains unsafe characters. Branch names can only contain alphanumeric, ., -, _, and /.`)
+  }
+}
+
+/**
+ * Validate git file path parameters to prevent command injection
+ * File paths can contain spaces, so we'll quote them in commands
+ */
+function validateFilePath(param: string, paramName: string): void {
+  // Allow: alphanumeric, dots, hyphens, underscores, forward slashes, spaces, and common symbols
+  // File paths can have spaces, but we'll need to quote them in shell commands
   const safePattern = /^[a-zA-Z0-9._\-/@:~^ \s]+$/
 
   if (!safePattern.test(param)) {
-    throw new Error(
-      `Invalid ${paramName}: contains potentially unsafe characters. Only alphanumeric, ., -, _, /, @, :, ~, ^, and spaces are allowed.`,
-    )
+    throw new Error(`Invalid ${paramName}: contains potentially unsafe characters.`)
   }
+}
+
+/**
+ * Validate git range parameters (commit hashes, refs, ranges)
+ */
+function validateGitRange(param: string, paramName: string): void {
+  // Allow: alphanumeric, dots, hyphens, underscores, forward slashes, @, :, ~, ^, and spaces
+  // Ranges can include spaces (e.g., "HEAD..main")
+  const safePattern = /^[a-zA-Z0-9._\-/@:~^ \s]+$/
+
+  if (!safePattern.test(param)) {
+    throw new Error(`Invalid ${paramName}: contains potentially unsafe characters.`)
+  }
+}
+
+/**
+ * Quote a string for safe shell execution
+ * Wraps the string in single quotes and escapes any existing single quotes
+ */
+function quoteForShell(str: string): string {
+  return `'${str.replace(/'/g, "'\\''")}'`
 }
 
 export interface FileChange {
@@ -35,7 +68,7 @@ export class GitOperations {
    */
   async getFileChanges(range?: string): Promise<FileChange[]> {
     if (range) {
-      validateGitParam(range, 'range')
+      validateGitRange(range, 'range')
     }
 
     const command = range ? `git --no-pager diff --name-status --no-color ${range}` : 'git --no-pager diff --name-status --no-color HEAD'
@@ -167,7 +200,7 @@ export class GitOperations {
    * Checkout a branch
    */
   async checkoutBranch(branchName: string): Promise<void> {
-    validateGitParam(branchName, 'branchName')
+    validateBranchName(branchName, 'branchName')
 
     const result = await this.tools.executeCommand({
       command: `git checkout ${branchName}`,
@@ -183,7 +216,7 @@ export class GitOperations {
    * Create and checkout a new branch
    */
   async createAndCheckoutBranch(branchName: string): Promise<void> {
-    validateGitParam(branchName, 'branchName')
+    validateBranchName(branchName, 'branchName')
 
     const result = await this.tools.executeCommand({
       command: `git checkout -b ${branchName}`,
@@ -199,7 +232,7 @@ export class GitOperations {
    * Get commit messages for a range
    */
   async getCommitMessages(range: string): Promise<string> {
-    validateGitParam(range, 'range')
+    validateGitRange(range, 'range')
 
     const result = await this.tools.executeCommand({
       command: `git log --format=%s%n%b ${range}`,
@@ -252,7 +285,7 @@ export class GitOperations {
    */
   private async enrichWithNumStats(files: FileChange[], range?: string): Promise<void> {
     if (range) {
-      validateGitParam(range, 'range')
+      validateGitRange(range, 'range')
     }
 
     const command = range ? `git --no-pager diff --numstat --no-color ${range}` : 'git --no-pager diff --numstat --no-color HEAD'
@@ -280,10 +313,12 @@ export class GitOperations {
     try {
       // Validate each arg to prevent command injection
       for (const arg of args) {
-        validateGitParam(arg, 'git argument')
+        validateFilePath(arg, 'git argument')
       }
 
-      const command = `git --no-pager diff ${args.join(' ')} --no-color`
+      // Quote each argument to handle spaces safely
+      const quotedArgs = args.map(quoteForShell)
+      const command = `git --no-pager diff ${quotedArgs.join(' ')} --no-color`
       const result = await this.tools.executeCommand({
         command,
         requiresApproval: false,

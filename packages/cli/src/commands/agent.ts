@@ -1,4 +1,5 @@
 import { execSync } from 'node:child_process'
+import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import { Command } from 'commander'
 import { loadConfig } from '../agent/config'
@@ -28,7 +29,7 @@ export async function runAgent(goal: string | undefined, options: any, _command:
   const sessionId = `agent-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 
   // Create minimal tools implementation for agent context
-  // The agent needs executeCommand for safety checks
+  // The agent needs executeCommand for safety checks and readFile for goal decomposition
   const tools = {
     executeCommand: async ({ command, requiresApproval }: { command: string; requiresApproval: boolean }) => {
       if (requiresApproval && !options.yes) {
@@ -45,6 +46,12 @@ export async function runAgent(goal: string | undefined, options: any, _command:
           stderr: error.stderr || error.message,
         }
       }
+    },
+
+    readFile: async ({ filePath }: { filePath: string }) => {
+      const fullPath = path.resolve(workingDir, filePath)
+      const content = await fs.readFile(fullPath, 'utf-8')
+      return { content }
     },
   } as any
 

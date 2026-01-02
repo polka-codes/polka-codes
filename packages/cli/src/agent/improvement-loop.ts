@@ -1,5 +1,7 @@
 import { TaskExecutor } from './executor'
+import { createTaskPlanner } from './planner'
 import type { AgentStateManager } from './state-manager'
+import { createTaskDiscoveryEngine } from './task-discovery'
 import { TaskPrioritizer } from './task-prioritizer'
 import type { Plan, Task, WorkflowContext } from './types'
 
@@ -39,9 +41,6 @@ export function createContinuousImprovementLoop(
   stateManager: AgentStateManager,
   _sessionId: string,
 ): ContinuousImprovementLoop {
-  const { createTaskDiscoveryEngine } = require('./task-discovery')
-  const { createTaskPlanner } = require('./planner')
-
   const state: ContinuousImprovementLoopState = {
     discovery: createTaskDiscoveryEngine(context),
     planner: createTaskPlanner(context),
