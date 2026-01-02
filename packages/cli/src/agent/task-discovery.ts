@@ -43,8 +43,8 @@ export class TaskDiscoveryEngine {
     if (useCache) {
       const cached = await this.loadFromCache()
       if (cached) {
-        this.context.logger.info(`[Discovery] Using cached results (${cached.discoveredTasks.length} tasks)`)
-        return cached.discoveredTasks
+        this.context.logger.info(`[Discovery] Using cached results (${cached.length} tasks)`)
+        return cached
       }
     }
 

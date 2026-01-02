@@ -255,10 +255,10 @@ export class AgentStateManager {
 
     const checkpointPath = path.join(this.checkpointDir, matching)
     const content = await fs.readFile(checkpointPath, 'utf-8')
-    this.state = JSON.parse(content)
+    this.state = JSON.parse(content) as AgentState
 
     await this.saveState()
-    return this.state
+    return this.state!
   }
 
   /**

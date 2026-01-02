@@ -69,7 +69,7 @@ export class TaskHistory {
 
     return {
       averageError: avgError,
-      averageErrorPercentage,
+      averageErrorPercentage: _avgErrorPercentage,
       totalTasks: this.history.length,
     }
   }

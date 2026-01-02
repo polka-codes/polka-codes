@@ -63,7 +63,7 @@ export class TaskExecutor {
     })
 
     try {
-      const result = (await Promise.race([this.invokeWorkflow(task), timeoutPromise])) as Promise<WorkflowExecutionResult>
+      const result = await Promise.race([this.invokeWorkflow(task), timeoutPromise])
 
       return result
     } finally {
