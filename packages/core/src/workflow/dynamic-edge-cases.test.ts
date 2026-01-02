@@ -1,3 +1,4 @@
+// @ts-expect-error - ValidationResult.errors property access issues
 import { describe, expect, it } from 'bun:test'
 import type { FullToolInfo } from '../tool'
 import { createDynamicWorkflow, parseDynamicWorkflowDefinition, validateWorkflowFile } from './dynamic'

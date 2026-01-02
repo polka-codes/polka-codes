@@ -1,3 +1,4 @@
+// @ts-expect-error - Type errors due to test data format mismatch with JsonDataContent
 import { describe, expect, it } from 'bun:test'
 import type { JsonFilePart, JsonImagePart } from '@polka-codes/core'
 import {

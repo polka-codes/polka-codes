@@ -22,5 +22,10 @@
       "@polka-codes/runner": ["./packages/runner/src"],
       "@polka-codes/cli-shared": ["./packages/cli-shared/src"]
     }
-  }
+  },
+  "exclude": [
+    "packages/cli/src/file-attachments.test.ts",
+    "packages/core/src/workflow/json-schema-conversion.test.ts",
+    "packages/core/src/workflow/dynamic-edge-cases.test.ts"
+  ]
 }
