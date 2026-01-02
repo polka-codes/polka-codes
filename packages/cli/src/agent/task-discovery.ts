@@ -1,9 +1,20 @@
 import { execSync } from 'node:child_process'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
+import type { Logger } from '@polka-codes/core'
 import { AdvancedDiscoveryStrategies } from './advanced-discovery'
 import { Priority } from './constants'
+import { logAndSuppress } from './error-handling'
 import type { Task, WorkflowContext } from './types'
+
+/**
+ * Type for execSync error with stdout/stderr
+ */
+interface ExecSyncError extends Error {
+  stdout?: string
+  stderr?: string
+  status?: number
+}
 
 /**
  * Task discovery cache entry
@@ -56,14 +67,17 @@ function parseLintFiles(output: string): string[] {
 /**
  * Get current git HEAD commit
  */
-async function getGitHead(): Promise<string> {
+async function getGitHead(logger?: Logger): Promise<string> {
   try {
     return execSync('git rev-parse HEAD', {
       cwd: process.cwd(),
       encoding: 'utf-8',
       stdio: 'pipe',
     }).trim()
-  } catch {
+  } catch (error) {
+    if (logger) {
+      logAndSuppress(logger, error, 'getGitHead')
+    }
     return 'unknown'
   }
 }
@@ -88,7 +102,8 @@ async function discoverBuildErrors(context: WorkflowContext): Promise<Task[]> {
       })
     } catch (error) {
       // Type errors found - create high-priority task
-      const output = (error as any).stdout || (error as any).stderr || String(error)
+      const execError = error as ExecSyncError
+      const output = execError.stdout || execError.stderr || String(error)
 
       tasks.push({
         id: generateId('build-typecheck'),
@@ -128,7 +143,7 @@ async function discoverBuildErrors(context: WorkflowContext): Promise<Task[]> {
         timeout: 120000, // 2 minute timeout
       })
     } catch (error) {
-      const output = (error as any).stdout || (error as any).stderr || String(error)
+      const output = (error as ExecSyncError).stdout || (error as ExecSyncError).stderr || String(error)
 
       tasks.push({
         id: generateId('build'),
@@ -182,7 +197,7 @@ async function discoverTestFailures(context: WorkflowContext): Promise<Task[]> {
     // If we get here, tests passed
     context.logger.info('[Discovery] All tests passing')
   } catch (error) {
-    const output = (error as any).stdout || (error as any).stderr || String(error)
+    const output = (error as ExecSyncError).stdout || (error as ExecSyncError).stderr || String(error)
 
     // Parse test output for failures
     const failedTests = parseTestFailures(output)
@@ -236,7 +251,7 @@ async function discoverTypeErrors(context: WorkflowContext): Promise<Task[]> {
       stdio: 'pipe',
     })
   } catch (error) {
-    const output = (error as any).stdout || (error as any).stderr || String(error)
+    const output = (error as ExecSyncError).stdout || (error as ExecSyncError).stderr || String(error)
 
     // Count errors
     const errorCount = (output.match(/error TS/gi) || []).length
@@ -290,7 +305,7 @@ async function discoverLintIssues(context: WorkflowContext): Promise<Task[]> {
 
     context.logger.info('[Discovery] No lint issues')
   } catch (error) {
-    const output = (error as any).stdout || (error as any).stderr || String(error)
+    const output = (error as ExecSyncError).stdout || (error as ExecSyncError).stderr || String(error)
 
     // Parse lint output for file paths
     const files = parseLintFiles(output)
@@ -349,7 +364,7 @@ async function loadFromCache(context: WorkflowContext, cacheDir: string): Promis
     const cached: DiscoveryCache = JSON.parse(await fs.readFile(cacheFile, 'utf-8'))
 
     // Check if git state changed
-    const currentHead = await getGitHead()
+    const currentHead = await getGitHead(context.logger)
     if (cached.gitHead !== currentHead) {
       context.logger.info('[Discovery] Cache invalid (git state changed)')
       return null
@@ -377,7 +392,7 @@ async function saveToCache(context: WorkflowContext, cacheDir: string, tasks: Ta
     await fs.mkdir(cacheDir, { recursive: true })
 
     const cacheFile = path.join(cacheDir, 'discovery-cache.json')
-    const gitHead = await getGitHead()
+    const gitHead = await getGitHead(context.logger)
 
     const cache: DiscoveryCache = {
       gitHead,

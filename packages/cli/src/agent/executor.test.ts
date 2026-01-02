@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, mock } from 'bun:test'
 import { Priority } from './constants'
 import { TaskExecutor } from './executor'
+import { createMockContext, createMockLogger } from './test-fixtures'
 import type { AgentConfig, AgentState, Task } from './types'
 
 describe('TaskExecutor', () => {
   let executor: TaskExecutor
-  let mockLogger: any
+  let mockLogger: ReturnType<typeof createMockLogger>
   let mockState: AgentState
 
   const mockConfig: AgentConfig = {
@@ -56,13 +57,8 @@ describe('TaskExecutor', () => {
   }
 
   beforeEach(() => {
-    mockLogger = {
-      info: () => {},
-      warn: () => {},
-      error: () => {},
-    }
-
-    executor = new TaskExecutor({} as any, mockLogger)
+    mockLogger = createMockLogger()
+    executor = new TaskExecutor(createMockContext(), mockLogger)
 
     mockState = {
       sessionId: 'test-session',

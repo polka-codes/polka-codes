@@ -338,7 +338,7 @@ export class AutonomousAgent {
 
       // Log metrics
       const metrics = this.metrics.getMetrics()
-      this.logger.info('[Cleanup] Metrics:', metrics as any)
+      this.logger.info('[Cleanup] Metrics:', JSON.stringify(metrics, null, 2))
 
       this.initialized = false
 
