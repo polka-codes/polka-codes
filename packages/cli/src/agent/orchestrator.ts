@@ -1,3 +1,4 @@
+import * as crypto from 'node:crypto'
 import * as path from 'node:path'
 import { AgentStatusError, SafetyViolationError } from './errors'
 import { TaskExecutor } from './executor'
@@ -446,11 +447,10 @@ export class AutonomousAgent {
     this.logger.warn(`[Resource] Limit exceeded: ${event.limit} (${event.current}/${event.max})`)
 
     if (event.limit === 'memory') {
-      // Trigger garbage collection if available
-      if (typeof global.gc === 'function') {
-        global.gc()
-        this.logger.warn('[Resource] Attempted garbage collection')
-      }
+      // Note: Attempting garbage collection requires --expose-gc flag
+      // In production, rely on Node.js/Bun automatic garbage collection
+      // Consider reducing memory usage by clearing caches, releasing resources, etc.
+      this.logger.warn('[Resource] Memory limit exceeded - consider clearing caches or reducing task complexity')
     }
 
     if (event.limit === 'sessionTime') {
@@ -465,7 +465,7 @@ export class AutonomousAgent {
    * Generate unique session ID
    */
   private generateSessionId(): string {
-    return `agent-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+    return `agent-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`
   }
 
   /**

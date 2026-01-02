@@ -40,6 +40,18 @@ export class TaskExecutor {
 
   /**
    * Execute task with timeout wrapper
+   *
+   * NOTE: This implementation uses Promise.race which does NOT cancel the underlying
+   * workflow when a timeout occurs. The workflow will continue running in the background.
+   * This is a known limitation - proper cancellation would require AbortController support
+   * throughout the workflow execution chain.
+   *
+   * For now, this is acceptable because:
+   * 1. Timeouts are set conservatively high (default 30 minutes)
+   * 2. The orchestrator will mark the task as failed and continue
+   * 3. Background workflows will eventually complete or fail on their own
+   *
+   * TODO: Implement proper cancellation with AbortController
    */
   private async executeTaskInternal(task: Task, timeoutMs: number): Promise<WorkflowExecutionResult> {
     const timeoutPromise = new Promise<never>((_, reject) => {

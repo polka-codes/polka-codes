@@ -278,6 +278,14 @@ export type DynamicWorkflowRunnerOptions = {
    * Built-in workflows that can be called by name if not found in the definition.
    */
   builtInWorkflows?: Record<string, WorkflowFn<any, any, any>>
+  /**
+   * Allow unsafe code execution in condition expressions.
+   * When false (default), only simple comparisons and property access are allowed.
+   * When true, arbitrary JavaScript code can be executed in conditions.
+   * WARNING: Setting to true with untrusted workflow definitions is a security risk.
+   * @default false
+   */
+  allowUnsafeCodeExecution?: boolean
 }
 
 function validateAndApplyDefaults(workflowId: string, workflow: WorkflowDefinition, input: Record<string, any>): Record<string, any> {
@@ -309,22 +317,315 @@ function validateAndApplyDefaults(workflowId: string, workflow: WorkflowDefiniti
 
 /**
  * Safely evaluate a condition expression with access to input and state
+ *
+ * Security: When allowUnsafeCodeExecution is false (default), only supports:
+ * - Property access: input.foo, state.bar
+ * - Comparisons: ==, !=, ===, !==, <, >, <=, >=
+ * - Logical operators: &&, ||, !
+ * - Parentheses for grouping
+ * - Literals: strings, numbers, booleans, null
+ *
+ * When allowUnsafeCodeExecution is true, arbitrary JavaScript is executed.
+ * WARNING: Only set to true for trusted workflow definitions!
  */
-function evaluateCondition(condition: string, input: Record<string, any>, state: Record<string, any>): boolean {
-  const functionBody = `
-    try {
-      return ${condition};
-    } catch (error) {
-      throw new Error('Condition evaluation failed: ' + (error instanceof Error ? error.message : String(error)));
-    }
-  `
+function evaluateCondition(
+  condition: string,
+  input: Record<string, any>,
+  state: Record<string, any>,
+  allowUnsafeCodeExecution = false,
+): boolean {
+  if (allowUnsafeCodeExecution) {
+    // Unsafe mode: use new Function for full JavaScript support
+    const functionBody = `
+      try {
+        return ${condition};
+      } catch (error) {
+        throw new Error('Condition evaluation failed: ' + (error instanceof Error ? error.message : String(error)));
+      }
+    `
 
-  try {
-    const fn = new Function('input', 'state', functionBody)
-    const result = fn(input, state)
-    return Boolean(result)
-  } catch (error) {
-    throw new Error(`Failed to evaluate condition: ${condition}. Error: ${error instanceof Error ? error.message : String(error)}`)
+    try {
+      const fn = new Function('input', 'state', functionBody)
+      const result = fn(input, state)
+      return Boolean(result)
+    } catch (error) {
+      throw new Error(`Failed to evaluate condition: ${condition}. Error: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  } else {
+    // Safe mode: use a simple, restricted evaluator
+    return evaluateConditionSafe(condition, input, state)
+  }
+}
+
+/**
+ * Safe condition evaluator that supports a restricted subset of JavaScript
+ * Prevents code injection by not using eval or new Function
+ *
+ * Operator precedence (from lowest to highest):
+ * 1. || (logical OR)
+ * 2. && (logical AND)
+ * 3. ===, !==, ==, !=, >=, <=, >, < (comparisons)
+ * 4. ! (negation)
+ * 5. (...) (parentheses - highest precedence, evaluated first)
+ */
+function evaluateConditionSafe(condition: string, input: Record<string, any>, state: Record<string, any>): boolean {
+  // Trim whitespace
+  condition = condition.trim()
+
+  // Handle simple boolean literals
+  if (condition === 'true') return true
+  if (condition === 'false') return false
+
+  // Handle logical OR (lowest precedence)
+  const orIndex = findTopLevelOperator(condition, '||')
+  if (orIndex !== -1) {
+    const left = condition.slice(0, orIndex).trim()
+    const right = condition.slice(orIndex + 2).trim()
+    return evaluateConditionSafe(left, input, state) || evaluateConditionSafe(right, input, state)
+  }
+
+  // Handle logical AND
+  const andIndex = findTopLevelOperator(condition, '&&')
+  if (andIndex !== -1) {
+    const left = condition.slice(0, andIndex).trim()
+    const right = condition.slice(andIndex + 2).trim()
+    return evaluateConditionSafe(left, input, state) && evaluateConditionSafe(right, input, state)
+  }
+
+  // Handle comparisons
+  const comparisonOps = ['===', '!==', '==', '!=', '>=', '<=', '>', '<']
+  for (const op of comparisonOps) {
+    const opIndex = findTopLevelOperator(condition, op)
+    if (opIndex !== -1) {
+      const left = evaluateValue(condition.slice(0, opIndex).trim(), input, state)
+      const right = evaluateValue(condition.slice(opIndex + op.length).trim(), input, state)
+      return compareValues(left, right, op)
+    }
+  }
+
+  // Handle negation (higher precedence than comparisons)
+  if (condition.startsWith('!')) {
+    return !evaluateConditionSafe(condition.slice(1).trim(), input, state)
+  }
+
+  // Handle parentheses (highest precedence)
+  if (hasEnclosingParens(condition)) {
+    const inner = condition.slice(1, -1)
+    return evaluateConditionSafe(inner, input, state)
+  }
+
+  // If we get here, it's a simple value
+  const value = evaluateValue(condition, input, state)
+  return Boolean(value)
+}
+
+/**
+ * Find index of operator at top level (not inside parentheses or string literals)
+ */
+function findTopLevelOperator(expr: string, op: string): number {
+  let parenDepth = 0
+  let inString = false
+  let stringChar = ''
+  let escapeNext = false
+
+  for (let i = 0; i <= expr.length - op.length; i++) {
+    const char = expr[i]
+
+    if (escapeNext) {
+      escapeNext = false
+      continue
+    }
+
+    if (char === '\\') {
+      escapeNext = true
+      continue
+    }
+
+    if (!inString && (char === '"' || char === "'")) {
+      inString = true
+      stringChar = char
+      continue
+    }
+
+    if (inString && char === stringChar) {
+      inString = false
+      stringChar = ''
+      continue
+    }
+
+    if (inString) continue
+
+    if (char === '(') parenDepth++
+    if (char === ')') parenDepth--
+
+    if (parenDepth === 0 && expr.slice(i, i + op.length) === op) {
+      return i
+    }
+  }
+  return -1
+}
+
+/**
+ * Check if expression is wrapped in enclosing parentheses
+ * (e.g., "(A && B)" returns true, "(A) && (B)" returns false)
+ */
+function hasEnclosingParens(expr: string): boolean {
+  expr = expr.trim()
+
+  if (!expr.startsWith('(') || !expr.endsWith(')')) {
+    return false
+  }
+
+  // Check if the opening and closing parentheses enclose the entire expression
+  let depth = 0
+  let inString = false
+  let stringChar = ''
+  let escapeNext = false
+
+  for (let i = 0; i < expr.length; i++) {
+    const char = expr[i]
+
+    if (escapeNext) {
+      escapeNext = false
+      continue
+    }
+
+    if (char === '\\') {
+      escapeNext = true
+      continue
+    }
+
+    if (!inString && (char === '"' || char === "'")) {
+      inString = true
+      stringChar = char
+      continue
+    }
+
+    if (inString && char === stringChar) {
+      inString = false
+      stringChar = ''
+      continue
+    }
+
+    if (inString) continue
+
+    if (char === '(') {
+      depth++
+      // First paren is at index 0
+      if (i === 0) depth = 1
+    }
+    if (char === ')') {
+      depth--
+      // Last paren should be at the last index
+      if (depth === 0 && i === expr.length - 1) {
+        return true
+      }
+      if (depth === 0 && i < expr.length - 1) {
+        // Found closing paren before end of expression
+        return false
+      }
+    }
+  }
+
+  return false
+}
+
+/**
+ * Evaluate a simple value (property access or literal)
+ */
+function evaluateValue(expr: string, input: Record<string, any>, state: Record<string, any>): any {
+  expr = expr.trim()
+
+  // String literals (with proper handling of escaped quotes)
+  // Use stricter check - ensure entire expression is a quoted string
+  const stringMatch = expr.match(/^(["'])(?:(?=(\\?))\2.)*?\1$/)
+  if (stringMatch) {
+    const quote = stringMatch[1]
+    if (quote === '"') {
+      // Use JSON.parse for double-quoted strings (handles all JSON escape sequences correctly)
+      try {
+        return JSON.parse(expr)
+      } catch (error) {
+        throw new Error(`Invalid string literal: "${expr}". Error: ${error instanceof Error ? error.message : String(error)}`)
+      }
+    } else {
+      // Single-quoted strings: convert to double-quoted and use JSON.parse
+      // Need to handle both \' and \" escape sequences
+      let inner = expr.slice(1, -1)
+      // Replace \' with ' (unescape single quotes)
+      inner = inner.replace(/\\'/g, "'")
+      // Replace \" with " (unescape double quotes)
+      inner = inner.replace(/\\"/g, '"')
+      // Now escape any double quotes and backslashes for JSON
+      const converted = `"${inner.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
+      try {
+        return JSON.parse(converted)
+      } catch (error) {
+        throw new Error(`Invalid string literal: "${expr}". Error: ${error instanceof Error ? error.message : String(error)}`)
+      }
+    }
+  }
+
+  // Number literals (more permissive regex)
+  if (/^-?\d*\.?\d+(?:[eE][+-]?\d+)?$/.test(expr)) {
+    return Number.parseFloat(expr)
+  }
+
+  // Boolean literals
+  if (expr === 'true') return true
+  if (expr === 'false') return false
+  if (expr === 'null') return null
+
+  // Property access: input.foo or state.bar.baz
+  if (expr.startsWith('input.')) {
+    return getNestedProperty(input, expr.slice(6))
+  }
+  if (expr.startsWith('state.')) {
+    return getNestedProperty(state, expr.slice(6))
+  }
+
+  // If we get here, the expression is not recognized
+  throw new Error(
+    `Unrecognized expression in condition: "${expr}". Valid expressions are: string literals, numbers, boolean literals, null, or property access like "input.foo" or "state.bar"`,
+  )
+}
+
+/**
+ * Get nested property from object
+ */
+function getNestedProperty(obj: any, path: string): any {
+  const parts = path.split('.')
+  let current = obj
+  for (const part of parts) {
+    if (current == null) return undefined
+    current = current[part]
+  }
+  return current
+}
+
+/**
+ * Compare two values using the specified operator
+ */
+function compareValues(left: any, right: any, op: string): boolean {
+  switch (op) {
+    case '===':
+      return left === right
+    case '!==':
+      return left !== right
+    case '==':
+      return Object.is(left, right)
+    case '!=':
+      return !Object.is(left, right)
+    case '>=':
+      return left >= right
+    case '<=':
+      return left <= right
+    case '>':
+      return left > right
+    case '<':
+      return left < right
+    default:
+      throw new Error(`Unknown comparison operator: ${op}`)
   }
 }
 
@@ -730,7 +1031,7 @@ async function executeControlFlowStep<TTools extends ToolRegistry>(
       }
 
       // Evaluate condition
-      const conditionResult = evaluateCondition(step.while.condition, input, state)
+      const conditionResult = evaluateCondition(step.while.condition, input, state, options.allowUnsafeCodeExecution)
       context.logger.debug(`[ControlFlow] While loop '${step.id}' iteration ${iterationCount}: condition = ${conditionResult}`)
 
       if (!conditionResult) {
@@ -790,7 +1091,7 @@ async function executeControlFlowStep<TTools extends ToolRegistry>(
       context.logger.debug(`[ControlFlow] Else branch has ${step.if.elseBranch.length} step(s)`)
     }
 
-    const conditionResult = evaluateCondition(step.if.condition, input, state)
+    const conditionResult = evaluateCondition(step.if.condition, input, state, options.allowUnsafeCodeExecution)
     context.logger.debug(`[ControlFlow] If/else '${step.id}' condition = ${conditionResult}`)
 
     const branchSteps = conditionResult ? step.if.thenBranch : (step.if.elseBranch ?? [])

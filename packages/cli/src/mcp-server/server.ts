@@ -237,6 +237,9 @@ export class McpServer {
         ],
       })
     } catch (error) {
+      // Per MCP protocol spec, tool errors should be returned in the response
+      // with isError: true, not as JSON-RPC errors. The client checks this flag
+      // to determine if the tool execution failed.
       const errorMessage = error instanceof Error ? error.message : String(error)
       this.transport.sendResponse(id, {
         content: [
