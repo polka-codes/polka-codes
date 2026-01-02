@@ -3,7 +3,6 @@ import * as path from 'node:path'
 import { AgentStatusError, SafetyViolationError } from './errors'
 import { TaskExecutor } from './executor'
 import { GoalDecomposer } from './goal-decomposer'
-import { HealthMonitor } from './health-monitor'
 import { createContinuousImprovementLoop } from './improvement-loop'
 import { AgentLogger } from './logger'
 import { MetricsCollector } from './metrics'
@@ -12,7 +11,6 @@ import { ResourceMonitor } from './resource-monitor'
 import { ApprovalManager } from './safety/approval'
 import { SafetyChecker } from './safety/checks'
 import { InterruptHandler } from './safety/interrupt'
-import { SessionManager } from './session'
 import { AgentStateManager } from './state-manager'
 import { TaskHistory } from './task-history'
 import type { AgentConfig, AgentState, Plan, WorkflowContext } from './types'
@@ -59,14 +57,8 @@ export class AutonomousAgent {
 
     // Initialize all components with correct constructor arguments
     this.stateManager = new AgentStateManager(stateDir, this.sessionId)
-    this.sessionManager = new SessionManager()
     this.resourceMonitor = new ResourceMonitor(config.resourceLimits, context.logger, this.handleResourceLimit.bind(this))
     this.taskHistory = new TaskHistory(stateDir)
-    this.healthMonitor = new HealthMonitor(
-      context.logger,
-      async () => ({ healthy: true }),
-      config.healthCheck?.interval ? undefined : undefined,
-    )
     this.logger = new AgentLogger(context.logger, path.join(stateDir, 'agent.log'), this.sessionId)
     this.metrics = new MetricsCollector()
     this.approvalManager = new ApprovalManager(

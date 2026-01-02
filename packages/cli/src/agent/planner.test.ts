@@ -5,14 +5,15 @@ import type { Task } from './types'
 
 describe('TaskPlanner', () => {
   const mockContext = {
-    step: {},
     tools: {},
+    step: {},
+    cwd: '/test',
     logger: {
       info: () => {},
       warn: () => {},
       error: () => {},
     },
-  }
+  } as any
 
   let planner: ReturnType<typeof createTaskPlanner>
 

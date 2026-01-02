@@ -4,14 +4,15 @@ import { createTaskDiscoveryEngine } from './task-discovery'
 
 describe('TaskDiscoveryEngine', () => {
   const mockContext = {
-    step: {},
     tools: {},
+    step: {},
+    cwd: '/test',
     logger: {
       info: () => {},
       warn: () => {},
       error: () => {},
     },
-  }
+  } as any
 
   let discovery: ReturnType<typeof createTaskDiscoveryEngine>
 
