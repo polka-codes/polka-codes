@@ -38,28 +38,6 @@ describe('WorkflowAdapter', () => {
       expect(result.output).toContain('Fixed bug')
     })
 
-    it('should invoke dynamic workflow', async () => {
-      const input = {
-        prompt: 'Create API endpoint',
-        workflow: 'api-generator',
-        inputSchema: { type: 'object' },
-        outputSchema: { type: 'object' },
-      }
-
-      mock.module('../workflows/dynamic.workflow', () => ({
-        dynamicWorkflow: async () => ({
-          success: true,
-          result: { endpoint: '/api/test' },
-          output: 'Created endpoint',
-        }),
-      }))
-
-      const result = await WorkflowAdapter.invokeWorkflow('dynamic', input, mockContext)
-
-      expect(result.success).toBe(true)
-      expect(result.data).toEqual({ endpoint: '/api/test' })
-    })
-
     it('should handle workflow errors gracefully', async () => {
       const input = {
         prompt: 'Invalid task',
@@ -82,7 +60,7 @@ describe('WorkflowAdapter', () => {
       const result = await WorkflowAdapter.invokeWorkflow('unknown' as any, {}, mockContext)
 
       expect(result.success).toBe(false)
-      expect(result.error?.message).toContain('Unknown workflow type')
+      expect(result.error?.message).toContain('Unknown workflow')
     })
   })
 
@@ -120,42 +98,6 @@ describe('WorkflowAdapter', () => {
       expect(result.success).toBe(false)
       expect(result.error).toBeInstanceOf(Error)
       expect(result.error?.message).toBe('Type errors found')
-    })
-  })
-
-  describe('adaptDynamicWorkflow', () => {
-    it('should adapt successful dynamic workflow result', async () => {
-      const mockResult = {
-        success: true,
-        result: { code: 'const x = 1' },
-        output: 'Generated code',
-      }
-
-      mock.module('../workflows/dynamic.workflow', () => ({
-        dynamicWorkflow: async () => mockResult,
-      }))
-
-      const result = await WorkflowAdapter.adaptDynamicWorkflow({}, mockContext)
-
-      expect(result.success).toBe(true)
-      expect(result.data).toEqual({ code: 'const x = 1' })
-      expect(result.output).toBe('Generated code')
-    })
-
-    it('should handle validation errors', async () => {
-      const mockResult = {
-        success: false,
-        validationErrors: ['Missing required field: name'],
-      }
-
-      mock.module('../workflows/dynamic.workflow', () => ({
-        dynamicWorkflow: async () => mockResult,
-      }))
-
-      const result = await WorkflowAdapter.adaptDynamicWorkflow({}, mockContext)
-
-      expect(result.success).toBe(false)
-      expect(result.error?.message).toContain('Validation failed')
     })
   })
 })

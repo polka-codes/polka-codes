@@ -17,8 +17,6 @@ describe('GoalDecomposer', () => {
       debug: () => {},
     },
     tools: mockTools as any,
-    workingDir: '/test',
-    stateDir: '/test/.polka',
     sessionId: 123,
     env: {},
   }
