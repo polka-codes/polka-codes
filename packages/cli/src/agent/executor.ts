@@ -1,5 +1,6 @@
+import type { Logger } from '@polka-codes/core'
 import { TaskExecutionError } from './errors'
-import type { AgentState, Task, WorkflowExecutionResult } from './types'
+import type { AgentState, Task, WorkflowContext, WorkflowExecutionResult } from './types'
 import { WorkflowAdapter } from './workflow-adapter'
 
 /**
@@ -9,8 +10,8 @@ export class TaskExecutor {
   private taskTimeouts: Map<string, NodeJS.Timeout> = new Map()
 
   constructor(
-    private context: any,
-    private logger: any,
+    private context: WorkflowContext,
+    private logger: Logger,
   ) {}
 
   /**

@@ -14,7 +14,7 @@ import { InterruptHandler } from './safety/interrupt'
 import { SessionManager } from './session'
 import { AgentStateManager } from './state-manager'
 import { TaskHistory } from './task-history'
-import type { AgentConfig, AgentState, Plan, WorkflowContext } from './types'
+import type { AgentConfig, AgentState, Plan, Task, WorkflowContext } from './types'
 
 /**
  * Main autonomous agent orchestrator
@@ -388,7 +388,7 @@ export class AutonomousAgent {
         } else {
           failedTasks++
           // Stop execution on task failure to prevent cascading errors
-          const error = new Error('Task failed, stopping execution to prevent cascading errors')
+          const error = new Error(`Task "${task.title}" failed, stopping execution to prevent cascading errors`)
           this.logger.error('[Run]', error)
           throw error
         }
@@ -401,7 +401,7 @@ export class AutonomousAgent {
   /**
    * Execute a single task
    */
-  private async executeTask(task: any): Promise<boolean> {
+  private async executeTask(task: Task): Promise<boolean> {
     this.logger.info(`[Run] → ${task.title}`)
 
     try {
