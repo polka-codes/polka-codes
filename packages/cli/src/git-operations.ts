@@ -18,13 +18,11 @@ export class GitOperations {
    * Get file changes for a git range (commit, branch, or PR reference)
    */
   async getFileChanges(range?: string): Promise<FileChange[]> {
-    const diffArgs = range
-      ? ['--no-pager', 'diff', '--name-status', '--no-color', range]
-      : ['--no-pager', 'diff', '--name-status', '--no-color', 'HEAD']
+    const command = range ? `git --no-pager diff --name-status --no-color ${range}` : 'git --no-pager diff --name-status --no-color HEAD'
 
     const diffResult = await this.tools.executeCommand({
-      command: 'git',
-      args: diffArgs,
+      command,
+      requiresApproval: false,
     })
 
     if (diffResult.exitCode !== 0) {
@@ -41,8 +39,8 @@ export class GitOperations {
    */
   async getPullRequestChanges(prNumber: number): Promise<{ files: FileChange[]; baseRefOid: string }> {
     const prDetails = await this.tools.executeCommand({
-      command: 'gh',
-      args: ['pr', 'view', prNumber.toString(), '--json', 'baseRefOid'],
+      command: `gh pr view ${prNumber} --json baseRefOid`,
+      requiresApproval: false,
     })
 
     if (prDetails.exitCode !== 0) {
@@ -60,8 +58,8 @@ export class GitOperations {
    */
   async getLocalChanges(): Promise<{ staged: FileChange[]; unstaged: FileChange[] }> {
     const statusResult = await this.tools.executeCommand({
-      command: 'git',
-      args: ['status', '--porcelain'],
+      command: 'git status --porcelain',
+      requiresApproval: false,
     })
 
     if (statusResult.exitCode !== 0) {
@@ -105,8 +103,8 @@ export class GitOperations {
    */
   async getCurrentBranch(): Promise<string> {
     const result = await this.tools.executeCommand({
-      command: 'git',
-      args: ['rev-parse', '--abbrev-ref', 'HEAD'],
+      command: 'git rev-parse --abbrev-ref HEAD',
+      requiresApproval: false,
     })
 
     if (result.exitCode !== 0) {
@@ -121,8 +119,8 @@ export class GitOperations {
    */
   async getDefaultBranch(): Promise<string> {
     const result = await this.tools.executeCommand({
-      command: 'git',
-      args: ['rev-parse', '--abbrev-ref', 'origin/HEAD'],
+      command: 'git rev-parse --abbrev-ref origin/HEAD',
+      requiresApproval: false,
     })
 
     if (result.exitCode !== 0) {
@@ -138,8 +136,8 @@ export class GitOperations {
    */
   async hasUncommittedChanges(): Promise<boolean> {
     const result = await this.tools.executeCommand({
-      command: 'git',
-      args: ['status', '--porcelain'],
+      command: 'git status --porcelain',
+      requiresApproval: false,
     })
 
     return result.stdout.trim().length > 0
@@ -150,8 +148,8 @@ export class GitOperations {
    */
   async checkoutBranch(branchName: string): Promise<void> {
     const result = await this.tools.executeCommand({
-      command: 'git',
-      args: ['checkout', branchName],
+      command: `git checkout ${branchName}`,
+      requiresApproval: true,
     })
 
     if (result.exitCode !== 0) {
@@ -164,8 +162,8 @@ export class GitOperations {
    */
   async createAndCheckoutBranch(branchName: string): Promise<void> {
     const result = await this.tools.executeCommand({
-      command: 'git',
-      args: ['checkout', '-b', branchName],
+      command: `git checkout -b ${branchName}`,
+      requiresApproval: true,
     })
 
     if (result.exitCode !== 0) {
@@ -178,8 +176,8 @@ export class GitOperations {
    */
   async getCommitMessages(range: string): Promise<string> {
     const result = await this.tools.executeCommand({
-      command: 'git',
-      args: ['log', '--format=%s%n%b', '---', range],
+      command: `git log --format=%s%n%b --- ${range}`,
+      requiresApproval: false,
     })
 
     if (result.exitCode !== 0) {
@@ -227,13 +225,11 @@ export class GitOperations {
    * Enrich files with numstats (insertions/deletions)
    */
   private async enrichWithNumStats(files: FileChange[], range?: string): Promise<void> {
-    const diffArgs = range
-      ? ['--no-pager', 'diff', '--numstat', '--no-color', range]
-      : ['--no-pager', 'diff', '--numstat', '--no-color', 'HEAD']
+    const command = range ? `git --no-pager diff --numstat --no-color ${range}` : 'git --no-pager diff --numstat --no-color HEAD'
 
     const statResult = await this.tools.executeCommand({
-      command: 'git',
-      args: diffArgs,
+      command,
+      requiresApproval: false,
     })
 
     if (statResult.exitCode === 0) {
@@ -252,9 +248,10 @@ export class GitOperations {
    */
   private async getNumStats(args: string[]): Promise<Record<string, { insertions: number; deletions: number }>> {
     try {
+      const command = `git --no-pager diff ${args.join(' ')} --no-color`
       const result = await this.tools.executeCommand({
-        command: 'git',
-        args: ['--no-pager', 'diff', ...args, '--no-color'],
+        command,
+        requiresApproval: false,
       })
 
       if (result.exitCode === 0) {

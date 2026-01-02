@@ -231,8 +231,9 @@ export class AutonomousAgent {
       // 4. Request approval
       this.logger.info('[Run] Phase 4: Requesting approval...')
 
-      // For now, auto-approve the plan
-      // TODO: Implement proper plan approval flow
+      // TEMPORARY: Auto-approve plans for initial release
+      // TODO: Implement proper plan approval flow using ApprovalManager
+      // Bypassing this.approvalManager.requestApproval() until user approval workflow is ready
       const approved = true
 
       if (!approved) {
