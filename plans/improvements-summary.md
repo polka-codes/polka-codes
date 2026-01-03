@@ -207,6 +207,186 @@ Do you want to proceed with this plan? (yes/no):
 
 ---
 
+### ✅ Priority 5: Developer Experience (Completed)
+
+**Goal:** Improve developer productivity and debugging experience
+
+**Achievements:**
+
+#### 5.1 Enhanced Error Messages ✅
+
+**Created ErrorSuggestions Interface:**
+```typescript
+interface ErrorSuggestions {
+  suggestions: string[]      // Short, actionable suggestions
+  docs?: string[]            // Relevant documentation links
+  files?: string[]           // Related files to check
+  recovery?: string[]        // Recovery steps
+}
+```
+
+**Enhanced All Error Classes:**
+- `AgentError` - Base class with `getFormattedMessage()` method
+- `StateTransitionError` - State machine guidance
+- `TaskExecutionError` - Task debugging help
+- `WorkflowInvocationError` - Workflow troubleshooting
+- `StateCorruptionError` - State file recovery
+- `ResourceLimitError` - Resource optimization tips
+- `ConfigValidationError` - Config fixing guidance
+- `SessionConflictError` - Session management help
+- `AgentStatusError` - Lifecycle debugging
+- `SafetyViolationError` - Safety workflow guidance
+
+**Added `formatError()` Utility:**
+```typescript
+// Consistent error formatting across codebase
+logger.error(formatError(error))
+```
+
+**Error Message Format:**
+```
+❌ Task task-123 failed: Workflow execution timed out
+   Error Code: TASK_EXECUTION_FAILED
+   Details: {"taskId":"task-123","originalError":"Timeout after 30000ms"}
+
+   💡 Suggestions:
+      1. Check the task logs for more details
+      2. Verify all required dependencies are installed
+      3. Ensure the task input is valid
+      4. Check if there are sufficient system resources
+
+   🔧 Recovery Steps:
+      1. Review the error details above
+      2. Fix the underlying issue and retry the task
+      3. Use --dry-run to test without making changes
+      4. Check logs in the state directory for full stack traces
+
+   📁 Check Files:
+      - packages/cli/src/agent/executor.ts
+      - packages/cli/src/agent/workflow-adapter.ts
+
+   📚 Documentation:
+      - Task Execution: packages/cli/src/agent/ARCHITECTURE.md#task-executor
+```
+
+#### 5.2 Debug Logging System ✅
+
+**Created Debug Logger** (`packages/cli/src/agent/debug-logger.ts`):
+
+**Verbosity Levels:**
+```typescript
+enum DebugLevel {
+  NONE = 0,      // No debug output
+  BASIC = 1,     // Basic debug information
+  VERBOSE = 2,   // Verbose debug information
+  TRACE = 3,     // Extremely detailed (includes all logs)
+}
+```
+
+**Debug Categories:**
+- `WORKFLOW` - Workflow execution
+- `STATE` - State management
+- `EXECUTOR` - Task execution
+- `PLANNER` - Task planning
+- `DISCOVERY` - Task discovery
+- `APPROVAL` - Approval workflows
+- `SAFETY` - Safety checks
+- `SESSION` - Session management
+- `ALL` - All categories
+
+**Features:**
+- Structured logging with timestamps
+- Category filtering
+- File output with automatic buffer flushing
+- Child loggers for category-specific logging
+- Convenience methods: `enter()`, `exit()`, `stateTransition()`, `workflow()`, `task()`
+
+**Environment Variable Support:**
+```bash
+# Enable debug logging
+DEBUG=1                    # Basic level
+DEBUG_LEVEL=2              # Verbose level
+DEBUG_CATEGORIES=workflow,executor  # Specific categories
+
+# Debug log output to: {stateDir}/debug.log
+```
+
+**Usage Examples:**
+```typescript
+// Create debug logger
+const debugLogger = createDebugLoggerFromEnv(logger, stateDir)
+
+// Use category-specific child logger
+const executorDebug = debugLogger.child(DebugCategory.EXECUTOR)
+
+// Log at different levels
+executorDebug.basic('Task started', { taskId })
+executorDebug.verbose('Processing input', input)
+executorDebug.trace('Detailed state', fullState)
+
+// Log function entry/exit
+executorDebug.enter('executeTask', { task })
+executorDebug.exit('executeTask', result)
+```
+
+#### 5.3 Progress Indicators ✅
+
+**Created Progress Utilities** (`packages/cli/src/agent/progress.ts`):
+
+**Progress Bar:**
+```typescript
+const progress = createProgress({
+  total: 100,
+  label: 'Processing files',
+  showPercentage: true,
+  showETA: true,
+})
+
+progress.update(10)  // Update progress
+progress.tick()      // Increment by 1
+progress.complete()  // Mark complete
+```
+
+**Spinner for Indeterminate Progress:**
+```typescript
+const spinner = createSpinner('Loading data')
+spinner.start()
+spinner.update('Processing data')
+spinner.succeed('Data loaded successfully')
+spinner.fail('Failed to load data')
+```
+
+**Multi-Progress for Multiple Operations:**
+```typescript
+const multi = createMultiProgress()
+const bar1 = multi.create('task-1', { total: 100, label: 'Task 1' })
+const bar2 = multi.create('task-2', { total: 50, label: 'Task 2' })
+```
+
+**Visual Output:**
+```
+Processing files [████████████████████░░░░░░░░░░░░░░░░] 42.0% (42/100) ETA: 2m 15s
+```
+
+**Features:**
+- TTY detection (only renders in interactive terminals)
+- ETA calculation
+- Percentage display
+- Customizable width and labels
+- Smooth animation (spinners)
+
+**Results:**
+- ✅ Rich, actionable error messages
+- ✅ Structured debug logging with file output
+- ✅ Visual feedback for long operations
+- ✅ Better debugging and troubleshooting
+- ✅ Improved developer productivity
+
+**Impact:** High (developer experience)
+**Risk:** Low (backward compatible, opt-in features)
+
+---
+
 ### ✅ Priority 6: Documentation (Completed)
 
 **Created:**
@@ -271,16 +451,6 @@ Do you want to proceed with this plan? (yes/no):
 **Impact:** Medium (performance)
 **Risk:** Low
 
-### Priority 5: Developer Experience (3-4 hours)
-
-**Planned:**
-- Better error messages
-- Debug logging modes
-- Progress indicators for long operations
-
-**Impact:** Medium (UX)
-**Risk:** Low
-
 ---
 
 ## Overall Assessment
@@ -292,22 +462,27 @@ Do you want to proceed with this plan? (yes/no):
 - **Type Safety:** Good (some `as any`)
 - **Error Handling:** Good (inconsistent)
 - **Feature Complete:** 95%
+- **Developer Experience:** Good (basic error messages)
 
 ### After Improvements
-- **Rating:** 9.0/10
+- **Rating:** 9.5/10
 - **Production Ready:** ✅ Yes
 - **Critical Issues:** None
 - **Type Safety:** Excellent (zero production `as any`)
-- **Error Handling:** Excellent (standardized patterns)
+- **Error Handling:** Excellent (standardized patterns with suggestions)
 - **Feature Complete:** 100%
+- **Developer Experience:** Excellent (debug logging, progress bars, rich errors)
 
 ### Key Achievements
 
 1. ✅ **Zero production `as any`** - Complete type safety
 2. ✅ **Proper resource management** - AbortController implementation
 3. ✅ **User control** - Plan approval flow
-4. ✅ **Better debugging** - Standardized error handling
-5. ✅ **Comprehensive docs** - Architecture documentation
+4. ✅ **Better debugging** - Standardized error handling with rich context
+5. ✅ **Enhanced error messages** - Suggestions, recovery steps, file references
+6. ✅ **Structured debug logging** - Verbosity levels, categories, file output
+7. ✅ **Progress indicators** - Progress bars, spinners, multi-progress
+8. ✅ **Comprehensive docs** - Architecture documentation
 
 ---
 
