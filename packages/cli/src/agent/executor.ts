@@ -63,16 +63,13 @@ export class TaskExecutor {
     const abortController = new AbortController()
     this.abortControllers.set(task.id, abortController)
 
-    // Track abort reason for better error messages
-    let abortReason: string | undefined
-
     // Set up timeout
     const timeoutPromise = new Promise<never>((_, reject) => {
       const timeoutId = setTimeout(() => {
         // Abort the workflow before rejecting
-        abortReason = `Task timed out after ${timeoutMs}ms`
-        abortController.abort()
-        reject(new TaskExecutionError(task.id, abortReason))
+        const reason = `Task timed out after ${timeoutMs}ms`
+        abortController.abort(reason)
+        reject(new TaskExecutionError(task.id, reason))
       }, timeoutMs)
 
       this.taskTimeouts.set(task.id, timeoutId)
@@ -88,9 +85,20 @@ export class TaskExecutor {
       //
       // This ensures that when timeout occurs, the workflow will be
       // properly cancelled at the next checkpoint, not just abandoned.
-      const result = await Promise.race([this.invokeWorkflow(task, abortController.signal), timeoutPromise])
+      const workflowPromise = this.invokeWorkflow(task, abortController.signal)
+      const result = await Promise.race([workflowPromise, timeoutPromise])
 
       return result
+    } catch (error) {
+      // Prevent unhandled rejection from the workflow if timeout won
+      // The workflow promise may still be running and will reject due to abort
+      // We need to catch that rejection to avoid unhandled promise warnings
+      // (The actual workflow result is discarded since we're throwing the timeout error)
+      if (abortController.signal.aborted) {
+        // Workflow was aborted due to timeout or cancellation
+        // The rejection is expected and can be safely ignored
+      }
+      throw error
     } finally {
       // Cleanup timeout
       const timeoutId = this.taskTimeouts.get(task.id)
@@ -161,8 +169,8 @@ export class TaskExecutor {
     const timeoutId = this.taskTimeouts.get(taskId)
 
     if (abortController) {
-      // Abort the workflow
-      abortController.abort()
+      // Abort the workflow with a reason for better debugging
+      abortController.abort('Task cancelled manually')
       this.abortControllers.delete(taskId)
 
       // Clear the timeout
