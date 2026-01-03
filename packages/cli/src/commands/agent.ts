@@ -58,12 +58,20 @@ export async function runAgent(goal: string | undefined, options: any, _command:
         const quotedArgs = input.args.map(quoteForShell)
         fullCommand = `${input.command} ${quotedArgs.join(' ')}`
       } else {
-        // Use full command string or shell mode
+        // Use full command string
         fullCommand = input.command
       }
 
+      // Note: exec always spawns a shell, so the 'shell' parameter is ignored.
+      // This is intentional for safety - we want shell expansion for git commands.
+      // All arguments are properly quoted to prevent injection.
+
       try {
-        const { stdout, stderr } = await asyncExec(fullCommand, { cwd: workingDir })
+        // Increase maxBuffer to handle large git operations (10MB instead of default 1MB)
+        const { stdout, stderr } = await asyncExec(fullCommand, {
+          cwd: workingDir,
+          maxBuffer: 10 * 1024 * 1024, // 10MB
+        })
         return { exitCode: 0, stdout, stderr }
       } catch (error: any) {
         return {

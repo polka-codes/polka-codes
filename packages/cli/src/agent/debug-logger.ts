@@ -273,10 +273,31 @@ export class DebugLoggerChild {
  * Create a debug logger from environment variable
  *
  * Usage: DEBUG=1,2,3,4 or DEBUG_LEVEL=1 DEBUG_CATEGORIES=workflow,executor
+ *
+ * Environment variables:
+ * - DEBUG: Enable debug logging (1, true, yes, verbose, or *) -> level 1
+ * - DEBUG_LEVEL: Set specific level (0-4)
+ * - DEBUG_CATEGORIES: Comma-separated categories (e.g., workflow,executor)
  */
 export function createDebugLoggerFromEnv(baseLogger: Logger, stateDir: string): DebugLogger {
-  // Check DEBUG environment variable (0-4)
-  const debugLevel = parseInt(process.env.DEBUG_LEVEL || process.env.DEBUG || '0', 10)
+  // Check DEBUG environment variable
+  const debugEnv = process.env.DEBUG_LEVEL || process.env.DEBUG || '0'
+
+  // Parse debug level with support for common boolean strings
+  let debugLevel: number
+  const parsed = parseInt(debugEnv, 10)
+
+  if (isNaN(parsed)) {
+    // Handle non-numeric values
+    const normalized = debugEnv.toLowerCase().trim()
+    if (normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'verbose' || normalized === '*') {
+      debugLevel = 1
+    } else {
+      debugLevel = 0
+    }
+  } else {
+    debugLevel = Math.max(0, Math.min(4, parsed)) // Clamp to valid range
+  }
 
   // Parse categories
   const categoriesStr = process.env.DEBUG_CATEGORIES || ''
