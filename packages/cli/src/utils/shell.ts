@@ -21,8 +21,11 @@ function isWindows(): boolean {
  * On Windows (cmd.exe):
  * - Uses double-quote wrapping
  * - Only escapes double quotes by doubling them ("")
- * - All other special characters are safe inside double quotes
- * - Note: This is the standard Windows argument quoting pattern
+ * - Most special characters (&, |, <, >, ^) are safe inside double quotes
+ * - LIMITATION: %VAR% environment variables are expanded even inside double quotes
+ * - Note: Quote doubling ("") works with Git/MinGW tools. Standard Windows apps
+ *   sometimes use backslash escaping (\") via CommandLineToArgvW, but Git
+ *   on Windows typically uses MSYS/Cygwin which handles doubled quotes correctly.
  *
  * This function is primarily used for git commands, which work well with
  * this quoting strategy on both platforms.
@@ -42,8 +45,8 @@ function isWindows(): boolean {
 export function quoteForShell(str: string): string {
   if (isWindows()) {
     // Windows cmd.exe quoting: wrap in double quotes and double internal quotes
-    // This is the standard Windows argument quoting pattern
-    // All special characters (&, |, <, >, ^, %) are safe inside double quotes
+    // This pattern works with Git/MinGW tools (MSYS/Cygwin runtime)
+    // Note: %VAR% expansion still occurs inside double quotes - this is a cmd.exe limitation
     const escaped = str.replace(/"/g, '""')
     return `"${escaped}"`
   } else {

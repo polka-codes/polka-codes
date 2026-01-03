@@ -291,9 +291,11 @@ export function createDebugLoggerFromEnv(baseLogger: Logger, stateDir: string): 
     // Handle non-numeric values
     const normalized = debugEnv.toLowerCase().trim()
     if (normalized === '*') {
-      // Wildcard typically means "all" -> maximum verbosity
+      // Wildcard typically means "all" -> maximum verbosity with all categories
       debugLevel = 3 // TRACE
-    } else if (normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'verbose') {
+    } else if (normalized === 'verbose') {
+      debugLevel = 2 // VERBOSE (not BASIC)
+    } else if (normalized === '1' || normalized === 'true' || normalized === 'yes') {
       debugLevel = 1 // BASIC
     } else {
       debugLevel = 0 // NONE
@@ -304,10 +306,15 @@ export function createDebugLoggerFromEnv(baseLogger: Logger, stateDir: string): 
 
   // Parse categories
   const categoriesStr = process.env.DEBUG_CATEGORIES || ''
-  const categories = categoriesStr
+  let categories = categoriesStr
     .split(',')
     .filter(Boolean)
     .map((c) => c.trim() as DebugCategory)
+
+  // If DEBUG=* was used, enable all categories
+  if (debugEnv.toLowerCase().trim() === '*' && categories.length === 0) {
+    categories = [DebugCategory.ALL]
+  }
 
   // Create output file path
   const outputFile = debugLevel > 0 ? join(stateDir, 'debug.log') : undefined
