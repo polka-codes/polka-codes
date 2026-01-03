@@ -51,23 +51,27 @@ export const reviewCommand = new Command('review')
 
       // Heuristic to detect if the positional argument is intended as context
       if (files.length === 1 && !existsSync(files[0]) && files[0].includes(' ') && !context) {
-        console.warn(
-          'Warning: The argument looks like context but was passed as a file. Treating it as context. Please use --context for review instructions in the future.',
-        )
+        // Suppress warning in JSON mode
+        if (!json) {
+          console.warn(
+            'Warning: The argument looks like context but was passed as a file. Treating it as context. Please use --context for review instructions in the future.',
+          )
+        }
         context = files[0]
         filesToReview = []
       }
 
       const globalOpts = (command.parent ?? command).opts()
       const { verbose } = globalOpts
+      // In JSON mode, force silent mode to suppress all non-JSON output
       const logger = createLogger({
-        verbose: verbose,
+        verbose: json ? -1 : verbose,
       })
 
       for (let i = 0; i < maxIterations; i++) {
         changesAppliedInThisIteration = false
 
-        if (i > 0) {
+        if (i > 0 && !json) {
           logger.debug(`Re-running review (iteration ${i + 1} of ${maxIterations})...`)
         }
 
@@ -131,6 +135,11 @@ export const reviewCommand = new Command('review')
             }
           }
 
+          // In JSON mode, exit after first iteration (no auto-apply)
+          if (json) {
+            break
+          }
+
           if (shouldRunTask && formattedReview) {
             changesAppliedInThisIteration = true
             const taskInstruction = `please address the review result:\n\n${formattedReview}`
@@ -143,7 +152,9 @@ export const reviewCommand = new Command('review')
         }
 
         if (maxIterations > 1 && !changesAppliedInThisIteration) {
-          logger.debug('No more review feedback to apply. Exiting loop.')
+          if (!json) {
+            logger.debug('No more review feedback to apply. Exiting loop.')
+          }
           break
         }
       }
