@@ -723,6 +723,23 @@ export interface WorkflowContext {
 
   /** Config */
   config?: AgentConfig
+
+  /**
+   * Check if workflow was aborted
+   *
+   * This method is added by WorkflowAdapter when an AbortSignal is provided.
+   * Workflows can call this method periodically to check if they should stop.
+   *
+   * @throws {WorkflowInvocationError} If the workflow was aborted
+   *
+   * @example
+   * ```ts
+   * context.checkAbort()  // Throws if aborted
+   * ```
+   *
+   * @note This is an optional property that may not be present if no AbortSignal was provided
+   */
+  checkAbort?: () => void
 }
 
 /**
