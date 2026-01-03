@@ -129,8 +129,18 @@ export class TaskExecutor {
     } catch (error) {
       // Check if error is due to abort
       if (signal.aborted) {
-        const abortReason = error instanceof TaskExecutionError ? error.message : 'Task was cancelled'
+        // If error is already a TaskExecutionError, rethrow it directly
+        if (error instanceof TaskExecutionError) {
+          throw error
+        }
+        // Otherwise wrap it
+        const abortReason = error instanceof Error ? error.message : 'Task was cancelled'
         throw new TaskExecutionError(task.id, abortReason, error instanceof Error ? error : undefined)
+      }
+
+      // If error is already a TaskExecutionError, rethrow it directly
+      if (error instanceof TaskExecutionError) {
+        throw error
       }
 
       throw new TaskExecutionError(
