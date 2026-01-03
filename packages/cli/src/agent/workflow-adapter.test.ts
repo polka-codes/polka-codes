@@ -1,15 +1,9 @@
 import { beforeEach, describe, expect, it, mock } from 'bun:test'
+import { createMockContext } from './test-fixtures'
 import { WorkflowAdapter } from './workflow-adapter'
 
 describe('WorkflowAdapter', () => {
-  const mockContext = {
-    logger: {
-      info: () => {},
-      warn: () => {},
-      error: () => {},
-    },
-    cwd: '/test',
-  }
+  const mockContext = createMockContext()
 
   beforeEach(() => {
     // Clear any mocks

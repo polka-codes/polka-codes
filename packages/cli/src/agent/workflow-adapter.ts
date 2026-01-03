@@ -1,5 +1,5 @@
 import { WorkflowInvocationError } from './errors'
-import type { WorkflowExecutionResult } from './types'
+import type { WorkflowContext, WorkflowExecutionResult } from './types'
 
 /**
  * Adapts existing workflow outputs to WorkflowExecutionResult format
@@ -187,7 +187,12 @@ export class WorkflowAdapter {
    * @param context - Workflow context (logger, tools, etc.)
    * @param signal - Optional AbortSignal for cancellation
    */
-  static async invokeWorkflow(workflowName: string, input: any, context: any, signal?: AbortSignal): Promise<WorkflowExecutionResult> {
+  static async invokeWorkflow(
+    workflowName: string,
+    input: unknown,
+    context: WorkflowContext,
+    signal?: AbortSignal,
+  ): Promise<WorkflowExecutionResult> {
     // Check if operation was aborted before starting
     if (signal?.aborted) {
       throw new WorkflowInvocationError(workflowName, 'Workflow was cancelled before execution')

@@ -267,7 +267,7 @@ Return your response as a JSON object following the provided schema.`
     try {
       // Get project structure using git ls-files (cross-platform)
       const pkgResult = await this.context.tools.executeCommand({
-        command: 'git ls-files "src/**/*.ts" | head -20',
+        command: 'git ls-files "src/**/*.ts"',
         shell: true,
       })
 

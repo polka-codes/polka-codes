@@ -1,4 +1,5 @@
 import type { Logger, WorkflowTools } from '@polka-codes/core'
+import { quoteForShell } from './utils/shell'
 
 /**
  * Validate git branch/ref parameters to prevent command injection
@@ -39,14 +40,6 @@ function validateGitRange(param: string, paramName: string): void {
   if (!safePattern.test(param)) {
     throw new Error(`Invalid ${paramName}: contains potentially unsafe characters.`)
   }
-}
-
-/**
- * Quote a string for safe shell execution
- * Wraps the string in single quotes and escapes any existing single quotes
- */
-function quoteForShell(str: string): string {
-  return `'${str.replace(/'/g, "'\\''")}'`
 }
 
 export interface FileChange {

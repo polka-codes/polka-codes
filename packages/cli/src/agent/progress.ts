@@ -200,6 +200,26 @@ export class Spinner {
 
 /**
  * Multi-progress for tracking multiple operations
+ *
+ * WARNING: This implementation has a known limitation with concurrent updates.
+ * Since each Progress bar writes to stdout using \r (carriage return), multiple
+ * bars updating concurrently will overwrite each other's visual output.
+ *
+ * Current Behavior:
+ * - Each bar renders independently with \r to update its line
+ * - Concurrent updates result in visual corruption/overwrites
+ *
+ * Suitable Use Cases:
+ * - Sequential progress bars (one completes before next starts)
+ * - Non-concurrent updates (manual coordination of update timing)
+ * - Debug/development scenarios where visual corruption is acceptable
+ *
+ * Not Suitable For:
+ * - Parallel operations with simultaneous progress updates
+ * - Production environments requiring clean multi-line progress
+ *
+ * For proper multi-progress rendering, consider using a dedicated library
+ * like 'cli-progress' or 'multi-progress' which handles line coordination.
  */
 export class MultiProgress {
   private progressBars: Map<string, Progress> = new Map()

@@ -63,12 +63,16 @@ export class TaskExecutor {
     const abortController = new AbortController()
     this.abortControllers.set(task.id, abortController)
 
+    // Track abort reason for better error messages
+    let abortReason: string | undefined
+
     // Set up timeout
     const timeoutPromise = new Promise<never>((_, reject) => {
       const timeoutId = setTimeout(() => {
         // Abort the workflow before rejecting
+        abortReason = `Task timed out after ${timeoutMs}ms`
         abortController.abort()
-        reject(new TaskExecutionError(task.id, `Task timed out after ${timeoutMs}ms`))
+        reject(new TaskExecutionError(task.id, abortReason))
       }, timeoutMs)
 
       this.taskTimeouts.set(task.id, timeoutId)
@@ -88,17 +92,19 @@ export class TaskExecutor {
 
       return result
     } finally {
-      // Cleanup
+      // Cleanup timeout
       const timeoutId = this.taskTimeouts.get(task.id)
       if (timeoutId) {
         clearTimeout(timeoutId)
         this.taskTimeouts.delete(task.id)
       }
 
-      // Only abort if not already aborted
-      if (!abortController.signal.aborted) {
-        abortController.abort()
-      }
+      // Remove from active controllers
+      // Note: We do NOT abort the controller here because:
+      // 1. If task succeeded, aborting would trigger abort event listeners incorrectly
+      // 2. If task timed out, timeout handler already aborted it
+      // 3. If task was cancelled manually, cancel() method already aborted it
+      // 4. The AbortController will be garbage collected when removed from map
       this.abortControllers.delete(task.id)
     }
   }
@@ -123,7 +129,8 @@ export class TaskExecutor {
     } catch (error) {
       // Check if error is due to abort
       if (signal.aborted) {
-        throw new TaskExecutionError(task.id, 'Task was cancelled')
+        const abortReason = error instanceof TaskExecutionError ? error.message : 'Task was cancelled'
+        throw new TaskExecutionError(task.id, abortReason, error instanceof Error ? error : undefined)
       }
 
       throw new TaskExecutionError(

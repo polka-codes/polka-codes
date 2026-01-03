@@ -2,10 +2,26 @@ import { exec } from 'node:child_process'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import { promisify } from 'node:util'
+import type { ToolRegistry, WorkflowTools } from '@polka-codes/core'
 import { Command } from 'commander'
 import { loadConfig } from '../agent/config'
 import { AutonomousAgent } from '../agent/orchestrator'
 import { createLogger } from '../logger'
+import { quoteForShell } from '../utils/shell'
+
+/**
+ * Tool registry for agent command execution
+ */
+type AgentToolsRegistry = ToolRegistry & {
+  executeCommand: {
+    input: { command: string; args?: string[]; shell?: boolean }
+    output: { exitCode: number; stdout: string; stderr: string }
+  }
+  readFile: {
+    input: { path: string }
+    output: { content: string }
+  }
+}
 
 /**
  * Autonomous agent command
@@ -32,9 +48,6 @@ export async function runAgent(goal: string | undefined, options: any, _command:
   // Create minimal tools implementation for agent context
   // The agent needs executeCommand for safety checks and readFile for goal decomposition
   const asyncExec = promisify(exec)
-
-  // Helper function to quote arguments for safe shell execution
-  const quoteForShell = (str: string): string => `'${str.replace(/'/g, "'\\''")}'`
 
   const tools = {
     executeCommand: async (input: { command: string; args?: string[]; shell?: boolean }) => {
@@ -66,7 +79,7 @@ export async function runAgent(goal: string | undefined, options: any, _command:
       const content = await fs.readFile(fullPath, 'utf-8')
       return { content }
     },
-  } as any
+  } as WorkflowTools<AgentToolsRegistry>
 
   const context = {
     logger,
