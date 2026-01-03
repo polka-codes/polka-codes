@@ -76,6 +76,14 @@ export class TaskExecutor {
 
     try {
       // Race between workflow execution and timeout
+      // The AbortSignal is passed through the workflow chain:
+      // 1. TaskExecutor.invokeWorkflow() receives the signal
+      // 2. WorkflowAdapter.invokeWorkflow() checks signal.aborted
+      // 3. Context is wrapped with checkAbort() function
+      // 4. Workflows can call context.checkAbort() periodically
+      //
+      // This ensures that when timeout occurs, the workflow will be
+      // properly cancelled at the next checkpoint, not just abandoned.
       const result = await Promise.race([this.invokeWorkflow(task, abortController.signal), timeoutPromise])
 
       return result

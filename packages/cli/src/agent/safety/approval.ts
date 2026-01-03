@@ -190,6 +190,12 @@ export class ApprovalManager {
   /**
    * Ask a question via stdin/stdout
    *
+   * Creates a new readline interface for each question.
+   * Note: This is intentional and safe for approval workflow which:
+   * - Is low-frequency (once per plan approval)
+   * - Properly closes the interface after each question
+   * - Avoids listener leaks by creating fresh interface each time
+   *
    * @param query - Question to display
    * @returns User's answer
    */

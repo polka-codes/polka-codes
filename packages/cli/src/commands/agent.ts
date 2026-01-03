@@ -33,13 +33,17 @@ export async function runAgent(goal: string | undefined, options: any, _command:
   // The agent needs executeCommand for safety checks and readFile for goal decomposition
   const asyncExec = promisify(exec)
 
+  // Helper function to quote arguments for safe shell execution
+  const quoteForShell = (str: string): string => `'${str.replace(/'/g, "'\\''")}'`
+
   const tools = {
     executeCommand: async (input: { command: string; args?: string[]; shell?: boolean }) => {
-      // Build command from input
+      // Build command from input with proper shell quoting
       let fullCommand: string
       if (input.args && input.args.length > 0) {
-        // Use args array - safer
-        fullCommand = `${input.command} ${input.args.join(' ')}`
+        // Quote each argument to handle spaces and special characters safely
+        const quotedArgs = input.args.map(quoteForShell)
+        fullCommand = `${input.command} ${quotedArgs.join(' ')}`
       } else {
         // Use full command string or shell mode
         fullCommand = input.command
