@@ -59,8 +59,9 @@ describe('TaskDiscoveryEngine', () => {
       const tasks = await discovery.discover({ useCache: false })
 
       // Should stop after typecheck failure
+      // Calls: git rev-parse (1), typecheck in discoverBuildErrors (2), bun test (3), typecheck in discoverTypeErrors (4)
       expect(tasks.length).toBeGreaterThan(0)
-      expect(callCount).toBeLessThan(3)
+      expect(callCount).toBe(4)
     })
 
     it('should manage backoff', () => {

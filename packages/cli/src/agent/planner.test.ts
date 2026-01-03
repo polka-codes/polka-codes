@@ -62,9 +62,13 @@ describe('TaskPlanner', () => {
     })
 
     it('should identify risks', () => {
+      // Create tasks that will have IDs task-0 through task-5
+      const depTasks = Array.from({ length: 6 }, () => createMockTask())
+
       const tasks = [
+        ...depTasks, // Include the dependency tasks in the plan
         createMockTask({
-          dependencies: ['task-1', 'task-2', 'task-3', 'task-4', 'task-5', 'task-6'],
+          dependencies: depTasks.map((t) => t.id),
         }),
         createMockTask({ estimatedTime: 150 }),
         createMockTask({
@@ -76,7 +80,7 @@ describe('TaskPlanner', () => {
       const plan = planner.createPlan('Test', tasks)
 
       expect(plan.risks.length).toBeGreaterThan(0)
-      expect(plan.risks.some((r) => r.includes('6 dependencies'))).toBe(true)
+      expect(plan.risks.some((r) => r.includes('has 6 dependencies'))).toBe(true)
       expect(plan.risks.some((r) => r.includes('long estimated time'))).toBe(true)
       expect(plan.risks.some((r) => r.includes('high-complexity'))).toBe(true)
     })
@@ -158,10 +162,8 @@ describe('TaskPlanner', () => {
     it('should detect circular dependencies', () => {
       const tasks = [createMockTask({ id: 'task-1', dependencies: ['task-2'] }), createMockTask({ id: 'task-2', dependencies: ['task-1'] })]
 
-      const plan = planner.createPlan('Test', tasks)
-
-      // Should break out of loop to prevent infinite loop
-      expect(plan.executionOrder.length).toBeLessThan(10)
+      // Should throw error for circular dependencies
+      expect(() => planner.createPlan('Test', tasks)).toThrow('Circular dependency')
     })
   })
 })

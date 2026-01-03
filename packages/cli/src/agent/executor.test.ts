@@ -193,21 +193,31 @@ describe('TaskExecutor', () => {
       // Create task that takes longer than timeout
       const task = createMockTask()
 
+      // Create a config with shorter timeout for testing
+      const testConfig = {
+        ...mockConfig,
+        resourceLimits: {
+          ...mockConfig.resourceLimits,
+          maxTaskExecutionTime: 0.01, // 0.01 minutes = 0.6 seconds = 600ms
+        },
+      }
+
+      const testState = { ...mockState, config: testConfig }
+
       mock.module('./workflow-adapter', () => ({
         invokeWorkflow: async () => {
-          // Sleep longer than 5 minute timeout
-          await new Promise((resolve) => setTimeout(resolve, 10000))
+          // Sleep longer than 600ms timeout
+          await new Promise((resolve) => setTimeout(resolve, 2000))
           return { success: true }
         },
       }))
 
-      // Set short timeout for testing (5 minutes in config)
-      const result = await executor.execute(task, mockState)
+      const result = await executor.execute(task, testState)
 
       // Should timeout
       expect(result.success).toBe(false)
       expect(result.error?.message).toContain('timed out')
-    }, 10000)
+    }, 5000)
   })
 
   describe('cancel', () => {

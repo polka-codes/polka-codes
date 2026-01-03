@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import { promisify } from 'node:util'
-import type { ToolRegistry, WorkflowTools } from '@polka-codes/core'
+import type { StepFn, ToolRegistry, WorkflowTools } from '@polka-codes/core'
 import { Command } from 'commander'
 import { loadConfig } from '../agent/config'
 import { AutonomousAgent } from '../agent/orchestrator'
@@ -107,8 +107,18 @@ export async function runAgent(goal: string | undefined, options: any, _command:
     },
   } as WorkflowTools<AgentToolsRegistry>
 
+  // Simple step function for workflow execution tracking
+  const step: StepFn = async <T>(_name: string, optionsOrFn: any, fn?: () => Promise<T>) => {
+    const actualFn = fn || optionsOrFn
+    if (typeof actualFn === 'function') {
+      return await actualFn()
+    }
+    throw new Error('Invalid step function call')
+  }
+
   const context = {
     logger,
+    step,
     workingDir,
     stateDir,
     sessionId,

@@ -61,6 +61,7 @@ export function createMockContext(overrides?: Partial<WorkflowContext>): Workflo
   return {
     logger: createMockLogger(),
     tools: createMockTools(),
+    step: createMockStepFn(),
     workingDir: '/test/workspace',
     stateDir: '/test/state',
     sessionId: 'test-session-123',
