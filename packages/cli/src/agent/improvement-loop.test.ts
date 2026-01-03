@@ -8,7 +8,7 @@ describe('ContinuousImprovementLoop', () => {
   let stateManager: AgentStateManager
   let mockContext: WorkflowContext
 
-  const mockConfig: AgentConfig = {
+  const _mockConfig: AgentConfig = {
     strategy: 'goal-directed',
     continueOnCompletion: false,
     maxIterations: 0,
