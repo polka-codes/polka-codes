@@ -290,13 +290,16 @@ export function createDebugLoggerFromEnv(baseLogger: Logger, stateDir: string): 
   if (Number.isNaN(parsed)) {
     // Handle non-numeric values
     const normalized = debugEnv.toLowerCase().trim()
-    if (normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'verbose' || normalized === '*') {
-      debugLevel = 1
+    if (normalized === '*') {
+      // Wildcard typically means "all" -> maximum verbosity
+      debugLevel = 3 // TRACE
+    } else if (normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'verbose') {
+      debugLevel = 1 // BASIC
     } else {
-      debugLevel = 0
+      debugLevel = 0 // NONE
     }
   } else {
-    debugLevel = Math.max(0, Math.min(4, parsed)) // Clamp to valid range
+    debugLevel = Math.max(0, Math.min(3, parsed)) // Clamp to valid range (0-3)
   }
 
   // Parse categories
