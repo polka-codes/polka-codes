@@ -1,16 +1,20 @@
-import { execSync } from 'node:child_process'
+import { exec as execCallback } from 'node:child_process'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
+import { promisify } from 'node:util'
 import type { Logger } from '@polka-codes/core'
 import { AdvancedDiscoveryStrategies } from './advanced-discovery'
 import { Priority } from './constants'
 import { logAndSuppress } from './error-handling'
 import type { Task, WorkflowContext } from './types'
 
+// Promisified exec for non-blocking command execution
+const exec = promisify(execCallback)
+
 /**
- * Type for execSync error with stdout/stderr
+ * Type for exec error with stdout/stderr
  */
-interface ExecSyncError extends Error {
+interface ExecError extends Error {
   stdout?: string
   stderr?: string
   status?: number
@@ -69,11 +73,10 @@ function parseLintFiles(output: string): string[] {
  */
 async function getGitHead(logger?: Logger): Promise<string> {
   try {
-    return execSync('git rev-parse HEAD', {
+    const { stdout } = await exec('git rev-parse HEAD', {
       cwd: process.cwd(),
-      encoding: 'utf-8',
-      stdio: 'pipe',
-    }).trim()
+    })
+    return stdout.trim()
   } catch (error) {
     if (logger) {
       logAndSuppress(logger, error, 'getGitHead')
@@ -95,14 +98,12 @@ async function discoverBuildErrors(context: WorkflowContext): Promise<Task[]> {
 
     // Run typecheck first
     try {
-      execSync('bun typecheck', {
+      await exec('bun typecheck', {
         cwd: process.cwd(),
-        encoding: 'utf-8',
-        stdio: 'pipe',
       })
     } catch (error) {
       // Type errors found - create high-priority task
-      const execError = error as ExecSyncError
+      const execError = error as ExecError
       const output = execError.stdout || execError.stderr || String(error)
 
       tasks.push({
@@ -136,14 +137,12 @@ async function discoverBuildErrors(context: WorkflowContext): Promise<Task[]> {
 
     // Types pass, try build
     try {
-      execSync('bun run build', {
+      await exec('bun run build', {
         cwd: process.cwd(),
-        encoding: 'utf-8',
-        stdio: 'pipe',
         timeout: 120000, // 2 minute timeout
       })
     } catch (error) {
-      const output = (error as ExecSyncError).stdout || (error as ExecSyncError).stderr || String(error)
+      const output = (error as ExecError).stdout || (error as ExecError).stderr || String(error)
 
       tasks.push({
         id: generateId('build'),
@@ -188,16 +187,14 @@ async function discoverTestFailures(context: WorkflowContext): Promise<Task[]> {
   try {
     context.logger.info('[Discovery] Checking for failing tests...')
 
-    const _output = execSync('bun test', {
+    const _output = await exec('bun test', {
       cwd: process.cwd(),
-      encoding: 'utf-8',
-      stdio: 'pipe',
     })
 
     // If we get here, tests passed
     context.logger.info('[Discovery] All tests passing')
   } catch (error) {
-    const output = (error as ExecSyncError).stdout || (error as ExecSyncError).stderr || String(error)
+    const output = (error as ExecError).stdout || (error as ExecError).stderr || String(error)
 
     // Parse test output for failures
     const failedTests = parseTestFailures(output)
@@ -245,13 +242,11 @@ async function discoverTypeErrors(context: WorkflowContext): Promise<Task[]> {
   try {
     context.logger.info('[Discovery] Running typecheck...')
 
-    execSync('bun typecheck', {
+    await exec('bun typecheck', {
       cwd: process.cwd(),
-      encoding: 'utf-8',
-      stdio: 'pipe',
     })
   } catch (error) {
-    const output = (error as ExecSyncError).stdout || (error as ExecSyncError).stderr || String(error)
+    const output = (error as ExecError).stdout || (error as ExecError).stderr || String(error)
 
     // Count errors
     const errorCount = (output.match(/error TS/gi) || []).length
@@ -297,15 +292,13 @@ async function discoverLintIssues(context: WorkflowContext): Promise<Task[]> {
   try {
     context.logger.info('[Discovery] Running linter...')
 
-    const _output = execSync('bun lint', {
+    const _output = await exec('bun lint', {
       cwd: process.cwd(),
-      encoding: 'utf-8',
-      stdio: 'pipe',
     })
 
     context.logger.info('[Discovery] No lint issues')
   } catch (error) {
-    const output = (error as ExecSyncError).stdout || (error as ExecSyncError).stderr || String(error)
+    const output = (error as ExecError).stdout || (error as ExecError).stderr || String(error)
 
     // Parse lint output for file paths
     const files = parseLintFiles(output)
