@@ -16,13 +16,14 @@ describe('TaskPlanner', () => {
   } as any
 
   let planner: ReturnType<typeof createTaskPlanner>
+  let taskIdCounter = 0
 
   beforeEach(() => {
     planner = createTaskPlanner(mockContext)
   })
 
   const createMockTask = (overrides?: Partial<Task>): Task => ({
-    id: `task-${Date.now()}`,
+    id: `task-${taskIdCounter++}`,
     title: 'Test task',
     description: 'Test description',
     type: 'bugfix',

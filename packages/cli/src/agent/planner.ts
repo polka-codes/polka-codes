@@ -7,16 +7,26 @@ function resolveDependencies(tasks: Task[], context: WorkflowContext): Task[] {
   const _taskMap = new Map(tasks.map((t) => [t.id, t]))
 
   const resolved = tasks.map((task) => {
-    // Convert dependency titles to IDs
+    // Dependencies can be either IDs or titles
+    // If all dependencies are valid task IDs, use them as-is
+    // Otherwise, convert titles to IDs
     const depIds: string[] = []
 
-    for (const depTitle of task.dependencies) {
-      // Find task by title
-      const depTask = tasks.find((t) => t.title === depTitle)
-      if (depTask) {
-        depIds.push(depTask.id)
+    for (const dep of task.dependencies) {
+      // Check if this is already a task ID
+      const isTaskId = tasks.some((t) => t.id === dep)
+
+      if (isTaskId) {
+        // It's already an ID, use it directly
+        depIds.push(dep)
       } else {
-        context.logger.warn(`[Planner] Dependency not found: ${depTitle}`)
+        // It's a title, find the corresponding task ID
+        const depTask = tasks.find((t) => t.title === dep)
+        if (depTask) {
+          depIds.push(depTask.id)
+        } else {
+          context.logger.warn(`[Planner] Dependency not found: ${dep}`)
+        }
       }
     }
 
@@ -47,6 +57,7 @@ function createExecutionPhases(tasks: Task[], _context: WorkflowContext): string
       if (completed.has(task.id)) continue
 
       // Check if all dependencies are met
+      // Note: task.dependencies should be task IDs at this point
       const depsMet = task.dependencies.every((depId) => completed.has(depId))
 
       if (depsMet) {
