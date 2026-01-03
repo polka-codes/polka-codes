@@ -10,6 +10,9 @@
 // Configuration
 export * from './config'
 export * from './constants'
+export type { DebugLoggerConfig } from './debug-logger'
+// Debug logging and progress tracking
+export { createDebugLoggerFromEnv, DebugLogger, DebugLoggerChild } from './debug-logger'
 export * from './errors'
 export { TaskExecutor } from './executor'
 export { GoalDecomposer } from './goal-decomposer'
@@ -22,6 +25,8 @@ export { MetricsCollector } from './metrics'
 export { AutonomousAgent } from './orchestrator'
 export type { TaskPlanner } from './planner'
 export { createTaskPlanner } from './planner'
+export type { ProgressOptions } from './progress'
+export { createMultiProgress, createProgress, createSpinner, formatDuration, MultiProgress, Progress, Spinner } from './progress'
 export { ResourceMonitor } from './resource-monitor'
 // Safety systems
 export { ApprovalManager } from './safety/approval'

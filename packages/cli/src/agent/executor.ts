@@ -38,7 +38,12 @@ export class TaskExecutor {
       this.logger.info(`[Executor] Task ${task.id} completed`)
       return result
     } catch (error) {
-      this.logger.error(`[Executor] Task ${task.id} failed`, error as Error)
+      // Enhanced error logging with context
+      if (error instanceof TaskExecutionError) {
+        this.logger.error(`\n${error.getFormattedMessage()}`)
+      } else {
+        this.logger.error(`[Executor] Task ${task.id} failed`, error as Error)
+      }
 
       return {
         success: false,
@@ -157,7 +162,7 @@ export class TaskExecutor {
     this.logger.info(`[Executor] Cancelling all tasks (${this.abortControllers.size} running)`)
 
     // Abort all controllers
-    for (const [taskId, controller] of this.abortControllers) {
+    for (const [, controller] of this.abortControllers) {
       controller.abort()
     }
     this.abortControllers.clear()
