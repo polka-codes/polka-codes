@@ -145,13 +145,11 @@ describe('TaskExecutor', () => {
       const task = createMockTask()
 
       mock.module('./workflow-adapter', () => ({
-        WorkflowAdapter: {
-          invokeWorkflow: async () => ({
-            success: true,
-            data: { result: 'done' },
-            output: 'Task completed',
-          }),
-        },
+        invokeWorkflow: async () => ({
+          success: true,
+          data: { result: 'done' },
+          output: 'Task completed',
+        }),
       }))
 
       const result = await executor.execute(task, mockState)
@@ -164,12 +162,10 @@ describe('TaskExecutor', () => {
       const task = createMockTask()
 
       mock.module('./workflow-adapter', () => ({
-        WorkflowAdapter: {
-          invokeWorkflow: async () => ({
-            success: false,
-            error: new Error('Workflow failed'),
-          }),
-        },
+        invokeWorkflow: async () => ({
+          success: false,
+          error: new Error('Workflow failed'),
+        }),
       }))
 
       const result = await executor.execute(task, mockState)
@@ -182,10 +178,8 @@ describe('TaskExecutor', () => {
       const task = createMockTask()
 
       mock.module('./workflow-adapter', () => ({
-        WorkflowAdapter: {
-          invokeWorkflow: async () => {
-            throw new Error('Unexpected error')
-          },
+        invokeWorkflow: async () => {
+          throw new Error('Unexpected error')
         },
       }))
 
@@ -200,12 +194,10 @@ describe('TaskExecutor', () => {
       const task = createMockTask()
 
       mock.module('./workflow-adapter', () => ({
-        WorkflowAdapter: {
-          invokeWorkflow: async () => {
-            // Sleep longer than 5 minute timeout
-            await new Promise((resolve) => setTimeout(resolve, 10000))
-            return { success: true }
-          },
+        invokeWorkflow: async () => {
+          // Sleep longer than 5 minute timeout
+          await new Promise((resolve) => setTimeout(resolve, 10000))
+          return { success: true }
         },
       }))
 

@@ -80,7 +80,7 @@ describe('WorkflowAdapter', () => {
     it('should adapt failed code workflow result', async () => {
       const mockResult = {
         success: false,
-        error: 'Type errors found',
+        reason: 'Type errors found',
       }
 
       mock.module('../workflows/code.workflow', () => ({

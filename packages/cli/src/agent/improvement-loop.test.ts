@@ -66,7 +66,7 @@ describe('ContinuousImprovementLoop', () => {
       cwd: '/test',
     } as unknown as WorkflowContext
 
-    stateManager = new AgentStateManager(mockConfig as any, {} as any)
+    stateManager = new AgentStateManager('/test-state-dir', 'test-session')
     loop = createContinuousImprovementLoop(mockContext, stateManager, 'test-session')
   })
 
