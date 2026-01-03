@@ -12,6 +12,8 @@ import { Priority } from './types'
  * - Security vulnerabilities
  * - Test coverage gaps
  * - Performance issues
+ *
+ * biome-ignore lint/complexity/noStaticOnlyClass: This is a strategies registry pattern, not a utility class
  */
 export class AdvancedDiscoveryStrategies {
   /**

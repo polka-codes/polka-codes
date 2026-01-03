@@ -1,7 +1,7 @@
 import type { Logger } from '@polka-codes/core'
 import { TaskExecutionError } from './errors'
 import type { AgentState, Task, WorkflowContext, WorkflowExecutionResult } from './types'
-import { WorkflowAdapter } from './workflow-adapter'
+import { invokeWorkflow } from './workflow-adapter'
 
 /**
  * Executes tasks by invoking appropriate workflows
@@ -123,7 +123,7 @@ export class TaskExecutor {
       }
 
       // Use workflow adapter to invoke appropriate workflow with abort signal
-      const result = await WorkflowAdapter.invokeWorkflow(task.workflow, task.workflowInput, this.context, signal)
+      const result = await invokeWorkflow(task.workflow, task.workflowInput, this.context, signal)
 
       return result
     } catch (error) {

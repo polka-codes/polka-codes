@@ -11,7 +11,7 @@ import { ResourceMonitor } from './resource-monitor'
 import { ApprovalManager } from './safety/approval'
 import { SafetyChecker } from './safety/checks'
 import { InterruptHandler } from './safety/interrupt'
-import { SessionManager } from './session'
+import { acquire, release } from './session'
 import { AgentStateManager } from './state-manager'
 import { TaskHistory } from './task-history'
 import type { AgentConfig, AgentState, Plan, Task, WorkflowContext } from './types'
@@ -93,7 +93,7 @@ export class AutonomousAgent {
       // 1. Acquire session
       this.logger.info(`[Init] Acquiring session: ${this.sessionId}`)
 
-      const acquireResult = await SessionManager.acquire(this.sessionId)
+      const acquireResult = await acquire(this.sessionId)
 
       if (!acquireResult.acquired) {
         throw new AgentStatusError(`Session conflict: ${this.sessionId} - ${acquireResult.reason}`)
@@ -345,7 +345,7 @@ export class AutonomousAgent {
       await this.resourceMonitor.stop()
 
       // Release session
-      await SessionManager.release(this.sessionId)
+      await release(this.sessionId)
 
       // Log metrics
       const metrics = this.metrics.getMetrics()

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, mock } from 'bun:test'
 import { createMockContext } from './test-fixtures'
-import { WorkflowAdapter } from './workflow-adapter'
+import { adaptCodeWorkflow, invokeWorkflow } from './workflow-adapter'
 
 describe('WorkflowAdapter', () => {
   const mockContext = createMockContext()
@@ -26,7 +26,7 @@ describe('WorkflowAdapter', () => {
         }),
       }))
 
-      const result = await WorkflowAdapter.invokeWorkflow('code', input, mockContext)
+      const result = await invokeWorkflow('code', input, mockContext)
 
       expect(result.success).toBe(true)
       expect(result.output).toContain('Fixed bug')
@@ -43,7 +43,7 @@ describe('WorkflowAdapter', () => {
         },
       }))
 
-      const result = await WorkflowAdapter.invokeWorkflow('code', input, mockContext)
+      const result = await invokeWorkflow('code', input, mockContext)
 
       expect(result.success).toBe(false)
       expect(result.error).toBeInstanceOf(Error)
@@ -51,7 +51,7 @@ describe('WorkflowAdapter', () => {
     })
 
     it('should return error for unknown workflow type', async () => {
-      const result = await WorkflowAdapter.invokeWorkflow('unknown' as any, {}, mockContext)
+      const result = await invokeWorkflow('unknown' as any, {}, mockContext)
 
       expect(result.success).toBe(false)
       expect(result.error?.message).toContain('Unknown workflow')
@@ -70,7 +70,7 @@ describe('WorkflowAdapter', () => {
         codeWorkflow: async () => mockResult,
       }))
 
-      const result = await WorkflowAdapter.adaptCodeWorkflow({}, mockContext)
+      const result = await adaptCodeWorkflow({}, mockContext)
 
       expect(result.success).toBe(true)
       expect(result.data).toEqual(mockResult)
@@ -87,7 +87,7 @@ describe('WorkflowAdapter', () => {
         codeWorkflow: async () => mockResult,
       }))
 
-      const result = await WorkflowAdapter.adaptCodeWorkflow({}, mockContext)
+      const result = await adaptCodeWorkflow({}, mockContext)
 
       expect(result.success).toBe(false)
       expect(result.error).toBeInstanceOf(Error)
