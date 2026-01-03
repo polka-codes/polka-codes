@@ -4,7 +4,7 @@ import type { Plan, Task, WorkflowContext } from './types'
  * Resolve task dependencies
  */
 function resolveDependencies(tasks: Task[], context: WorkflowContext): Task[] {
-  const _taskMap = new Map(tasks.map((t) => [t.id, t]))
+  const taskMap = new Map(tasks.map((t) => [t.id, t]))
 
   const resolved = tasks.map((task) => {
     // Dependencies can be either IDs or titles
@@ -13,8 +13,8 @@ function resolveDependencies(tasks: Task[], context: WorkflowContext): Task[] {
     const depIds: string[] = []
 
     for (const dep of task.dependencies) {
-      // Check if this is already a task ID
-      const isTaskId = tasks.some((t) => t.id === dep)
+      // Check if this is already a task ID (O(1) lookup)
+      const isTaskId = taskMap.has(dep)
 
       if (isTaskId) {
         // It's already an ID, use it directly
