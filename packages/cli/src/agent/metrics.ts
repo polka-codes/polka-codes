@@ -1,4 +1,17 @@
+import type { Logger } from '@polka-codes/core'
 import type { AgentMetrics } from './types'
+
+/**
+ * Create a default no-op logger for testing
+ */
+function createDefaultLogger(): Logger {
+  return {
+    debug: () => {},
+    info: () => {},
+    warn: () => {},
+    error: () => {},
+  }
+}
 
 /**
  * Collects and tracks agent metrics
@@ -7,10 +20,12 @@ export class MetricsCollector {
   private metrics: AgentMetrics
   private startTime: number
   private taskStartTimes: Map<string, number> = new Map()
+  private logger: Logger
 
-  constructor() {
+  constructor(logger: Logger = createDefaultLogger()) {
     this.startTime = Date.now()
     this.metrics = this.emptyMetrics()
+    this.logger = logger
   }
 
   /**
@@ -27,7 +42,7 @@ export class MetricsCollector {
   recordTaskComplete(taskId: string): void {
     const startTime = this.taskStartTimes.get(taskId)
     if (!startTime) {
-      console.warn(`No start time for task ${taskId}`)
+      this.logger.warn(`[Metrics] No start time for task ${taskId}`)
       return
     }
 
@@ -156,12 +171,6 @@ export class MetricsCollector {
         refactoringsCompleted: 0,
         documentationAdded: 0,
         qualityImprovements: 0,
-      },
-      resources: {
-        peakMemoryMB: 0,
-        averageCpuPercent: 0,
-        totalApiCalls: 0,
-        totalTokensUsed: 0,
       },
     }
   }

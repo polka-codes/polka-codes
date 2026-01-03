@@ -40,9 +40,14 @@ export const DEFAULT_DISCOVERY_STRATEGIES = ['build-errors', 'failing-tests', 't
 export const ADVANCED_DISCOVERY_STRATEGIES = ['test-coverage', 'code-quality', 'refactoring', 'documentation', 'security'] as const
 
 /**
+ * Working directory discovery strategy
+ */
+export const WORKING_DIR_STRATEGY = 'working-dir' as const
+
+/**
  * All discovery strategies
  */
-export const ALL_DISCOVERY_STRATEGIES = [...DEFAULT_DISCOVERY_STRATEGIES, ...ADVANCED_DISCOVERY_STRATEGIES] as const
+export const ALL_DISCOVERY_STRATEGIES = [...DEFAULT_DISCOVERY_STRATEGIES, ...ADVANCED_DISCOVERY_STRATEGIES, WORKING_DIR_STRATEGY] as const
 
 /**
  * State transition rules
@@ -81,13 +86,6 @@ export const DEFAULT_AGENT_CONFIG: AgentConfig = {
   destructiveOperations: ['delete', 'force-push', 'reset'],
   maxAutoApprovalCost: 5,
   autoApproveSafeTasks: true,
-  resourceLimits: {
-    maxMemory: 2048,
-    maxCpuPercent: 80,
-    maxTaskExecutionTime: 60,
-    maxSessionTime: 480,
-    maxFilesChanged: 20,
-  },
   continuousImprovement: {
     sleepTimeOnNoTasks: 60000, // 1 minute
     sleepTimeBetweenTasks: 5000, // 5 seconds
@@ -169,6 +167,23 @@ export const CONFIG_PRESETS: Record<string, Partial<AgentConfig>> = {
       enabledStrategies: [...DEFAULT_DISCOVERY_STRATEGIES, 'test-coverage'],
       cacheTime: 300000,
       checkChanges: true,
+    },
+  },
+
+  'working-dir': {
+    strategy: 'continuous-improvement',
+    continueOnCompletion: true,
+    maxIterations: 0,
+    requireApprovalFor: 'commits' as ApprovalLevel,
+    autoApproveSafeTasks: true,
+    maxAutoApprovalCost: 30,
+    pauseOnError: false,
+    maxConcurrency: 1,
+    workingDir: './plans', // Default working directory
+    discovery: {
+      enabledStrategies: ['working-dir'],
+      cacheTime: 60000, // Check every minute for new tasks
+      checkChanges: false,
     },
   },
 }

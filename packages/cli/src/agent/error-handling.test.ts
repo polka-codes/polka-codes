@@ -229,14 +229,14 @@ describe('error-handling', () => {
     })
 
     it('should handle boolean values', () => {
-      expect(safeJSONParse('true', '/test.json')).toBe(true)
-      expect(safeJSONParse('false', '/test.json')).toBe(false)
+      expect(safeJSONParse<boolean>('true', '/test.json')).toEqual(true)
+      expect(safeJSONParse<boolean>('false', '/test.json')).toEqual(false)
     })
 
     it('should handle numbers', () => {
-      expect(safeJSONParse('42', '/test.json')).toBe(42)
-      expect(safeJSONParse('3.14', '/test.json')).toBe(3.14)
-      expect(safeJSONParse('-10', '/test.json')).toBe(-10)
+      expect(safeJSONParse<number>('42', '/test.json')).toEqual(42)
+      expect(safeJSONParse<number>('3.14', '/test.json')).toEqual(3.14)
+      expect(safeJSONParse<number>('-10', '/test.json')).toEqual(-10)
     })
   })
 })

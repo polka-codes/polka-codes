@@ -38,17 +38,17 @@ describe('AgentConfig', () => {
   it('should merge nested objects', () => {
     const base = DEFAULT_AGENT_CONFIG
     const override: Partial<AgentConfig> = {
-      resourceLimits: {
-        ...base.resourceLimits,
-        maxMemory: 4096,
+      continuousImprovement: {
+        ...base.continuousImprovement,
+        sleepTimeOnNoTasks: 120000,
       },
     }
 
     const merged = mergeConfig(base, override)
 
-    expect(merged.resourceLimits.maxMemory).toBe(4096)
-    // Other resource limits should remain
-    expect(merged.resourceLimits.maxCpuPercent).toBe(base.resourceLimits.maxCpuPercent)
+    expect(merged.continuousImprovement.sleepTimeOnNoTasks).toBe(120000)
+    // Other continuous improvement settings should remain
+    expect(merged.continuousImprovement.sleepTimeBetweenTasks).toBe(base.continuousImprovement.sleepTimeBetweenTasks)
   })
 })
 

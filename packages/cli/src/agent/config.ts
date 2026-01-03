@@ -4,17 +4,6 @@ import { ConfigValidationError } from './errors'
 import type { AgentConfig } from './types'
 
 /**
- * Zod schema for ResourceLimits
- */
-const ResourceLimitsSchema = z.object({
-  maxMemory: z.number().int().positive().default(2048),
-  maxCpuPercent: z.number().int().min(1).max(100).default(80),
-  maxTaskExecutionTime: z.number().int().positive().default(60),
-  maxSessionTime: z.number().int().positive().default(480),
-  maxFilesChanged: z.number().int().positive().default(20),
-})
-
-/**
  * Zod schema for ContinuousImprovementConfig
  */
 const ContinuousImprovementConfigSchema = z.object({
@@ -49,7 +38,7 @@ export const AgentConfigSchema = z.object({
   destructiveOperations: z.array(z.string()).default([]),
   maxAutoApprovalCost: z.number().int().nonnegative().default(5),
   autoApproveSafeTasks: z.boolean().default(true),
-  resourceLimits: ResourceLimitsSchema.default(DEFAULT_AGENT_CONFIG.resourceLimits),
+  workingDir: z.string().optional(),
   continuousImprovement: ContinuousImprovementConfigSchema.default(DEFAULT_AGENT_CONFIG.continuousImprovement),
   discovery: DiscoveryConfigSchema.default(DEFAULT_AGENT_CONFIG.discovery),
   preset: z.string().optional(),
@@ -132,10 +121,6 @@ export function mergeConfig(base: AgentConfig, override: Partial<AgentConfig>): 
   return {
     ...base,
     ...override,
-    resourceLimits: {
-      ...base.resourceLimits,
-      ...(override.resourceLimits || {}),
-    },
     continuousImprovement: {
       ...base.continuousImprovement,
       ...(override.continuousImprovement || {}),

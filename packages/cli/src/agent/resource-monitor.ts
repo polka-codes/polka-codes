@@ -1,5 +1,34 @@
 import type { Logger } from '@polka-codes/core'
-import type { ResourceLimits } from './types'
+
+/**
+ * Resource limits configuration
+ */
+export interface ResourceLimits {
+  maxExecutionTime?: number // milliseconds
+  maxMemory?: number // MB
+  maxSessionTime?: number // minutes
+  maxFilesModified?: number
+}
+
+/**
+ * Resource limit exceeded event
+ */
+export interface ResourceLimitExceeded {
+  limit: 'memory' | 'sessionTime' | 'execution-time' | 'files-modified'
+  current: number
+  max: number
+  message?: string
+}
+
+/**
+ * Current resource usage
+ */
+export interface ResourceUsage {
+  memoryMB: number
+  peakMemoryMB: number
+  sessionTimeMinutes: number
+  withinLimits: boolean
+}
 
 /**
  * Monitors and enforces resource limits
@@ -65,7 +94,7 @@ export class ResourceMonitor {
     const memUsedMB = memUsage.heapUsed / 1024 / 1024
     this.peakMemory = Math.max(this.peakMemory, memUsedMB)
 
-    if (memUsedMB > this.limits.maxMemory) {
+    if (this.limits.maxMemory && memUsedMB > this.limits.maxMemory) {
       this.logger.warn(`[ResourceMonitor] Memory limit exceeded: ${memUsedMB.toFixed(2)}MB / ${this.limits.maxMemory}MB`)
 
       await this.onLimitExceeded({
@@ -79,7 +108,7 @@ export class ResourceMonitor {
     // Check session time
     const elapsedMinutes = (Date.now() - this.startTime) / 60000
 
-    if (elapsedMinutes > this.limits.maxSessionTime) {
+    if (this.limits.maxSessionTime && elapsedMinutes > this.limits.maxSessionTime) {
       this.logger.warn(`[ResourceMonitor] Session time limit exceeded: ${elapsedMinutes.toFixed(2)}min / ${this.limits.maxSessionTime}min`)
 
       await this.onLimitExceeded({
@@ -102,7 +131,9 @@ export class ResourceMonitor {
       memoryMB: memUsage.heapUsed / 1024 / 1024,
       peakMemoryMB: this.peakMemory,
       sessionTimeMinutes: elapsedMinutes,
-      withinLimits: memUsage.heapUsed / 1024 / 1024 <= this.limits.maxMemory && elapsedMinutes <= this.limits.maxSessionTime,
+      withinLimits:
+        (this.limits.maxMemory === undefined || memUsage.heapUsed / 1024 / 1024 <= this.limits.maxMemory) &&
+        (this.limits.maxSessionTime === undefined || elapsedMinutes <= this.limits.maxSessionTime),
     }
   }
 
@@ -110,6 +141,7 @@ export class ResourceMonitor {
    * Get memory usage percentage
    */
   getMemoryUsagePercentage(): number {
+    if (!this.limits.maxMemory) return 0
     const current = this.getCurrentUsage().memoryMB
     return (current / this.limits.maxMemory) * 100
   }
@@ -118,27 +150,8 @@ export class ResourceMonitor {
    * Get session time percentage
    */
   getSessionTimePercentage(): number {
+    if (!this.limits.maxSessionTime) return 0
     const current = this.getCurrentUsage().sessionTimeMinutes
     return (current / this.limits.maxSessionTime) * 100
   }
-}
-
-/**
- * Resource limit exceeded event
- */
-export interface ResourceLimitExceeded {
-  limit: 'memory' | 'sessionTime' | 'taskTime' | 'filesChanged'
-  current: number
-  max: number
-  message: string
-}
-
-/**
- * Current resource usage
- */
-export interface ResourceUsage {
-  memoryMB: number
-  peakMemoryMB: number
-  sessionTimeMinutes: number
-  withinLimits: boolean
 }

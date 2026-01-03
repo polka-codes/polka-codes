@@ -22,13 +22,6 @@ describe('ContinuousImprovementLoop', () => {
     destructiveOperations: ['delete', 'force-push', 'reset'],
     maxAutoApprovalCost: 5,
     autoApproveSafeTasks: true,
-    resourceLimits: {
-      maxMemory: 1024,
-      maxCpuPercent: 80,
-      maxSessionTime: 60,
-      maxTaskExecutionTime: 5,
-      maxFilesChanged: 20,
-    },
     continuousImprovement: {
       sleepTimeOnNoTasks: 60000,
       sleepTimeBetweenTasks: 5000,

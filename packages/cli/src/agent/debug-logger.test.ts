@@ -342,27 +342,33 @@ describe('DebugLogger', () => {
 
   describe('DebugCategory enum', () => {
     it('should have workflow category', () => {
-      expect(DebugCategory.WORKFLOW).toBe('workflow')
+      expect(DebugCategory.WORKFLOW).toBeDefined()
+      expect(DebugCategory.WORKFLOW as string).toBe('workflow')
     })
 
     it('should have state category', () => {
-      expect(DebugCategory.STATE).toBe('state')
+      expect(DebugCategory.STATE).toBeDefined()
+      expect(DebugCategory.STATE as string).toBe('state')
     })
 
     it('should have executor category', () => {
-      expect(DebugCategory.EXECUTOR).toBe('executor')
+      expect(DebugCategory.EXECUTOR).toBeDefined()
+      expect(DebugCategory.EXECUTOR as string).toBe('executor')
     })
 
     it('should have planner category', () => {
-      expect(DebugCategory.PLANNER).toBe('planner')
+      expect(DebugCategory.PLANNER).toBeDefined()
+      expect(DebugCategory.PLANNER as string).toBe('planner')
     })
 
     it('should have discovery category', () => {
-      expect(DebugCategory.DISCOVERY).toBe('discovery')
+      expect(DebugCategory.DISCOVERY).toBeDefined()
+      expect(DebugCategory.DISCOVERY as string).toBe('discovery')
     })
 
     it('should have ALL wildcard', () => {
-      expect(DebugCategory.ALL).toBe('*')
+      expect(DebugCategory.ALL).toBeDefined()
+      expect(DebugCategory.ALL as string).toBe('*')
     })
   })
 })

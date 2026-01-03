@@ -9,11 +9,13 @@ export class AgentLogger {
   private logger: Logger
   private logFile: string
   private sessionId: string
+  private logLevel: string = 'info'
 
-  constructor(logger: Logger, logFile: string, sessionId: string) {
+  constructor(logger: Logger, logFile: string, sessionId: string, logLevel: string = 'info') {
     this.logger = logger
     this.logFile = logFile
     this.sessionId = sessionId
+    this.logLevel = logLevel
   }
 
   /**
@@ -192,7 +194,10 @@ export class AgentLogger {
       await fs.appendFile(this.logFile, `${JSON.stringify(entry)}\n`)
     } catch (error) {
       // Silently fail to avoid infinite loops
-      console.error('Failed to write to log file:', error)
+      // Use stderr as last resort for critical logger failures
+      if (this.logLevel === 'debug') {
+        process.stderr.write(`[Logger] Failed to write to log file: ${error}\n`)
+      }
     }
   }
 }

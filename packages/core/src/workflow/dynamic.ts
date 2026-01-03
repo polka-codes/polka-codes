@@ -19,6 +19,11 @@ import {
 import type { Logger, StepFn, ToolRegistry, WorkflowContext, WorkflowFn, WorkflowTools } from './workflow'
 
 /**
+ * Maximum iterations for while loops to prevent infinite loops
+ */
+const MAX_WHILE_LOOP_ITERATIONS = 1000
+
+/**
  * JSON Schema type to Zod type mapping
  */
 type JsonSchemaType = 'string' | 'number' | 'integer' | 'boolean' | 'object' | 'array' | 'null'
@@ -1021,13 +1026,14 @@ async function executeControlFlowStep<TTools extends ToolRegistry>(
     context.logger.debug(`[ControlFlow] Loop body has ${step.while.steps.length} step(s)`)
 
     let iterationCount = 0
-    const maxIterations = 1000 // Safety limit to prevent infinite loops
     let loopResult: any
 
     while (true) {
       iterationCount++
-      if (iterationCount > maxIterations) {
-        throw new Error(`While loop '${step.id}' in workflow '${workflowId}' exceeded maximum iteration limit of ${maxIterations}`)
+      if (iterationCount > MAX_WHILE_LOOP_ITERATIONS) {
+        throw new Error(
+          `While loop '${step.id}' in workflow '${workflowId}' exceeded maximum iteration limit of ${MAX_WHILE_LOOP_ITERATIONS}`,
+        )
       }
 
       // Evaluate condition

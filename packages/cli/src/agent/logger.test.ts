@@ -187,12 +187,6 @@ describe('AgentLogger', () => {
           documentationAdded: 3,
           qualityImprovements: 1,
         },
-        resources: {
-          peakMemoryMB: 512,
-          averageCpuPercent: 45,
-          totalApiCalls: 100,
-          totalTokensUsed: 50000,
-        },
       })
 
       expect(logMessages).toHaveLength(1)

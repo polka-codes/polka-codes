@@ -18,6 +18,7 @@ export class TaskExecutor {
   constructor(
     private context: WorkflowContext,
     private logger: Logger,
+    private defaultTimeoutMs: number = 60 * 60 * 1000, // 60 minutes default
   ) {}
 
   /**
@@ -25,15 +26,15 @@ export class TaskExecutor {
    *
    * Uses AbortController to properly cancel the workflow if timeout occurs
    */
-  async execute(task: Task, state: AgentState): Promise<WorkflowExecutionResult> {
+  async execute(task: Task, _state: AgentState, timeoutMs?: number): Promise<WorkflowExecutionResult> {
     this.logger.info(`[Executor] Executing task ${task.id}: ${task.title}`)
 
-    // Get timeout from config
-    const timeoutMs = state.config.resourceLimits.maxTaskExecutionTime * 60 * 1000
+    // Use provided timeout or default
+    const effectiveTimeout = timeoutMs ?? this.defaultTimeoutMs
 
     try {
       // Execute with timeout and cancellation support
-      const result = await this.executeTaskInternal(task, timeoutMs)
+      const result = await this.executeTaskInternal(task, effectiveTimeout)
 
       this.logger.info(`[Executor] Task ${task.id} completed`)
       return result

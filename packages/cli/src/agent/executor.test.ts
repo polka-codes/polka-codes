@@ -23,13 +23,6 @@ describe('TaskExecutor', () => {
     destructiveOperations: ['delete', 'force-push', 'reset'],
     maxAutoApprovalCost: 5,
     autoApproveSafeTasks: true,
-    resourceLimits: {
-      maxMemory: 1024,
-      maxCpuPercent: 80,
-      maxSessionTime: 60,
-      maxTaskExecutionTime: 5,
-      maxFilesChanged: 20,
-    },
     continuousImprovement: {
       sleepTimeOnNoTasks: 60000,
       sleepTimeBetweenTasks: 5000,
@@ -98,12 +91,6 @@ describe('TaskExecutor', () => {
           refactoringsCompleted: 0,
           documentationAdded: 0,
           qualityImprovements: 0,
-        },
-        resources: {
-          peakMemoryMB: 0,
-          averageCpuPercent: 0,
-          totalApiCalls: 0,
-          totalTokensUsed: 0,
         },
       },
       timestamps: {
@@ -193,26 +180,19 @@ describe('TaskExecutor', () => {
       // Create task that takes longer than timeout
       const task = createMockTask()
 
-      // Create a config with shorter timeout for testing
-      const testConfig = {
-        ...mockConfig,
-        resourceLimits: {
-          ...mockConfig.resourceLimits,
-          maxTaskExecutionTime: 0.01, // 0.01 minutes = 0.6 seconds = 600ms
-        },
-      }
-
-      const testState = { ...mockState, config: testConfig }
+      // Use the mock state
+      const testState = mockState
 
       mock.module('./workflow-adapter', () => ({
         invokeWorkflow: async () => {
-          // Sleep longer than 600ms timeout
-          await new Promise((resolve) => setTimeout(resolve, 2000))
+          // Sleep longer than 100ms timeout
+          await new Promise((resolve) => setTimeout(resolve, 500))
           return { success: true }
         },
       }))
 
-      const result = await executor.execute(task, testState)
+      // Execute with 100ms timeout
+      const result = await executor.execute(task, testState, 100)
 
       // Should timeout
       expect(result.success).toBe(false)

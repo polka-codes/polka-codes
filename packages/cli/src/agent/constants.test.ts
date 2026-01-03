@@ -121,8 +121,8 @@ describe('constants', () => {
       })
     })
 
-    it('should have 9 strategies total', () => {
-      expect(ALL_DISCOVERY_STRATEGIES).toHaveLength(9)
+    it('should have 10 strategies total', () => {
+      expect(ALL_DISCOVERY_STRATEGIES).toHaveLength(10)
     })
   })
 
@@ -215,15 +215,6 @@ describe('constants', () => {
 
     it('should auto approve safe tasks', () => {
       expect(DEFAULT_AGENT_CONFIG.autoApproveSafeTasks).toBe(true)
-    })
-
-    it('should have resource limits', () => {
-      expect(DEFAULT_AGENT_CONFIG.resourceLimits).toBeDefined()
-      expect(DEFAULT_AGENT_CONFIG.resourceLimits.maxMemory).toBe(2048)
-      expect(DEFAULT_AGENT_CONFIG.resourceLimits.maxCpuPercent).toBe(80)
-      expect(DEFAULT_AGENT_CONFIG.resourceLimits.maxTaskExecutionTime).toBe(60)
-      expect(DEFAULT_AGENT_CONFIG.resourceLimits.maxSessionTime).toBe(480)
-      expect(DEFAULT_AGENT_CONFIG.resourceLimits.maxFilesChanged).toBe(20)
     })
 
     it('should have continuous improvement config', () => {

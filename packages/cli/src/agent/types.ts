@@ -77,6 +77,26 @@ export type TaskStatus = 'pending' | 'in-progress' | 'completed' | 'failed' | 'b
 export type WorkflowName = 'plan' | 'code' | 'review' | 'fix' | 'commit' | 'test' | 'refactor' | 'analyze'
 
 /**
+ * Workflow input - flexible record to accommodate different workflow needs
+ * This allows for extensibility while maintaining some type safety
+ */
+export type WorkflowInput = Record<string, unknown> & {
+  goal?: string
+  prompt?: string
+  task?: string
+  plan?: string
+  files?: string[]
+  error?: string
+  context?: string | Record<string, unknown>
+  [key: string]: unknown
+}
+
+/**
+ * Workflow result data - flexible type to accommodate different workflow outputs
+ */
+export type WorkflowResultData = unknown
+
+/**
  * Priority calculation result
  */
 export interface PriorityResult {
@@ -127,8 +147,8 @@ export interface AgentConfig {
   /** Auto-approve safe tasks */
   autoApproveSafeTasks: boolean
 
-  /** Resource limits */
-  resourceLimits: ResourceLimits
+  /** Working directory for plans and task documentation */
+  workingDir?: string
 
   /** Continuous improvement settings */
   continuousImprovement: ContinuousImprovementConfig
@@ -161,26 +181,6 @@ export interface AgentConfig {
     enabled: boolean
     interval: number
   }
-}
-
-/**
- * Resource limits to prevent resource exhaustion
- */
-export interface ResourceLimits {
-  /** Maximum memory usage (MB) */
-  maxMemory: number
-
-  /** Maximum CPU percentage */
-  maxCpuPercent: number
-
-  /** Maximum execution time per task (minutes) */
-  maxTaskExecutionTime: number
-
-  /** Maximum total session time (minutes) */
-  maxSessionTime: number
-
-  /** Maximum files changed per commit */
-  maxFilesChanged: number
 }
 
 /**
@@ -316,7 +316,7 @@ export interface Task {
   workflow: WorkflowName
 
   /** Input for the workflow */
-  workflowInput: any
+  workflowInput: WorkflowInput
 
   /** Execution result (if completed) */
   result?: WorkflowExecutionResult
@@ -340,7 +340,7 @@ export interface Task {
   branch?: string
 
   /** Additional metadata */
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 }
 
 /**
@@ -351,7 +351,7 @@ export interface WorkflowExecutionResult {
   success: boolean
 
   /** Result data */
-  data?: any
+  data?: WorkflowResultData
 
   /** Output generated */
   output?: string
@@ -459,9 +459,6 @@ export interface AgentMetrics {
 
   /** Improvement metrics */
   improvements: ImprovementMetrics
-
-  /** Resource usage */
-  resources: ResourceUsage
 }
 
 /**
@@ -522,23 +519,6 @@ export interface ImprovementMetrics {
 
   /** Code quality improvements */
   qualityImprovements: number
-}
-
-/**
- * Resource usage tracking
- */
-export interface ResourceUsage {
-  /** Peak memory usage (MB) */
-  peakMemoryMB: number
-
-  /** Average CPU percentage */
-  averageCpuPercent: number
-
-  /** Total API calls made */
-  totalApiCalls: number
-
-  /** Total tokens used */
-  totalTokensUsed: number
 }
 
 /**

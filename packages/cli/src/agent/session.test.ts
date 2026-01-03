@@ -153,9 +153,9 @@ describe('session', () => {
     })
 
     it('should list all active sessions', async () => {
-      const result1 = await acquire('session-list-1')
-      const result2 = await acquire('session-list-2')
-      const result3 = await acquire('session-list-3')
+      const _result1 = await acquire('session-list-1')
+      const _result2 = await acquire('session-list-2')
+      const _result3 = await acquire('session-list-3')
 
       const sessions = listActive()
 

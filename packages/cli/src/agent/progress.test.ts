@@ -141,7 +141,7 @@ describe('Progress', () => {
     it('should calculate ETA when progress exists', () => {
       progress.set(50)
       // Give some time to pass
-      const startTime = (progress as any).startTime
+      const _startTime = (progress as any).startTime
       ;(progress as any).startTime = Date.now() - 1000 // 1 second ago
 
       const eta = (progress as any).calculateETA()
@@ -298,7 +298,7 @@ describe('Spinner', () => {
       ;(process.stdout as any).isTTY = true
 
       spinner.start()
-      const intervalId = (spinner as any).intervalId
+      const _intervalId = (spinner as any).intervalId
 
       spinner.start() // Try to start again (will be ignored)
       ;(spinner as any).stop('Stopped')

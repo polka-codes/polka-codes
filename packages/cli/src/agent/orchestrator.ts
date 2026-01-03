@@ -7,7 +7,6 @@ import { createContinuousImprovementLoop } from './improvement-loop'
 import { AgentLogger } from './logger'
 import { MetricsCollector } from './metrics'
 import { createTaskPlanner } from './planner'
-import { ResourceMonitor } from './resource-monitor'
 import { ApprovalManager } from './safety/approval'
 import { SafetyChecker } from './safety/checks'
 import { InterruptHandler } from './safety/interrupt'
@@ -15,6 +14,7 @@ import { acquire, release } from './session'
 import { AgentStateManager } from './state-manager'
 import { TaskHistory } from './task-history'
 import type { AgentConfig, AgentState, Plan, Task, WorkflowContext } from './types'
+import { WorkingSpace } from './working-space'
 
 /**
  * Main autonomous agent orchestrator
@@ -23,16 +23,21 @@ import type { AgentConfig, AgentState, Plan, Task, WorkflowContext } from './typ
  * - Accept high-level goals
  * - Decompose into executable tasks
  * - Execute tasks safely with approvals
- * - Manage resources and state
+ * - Manage state
  * - Handle continuous improvement mode
+ * - Manage working directory for plans and tasks
  *
  * Two modes:
  * - Goal-directed: User provides a goal to achieve
  * - Continuous: Auto-discovers and fixes issues
+ *
+ * Optional working directory mode:
+ * - Uses a user-specified directory for plans and task documentation
+ * - Discovers tasks from working directory
+ * - Documents completed tasks in working directory
  */
 export class AutonomousAgent {
   private stateManager: AgentStateManager
-  private resourceMonitor: ResourceMonitor
   private taskHistory: TaskHistory
   private logger: AgentLogger
   private metrics: MetricsCollector
@@ -43,6 +48,7 @@ export class AutonomousAgent {
   private taskPlanner: ReturnType<typeof createTaskPlanner>
   private taskExecutor: TaskExecutor
   private improvementLoop?: ReturnType<typeof createContinuousImprovementLoop>
+  private workingSpace?: WorkingSpace
 
   private initialized: boolean = false
   private sessionId: string
@@ -58,7 +64,6 @@ export class AutonomousAgent {
 
     // Initialize all components with correct constructor arguments
     this.stateManager = new AgentStateManager(stateDir, this.sessionId)
-    this.resourceMonitor = new ResourceMonitor(config.resourceLimits, context.logger, this.handleResourceLimit.bind(this))
     this.taskHistory = new TaskHistory(stateDir)
     this.logger = new AgentLogger(context.logger, path.join(stateDir, 'agent.log'), this.sessionId)
     this.metrics = new MetricsCollector()
@@ -74,6 +79,11 @@ export class AutonomousAgent {
     this.goalDecomposer = new GoalDecomposer(context)
     this.taskPlanner = createTaskPlanner(context)
     this.taskExecutor = new TaskExecutor(context, context.logger)
+
+    // Initialize working space if configured
+    if (config.workingDir) {
+      this.workingSpace = new WorkingSpace(config.workingDir, context.logger)
+    }
   }
 
   /**
@@ -108,19 +118,25 @@ export class AutonomousAgent {
 
       this.logger.info(`[Init] ✅ State initialized: ${initialState.currentMode}`)
 
-      // 3. Start resource monitor
-      this.logger.info('[Init] Starting resource monitor...')
+      // 3. Initialize working space if configured
+      if (this.workingSpace) {
+        this.logger.info('[Init] Initializing working space...')
+        await this.workingSpace.initialize()
+        this.logger.info(`[Init] ✅ Working space ready: ${this.config.workingDir}`)
 
-      await this.resourceMonitor.start()
-
-      this.logger.info('[Init] ✅ Resource monitor started')
+        const stats = await this.workingSpace.getStats()
+        this.logger.info(
+          `[Init] Working space stats: ${stats.planCount} plans, ${stats.pendingTaskCount} pending tasks, ${stats.completedTaskCount} completed tasks`,
+        )
+      }
 
       // 4. Log configuration
       this.logger.info('[Init] Configuration:')
+      this.logger.info(`  - Strategy: ${this.config.strategy}`)
       this.logger.info(`  - Approval level: ${this.config.approval.level}`)
-      this.logger.info(`  - Max memory: ${this.config.resourceLimits.maxMemory}MB`)
-      this.logger.info(`  - Session timeout: ${this.config.resourceLimits.maxSessionTime}min`)
-      this.logger.info(`  - Task timeout: ${this.config.resourceLimits.maxTaskExecutionTime}min`)
+      if (this.config.workingDir) {
+        this.logger.info(`  - Working directory: ${this.config.workingDir}`)
+      }
       this.logger.info('')
 
       this.initialized = true
@@ -255,8 +271,14 @@ export class AutonomousAgent {
 
       this.logger.info('[Run] ✅ Plan approved')
 
-      // 5. Execute plan
-      this.logger.info('[Run] Phase 5: Executing plan...')
+      // 5. Save plan to working space if configured
+      if (this.workingSpace) {
+        this.logger.info('[Run] Saving plan to working space...')
+        await this.workingSpace.savePlan(plan)
+      }
+
+      // 6. Execute plan
+      this.logger.info('[Run] Phase 6: Executing plan...')
       this.logger.info('')
 
       await this.executePlan(plan)
@@ -341,9 +363,6 @@ export class AutonomousAgent {
     this.logger.info('[Cleanup] Cleaning up...')
 
     try {
-      // Stop resource monitor
-      await this.resourceMonitor.stop()
-
       // Release session
       await release(this.sessionId)
 
@@ -442,6 +461,12 @@ export class AutonomousAgent {
       if (result.success) {
         this.logger.info(`[Run] ✅ Task completed`)
 
+        // Document completed task in working space if configured
+        if (this.workingSpace) {
+          const resultText = result.output || result.data?.toString() || 'Task completed successfully'
+          await this.workingSpace.documentCompletedTask(task, resultText)
+        }
+
         // Move task from queue to completed
         await this.stateManager.moveTask(task.id, 'queue', 'completed')
 
@@ -473,27 +498,6 @@ export class AutonomousAgent {
       await this.stateManager.moveTask(task.id, 'queue', 'failed')
 
       return false
-    }
-  }
-
-  /**
-   * Handle resource limit exceeded
-   */
-  private async handleResourceLimit(event: { limit: string; current: number; max: number }): Promise<void> {
-    this.logger.warn(`[Resource] Limit exceeded: ${event.limit} (${event.current}/${event.max})`)
-
-    if (event.limit === 'memory') {
-      // Note: Attempting garbage collection requires --expose-gc flag
-      // In production, rely on Node.js/Bun automatic garbage collection
-      // Consider reducing memory usage by clearing caches, releasing resources, etc.
-      this.logger.warn('[Resource] Memory limit exceeded - consider clearing caches or reducing task complexity')
-    }
-
-    if (event.limit === 'sessionTime') {
-      this.logger.warn('[Resource] Session timeout approaching')
-
-      // Stop gracefully
-      await this.stop()
     }
   }
 

@@ -12,12 +12,12 @@ import type { WorkflowContext, WorkflowExecutionResult } from './types'
 /**
  * Adapt code workflow result
  */
-export async function adaptCodeWorkflow(input: any, context: any): Promise<WorkflowExecutionResult> {
+export async function adaptCodeWorkflow(input: Record<string, unknown>, context: WorkflowContext): Promise<WorkflowExecutionResult> {
   try {
     // Dynamic import to avoid circular dependencies
     const { codeWorkflow } = await import('../workflows/code.workflow')
 
-    const result = await codeWorkflow(input, context)
+    const result = await codeWorkflow(input as any, context)
 
     if (result.success) {
       return {
@@ -43,11 +43,11 @@ export async function adaptCodeWorkflow(input: any, context: any): Promise<Workf
 /**
  * Adapt fix workflow result
  */
-export async function adaptFixWorkflow(input: any, context: any): Promise<WorkflowExecutionResult> {
+export async function adaptFixWorkflow(input: Record<string, unknown>, context: WorkflowContext): Promise<WorkflowExecutionResult> {
   try {
     const { fixWorkflow } = await import('../workflows/fix.workflow')
 
-    const result = await fixWorkflow(input, context)
+    const result = await fixWorkflow(input as any, context)
 
     if (result.success) {
       return {
@@ -73,11 +73,11 @@ export async function adaptFixWorkflow(input: any, context: any): Promise<Workfl
 /**
  * Adapt plan workflow result
  */
-export async function adaptPlanWorkflow(input: any, context: any): Promise<WorkflowExecutionResult> {
+export async function adaptPlanWorkflow(input: Record<string, unknown>, context: WorkflowContext): Promise<WorkflowExecutionResult> {
   try {
     const { planWorkflow } = await import('../workflows/plan.workflow')
 
-    const result = await planWorkflow(input, context)
+    const result = await planWorkflow(input as any, context)
 
     if (!result) {
       return {
@@ -104,11 +104,11 @@ export async function adaptPlanWorkflow(input: any, context: any): Promise<Workf
 /**
  * Adapt review workflow result
  */
-export async function adaptReviewWorkflow(input: any, context: any): Promise<WorkflowExecutionResult> {
+export async function adaptReviewWorkflow(input: Record<string, unknown>, context: WorkflowContext): Promise<WorkflowExecutionResult> {
   try {
     const { reviewWorkflow } = await import('../workflows/review.workflow')
 
-    const result = await reviewWorkflow(input, context)
+    const result = await reviewWorkflow(input as any, context)
 
     // Review workflow always returns successfully
     return {
@@ -128,11 +128,11 @@ export async function adaptReviewWorkflow(input: any, context: any): Promise<Wor
 /**
  * Adapt commit workflow result
  */
-export async function adaptCommitWorkflow(input: any, context: any): Promise<WorkflowExecutionResult> {
+export async function adaptCommitWorkflow(input: Record<string, unknown>, context: WorkflowContext): Promise<WorkflowExecutionResult> {
   try {
     const { commitWorkflow } = await import('../workflows/commit.workflow')
 
-    const result = await commitWorkflow(input, context)
+    const result = await commitWorkflow(input as any, context)
 
     // Commit workflow returns string | void
     if (typeof result === 'string') {
@@ -160,11 +160,11 @@ export async function adaptCommitWorkflow(input: any, context: any): Promise<Wor
 /**
  * Adapt epic workflow result (if exists)
  */
-export async function adaptEpicWorkflow(input: any, context: any): Promise<WorkflowExecutionResult> {
+export async function adaptEpicWorkflow(input: Record<string, unknown>, context: WorkflowContext): Promise<WorkflowExecutionResult> {
   try {
     const { epicWorkflow } = await import('../workflows/epic.workflow')
 
-    const _result = await epicWorkflow(input, context)
+    const _result = await epicWorkflow(input as any, context)
 
     // Epic workflow returns void
     return {
@@ -212,19 +212,22 @@ export async function invokeWorkflow(
       }
     : context
 
+  // Cast input to Record<string, unknown> for compatibility
+  const workflowInput = input as Record<string, unknown>
+
   switch (workflowName) {
     case 'code':
-      return adaptCodeWorkflow(input, wrappedContext)
+      return adaptCodeWorkflow(workflowInput, wrappedContext)
     case 'fix':
-      return adaptFixWorkflow(input, wrappedContext)
+      return adaptFixWorkflow(workflowInput, wrappedContext)
     case 'plan':
-      return adaptPlanWorkflow(input, wrappedContext)
+      return adaptPlanWorkflow(workflowInput, wrappedContext)
     case 'review':
-      return adaptReviewWorkflow(input, wrappedContext)
+      return adaptReviewWorkflow(workflowInput, wrappedContext)
     case 'commit':
-      return adaptCommitWorkflow(input, wrappedContext)
+      return adaptCommitWorkflow(workflowInput, wrappedContext)
     case 'epic':
-      return adaptEpicWorkflow(input, wrappedContext)
+      return adaptEpicWorkflow(workflowInput, wrappedContext)
     default:
       throw new WorkflowInvocationError(workflowName, `Unknown workflow: ${workflowName}`)
   }
@@ -236,8 +239,8 @@ export async function invokeWorkflow(
  */
 export async function invokeWorkflowWithTimeout(
   workflowName: string,
-  input: any,
-  context: any,
+  input: unknown,
+  context: WorkflowContext,
   timeoutMs: number,
 ): Promise<WorkflowExecutionResult> {
   const timeoutPromise = new Promise<never>((_, reject) => {
@@ -247,7 +250,7 @@ export async function invokeWorkflowWithTimeout(
   })
 
   try {
-    return await Promise.race([invokeWorkflow(workflowName, input, context), timeoutPromise])
+    return await Promise.race([invokeWorkflow(workflowName, input as Record<string, unknown>, context), timeoutPromise])
   } catch (error) {
     if (error instanceof Error && error.message.includes('timed out')) {
       return {

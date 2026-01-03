@@ -27,7 +27,7 @@ export type { TaskPlanner } from './planner'
 export { createTaskPlanner } from './planner'
 export type { ProgressOptions } from './progress'
 export { createMultiProgress, createProgress, createSpinner, formatDuration, MultiProgress, Progress, Spinner } from './progress'
-export { ResourceMonitor } from './resource-monitor'
+export { type ResourceLimitExceeded, type ResourceLimits, ResourceMonitor } from './resource-monitor'
 // Safety systems
 export { ApprovalManager } from './safety/approval'
 export { SafetyChecker } from './safety/checks'

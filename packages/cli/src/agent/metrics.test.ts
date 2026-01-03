@@ -49,15 +49,6 @@ describe('MetricsCollector', () => {
       expect(metrics.improvements.qualityImprovements).toBe(0)
     })
 
-    it('should initialize resource metrics to zero', () => {
-      const metrics = collector.getMetrics()
-
-      expect(metrics.resources.peakMemoryMB).toBe(0)
-      expect(metrics.resources.averageCpuPercent).toBe(0)
-      expect(metrics.resources.totalApiCalls).toBe(0)
-      expect(metrics.resources.totalTokensUsed).toBe(0)
-    })
-
     it('should set start time and calculate execution time', async () => {
       await new Promise((resolve) => setTimeout(resolve, 10))
       const metrics = collector.getMetrics()
