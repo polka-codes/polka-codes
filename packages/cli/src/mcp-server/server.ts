@@ -122,6 +122,10 @@ export class McpServer {
 
   /**
    * Check if client has exceeded rate limit
+   *
+   * Note: Uses Date.now() for rate limit windows which is appropriate for
+   * this use case. The rate limit is per-minute wall-clock time, not monotonic time.
+   * System time changes could temporarily affect rate limiting but will self-correct.
    */
   private checkRateLimit(clientId: string): boolean {
     const now = Date.now()

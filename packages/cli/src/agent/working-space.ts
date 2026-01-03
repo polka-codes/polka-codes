@@ -519,15 +519,13 @@ ${task.files.length > 0 ? task.files.map((f) => `- \`${f}\``).join('\n') : 'None
 }
 
 /**
- * Create a working space manager
+ * Create a working space manager and initialize it
  */
-export function createWorkingSpace(workingDir: string, logger: Logger, _context: WorkflowContext): WorkingSpace {
+export async function createWorkingSpace(workingDir: string, logger: Logger, _context: WorkflowContext): Promise<WorkingSpace> {
   const space = new WorkingSpace(workingDir, logger)
 
-  // Auto-initialize if directory doesn't exist
-  space.initialize().catch((error) => {
-    logger.warn('[WorkingSpace] Failed to initialize', error)
-  })
+  // Initialize the working directory structure
+  await space.initialize()
 
   return space
 }

@@ -108,6 +108,13 @@ export async function runAgent(goal: string | undefined, options: any, _command:
   } as WorkflowTools<AgentToolsRegistry>
 
   // Simple step function for workflow execution tracking
+  // NOTE: This is a minimal implementation that bypasses some workflow step features:
+  // - No retry logic on failures
+  // - No step timeout handling
+  // - No detailed step event logging
+  // This is acceptable for the agent command context where the autonomous agent
+  // handles its own retries and error recovery. The step function exists primarily
+  // for compatibility with the workflow system.
   const step: StepFn = async <T>(_name: string, optionsOrFn: any, fn?: () => Promise<T>) => {
     const actualFn = fn || optionsOrFn
     if (typeof actualFn === 'function') {

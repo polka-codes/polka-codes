@@ -47,7 +47,7 @@ export async function setupWorkingDirDiscovery(
   workingSpace: WorkingSpace
   discoveryStrategy: DiscoveryStrategy
 }> {
-  const { WorkingSpace } = await import('./working-space.js')
+  const { WorkingSpace } = await import('./working-space')
   const workingSpace = new WorkingSpace(workingDir, context.logger)
   await workingSpace.initialize()
 
