@@ -311,8 +311,9 @@ export function createDebugLoggerFromEnv(baseLogger: Logger, stateDir: string): 
     .filter(Boolean)
     .map((c) => c.trim() as DebugCategory)
 
-  // If DEBUG=* was used, enable all categories
-  if (debugEnv.toLowerCase().trim() === '*' && categories.length === 0) {
+  // If debug mode is enabled but no categories specified, enable all categories
+  // This ensures DEBUG=1, DEBUG=verbose, etc. actually produce output
+  if (debugLevel > 0 && categories.length === 0) {
     categories = [DebugCategory.ALL]
   }
 
