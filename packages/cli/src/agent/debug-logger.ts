@@ -287,7 +287,7 @@ export function createDebugLoggerFromEnv(baseLogger: Logger, stateDir: string): 
   let debugLevel: number
   const parsed = parseInt(debugEnv, 10)
 
-  if (isNaN(parsed)) {
+  if (Number.isNaN(parsed)) {
     // Handle non-numeric values
     const normalized = debugEnv.toLowerCase().trim()
     if (normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'verbose' || normalized === '*') {

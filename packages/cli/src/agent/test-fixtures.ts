@@ -24,7 +24,7 @@ export function createMockLogger(): Logger {
  * Mock step function for testing
  */
 export function createMockStepFn(): StepFn {
-  return async (name, optionsOrFn, fn?) => {
+  return async (_name, optionsOrFn, fn?) => {
     const actualFn = fn || optionsOrFn
     if (typeof actualFn === 'function') {
       return await actualFn()

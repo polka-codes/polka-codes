@@ -1,3 +1,4 @@
+import { Console } from 'node:console'
 import type { Writable } from 'node:stream'
 import { type TaskEvent, TaskEventKind, type UsageMeter } from '@polka-codes/core'
 import chalk from 'chalk'
@@ -7,22 +8,8 @@ type ToolStat = { calls: number; success: number; errors: number }
 const taskToolCallStats = new Map<string, ToolStat>()
 const globalToolCallStats = new Map<string, ToolStat>()
 
-// Create a console-like object that writes to a stream
-function createStreamConsole(stdout: Writable, stderr: Writable) {
-  return {
-    log: (...args: any[]) => stdout.write(`${args.map(String).join(' ')}\n`),
-    info: (...args: any[]) => stdout.write(`${args.map(String).join(' ')}\n`),
-    warn: (...args: any[]) => stderr.write(`${args.map(String).join(' ')}\n`),
-    error: (...args: any[]) => stderr.write(`${args.map(String).join(' ')}\n`),
-    table: (data: any[]) => {
-      // Simple table formatting - fallback for console.table
-      stdout.write(`${JSON.stringify(data, null, 2)}\n`)
-    },
-  }
-}
-
 export function logToolCallStats(stream: Writable, statsMap: Map<string, ToolStat>, title: string) {
-  const customConsole = createStreamConsole(stream, stream)
+  const customConsole = new Console(stream, stream) as globalThis.Console
   customConsole.log(`\n\n======== ${title} ========`)
   if (statsMap.size > 0) {
     const tableData = [...statsMap.entries()].map(([tool, stats]) => {
@@ -40,7 +27,6 @@ export function logToolCallStats(stream: Writable, statsMap: Map<string, ToolSta
     customConsole.log('No tools were called.')
   }
 }
-
 const mergeToolCallStats = (a: Map<string, ToolStat>, b: Map<string, ToolStat>) => {
   const merged = new Map<string, ToolStat>()
   for (const [tool, stat] of a) {
@@ -70,7 +56,7 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter, stream: Writ
   if (verbose < 0) {
     return () => {}
   }
-  const customConsole = createStreamConsole(stream, stream)
+  const customConsole = new Console(stream, stream) as globalThis.Console
   let hadReasoning = false
   let hasText = false
   const write = stream.write.bind(stream)

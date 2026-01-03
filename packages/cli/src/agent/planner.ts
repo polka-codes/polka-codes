@@ -33,7 +33,7 @@ function resolveDependencies(tasks: Task[], context: WorkflowContext): Task[] {
  * Create execution phases using topological sort
  * Tasks in each phase can be executed in parallel
  */
-function createExecutionPhases(tasks: Task[], context: WorkflowContext): string[][] {
+function createExecutionPhases(tasks: Task[], _context: WorkflowContext): string[][] {
   const phases: string[][] = []
   const completed = new Set<string>()
   const _taskMap = new Map(tasks.map((t) => [t.id, t]))

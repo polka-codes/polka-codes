@@ -454,7 +454,7 @@ workflows:
         toolInfo: mockToolInfo,
       })
 
-      const mockStep: StepFn = async (name, optionsOrFn, fn?) => {
+      const mockStep: StepFn = async (_name, optionsOrFn, fn?) => {
         const actualFn = fn || optionsOrFn
         if (typeof actualFn === 'function') {
           return await actualFn()

@@ -4,14 +4,10 @@ exports[`eventHandler should not double count stats when logGlobalToolCallStats 
 "
 
 ======== Global Tool Call Stats ========
-[
-  {
-    "Tool Name": "test-tool",
-    "Calls": 1,
-    "Success": 1,
-    "Errors": 0,
-    "Success Rate": "100.00%"
-  }
-]
+┌─────────┬─────────────┬───────┬─────────┬────────┬──────────────┐
+│ (index) │  Tool Name  │ Calls │ Success │ Errors │ Success Rate │
+├─────────┼─────────────┼───────┼─────────┼────────┼──────────────┤
+│    0    │ 'test-tool' │   1   │    1    │   0    │  '100.00%'   │
+└─────────┴─────────────┴───────┴─────────┴────────┴──────────────┘
 "
 `;
