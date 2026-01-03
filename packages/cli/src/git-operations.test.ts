@@ -10,7 +10,7 @@ describe('GitOperations', () => {
     error: () => {},
   }
 
-  const mockExecuteCommand = async ({ command, args }: { command: string; args: string[] }) => {
+  const mockExecuteCommand = async (_input: { command: string; args: string[] }) => {
     return { stdout: '', stderr: '', exitCode: 0 }
   }
 

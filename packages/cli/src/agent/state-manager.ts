@@ -258,7 +258,8 @@ export class AgentStateManager {
     this.state = JSON.parse(content) as AgentState
 
     await this.saveState()
-    return this.state!
+    // state is guaranteed to be set after JSON.parse and saveState
+    return this.state as AgentState
   }
 
   /**

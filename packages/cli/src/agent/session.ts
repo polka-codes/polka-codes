@@ -15,16 +15,16 @@ export class SessionManager {
    */
   static async acquire(sessionId: string): Promise<AcquireResult> {
     // Check in-memory active sessions
-    if (SessionManager.activeSessions.has(sessionId)) {
-      const existing = SessionManager.activeSessions.get(sessionId)!
-      const age = Date.now() - existing.startTime
+    const existingMemSession = SessionManager.activeSessions.get(sessionId)
+    if (existingMemSession) {
+      const age = Date.now() - existingMemSession.startTime
 
       if (age < 3600000) {
         // 1 hour
         return {
           acquired: false,
           reason: 'Session is already active',
-          existingSession: existing,
+          existingSession: existingMemSession,
         }
       }
 

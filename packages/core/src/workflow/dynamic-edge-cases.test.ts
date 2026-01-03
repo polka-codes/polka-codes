@@ -7,7 +7,6 @@ import type { StepFn } from './workflow'
 
 // Type guards for ValidationResult
 type ValidationFailure = Extract<ValidationResult, { success: false }>
-type ValidationSuccess = Extract<ValidationResult, { success: true }>
 
 function asValidationFailure(result: ValidationResult): ValidationFailure {
   if (result.success) {
@@ -18,7 +17,6 @@ function asValidationFailure(result: ValidationResult): ValidationFailure {
 
 // Type guards for DynamicWorkflowParseResult
 type ParseFailure = Extract<DynamicWorkflowParseResult, { success: false }>
-type ParseSuccess = Extract<DynamicWorkflowParseResult, { success: true }>
 
 function asParseFailure(result: DynamicWorkflowParseResult): ParseFailure {
   if (result.success) {
