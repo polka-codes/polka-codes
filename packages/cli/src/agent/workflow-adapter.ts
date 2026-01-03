@@ -195,7 +195,8 @@ export async function invokeWorkflow(
 ): Promise<WorkflowExecutionResult> {
   // Check if operation was aborted before starting
   if (signal?.aborted) {
-    throw new WorkflowInvocationError(workflowName, 'Workflow was cancelled before execution')
+    const abortReason = signal.reason ? String(signal.reason) : 'Workflow was cancelled before execution'
+    throw new WorkflowInvocationError(workflowName, abortReason)
   }
 
   // Create a wrapped context that can check abort status
@@ -204,7 +205,8 @@ export async function invokeWorkflow(
         ...context,
         checkAbort: () => {
           if (signal.aborted) {
-            throw new WorkflowInvocationError(workflowName, 'Workflow was cancelled')
+            const reason = signal.reason ? String(signal.reason) : 'Workflow was cancelled'
+            throw new WorkflowInvocationError(workflowName, reason)
           }
         },
       }

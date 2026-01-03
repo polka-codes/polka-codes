@@ -86,18 +86,25 @@ export class TaskExecutor {
       // This ensures that when timeout occurs, the workflow will be
       // properly cancelled at the next checkpoint, not just abandoned.
       const workflowPromise = this.invokeWorkflow(task, abortController.signal)
+
+      // Prevent unhandled rejection if timeout wins the race
+      // The workflow may continue running and reject after timeout,
+      // but we don't care about that rejection since we already timed out
+      workflowPromise.catch(() => {
+        // Suppress unhandled rejection warning
+        // The actual error (timeout) is already being thrown
+      })
+
       const result = await Promise.race([workflowPromise, timeoutPromise])
 
       return result
     } catch (error) {
-      // Prevent unhandled rejection from the workflow if timeout won
-      // The workflow promise may still be running and will reject due to abort
-      // We need to catch that rejection to avoid unhandled promise warnings
-      // (The actual workflow result is discarded since we're throwing the timeout error)
+      // If error is due to abort, rethrow with abort reason
       if (abortController.signal.aborted) {
-        // Workflow was aborted due to timeout or cancellation
-        // The rejection is expected and can be safely ignored
+        const abortReason = abortController.signal.reason ? String(abortController.signal.reason) : 'Task was cancelled'
+        throw new TaskExecutionError(task.id, abortReason, error instanceof Error ? error : undefined)
       }
+
       throw error
     } finally {
       // Cleanup timeout
@@ -127,7 +134,8 @@ export class TaskExecutor {
     try {
       // Check if already aborted before starting
       if (signal.aborted) {
-        throw new TaskExecutionError(task.id, 'Task was cancelled before execution')
+        const abortReason = signal.reason ? String(signal.reason) : 'Task was cancelled before execution'
+        throw new TaskExecutionError(task.id, abortReason)
       }
 
       // Use workflow adapter to invoke appropriate workflow with abort signal
