@@ -2,6 +2,7 @@ import { exec } from 'node:child_process'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import { promisify } from 'node:util'
+import { randomUUID } from 'node:crypto'
 import type { ToolRegistry, WorkflowTools } from '@polka-codes/core'
 import { Command } from 'commander'
 import { loadConfig } from '../agent/config'
@@ -43,7 +44,7 @@ export async function runAgent(goal: string | undefined, options: any, _command:
   const logger = createLogger({ verbose: options.verbose || 0 })
   const workingDir = process.cwd()
   const stateDir = path.join(workingDir, '.polka', 'agent-state')
-  const sessionId = `agent-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+  const sessionId = `agent-${Date.now()}-${randomUUID()}`
 
   // Create minimal tools implementation for agent context
   //
