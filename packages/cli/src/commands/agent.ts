@@ -46,7 +46,24 @@ export async function runAgent(goal: string | undefined, options: any, _command:
   const sessionId = `agent-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 
   // Create minimal tools implementation for agent context
-  // The agent needs executeCommand for safety checks and readFile for goal decomposition
+  //
+  // CRITICAL LIMITATION: The agent currently only provides executeCommand and readFile.
+  // When the agent invokes workflows (code, fix, plan, etc.) via WorkflowAdapter, those
+  // workflows expect a full tool context (writeToFile, listFiles, searchFiles, etc.).
+  //
+  // This will cause runtime errors if workflows try to use tools beyond executeCommand
+  // and readFile. The agent context should be initialized with full tools like runWorkflow
+  // does, using the toolCall infrastructure and provider.
+  //
+  // For now, the agent is primarily used for task discovery and planning, which only
+  // requires executeCommand and readFile. Full workflow execution support requires:
+  // 1. Initializing provider (getProvider, getModel)
+  // 2. Creating UsageMeter
+  // 3. Initializing MCP manager
+  // 4. Creating Proxy-based tools delegation to toolCall
+  // 5. Passing full context to AutonomousAgent
+  //
+  // TODO: Refactor agent.ts to use runWorkflow infrastructure for full tool support
   const asyncExec = promisify(exec)
 
   const tools = {
