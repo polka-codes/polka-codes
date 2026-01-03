@@ -3,6 +3,16 @@
 import { EventEmitter } from 'node:events'
 
 /**
+ * Maximum buffer size to prevent memory exhaustion
+ */
+const MAX_BUFFER_SIZE = 10 * 1024 * 1024 // 10MB
+
+/**
+ * Maximum individual message size
+ */
+const MAX_MESSAGE_SIZE = 10 * 1024 * 1024 // 10MB
+
+/**
  * Server-side transport for MCP protocol (stdio)
  * Handles incoming requests and sends responses
  */
@@ -35,6 +45,13 @@ export class McpServerTransport extends EventEmitter {
    * Supports both Content-Length header framing and newline-delimited messages
    */
   private handleData(data: string): void {
+    // Prevent buffer from growing indefinitely
+    if (this.buffer.length + data.length > MAX_BUFFER_SIZE) {
+      this.emit('error', new Error(`Message too large (exceeds ${MAX_BUFFER_SIZE} bytes)`))
+      this.buffer = ''
+      return
+    }
+
     this.buffer += data
 
     // Try to parse messages using Content-Length framing first
@@ -44,6 +61,14 @@ export class McpServerTransport extends EventEmitter {
 
       if (contentLengthMatch) {
         const contentLength = Number.parseInt(contentLengthMatch[1], 10)
+
+        // Check content length against maximum
+        if (contentLength > MAX_MESSAGE_SIZE) {
+          this.emit('error', new Error(`Message size ${contentLength} exceeds maximum ${MAX_MESSAGE_SIZE}`))
+          this.buffer = ''
+          return
+        }
+
         const matchStart = contentLengthMatch.index ?? 0
         const headerEnd = matchStart + contentLengthMatch[0].length
         const totalLength = headerEnd + contentLength

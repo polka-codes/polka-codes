@@ -5,6 +5,16 @@ import { McpServerTransport } from './transport'
 import type { McpServerConfig, McpServerResource, McpServerTool } from './types'
 
 /**
+ * Default rate limit: requests per minute per client
+ */
+const DEFAULT_RATE_LIMIT = 60
+
+/**
+ * Rate limit window in milliseconds
+ */
+const RATE_LIMIT_WINDOW = 60 * 1000 // 1 minute
+
+/**
  * MCP Server implementation
  * Exposes polka-codes tools and resources via MCP protocol
  */
@@ -13,6 +23,7 @@ export class McpServer {
   private tools = new Map<string, McpServerTool>()
   private resources = new Map<string, McpServerResource>()
   private initialized = false
+  private requestCounts = new Map<string, { count: number; resetTime: number }>()
 
   constructor(
     private readonly config: McpServerConfig,
@@ -90,16 +101,19 @@ export class McpServer {
       try {
         await this.handleMessage(message)
       } catch (error) {
+        // Log detailed error locally for debugging
         if (this.logger) {
-          this.logger.error(`Error handling MCP message: ${error}`)
+          this.logger.error(`Error handling MCP message: ${error instanceof Error ? error.stack : String(error)}`)
         }
+        // Send sanitized error to client (don't leak implementation details)
         if (message.id !== undefined) {
-          this.transport.sendError(message.id, -32603, 'Internal error', error instanceof Error ? error.message : String(error))
+          this.transport.sendError(message.id, -32603, 'Internal error')
         }
       }
     })
 
     this.transport.on('error', (error: Error) => {
+      // Log error locally
       if (this.logger) {
         this.logger.error(`MCP transport error: ${error.message}`)
       }
@@ -107,10 +121,48 @@ export class McpServer {
   }
 
   /**
+   * Check if client has exceeded rate limit
+   */
+  private checkRateLimit(clientId: string): boolean {
+    const now = Date.now()
+    const clientState = this.requestCounts.get(clientId)
+
+    // Reset window if expired
+    if (clientState && now > clientState.resetTime) {
+      this.requestCounts.set(clientId, { count: 1, resetTime: now + RATE_LIMIT_WINDOW })
+      return true
+    }
+
+    // Initialize new client
+    if (!clientState) {
+      this.requestCounts.set(clientId, { count: 1, resetTime: now + RATE_LIMIT_WINDOW })
+      return true
+    }
+
+    // Check limit
+    if (clientState.count >= DEFAULT_RATE_LIMIT) {
+      if (this.logger) {
+        this.logger.warn(`MCP rate limit exceeded for client '${clientId}'`)
+      }
+      return false
+    }
+
+    // Increment counter
+    clientState.count++
+    return true
+  }
+
+  /**
    * Handle incoming MCP message
    */
   private async handleMessage(message: any): Promise<void> {
     const { id, method, params } = message
+
+    // Check rate limit for requests
+    if (id !== undefined && !this.checkRateLimit('default')) {
+      this.transport.sendError(id, -32603, 'Rate limit exceeded')
+      return
+    }
 
     // Handle requests (with id)
     if (id !== undefined) {
@@ -219,9 +271,21 @@ export class McpServer {
   private async handleToolsCall(id: number | string, params: any): Promise<void> {
     const { name, arguments: args } = params
 
+    // Validate tool name exists
+    if (!name || typeof name !== 'string') {
+      this.transport.sendError(id, -32602, 'Invalid tool name')
+      return
+    }
+
     const tool = this.tools.get(name)
     if (!tool) {
-      this.transport.sendError(id, -32602, `Tool not found: ${name}`)
+      this.transport.sendError(id, -32602, 'Tool not found')
+      return
+    }
+
+    // Validate arguments
+    if (args !== undefined && typeof args !== 'object') {
+      this.transport.sendError(id, -32602, 'Invalid arguments format')
       return
     }
 
@@ -237,15 +301,20 @@ export class McpServer {
         ],
       })
     } catch (error) {
+      // Log detailed error locally
+      if (this.logger) {
+        this.logger.error(`Tool '${name}' execution failed: ${error instanceof Error ? error.stack : String(error)}`)
+      }
+
       // Per MCP protocol spec, tool errors should be returned in the response
       // with isError: true, not as JSON-RPC errors. The client checks this flag
       // to determine if the tool execution failed.
-      const errorMessage = error instanceof Error ? error.message : String(error)
+      // Send sanitized error message (don't leak internal details)
       this.transport.sendResponse(id, {
         content: [
           {
             type: 'text',
-            text: `Error: ${errorMessage}`,
+            text: 'Tool execution failed',
           },
         ],
         isError: true,
