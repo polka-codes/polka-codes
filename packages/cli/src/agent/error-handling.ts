@@ -132,11 +132,14 @@ export class JSONParseError extends Error {
 /**
  * Safely parse JSON with error handling
  *
+ * Unlike JSON.parse, this provides a structured error with file context.
+ *
  * @param content - JSON string to parse
  * @param filePath - File path for error messages
- * @returns Parsed object or null if parsing fails
+ * @returns Parsed object
+ * @throws {JSONParseError} If JSON parsing fails
  */
-export function safeJSONParse<T = unknown>(content: string, filePath: string): T | null {
+export function safeJSONParse<T = unknown>(content: string, filePath: string): T {
   try {
     return JSON.parse(content) as T
   } catch (error) {
