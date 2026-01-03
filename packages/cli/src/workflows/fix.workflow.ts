@@ -46,6 +46,13 @@ export const fixWorkflow: WorkflowFn<
   const summaries: string[] = []
   let formatCommand: string | undefined
 
+  // Helper function to build script invocation command
+  const buildScriptCommand = (scriptName: string): string => {
+    const runtime = process.argv[0]
+    const script = process.argv[1]
+    return `"${runtime}" "${script}" run ${scriptName}`
+  }
+
   if (!command) {
     const config = await loadConfig()
     const check = config?.scripts?.check
@@ -55,21 +62,39 @@ export const fixWorkflow: WorkflowFn<
     let checkCommand: string | undefined
     if (typeof check === 'string') {
       checkCommand = check
-    } else if (check) {
+    } else if (check && 'command' in check) {
       checkCommand = check.command
+    } else if (check && 'script' in check) {
+      // For TypeScript scripts, invoke via CLI
+      checkCommand = buildScriptCommand('check')
+    } else if (check && 'workflow' in check) {
+      // Workflows not yet supported for fix workflow
+      logger.warn('Workflow scripts are not yet supported in fix workflow')
     }
 
     let testCommand: string | undefined
     if (typeof test === 'string') {
       testCommand = test
-    } else if (test) {
+    } else if (test && 'command' in test) {
       testCommand = test.command
+    } else if (test && 'script' in test) {
+      // For TypeScript scripts, invoke via CLI
+      testCommand = buildScriptCommand('test')
+    } else if (test && 'workflow' in test) {
+      // Workflows not yet supported for fix workflow
+      logger.warn('Workflow scripts are not yet supported in fix workflow')
     }
 
     if (typeof format === 'string') {
       formatCommand = format
-    } else if (format) {
+    } else if (format && 'command' in format) {
       formatCommand = format.command
+    } else if (format && 'script' in format) {
+      // For TypeScript scripts, invoke via CLI
+      formatCommand = buildScriptCommand('format')
+    } else if (format && 'workflow' in format) {
+      // Workflows not yet supported for fix workflow
+      logger.warn('Workflow scripts are not yet supported in fix workflow')
     }
 
     let defaultCommand: string | undefined
@@ -138,6 +163,9 @@ export const fixWorkflow: WorkflowFn<
 
       if (additionalTools?.search) {
         agentTools.push(additionalTools.search)
+      }
+      if (additionalTools?.mcpTools) {
+        agentTools.push(...additionalTools.mcpTools)
       }
 
       return await agentWorkflow(

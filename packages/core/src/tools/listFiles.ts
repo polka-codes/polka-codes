@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import type { FullToolInfo, ToolHandler, ToolInfo } from '../tool'
 import type { FilesystemProvider } from './provider'
+import { createProviderError, preprocessBoolean } from './utils'
 
 export const toolInfo = {
   name: 'listFiles',
@@ -19,25 +20,11 @@ export const toolInfo = {
         .describe('The maximum number of files to list. Default to 2000')
         .meta({ usageValue: 'Maximum number of files to list (optional)' }),
       recursive: z
-        .preprocess((val) => {
-          if (typeof val === 'string') {
-            const lower = val.toLowerCase()
-            if (lower === 'false') return false
-            if (lower === 'true') return true
-          }
-          return val
-        }, z.boolean().optional().default(true))
+        .preprocess(preprocessBoolean, z.boolean().optional().default(true))
         .describe('Whether to list files recursively. Use true for recursive listing, false or omit for top-level only.')
         .meta({ usageValue: 'true or false (optional)' }),
       includeIgnored: z
-        .preprocess((val) => {
-          if (typeof val === 'string') {
-            const lower = val.toLowerCase()
-            if (lower === 'false') return false
-            if (lower === 'true') return true
-          }
-          return val
-        }, z.boolean().optional().default(false))
+        .preprocess(preprocessBoolean, z.boolean().optional().default(false))
         .describe('Whether to include ignored files. Use true to include files ignored by .gitignore.')
         .meta({ usageValue: 'true or false (optional)' }),
     })
@@ -56,13 +43,7 @@ export const toolInfo = {
 
 export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (provider, args) => {
   if (!provider.listFiles) {
-    return {
-      success: false,
-      message: {
-        type: 'error-text',
-        value: 'Not possible to list files.',
-      },
-    }
+    return createProviderError('list files')
   }
 
   const { path, maxCount, recursive, includeIgnored } = toolInfo.parameters.parse(args)

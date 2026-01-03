@@ -49,3 +49,23 @@ stderr
   "success": false,
 }
 `;
+
+exports[`executeCommand should handle approval required 1`] = `
+{
+  "message": {
+    "type": "text",
+    "value": 
+"<command>rm -rf /</command>
+<command_exit_code>0</command_exit_code>
+<command_stdout>
+Approved command
+</command_stdout>
+<command_stderr>
+stderr
+</command_stderr>
+"
+,
+  },
+  "success": true,
+}
+`;

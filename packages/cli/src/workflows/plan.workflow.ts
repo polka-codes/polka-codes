@@ -26,7 +26,7 @@ type CreatePlanInput = {
   files?: (JsonFilePart | JsonImagePart)[]
   interactive: boolean
   messages?: JsonModelMessage[]
-  additionalTools?: { search?: FullToolInfo }
+  additionalTools?: { search?: FullToolInfo; mcpTools?: FullToolInfo[] }
 }
 
 async function createPlan(input: CreatePlanInput, context: WorkflowContext<CliToolRegistry>) {
@@ -77,6 +77,9 @@ async function createPlan(input: CreatePlanInput, context: WorkflowContext<CliTo
   const agentTools: FullToolInfo[] = [readFile, listFiles, searchFiles, readBinaryFile, fetchUrl]
   if (additionalTools?.search) {
     agentTools.push(additionalTools.search)
+  }
+  if (additionalTools?.mcpTools) {
+    agentTools.push(...additionalTools.mcpTools)
   }
   if (interactive) {
     agentTools.push(askFollowupQuestion)

@@ -7,18 +7,22 @@ import { confirm as inquirerConfirm, select as inquirerSelect } from '@inquirer/
 import type {
   AgentWorkflowInput,
   MemoryProvider,
+  ScriptConfig,
+  SkillContext,
   TodoItem,
   TodoProvider,
   ToolResponse,
   UpdateTodoItemInput,
   UpdateTodoItemOutput,
   UsageMeter,
-  WorkflowContext,
 } from '@polka-codes/core'
 import {
   agentWorkflow,
   askFollowupQuestion,
   computeRateLimitBackoffSeconds,
+  listSkills as coreListSkills,
+  loadSkill as coreLoadSkill,
+  readSkillFile as coreReadSkillFile,
   executeCommand as executeCommandTool,
   type FullToolInfo,
   fetchUrl,
@@ -30,6 +34,7 @@ import {
   removeFile,
   renameFile,
   replaceInFile,
+  SOURCE_ICONS,
   search,
   searchFiles,
   type TaskEvent,
@@ -40,17 +45,25 @@ import {
   writeToFile as writeToFileTool,
 } from '@polka-codes/core'
 import { streamText, type ToolSet } from 'ai'
-
-import type { Command } from 'commander'
-
-import { UserCancelledError } from './errors'
+import {
+  createProviderErrorFromStatus,
+  MaxRetriesExceededError,
+  ProviderTimeoutError,
+  QuotaExceededError,
+  UserCancelledError,
+} from './errors'
+import { McpError } from './mcp/errors'
+import type { McpManager } from './mcp/manager'
+import { createSkillContext, generateSkillsSystemPrompt } from './skillIntegration'
 
 export type AgentContextParameters = {
   providerOptions?: Record<string, any>
-  scripts?: Record<string, string | { command: string; description: string }>
+  scripts?: Record<string, ScriptConfig>
   retryCount?: number
   requestTimeoutSeconds?: number
   usageMeter: UsageMeter
+  skillContext?: SkillContext
+  mcpManager?: McpManager // MCP manager for MCP server connections
 }
 
 import {
@@ -101,10 +114,9 @@ type ToolCallContext = {
   parameters: AgentContextParameters
   model: LanguageModelV2
   agentCallback?: TaskEventCallback
-  toolProvider: any // ToolProvider
-  command: Command
+  toolProvider: any
   yes?: boolean
-  workflowContext: WorkflowContext<any>
+  workflowContext: any
 }
 
 async function createPullRequest(input: { title: string; description: string }, _context: ToolCallContext) {
@@ -152,13 +164,8 @@ async function confirm(input: { message: string }, context: ToolCallContext) {
 
   // to allow ora to fully stop the spinner so inquirer can takeover the cli window
   await new Promise((resolve) => setTimeout(resolve, 50))
-  try {
-    process.stderr.write('\u0007')
-    const result = await inquirerConfirm({ message: input.message })
-    return result
-  } catch (_e) {
-    throw new UserCancelledError()
-  }
+  process.stderr.write('\u0007')
+  return await inquirerConfirm({ message: input.message })
 }
 
 async function input(input: { message: string; default: string }, context: ToolCallContext) {
@@ -186,13 +193,8 @@ async function select(input: { message: string; choices: { name: string; value: 
 
   // to allow ora to fully stop the spinner so inquirer can takeover the cli window
   await new Promise((resolve) => setTimeout(resolve, 50))
-  try {
-    process.stderr.write('\u0007')
-    const result = await inquirerSelect({ message: input.message, choices: input.choices })
-    return result
-  } catch (_e) {
-    throw new UserCancelledError()
-  }
+  process.stderr.write('\u0007')
+  return await inquirerSelect({ message: input.message, choices: input.choices })
 }
 
 async function writeToFile(input: { path: string; content: string }) {
@@ -204,12 +206,14 @@ async function writeToFile(input: { path: string; content: string }) {
 
 async function readFile(input: { path: string }) {
   try {
-    const content = await fs.readFile(input.path, 'utf8')
-    return content
-  } catch {
-    // return null if file doesn't exist or can't be read
+    return await fs.readFile(input.path, 'utf8')
+  } catch (error: unknown) {
+    // Return null for file not found errors, rethrow others
+    if (error && typeof error === 'object' && 'code' in error && (error.code === 'ENOENT' || error.code === 'EISDIR')) {
+      return null
+    }
+    throw error
   }
-  return null
 }
 
 async function executeCommand(input: { command: string; shell?: boolean; pipe?: boolean; args?: string[] }) {
@@ -281,17 +285,21 @@ async function generateText(input: { messages: JsonModelMessage[]; tools: ToolSe
     throw new Error('Model not found in context')
   }
 
-  if (context.parameters.usageMeter.isLimitExceeded().result) {
+  // Check usage limits
+  const limitResult = context.parameters.usageMeter.isLimitExceeded()
+  if (limitResult.result) {
     agentCallback?.({
       kind: TaskEventKind.UsageExceeded,
     })
-    throw new Error('Usage limit exceeded')
+    throw new QuotaExceededError(model.provider, model.modelId, context.parameters.usageMeter.usage.cost, limitResult.maxCost)
   }
 
   const { retryCount = 5, requestTimeoutSeconds = 90 } = context.parameters
 
   // Convert messages and apply cache control
   const messages = applyCacheControl(input.messages.map(fromJsonModelMessage), model.provider, model.modelId)
+
+  let lastError: Error | undefined
 
   for (let i = 0; i < retryCount; i++) {
     const abortController = new AbortController()
@@ -349,37 +357,81 @@ async function generateText(input: { messages: JsonModelMessage[]; tools: ToolSe
 
       await stream.consumeStream({
         onError: (error) => {
+          // Log stream errors but don't throw - let the main error handler deal with it
           console.error('Error in stream:', error)
+          lastError = error instanceof Error ? error : new Error(String(error))
         },
       })
 
       const resp = await stream.response
       return resp.messages.map(toJsonModelMessage)
-    } catch (error: any) {
-      if (error.name === 'AbortError') {
+    } catch (error: unknown) {
+      // Handle AbortError (timeouts and repetition)
+      if (error instanceof Error && error.name === 'AbortError') {
         if (repetitionDetected) {
           console.warn('Repetition detected, retrying...')
+          lastError = new Error('Repetition detected in model output')
           continue
         }
         // This is a timeout
         console.warn(`Request timed out after ${requestTimeoutSeconds} seconds, retrying...`)
+        lastError = new ProviderTimeoutError(model.provider, model.modelId, requestTimeoutSeconds)
         continue
       }
-      if ('response' in error) {
-        const response: Response = error.response
-        if (response.status === 429 || response.status >= 500) {
-          console.debug(`Request failed with status ${response.status}, retrying...`)
+
+      // Handle HTTP errors
+      if (error && typeof error === 'object' && 'response' in error) {
+        const errorWithResponse = error as { response: Response }
+        const response = errorWithResponse.response
+        const statusCode = response.status
+
+        // Create appropriate error based on status code
+        const providerError = createProviderErrorFromStatus(
+          model.provider,
+          model.modelId,
+          statusCode,
+          error instanceof Error ? error : undefined,
+        )
+
+        // Only retry if error is retryable
+        if (providerError.retryable && (statusCode === 429 || statusCode >= 500)) {
+          console.warn(`${providerError.message} (attempt ${i + 1}/${retryCount})`)
+          lastError = providerError
+
           const backoff = computeRateLimitBackoffSeconds(i)
+          console.debug(`Waiting ${backoff}s before retry...`)
           await new Promise((resolve) => setTimeout(resolve, backoff * 1000))
           continue
         }
+
+        // Non-retryable HTTP error - throw immediately
+        throw providerError
       }
-      throw error
+
+      // Handle other errors
+      if (error instanceof Error) {
+        // Check for network errors
+        if (error.message.includes('ECONNREFUSED') || error.message.includes('ENOTFOUND') || error.message.includes('ETIMEDOUT')) {
+          console.warn(`Network error: ${error.message}, retrying...`)
+          lastError = error
+          continue
+        }
+
+        // Unknown error - save and continue to retry
+        console.warn(`Unexpected error: ${error.message}, retrying...`)
+        lastError = error
+        continue
+      }
+
+      // Non-Error throwable
+      lastError = new Error(String(error))
     } finally {
       clearTimeout(timeout)
     }
   }
-  throw new Error(`Failed to get a response from the model after ${retryCount} retries.`)
+
+  // All retries exhausted
+  throw new MaxRetriesExceededError(model.provider, model.modelId, retryCount, lastError || new Error('Unknown error'))
 }
 
 async function invokeTool(input: { toolName: string; input: any }, context: ToolCallContext): Promise<ToolResponse> {
@@ -396,12 +448,12 @@ async function invokeTool(input: { toolName: string; input: any }, context: Tool
   try {
     const result = await tool.handler(context.toolProvider, input.input)
     return result
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
       message: {
         type: 'error-text',
-        value: error?.message ?? `${error}`,
+        value: error instanceof Error ? error.message : String(error),
       },
     }
   }
@@ -474,6 +526,88 @@ async function runAgent(input: AgentWorkflowInput, context: ToolCallContext) {
   return await agentWorkflow(input, context.workflowContext)
 }
 
+/**
+ * Wrapper for skill tool operations that handles context validation and error handling
+ */
+async function withSkillContext<_T>(
+  context: ToolCallContext,
+  fn: (skillContext: SkillContext) => Promise<ToolResponse>,
+): Promise<ToolResponse> {
+  if (!context.parameters.skillContext) {
+    return {
+      success: false,
+      message: { type: 'error-text', value: 'Skill context not initialized' },
+    }
+  }
+
+  try {
+    return await fn(context.parameters.skillContext)
+  } catch (error: unknown) {
+    return {
+      success: false,
+      message: {
+        type: 'error-text',
+        value: error instanceof Error ? error.message : String(error),
+      },
+    }
+  }
+}
+
+async function loadSkill(input: { skillName: string }, context: ToolCallContext): Promise<ToolResponse> {
+  return withSkillContext(context, async (skillContext) => {
+    const result = await coreLoadSkill(input, skillContext)
+    if (!result.success || !result.skill) {
+      return {
+        success: false,
+        message: { type: 'error-text', value: result.error ?? 'Failed to load skill' },
+      }
+    }
+    return {
+      success: true,
+      message: {
+        type: 'text',
+        value: `Loaded skill '${result.skill.name}':\n\n${result.skill.content}\n\nAvailable files: ${result.skill.availableFiles.join(', ')}${result.warnings && result.warnings.length > 0 ? `\n\nWarnings:\n${result.warnings.join('\n')}` : ''}`,
+      },
+    }
+  })
+}
+
+async function listSkills(input: { filter?: string }, context: ToolCallContext): Promise<ToolResponse> {
+  return withSkillContext(context, async (skillContext) => {
+    const result = await coreListSkills(input, skillContext)
+    const skillsList = result.skills
+      .map((skill: { name: string; description: string; source: string }) => {
+        const sourceIcon = SOURCE_ICONS[skill.source as keyof typeof SOURCE_ICONS]
+        return `${sourceIcon} **${skill.name}**: ${skill.description}`
+      })
+      .join('\n')
+
+    return {
+      success: true,
+      message: {
+        type: 'text',
+        value: `Found ${result.total} skill${result.total === 1 ? '' : 's'}:\n\n${skillsList}`,
+      },
+    }
+  })
+}
+
+async function readSkillFile(input: { skillName: string; filename: string }, context: ToolCallContext): Promise<ToolResponse> {
+  return withSkillContext(context, async (skillContext) => {
+    const result = await coreReadSkillFile(input, skillContext)
+    if (!result.success || !result.content) {
+      return {
+        success: false,
+        message: { type: 'error-text', value: result.error ?? 'Failed to read skill file' },
+      }
+    }
+    return {
+      success: true,
+      message: { type: 'text', value: result.content },
+    }
+  })
+}
+
 const localToolHandlers = {
   runAgent,
   createPullRequest,
@@ -495,12 +629,72 @@ const localToolHandlers = {
   listTodoItems,
   getTodoItem,
   updateTodoItem,
+  loadSkill,
+  listSkills,
+  readSkillFile,
 }
 
 export async function toolCall(toolCall: ToolCall<CliToolRegistry>, context: ToolCallContext) {
+  // Check localToolHandlers first
   const handler = localToolHandlers[toolCall.tool]
   if (handler) {
     return handler(toolCall.input as any, context)
   }
-  throw new Error(`Unknown tool: ${(toolCall as any).tool}`)
+
+  // Check MCP tools
+  if (context.parameters.mcpManager?.hasTool(toolCall.tool as string)) {
+    const input = typeof toolCall.input === 'object' && toolCall.input !== null && !Array.isArray(toolCall.input) ? toolCall.input : {}
+    try {
+      const result = await context.parameters.mcpManager.callTool(toolCall.tool as string, input as Record<string, unknown>)
+      // Wrap result in ToolResponse format
+      const value = typeof result === 'string' ? result : result == null ? '' : JSON.stringify(result, null, 2)
+      return {
+        success: true,
+        message: {
+          type: 'text',
+          value,
+        },
+      }
+    } catch (error) {
+      // McpError should bubble up to the workflow level for proper handling
+      if (error instanceof McpError) {
+        throw error
+      }
+      // Other errors are returned as ToolResponse so the agent can see them and recover
+      return {
+        success: false,
+        message: {
+          type: 'error-text',
+          value: `Error: ${error instanceof Error ? error.message : String(error)}`,
+        },
+      }
+    }
+  }
+
+  // Check toolHandlers Map (for core/registered tools)
+  const toolHandler = toolHandlers.get(toolCall.tool as keyof ToolRegistry)
+  if (toolHandler) {
+    return toolHandler.handler(context.toolProvider, toolCall.input as any)
+  }
+
+  throw new Error(`Unknown tool: ${toolCall.tool}`)
+}
+
+/**
+ * Create skill context for agent execution
+ */
+export async function initializeSkillContext(cwd?: string): Promise<SkillContext> {
+  return await createSkillContext(cwd)
+}
+
+/**
+ * Generate system prompt with available skills
+ */
+export function generateSystemPromptWithSkills(basePrompt: string, skillContext?: SkillContext): string {
+  if (!skillContext || skillContext.availableSkills.length === 0) {
+    return basePrompt
+  }
+
+  const skillsPrompt = generateSkillsSystemPrompt(skillContext.availableSkills)
+  return basePrompt + skillsPrompt
 }

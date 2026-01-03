@@ -77,25 +77,39 @@ export async function resolveRules(rules?: ConfigRule[] | string) {
       }
       if ('url' in rule) {
         try {
-          const response = await fetch(rule.url)
+          const controller = new AbortController()
+          const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
+          const response = await fetch(rule.url, { signal: controller.signal })
+          clearTimeout(timeoutId)
           if (response.ok) {
             return await response.text()
           }
           console.warn(`Failed to fetch rule from ${rule.url}: ${response.statusText}`)
         } catch (error) {
-          console.warn(`Error fetching rule from ${rule.url}: ${error}`)
+          if (error instanceof Error && error.name === 'AbortError') {
+            console.warn(`Timeout fetching rule from ${rule.url} (30s)`)
+          } else {
+            console.warn(`Error fetching rule from ${rule.url}: ${error}`)
+          }
         }
       } else if ('repo' in rule) {
         const ref = rule.commit ?? rule.tag ?? rule.branch ?? 'main'
         const url = `https://raw.githubusercontent.com/${rule.repo}/${ref}/${rule.path}`
         try {
-          const response = await fetch(url)
+          const controller = new AbortController()
+          const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
+          const response = await fetch(url, { signal: controller.signal })
+          clearTimeout(timeoutId)
           if (response.ok) {
             return await response.text()
           }
           console.warn(`Failed to fetch rule from ${url}: ${response.statusText}`)
         } catch (error) {
-          console.warn(`Error fetching rule from ${url}: ${error}`)
+          if (error instanceof Error && error.name === 'AbortError') {
+            console.warn(`Timeout fetching rule from ${url} (30s)`)
+          } else {
+            console.warn(`Error fetching rule from ${url}: ${error}`)
+          }
         }
       } else if ('path' in rule) {
         if (existsSync(rule.path)) {

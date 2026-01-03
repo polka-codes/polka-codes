@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import type { FullToolInfo, ToolHandler, ToolInfo } from '../tool'
 import type { FilesystemProvider } from './provider'
+import { createProviderError } from './utils'
 
 export const toolInfo = {
   name: 'removeFile',
@@ -23,13 +24,7 @@ export const toolInfo = {
 
 export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (provider, args) => {
   if (!provider.removeFile) {
-    return {
-      success: false,
-      message: {
-        type: 'error-text',
-        value: 'Not possible to remove file.',
-      },
-    }
+    return createProviderError('remove file')
   }
 
   const parsed = toolInfo.parameters.safeParse(args)

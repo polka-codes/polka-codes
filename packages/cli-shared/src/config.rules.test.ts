@@ -22,7 +22,12 @@ describe('resolveRules', () => {
 
     await resolveRules(rules)
 
-    expect(fetchSpy).toHaveBeenCalledWith('https://raw.githubusercontent.com/owner/repo/main/rules/rule.md')
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'https://raw.githubusercontent.com/owner/repo/main/rules/rule.md',
+      expect.objectContaining({
+        signal: expect.any(AbortSignal),
+      }),
+    )
   })
 
   test('resolves repo rule with tag', async () => {
@@ -36,7 +41,12 @@ describe('resolveRules', () => {
 
     await resolveRules(rules)
 
-    expect(fetchSpy).toHaveBeenCalledWith('https://raw.githubusercontent.com/owner/repo/v1.0.0/rules/rule.md')
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'https://raw.githubusercontent.com/owner/repo/v1.0.0/rules/rule.md',
+      expect.objectContaining({
+        signal: expect.any(AbortSignal),
+      }),
+    )
   })
 
   test('resolves repo rule with branch', async () => {
@@ -50,7 +60,12 @@ describe('resolveRules', () => {
 
     await resolveRules(rules)
 
-    expect(fetchSpy).toHaveBeenCalledWith('https://raw.githubusercontent.com/owner/repo/develop/rules/rule.md')
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'https://raw.githubusercontent.com/owner/repo/develop/rules/rule.md',
+      expect.objectContaining({
+        signal: expect.any(AbortSignal),
+      }),
+    )
   })
 
   test('resolves repo rule with commit', async () => {
@@ -64,7 +79,12 @@ describe('resolveRules', () => {
 
     await resolveRules(rules)
 
-    expect(fetchSpy).toHaveBeenCalledWith('https://raw.githubusercontent.com/owner/repo/sha123/rules/rule.md')
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'https://raw.githubusercontent.com/owner/repo/sha123/rules/rule.md',
+      expect.objectContaining({
+        signal: expect.any(AbortSignal),
+      }),
+    )
   })
 
   test('prioritizes commit over tag and branch', async () => {
@@ -80,7 +100,12 @@ describe('resolveRules', () => {
 
     await resolveRules(rules)
 
-    expect(fetchSpy).toHaveBeenCalledWith('https://raw.githubusercontent.com/owner/repo/sha123/rules/rule.md')
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'https://raw.githubusercontent.com/owner/repo/sha123/rules/rule.md',
+      expect.objectContaining({
+        signal: expect.any(AbortSignal),
+      }),
+    )
   })
 
   test('prioritizes tag over branch', async () => {
@@ -95,6 +120,11 @@ describe('resolveRules', () => {
 
     await resolveRules(rules)
 
-    expect(fetchSpy).toHaveBeenCalledWith('https://raw.githubusercontent.com/owner/repo/v1.0.0/rules/rule.md')
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'https://raw.githubusercontent.com/owner/repo/v1.0.0/rules/rule.md',
+      expect.objectContaining({
+        signal: expect.any(AbortSignal),
+      }),
+    )
   })
 })

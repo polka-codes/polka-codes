@@ -46,31 +46,19 @@ export const handler: ToolHandler<typeof toolInfo, MemoryProvider> = async (prov
 
   await provider.updateMemory(params.operation, params.topic ?? undefined, params.content ?? undefined)
 
-  switch (params.operation) {
-    case 'append':
-      return {
-        success: true,
-        message: {
-          type: 'text',
-          value: `Content appended to memory topic '${params.topic || ':default:'}'.`,
-        },
-      }
-    case 'replace':
-      return {
-        success: true,
-        message: {
-          type: 'text',
-          value: `Memory topic '${params.topic || ':default:'}' replaced.`,
-        },
-      }
-    case 'remove':
-      return {
-        success: true,
-        message: {
-          type: 'text',
-          value: `Memory topic '${params.topic || ':default:'}' removed.`,
-        },
-      }
+  const topic = params.topic || ':default:'
+  const messages = {
+    append: `Content appended to memory topic '${topic}'`,
+    replace: `Memory topic '${topic}' replaced`,
+    remove: `Memory topic '${topic}' removed`,
+  }
+
+  return {
+    success: true,
+    message: {
+      type: 'text',
+      value: messages[params.operation],
+    },
   }
 }
 

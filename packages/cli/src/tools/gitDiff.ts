@@ -56,7 +56,10 @@ export const handler: ToolHandler<typeof toolInfo, CommandProvider> = async (pro
     commandParts.push(commitRange)
   }
   if (file) {
-    commandParts.push('--', `'${file}'`)
+    // Properly escape the file path to prevent command injection
+    // Replace single quotes with '\'' (end current quote, add escaped quote, start new quote)
+    const escapedFile = file.replace(/'/g, "'\\''")
+    commandParts.push('--', `'${escapedFile}'`)
   }
 
   const command = commandParts.join(' ')

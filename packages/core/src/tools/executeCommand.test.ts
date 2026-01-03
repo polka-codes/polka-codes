@@ -65,7 +65,7 @@ describe('executeCommand', () => {
       requiresApproval: 'true',
     })
 
-    expect(result).toMatchSnapshot
+    expect(result).toMatchSnapshot()
     expect(mockProvider.executeCommand).toHaveBeenCalledWith('rm -rf /', true)
   })
 })
