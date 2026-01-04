@@ -244,7 +244,7 @@ ${task.files.length > 0 ? task.files.map((f) => `- \`${f}\``).join('\n') : 'None
   private markdownToPlan(content: string, filename: string): Plan | null {
     try {
       // Extract goal from header - more lenient pattern accepts different header levels and spacing
-      const goalMatch = content.match(/^#{1,6}\s*(?:Pp)?lan:\s*(.+)$/m)
+      const goalMatch = content.match(/^#{1,6}\s*[Pp]lan:\s*(.+)$/m)
       const goal = goalMatch?.[1]?.trim() || filename.replace('.md', '')
 
       // Extract high-level plan (content after goal until next section)
@@ -298,7 +298,7 @@ ${task.files.length > 0 ? task.files.map((f) => `- \`${f}\``).join('\n') : 'None
   private markdownToTask(content: string, filename: string): Task | null {
     try {
       // Extract title from header - more lenient pattern accepts different header levels and spacing
-      const titleMatch = content.match(/^#{1,6}\s*(?:Tt)?ask:\s*(.+)$/m)
+      const titleMatch = content.match(/^#{1,6}\s*[Tt]ask:\s*(.+)$/m)
       const title = titleMatch?.[1]?.trim() || filename.replace('.md', '')
 
       // Helper to extract field value
