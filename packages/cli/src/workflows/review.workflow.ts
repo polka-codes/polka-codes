@@ -102,11 +102,13 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput,
       })
       return JSON.parse(result.stdout)
     })
+    const prCommitRange = `${prDetails.baseRefOid}...HEAD`
+    logger.info(`Reviewing PR #${pr} (commit range: ${prCommitRange})`)
     const commitMessages = prDetails.commits.map((c: any) => c.messageBody).join('\n---\n')
     const allChangedFiles: FileChange[] = await step('Getting file changes...', async () => {
       const diffResult = await tools.executeCommand({
         command: 'git',
-        args: ['--no-pager', 'diff', '--name-status', '--no-color', `${prDetails.baseRefOid}...HEAD`],
+        args: ['--no-pager', 'diff', '--name-status', '--no-color', prCommitRange],
       })
       if (diffResult.exitCode !== 0) {
         logger.warn('Warning: Could not retrieve file changes list')
@@ -116,7 +118,7 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput,
 
       const statResult = await tools.executeCommand({
         command: 'git',
-        args: ['--no-pager', 'diff', '--numstat', '--no-color', `${prDetails.baseRefOid}...HEAD`],
+        args: ['--no-pager', 'diff', '--numstat', '--no-color', prCommitRange],
       })
       if (statResult.exitCode === 0) {
         const stats = parseGitDiffNumStat(statResult.stdout)
@@ -135,7 +137,7 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput,
     printChangedFiles(logger, changedFiles)
 
     changeInfo = {
-      commitRange: `${prDetails.baseRefOid}...HEAD`,
+      commitRange: prCommitRange,
       pullRequestTitle: prDetails.title,
       pullRequestDescription: prDetails.body,
       commitMessages,
@@ -144,6 +146,7 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput,
     }
   } else if (range) {
     await step(`Reviewing git range '${range}'...`, async () => {})
+    logger.info(`Reviewing commit range: ${range}`)
 
     const allRangeChangedFiles = await step('Getting file changes...', async () => {
       const diffResult = await tools.executeCommand({
@@ -197,6 +200,23 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput,
 
     if (hasLocalChanges) {
       const hasStagedChanges = statusLines.some((line: string) => line[0] !== ' ' && line[0] !== '?')
+      const hasUnstagedChanges = statusLines.some((line: string) => line[1] !== ' ' && line[1] !== '?')
+      const hasUntrackedChanges = statusLines.some((line: string) => line.startsWith('??'))
+      const reviewTargets: string[] = []
+      if (hasStagedChanges) {
+        reviewTargets.push('staged files')
+      }
+      if (hasUnstagedChanges) {
+        reviewTargets.push('unstaged files')
+      }
+      if (hasUntrackedChanges) {
+        reviewTargets.push('untracked files')
+      }
+      if (reviewTargets.length > 0) {
+        logger.info(`Reviewing local changes: ${reviewTargets.join(', ')}.`)
+      } else {
+        logger.info('Reviewing local changes.')
+      }
       const allChangedFiles = parseGitStatus(gitStatus)
 
       const unstagedStatResult = await tools.executeCommand({
@@ -258,10 +278,12 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput,
         }
       }
 
+      const branchCommitRange = `${defaultBranch}...${currentBranch}`
+      logger.info(`Reviewing branch changes (commit range: ${branchCommitRange})`)
       const allBranchChangedFiles = await step('Getting file changes...', async () => {
         const diffResult = await tools.executeCommand({
           command: 'git',
-          args: ['--no-pager', 'diff', '--name-status', '--no-color', `${defaultBranch}...${currentBranch}`],
+          args: ['--no-pager', 'diff', '--name-status', '--no-color', branchCommitRange],
         })
         if (diffResult.exitCode !== 0) {
           logger.warn('Warning: Could not retrieve file changes list')
@@ -271,7 +293,7 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput,
 
         const statResult = await tools.executeCommand({
           command: 'git',
-          args: ['--no-pager', 'diff', '--numstat', '--no-color', `${defaultBranch}...${currentBranch}`],
+          args: ['--no-pager', 'diff', '--numstat', '--no-color', branchCommitRange],
         })
         if (statResult.exitCode === 0) {
           const stats = parseGitDiffNumStat(statResult.stdout)
@@ -290,7 +312,7 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput,
       printChangedFiles(logger, branchChangedFiles)
 
       changeInfo = {
-        commitRange: `${defaultBranch}...${currentBranch}`,
+        commitRange: branchCommitRange,
         changedFiles: branchChangedFiles,
         context: userContext,
       }
