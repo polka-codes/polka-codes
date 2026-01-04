@@ -1,5 +1,6 @@
 import * as crypto from 'node:crypto'
 import * as path from 'node:path'
+import { ulid } from 'ulid'
 import { AgentStatusError, SafetyViolationError } from './errors'
 import { TaskExecutor } from './executor'
 import { GoalDecomposer } from './goal-decomposer'
@@ -247,8 +248,8 @@ export class AutonomousAgent {
       // 4. Request approval
       this.logger.info('[Run] Phase 4: Requesting approval...')
 
-      // Generate a unique plan ID
-      const planId = `plan-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+      // Generate a unique plan ID using ULID
+      const planId = `plan-${ulid()}`
 
       // Create plan approval request
       const approvalRequest = {

@@ -1,5 +1,6 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
+import { ulid } from 'ulid'
 import { StateCorruptionError } from './errors'
 import type { AgentConfig, AgentState, Task } from './types'
 
@@ -277,10 +278,10 @@ export class AgentStateManager {
   }
 
   /**
-   * Generate unique session ID
+   * Generate unique session ID using ULID
    */
   private generateSessionId(): string {
-    return `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    return `session-${ulid()}`
   }
 
   /**

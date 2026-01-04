@@ -3,6 +3,7 @@ import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import { promisify } from 'node:util'
 import type { Logger } from '@polka-codes/core'
+import { ulid } from 'ulid'
 import { AdvancedDiscoveryStrategies } from './advanced-discovery'
 import { Priority } from './constants'
 import { logAndSuppress } from './error-handling'
@@ -30,10 +31,10 @@ interface DiscoveryCache {
 }
 
 /**
- * Generate unique task ID
+ * Generate unique task ID using ULID
  */
 function generateId(prefix: string): string {
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+  return `${prefix}-${ulid()}`
 }
 
 /**

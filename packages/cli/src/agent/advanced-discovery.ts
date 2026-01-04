@@ -1,5 +1,6 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
+import { ulid } from 'ulid'
 import type { DiscoveryStrategy, Task, WorkflowContext } from './types'
 import { Priority } from './types'
 
@@ -656,9 +657,9 @@ export class AdvancedDiscoveryStrategies {
   }
 
   /**
-   * Generate unique task ID
+   * Generate unique task ID using ULID
    */
   private static generateId(prefix: string): string {
-    return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+    return `${prefix}-${ulid()}`
   }
 }
