@@ -1,10 +1,9 @@
 import { getProvider } from '@polka-codes/cli-shared'
 import type { UsageMeter } from '@polka-codes/core'
 import { Command } from 'commander'
+import { epic } from '../api'
 import { createLogger } from '../logger'
-import { runWorkflow } from '../runWorkflow'
 import { getUserInput } from '../utils/userInput'
-import { epicWorkflow } from '../workflows/epic.workflow'
 import {
   type EpicContext,
   EpicMemoryStore,
@@ -15,7 +14,7 @@ import {
 
 export async function runEpic(task: string | undefined, options: any, command: Command) {
   const globalOpts = (command.parent ?? command).opts()
-  const { verbose, yes } = globalOpts
+  const { verbose } = globalOpts
   const { review } = options
   const logger = createLogger({
     verbose,
@@ -39,54 +38,53 @@ export async function runEpic(task: string | undefined, options: any, command: C
         return
       }
     }
-
-    epicContext.task = taskInput
   }
 
   let usageMeter: UsageMeter | undefined
 
-  const workflowInput = {
-    ...epicContext,
-    interactive: !yes,
-    noReview: review === false,
-    saveEpicContext: async (context: EpicContext) => {
-      // Update fields that might have changed in the workflow
-      // We explicitly exclude 'memory' and 'todos' because they are managed by their respective stores
-      // and the context object passed here might have stale references to them.
-      if (context.task) workflowInput.task = context.task
-      if (context.plan) workflowInput.plan = context.plan
-      if (context.branchName) workflowInput.branchName = context.branchName
-      if (context.baseBranch) workflowInput.baseBranch = context.baseBranch
+  try {
+    await epic({
+      task: taskInput,
+      noReview: review === false,
+      interactive: !globalOpts.yes,
+      onUsage: (meter: UsageMeter) => {
+        usageMeter = meter
+      },
+      ...globalOpts,
+      getProvider: (opt: any) =>
+        getProvider({
+          ...opt,
+          todoItemStore: new EpicTodoItemStore(epicContext),
+          memoryStore: new EpicMemoryStore(epicContext),
+        }),
+      _workflowInput: epicContext,
+      _saveEpicContext: async (context: EpicContext) => {
+        // Update fields that might have changed in the workflow
+        if (context.task) epicContext.task = context.task
+        if (context.plan) epicContext.plan = context.plan
+        if (context.branchName) epicContext.branchName = context.branchName
+        if (context.baseBranch) epicContext.baseBranch = context.baseBranch
 
-      await persistEpicContext(workflowInput)
-    },
-    saveUsageSnapshot: async () => {
-      if (usageMeter) {
-        const currentUsage = usageMeter.usage
-        if (!workflowInput.usages) {
-          workflowInput.usages = []
+        await persistEpicContext(epicContext)
+      },
+      _saveUsageSnapshot: async () => {
+        if (usageMeter) {
+          const currentUsage = usageMeter.usage
+          if (!epicContext.usages) {
+            epicContext.usages = []
+          }
+          epicContext.usages.push({ ...currentUsage, timestamp: Date.now() })
+          await persistEpicContext(epicContext)
         }
-        workflowInput.usages.push({ ...currentUsage, timestamp: Date.now() })
-        await persistEpicContext(workflowInput)
-      }
-    },
+      },
+    } as any)
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('Existing epic context found')) {
+      logger.error(`Error: ${error.message}`)
+      return
+    }
+    throw error
   }
-
-  await runWorkflow(epicWorkflow, workflowInput, {
-    commandName: 'epic',
-    command,
-    logger,
-    yes,
-    getProvider: (opt) =>
-      getProvider({
-        ...opt,
-        todoItemStore: new EpicTodoItemStore(workflowInput),
-        memoryStore: new EpicMemoryStore(workflowInput),
-      }),
-    onUsageMeterCreated: (meter) => {
-      usageMeter = meter
-    },
-  })
 }
 
 export const epicCommand = new Command('epic')

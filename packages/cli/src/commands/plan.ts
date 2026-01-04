@@ -1,9 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { Command } from 'commander'
-import { createLogger } from '../logger'
-import { runWorkflow } from '../runWorkflow'
+import { plan } from '../api'
 import { getUserInput } from '../utils/userInput'
-import { planWorkflow } from '../workflows/plan.workflow'
 
 export const planCommand = new Command('plan')
   .description('Create or update a plan for a task.')
@@ -33,19 +31,12 @@ export const planCommand = new Command('plan')
     }
 
     const globalOpts = (command.parent ?? command).opts()
-    const { verbose, yes } = globalOpts
-    const logger = createLogger({
-      verbose: verbose,
-    })
 
-    await runWorkflow(
-      planWorkflow,
-      {
-        task: taskInput,
-        fileContent,
-        filePath: options.planFile,
-        interactive: !yes,
-      },
-      { commandName: 'plan', command, logger, yes },
-    )
+    await plan({
+      task: taskInput,
+      fileContent,
+      planFile: options.planFile,
+      interactive: !globalOpts.yes,
+      ...globalOpts,
+    })
   })

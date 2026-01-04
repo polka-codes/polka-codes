@@ -1,8 +1,3 @@
-excludeFiles:
-  - .env
-  - bun.lock
-  - packages/cli/cli.mjs
-  - packages/github/schema.docs.graphql
 scripts:
   test: AGENT=1 bun test -u
   check: bun check
@@ -19,4 +14,8 @@ commands:
       - repo: polka-codes/prompts
         path: review/typescript.md
         branch: master
-
+excludeFiles:
+  - .env
+  - bun.lock
+  - packages/cli/cli.mjs
+  - packages/github/schema.docs.graphql

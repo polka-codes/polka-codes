@@ -9,7 +9,7 @@ const taskToolCallStats = new Map<string, ToolStat>()
 const globalToolCallStats = new Map<string, ToolStat>()
 
 export function logToolCallStats(stream: Writable, statsMap: Map<string, ToolStat>, title: string) {
-  const customConsole = new Console(stream, stream)
+  const customConsole = new Console(stream, stream) as globalThis.Console
   customConsole.log(`\n\n======== ${title} ========`)
   if (statsMap.size > 0) {
     const tableData = [...statsMap.entries()].map(([tool, stats]) => {
@@ -27,7 +27,6 @@ export function logToolCallStats(stream: Writable, statsMap: Map<string, ToolSta
     customConsole.log('No tools were called.')
   }
 }
-
 const mergeToolCallStats = (a: Map<string, ToolStat>, b: Map<string, ToolStat>) => {
   const merged = new Map<string, ToolStat>()
   for (const [tool, stat] of a) {
@@ -57,7 +56,7 @@ export const printEvent = (verbose: number, usageMeter: UsageMeter, stream: Writ
   if (verbose < 0) {
     return () => {}
   }
-  const customConsole = new Console(stream, stream)
+  const customConsole = new Console(stream, stream) as globalThis.Console
   let hadReasoning = false
   let hasText = false
   const write = stream.write.bind(stream)

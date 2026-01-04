@@ -3,9 +3,18 @@
 import type { Writable } from 'node:stream'
 import type { Logger } from '@polka-codes/core'
 
+function createStreamConsole(stdout: Writable, stderr: Writable) {
+  return {
+    log: (...args: any[]) => stdout.write(`${args.map(String).join(' ')}\n`),
+    info: (...args: any[]) => stdout.write(`${args.map(String).join(' ')}\n`),
+    warn: (...args: any[]) => stderr.write(`${args.map(String).join(' ')}\n`),
+    error: (...args: any[]) => stderr.write(`${args.map(String).join(' ')}\n`),
+  }
+}
+
 export const createLogger = (options: { verbose?: number; stream?: Writable }): Logger => {
   const { verbose = 0, stream = process.stderr } = options
-  const con = new console.Console(stream)
+  const con = createStreamConsole(stream, stream)
 
   if (verbose < 0) {
     return {

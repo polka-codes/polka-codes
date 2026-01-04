@@ -45,7 +45,7 @@ export class UsageMeter {
     this.#maxCost = opts.maxCost ?? 100
   }
 
-  #calculageUsage(usage: LanguageModelV2Usage, providerMetadata: any, modelInfo: ModelInfo) {
+  #calculateUsage(usage: LanguageModelV2Usage, providerMetadata: any, modelInfo: ModelInfo) {
     const providerMetadataKey = Object.keys(providerMetadata ?? {})[0]
     const metadata = providerMetadata?.[providerMetadataKey] ?? {}
 
@@ -119,7 +119,7 @@ export class UsageMeter {
       }
 
     const usage = 'totalUsage' in resp ? resp.totalUsage : resp.usage
-    const result = this.#calculageUsage(usage, resp.providerMetadata, modelInfo)
+    const result = this.#calculateUsage(usage, resp.providerMetadata, modelInfo)
 
     this.#totals.input += result.input || 0
     this.#totals.output += result.output || 0

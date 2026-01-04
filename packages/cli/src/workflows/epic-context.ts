@@ -53,8 +53,9 @@ export const loadEpicContext = async (): Promise<EpicContext> => {
   try {
     const loaded = parse(fileContent)
     return EpicContextSchema.parse(loaded)
-  } catch (error) {
-    console.error('Error parsing epic context file:', EPIC_CONTEXT_FILE, error)
+  } catch (_error) {
+    // Silently return empty context on parse error
+    // The file may be corrupted or in an invalid format
     return {}
   }
 }

@@ -53,6 +53,9 @@ Running generic agent...
   if (additionalTools?.search) {
     agentTools.push(additionalTools.search)
   }
+  if (additionalTools?.mcpTools) {
+    agentTools.push(...additionalTools.mcpTools)
+  }
 
   await step('agent', async () => {
     const defaultContext = await getDefaultContext('task')

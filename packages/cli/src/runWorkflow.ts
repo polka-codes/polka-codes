@@ -13,22 +13,31 @@ import {
   type WorkflowFn,
   type WorkflowTools,
 } from '@polka-codes/core'
-import type { Command } from 'commander'
 import { merge } from 'lodash-es'
-import { UserCancelledError } from './errors'
+import { AuthenticationError, ModelAccessError, ProviderError, QuotaExceededError, UserCancelledError } from './errors'
 import { getModel } from './getModel'
 import { getProviderOptions } from './getProviderOptions'
-import { parseOptions } from './options'
+import { McpError } from './mcp/errors'
+import { McpManager } from './mcp/manager'
+import { type CliOptions, parseOptions } from './options'
 import prices from './prices'
-import { type AgentContextParameters, toolCall } from './tool-implementations'
+import { type AgentContextParameters, initializeSkillContext, toolCall } from './tool-implementations'
 import type { BaseWorkflowInput } from './workflows'
+
+/**
+ * Execution context for running workflows.
+ * This replaces the Commander.js Command object, making the code
+ * usable both from CLI and as a scripting API.
+ */
+export interface ExecutionContext extends CliOptions {
+  // All CLI options are inherited from CliOptions
+}
 
 type RunWorkflowOptions = {
   commandName: string
-  command: Command
+  context: ExecutionContext
   logger: Logger
   requiresProvider?: boolean
-  yes?: boolean
   interactive?: boolean
   getProvider?: (args: ProviderOptions) => ToolProvider
   onUsageMeterCreated?: (meter: UsageMeter) => void
@@ -39,26 +48,30 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
   workflowInput: TInput,
   options: RunWorkflowOptions,
 ): Promise<TOutput | undefined> {
-  const { commandName, command, logger, requiresProvider = true, yes, interactive } = options
-  const globalOpts = (command.parent ?? command).opts()
-  const { providerConfig, config, verbose } = await parseOptions(globalOpts, {})
+  const { commandName, context, logger, requiresProvider = true, interactive } = options
+  const { providerConfig, config, verbose } = await parseOptions(context, {})
+  const yes = context.yes
 
   const additionalTools: BaseWorkflowInput['additionalTools'] = {}
   if (config.tools?.search) {
     additionalTools.search = search
   }
 
+  // Initialize MCP manager if MCP servers are configured
+  const mcpManager = new McpManager(logger)
+
   const finalWorkflowInput: TInput & BaseWorkflowInput = {
     ...workflowInput,
-    interactive: interactive ?? !yes,
+    interactive: interactive ?? yes !== true,
     additionalTools,
   }
 
   if (requiresProvider) {
     const commandConfig = providerConfig.getConfigForCommand(commandName)
     if (!commandConfig || !commandConfig.provider || !commandConfig.model) {
-      logger.error(`Error: No provider specified for ${commandName}. Please run "polka init" to configure your AI provider.`)
-      process.exit(1)
+      const error = new Error(`No provider specified for ${commandName}. Please run "polka init" to configure your AI provider.`)
+      logger.error(`Error: ${error.message}`)
+      throw error
     }
     logger.info('Provider:', commandConfig.provider)
     logger.info('Model:', commandConfig.model)
@@ -83,7 +96,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
 
   const toolProvider = (options.getProvider ?? getProvider)({
     excludeFiles,
-    yes,
+    yes: context.yes,
     getModel: (tool) => {
       const toolConfig = config.tools?.[tool as keyof typeof config.tools]
       if (toolConfig === false) {
@@ -112,15 +125,20 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
     parameters: commandConfig.parameters,
   })
 
+  // Initialize skill context for Agent Skills support
+  const skillContext = await initializeSkillContext()
+
   const parameters: AgentContextParameters = {
     providerOptions,
     scripts: config.scripts,
     retryCount: config.retryCount,
     requestTimeoutSeconds: config.requestTimeoutSeconds,
     usageMeter: usage,
+    skillContext,
+    mcpManager,
   }
 
-  let context: WorkflowContext<TTools>
+  let workflowContext: WorkflowContext<TTools>
 
   const tools = new Proxy({} as WorkflowTools<TTools>, {
     get: (_target, tool: string) => {
@@ -133,43 +151,121 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
             model,
             agentCallback: onEvent,
             toolProvider,
-            command,
-            yes,
-            workflowContext: context,
+            yes: context.yes,
+            workflowContext: workflowContext,
           },
         )
       }
     },
   })
 
-  context = {
+  workflowContext = {
     step: makeStepFn(),
     logger,
     tools,
   }
 
   try {
+    // Connect to MCP servers inside the try block to ensure cleanup
+    if (config.mcpServers && Object.keys(config.mcpServers).length > 0) {
+      await mcpManager.connectToServers(config.mcpServers)
+      const mcpTools = mcpManager.getFullToolInfos()
+      if (mcpTools.length > 0) {
+        additionalTools.mcpTools = mcpTools
+        logger.info(`Loaded ${mcpTools.length} MCP tools`)
+      }
+    }
+
     logger.info('Running workflow...')
-    const output = await workflow(finalWorkflowInput, context)
+    const output = await workflow(finalWorkflowInput, workflowContext)
     logger.info('\n\nWorkflow completed successfully.')
     logger.info(usage.getUsageText())
     return output
   } catch (e) {
     const error = e as any
-    onEvent({
-      kind: TaskEventKind.EndTask,
-      exitReason: {
-        type: 'Error',
-        error: { message: error.message, stack: error.stack },
-        messages: [],
-      },
-    })
+
+    // Handle different error types with appropriate messaging
     if (error instanceof UserCancelledError) {
       logger.warn('Workflow cancelled by user.')
+      onEvent({
+        kind: TaskEventKind.EndTask,
+        exitReason: {
+          type: 'Exit',
+          message: error.message,
+          messages: [],
+        },
+      })
+    } else if (error instanceof QuotaExceededError) {
+      logger.error(`\n❌ Error: ${error.message}`)
+      onEvent({
+        kind: TaskEventKind.EndTask,
+        exitReason: {
+          type: 'Error',
+          error: { message: error.message, stack: error.stack },
+          messages: [],
+        },
+      })
+    } else if (error instanceof AuthenticationError) {
+      logger.error(`\n❌ Authentication Error: ${error.message}`)
+      onEvent({
+        kind: TaskEventKind.EndTask,
+        exitReason: {
+          type: 'Error',
+          error: { message: error.message, stack: error.stack },
+          messages: [],
+        },
+      })
+    } else if (error instanceof ModelAccessError) {
+      logger.error(`\n❌ Model Access Error: ${error.message}`)
+      onEvent({
+        kind: TaskEventKind.EndTask,
+        exitReason: {
+          type: 'Error',
+          error: { message: error.message, stack: error.stack },
+          messages: [],
+        },
+      })
+    } else if (error instanceof ProviderError) {
+      // Handle all other provider errors
+      logger.error(`\n❌ Provider Error: ${error.message}`)
+      onEvent({
+        kind: TaskEventKind.EndTask,
+        exitReason: {
+          type: 'Error',
+          error: { message: error.message, stack: error.stack },
+          messages: [],
+        },
+      })
+    } else if (error instanceof McpError) {
+      // Handle all MCP errors
+      logger.error(`\n❌ MCP Error: ${error.message}`)
+      onEvent({
+        kind: TaskEventKind.EndTask,
+        exitReason: {
+          type: 'Error',
+          error: { message: error.message, stack: error.stack },
+          messages: [],
+        },
+      })
+    } else {
+      // Generic error handling
+      const errorMessage = error?.message || 'Unknown error'
+      logger.error(`\n❌ Error: ${errorMessage}`)
+      onEvent({
+        kind: TaskEventKind.EndTask,
+        exitReason: {
+          type: 'Error',
+          error: { message: errorMessage, stack: error?.stack },
+          messages: [],
+        },
+      })
     }
+
     logger.info(usage.getUsageText())
     return undefined
   } finally {
+    // Disconnect MCP servers
+    await mcpManager.disconnectAll()
     logGlobalToolCallStats(process.stderr)
   }
 }

@@ -1,7 +1,5 @@
 import { Command } from 'commander'
-import { createLogger } from '../logger'
-import { runWorkflow } from '../runWorkflow'
-import { commitWorkflow } from '../workflows'
+import { commit } from '../api'
 
 export const commitCommand = new Command('commit')
   .description('Create a commit with AI-generated message')
@@ -9,20 +7,10 @@ export const commitCommand = new Command('commit')
   .argument('[message]', 'Optional context for the commit message generation')
   .action(async (message, localOptions, command: Command) => {
     const globalOpts = (command.parent ?? command).opts()
-    const { verbose, yes } = globalOpts
-
-    const input = {
-      ...(localOptions.all && { all: true }),
-      ...(message && { context: message }),
-      interactive: !yes,
-    }
-    const logger = createLogger({
-      verbose,
-    })
-
-    await runWorkflow(commitWorkflow, input, {
-      commandName: 'commit',
-      command,
-      logger,
+    await commit({
+      all: localOptions.all,
+      context: message,
+      interactive: !globalOpts.yes,
+      ...globalOpts,
     })
   })

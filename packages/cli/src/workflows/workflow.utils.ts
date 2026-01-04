@@ -13,6 +13,7 @@ export type BaseWorkflowInput = {
   interactive: boolean
   additionalTools: {
     search?: FullToolInfo
+    mcpTools?: FullToolInfo[]
   }
 }
 
@@ -377,7 +378,16 @@ ${fileList}
         if (typeof script === 'string') {
           return `${name}: ${script}`
         }
-        return `${name}: ${script.command}${script.description ? ` # ${script.description}` : ''}`
+        if ('command' in script) {
+          return `${name}: ${script.command}${script.description ? ` # ${script.description}` : ''}`
+        }
+        if ('workflow' in script) {
+          return `${name}: workflow:${script.workflow}${script.description ? ` # ${script.description}` : ''}`
+        }
+        if ('script' in script) {
+          return `${name}: script:${script.script}${script.description ? ` # ${script.description}` : ''}`
+        }
+        return `${name}: unknown`
       })
       .join('\n')
     if (scripts.length > 0) {

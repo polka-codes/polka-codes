@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import type { FullToolInfo, ToolHandler, ToolInfo } from '../tool'
 import type { FilesystemProvider } from './provider'
+import { createFileElement, createProviderError, preprocessBoolean } from './utils'
 
 export const toolInfo = {
   name: 'readFile',
@@ -17,14 +18,7 @@ export const toolInfo = {
         .describe('The path of the file to read')
         .meta({ usageValue: 'Comma separated paths here' }),
       includeIgnored: z
-        .preprocess((val) => {
-          if (typeof val === 'string') {
-            const lower = val.toLowerCase()
-            if (lower === 'false') return false
-            if (lower === 'true') return true
-          }
-          return val
-        }, z.boolean().nullish().default(false))
+        .preprocess(preprocessBoolean, z.boolean().nullish().default(false))
         .describe('Whether to include ignored files. Use true to include files ignored by .gitignore.')
         .meta({ usageValue: 'true or false (optional)' }),
     })
@@ -48,13 +42,7 @@ export const toolInfo = {
 
 export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (provider, args) => {
   if (!provider.readFile) {
-    return {
-      success: false,
-      message: {
-        type: 'error-text',
-        value: 'Not possible to read file.',
-      },
-    }
+    return createProviderError('read file')
   }
 
   const { path: paths, includeIgnored } = toolInfo.parameters.parse(args)
@@ -63,14 +51,9 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
   for (const path of paths) {
     const fileContent = await provider.readFile(path, includeIgnored ?? false)
     if (!fileContent) {
-      resp.push(`<read_file_file_content path="${path}" file_not_found="true" />`)
+      resp.push(createFileElement('read_file_file_content', path, undefined, { file_not_found: 'true' }))
     } else {
-      const isEmpty = fileContent.trim().length === 0
-      if (isEmpty) {
-        resp.push(`<read_file_file_content path="${path}" is_empty="true" />`)
-      } else {
-        resp.push(`<read_file_file_content path="${path}">${fileContent}</read_file_file_content>`)
-      }
+      resp.push(createFileElement('read_file_file_content', path, fileContent))
     }
   }
 

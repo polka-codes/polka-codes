@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import type { FullToolInfo, ToolHandler, ToolInfo } from '../tool'
 import type { FilesystemProvider } from './provider'
+import { createProviderError } from './utils'
 
 export const toolInfo = {
   name: 'writeToFile',
@@ -42,13 +43,7 @@ export default App;
 
 export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (provider, args) => {
   if (!provider.writeFile) {
-    return {
-      success: false,
-      message: {
-        type: 'error-text',
-        value: 'Not possible to write file.',
-      },
-    }
+    return createProviderError('write file')
   }
 
   const parsed = toolInfo.parameters.safeParse(args)
@@ -63,11 +58,9 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
   }
   let { path, content } = parsed.data
 
-  // Remove CDATA tags if present
   const trimmedContent = content.trim()
-  if (trimmedContent.startsWith('<![CDATA[') && content.endsWith(']]>')) content = trimmedContent.slice(9, -3)
+  if (trimmedContent.startsWith('<![CDATA[') && trimmedContent.endsWith(']]>')) content = trimmedContent.slice(9, -3)
 
-  // Create parent directories if they don't exist
   await provider.writeFile(path, content)
 
   return {

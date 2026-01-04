@@ -20,6 +20,7 @@ Polka Codes is a powerful TypeScript-based AI coding assistant framework that he
 - 🐛 **Automated Debugging**: Automatically fix failing tests or commands with the `fix` command.
 - 🤖 **AI-Assisted Git Workflow**: Generate commit messages and create pull requests with the `commit` and `pr` commands.
 - 🕵️ **Code Review**: Get AI-powered feedback on your pull requests and local changes, and even have the AI apply the fixes for you.
+- 🎯 **Custom Scripts**: Define and execute custom TypeScript scripts and shell commands with the `run` and `init` commands.
 - 🤝 **Multi-Agent System**: Specialized AI agents (Architect, Coder, etc.) collaborate on complex tasks like planning, coding, and fixing.
 - 🔧 **Simple Setup**: Quickly initialize your project configuration with `init`.
 - 🔄 **GitHub Integration**: A GitHub Action that allows you to run Polka Codes by mentioning it in pull requests and issues.
@@ -27,6 +28,7 @@ Polka Codes is a powerful TypeScript-based AI coding assistant framework that he
 - ⚡ **Type Safety**: Fully typed with TypeScript for a better developer experience.
 - 🧪 **Thoroughly Tested**: Comprehensive test suite using `bun:test` with snapshot testing.
 - 🤖 **Multiple AI Providers**: Supports Google Vertex, DeepSeek (recommended), Anthropic Claude, Ollama, and OpenRouter.
+- 🔌 **MCP Support**: Consume tools from external MCP servers and expose your workflows via MCP server.
 
 ## Quick Start
 
@@ -105,6 +107,177 @@ polka review --json
 ```
 
 For more information, see the [CLI README](packages/cli/README.md).
+
+## Custom Scripts
+
+Polka Codes supports defining and executing custom automation scripts in your `.polkacodes.yml` configuration file. This allows you to create reusable TypeScript scripts and shell commands for common development tasks.
+
+### Script Types
+
+You can define four types of scripts:
+
+1. **Simple Shell Command**: A quick one-liner
+2. **Command with Description**: A shell command with metadata
+3. **TypeScript Script**: An in-process TypeScript file with full access to Polka Codes APIs
+4. **Workflow Script**: A reference to a workflow YAML file
+
+### Configuration
+
+Add scripts to your `.polkacodes.yml`:
+
+```yaml
+scripts:
+  # Simple shell command
+  test: bun test
+
+  # Command with description
+  lint:
+    command: bun run lint
+    description: Run linter
+
+  # TypeScript script
+  deploy:
+    script: .polka-scripts/deploy.ts
+    description: Deploy to production
+    timeout: 300000  # 5 minutes
+    permissions:
+      fs: write
+      network: true
+```
+
+### Running Scripts
+
+```bash
+# List all available scripts
+polka run --list
+
+# Run a specific script
+polka run deploy
+
+# Run with arguments
+polka run deploy -- --production --force
+
+# Quick execution (when no epic context)
+polka test  # Runs the 'test' script
+```
+
+### Creating TypeScript Scripts
+
+Generate a new script template:
+
+```bash
+polka init script my-script
+```
+
+This creates `.polka-scripts/my-script.ts` with a template:
+
+```typescript
+import { code, commit } from '@polka-codes/cli'
+
+export async function main(args: string[]) {
+  console.log('Running script: my-script')
+  console.log('Arguments:', args)
+
+  // Your automation here
+  // await code({ task: 'Add feature', interactive: false })
+  // await commit({ all: true, context: 'Feature complete' })
+
+  console.log('Script completed successfully')
+}
+
+if (import.meta.main) {
+  main(process.argv.slice(2))
+}
+```
+
+### Script Permissions
+
+TypeScript scripts support declaring permissions (currently advisory for future sandboxing):
+
+```yaml
+scripts:
+  risky-script:
+    script: .polka-scripts/risky.ts
+    permissions:
+      fs: write        # read, write, or none
+      network: true     # true or false
+      subprocess: true  # true or false
+    timeout: 60000      # Execution timeout in milliseconds
+    memory: 512         # Memory limit in MB (64-8192)
+```
+
+**Important**: TypeScript scripts currently run in-process with full permissions. Permission declarations are advisory only for future sandboxing implementation.
+
+### Built-in Commands
+
+The following command names are reserved and cannot be used for custom scripts:
+- `code`, `commit`, `pr`, `review`, `fix`, `plan`, `workflow`, `run`, `init`, `meta`
+
+## MCP Integration
+
+Polka Codes supports the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) for both consuming external tools and exposing your own workflows as MCP tools.
+
+### Consuming MCP Tools
+
+You can configure external MCP servers in your `.polkacodes.yml` to make their tools available to AI agents:
+
+```yaml
+mcpServers:
+  filesystem:
+    command: npx
+    args: ["-y", "@modelcontextprotocol/server-filesystem", "/allowed/path"]
+    tools:
+      read_file: true
+      write_file: true
+    # Optionally configure specific AI provider for tools
+    # provider: anthropic
+    # model: claude-3-5-sonnet-20241022
+
+  database:
+    command: /path/to/custom-server
+    env:
+      DATABASE_URL: "postgresql://..."
+```
+
+When MCP servers are configured, their tools are automatically exposed to AI agents in the `code`, `fix`, `plan`, and `task` workflows. Tools are named with the pattern `{serverName}/{toolName}` (e.g., `filesystem/read_file`).
+
+### Exposing Workflows via MCP Server
+
+Polka Codes can also run as an MCP server, exposing your high-level workflows to MCP-compatible clients like Claude Desktop, Continue.dev, and others.
+
+Start the MCP server:
+
+```bash
+polka mcp-server
+```
+
+The server exposes these workflow tools:
+- `code`: Execute coding tasks
+- `review`: Review code changes
+- `plan`: Create implementation plans
+- `fix`: Fix failing tests or commands
+- `epic`: Decompose large features into tasks
+- `commit`: Generate commit messages
+
+Example Claude Desktop configuration:
+
+```json
+{
+  "mcpServers": {
+    "polka-codes": {
+      "command": "polka",
+      "args": ["mcp-server"],
+      "env": {
+        "POLKA_API_PROVIDER": "google-vertex",
+        "POLKA_MODEL": "gemini-2.0-flash-exp",
+        "POLKA_API_KEY": "your-api-key"
+      }
+    }
+  }
+}
+```
+
+For detailed MCP usage instructions and configuration options, see [MCP_GUIDE.md](MCP_GUIDE.md).
 
 ## Project Structure
 

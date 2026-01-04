@@ -36,6 +36,71 @@ export const providerModelSchema = z.object({
 export type ConfigRule = z.infer<typeof ruleSchema>
 export type ProviderConfig = z.infer<typeof providerConfigSchema>
 
+// Script configuration schema
+// Supports multiple formats for backward compatibility and new features
+export const scriptSchema = z.union([
+  // Type 1: Simple shell command (backward compatible)
+  z.string(),
+  // Type 2: Object with command and description (backward compatible)
+  z
+    .object({
+      command: z.string(),
+      description: z.string(),
+    })
+    .strict(),
+  // Type 3: Reference to dynamic workflow YAML
+  z
+    .object({
+      workflow: z.string(), // Path to .yml workflow file
+      description: z.string().optional(),
+      input: z.record(z.string(), z.any()).optional(), // Default workflow input
+    })
+    .strict(),
+  // Type 4: TypeScript script file (NEW)
+  z
+    .object({
+      script: z.string(), // Path to .ts file
+      description: z.string().optional(),
+      permissions: z
+        .object({
+          fs: z.enum(['read', 'write', 'none']).optional(),
+          network: z.boolean().optional(),
+          subprocess: z.boolean().optional(),
+        })
+        .optional(),
+      timeout: z.number().int().positive().max(3600000).optional(), // Max 1 hour in milliseconds
+      memory: z.number().int().positive().min(64).max(8192).optional(), // 64MB-8GB in MB
+    })
+    .strict(),
+])
+
+export type ScriptConfig = z.infer<typeof scriptSchema>
+
+// MCP server configuration schema
+export const mcpServerConfigSchema = z
+  .object({
+    command: z.string(),
+    args: z.array(z.string()).optional(),
+    env: z.record(z.string(), z.string()).optional(),
+    tools: z
+      .record(
+        z.string(),
+        z.boolean().or(
+          z
+            .object({
+              provider: z.string().optional(),
+              model: z.string().optional(),
+              parameters: z.record(z.string(), z.unknown()).optional(),
+            })
+            .strict(),
+        ),
+      )
+      .optional(),
+  })
+  .strict()
+
+export type McpServerConfig = z.infer<typeof mcpServerConfigSchema>
+
 export const configSchema = z
   .object({
     prices: z
@@ -61,23 +126,14 @@ export const configSchema = z
     retryCount: z.number().int().min(0).optional(),
     requestTimeoutSeconds: z.number().int().positive().optional(),
     summaryThreshold: z.number().int().positive().optional(),
-    scripts: z
-      .record(
-        z.string(),
-        z.string().or(
-          z.object({
-            command: z.string(),
-            description: z.string(),
-          }),
-        ),
-      )
-      .optional(),
+    scripts: z.record(z.string(), scriptSchema).optional(),
     commands: z.record(z.string(), providerModelSchema).optional(),
     tools: z
       .object({
         search: providerModelSchema.or(z.boolean()).optional(),
       })
       .optional(),
+    mcpServers: z.record(z.string(), mcpServerConfigSchema).optional(),
     rules: z.array(ruleSchema).optional().or(z.string()).optional(),
     excludeFiles: z.array(z.string()).optional(),
   })

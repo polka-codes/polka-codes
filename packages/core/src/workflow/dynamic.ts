@@ -3,8 +3,133 @@ import { z } from 'zod'
 import { parseJsonFromMarkdown } from '../Agent/parseJsonFromMarkdown'
 import type { FullToolInfo, ToolResponseResult } from '../tool'
 import { type AgentToolRegistry, agentWorkflow } from './agent.workflow'
-import { type WorkflowDefinition, type WorkflowFile, WorkflowFileSchema, type WorkflowStepDefinition } from './dynamic-types'
+import {
+  type BreakStep,
+  type ContinueStep,
+  type IfElseStep,
+  type TryCatchStep,
+  type ValidationResult,
+  type WhileLoopStep,
+  type WorkflowControlFlowStep,
+  type WorkflowDefinition,
+  type WorkflowFile,
+  WorkflowFileSchema,
+  type WorkflowStepDefinition,
+} from './dynamic-types'
 import type { Logger, StepFn, ToolRegistry, WorkflowContext, WorkflowFn, WorkflowTools } from './workflow'
+
+/**
+ * Maximum iterations for while loops to prevent infinite loops
+ */
+const MAX_WHILE_LOOP_ITERATIONS = 1000
+
+/**
+ * JSON Schema type to Zod type mapping
+ */
+type JsonSchemaType = 'string' | 'number' | 'integer' | 'boolean' | 'object' | 'array' | 'null'
+
+interface JsonSchema {
+  type?: JsonSchemaType | JsonSchemaType[]
+  enum?: any[]
+  properties?: Record<string, JsonSchema>
+  required?: string[]
+  items?: JsonSchema
+  additionalProperties?: boolean | JsonSchema
+  description?: string
+  [key: string]: any
+}
+
+/**
+ * Convert a JSON Schema to a Zod schema
+ * Supports a subset of JSON SchemaDraft 7
+ */
+function convertJsonSchemaToZod(schema: JsonSchema): z.ZodTypeAny {
+  // Handle enum types
+  if (schema.enum) {
+    return z.enum(schema.enum.map((v: any) => String(v)))
+  }
+
+  // Handle union types (type: ["string", "null"])
+  if (Array.isArray(schema.type)) {
+    const types = schema.type
+    if (types.includes('null') && types.length === 2) {
+      const nonNullType = types.find((t) => t !== 'null')
+      if (nonNullType === 'string') return z.string().nullable()
+      if (nonNullType === 'number') return z.number().nullable()
+      if (nonNullType === 'integer')
+        return z
+          .number()
+          .refine((val) => Number.isInteger(val))
+          .nullable()
+      if (nonNullType === 'boolean') return z.boolean().nullable()
+      if (nonNullType === 'object') {
+        // Handle object with nullable - need to preserve properties
+        const shape: Record<string, z.ZodTypeAny> = {}
+        if (schema.properties) {
+          for (const [propName, propSchema] of Object.entries(schema.properties)) {
+            const propZod = convertJsonSchemaToZod(propSchema as JsonSchema)
+            const isRequired = schema.required?.includes(propName)
+            shape[propName] = isRequired ? propZod : propZod.optional()
+          }
+        }
+        return z.object(shape).nullable()
+      }
+      if (nonNullType === 'array') return z.array(z.any()).nullable()
+    }
+    // Fallback for complex unions
+    return z.any()
+  }
+
+  const type = schema.type as JsonSchemaType
+
+  switch (type) {
+    case 'string':
+      return z.string()
+    case 'number':
+      return z.number()
+    case 'integer':
+      // Zod v4 doesn't have .int(), use custom validation
+      return z.number().refine((val) => Number.isInteger(val), { message: 'Expected an integer' })
+    case 'boolean':
+      return z.boolean()
+    case 'null':
+      return z.null()
+    case 'object': {
+      const shape: Record<string, z.ZodTypeAny> = {}
+
+      // Convert properties
+      if (schema.properties) {
+        for (const [propName, propSchema] of Object.entries(schema.properties)) {
+          const propZod = convertJsonSchemaToZod(propSchema as JsonSchema)
+          // Check if property is required
+          const isRequired = schema.required?.includes(propName)
+          shape[propName] = isRequired ? propZod : propZod.optional()
+        }
+      }
+
+      let objectSchema = z.object(shape)
+
+      // Handle additionalProperties
+      if (schema.additionalProperties === true) {
+        objectSchema = objectSchema.and(z.any()) as any
+      } else if (typeof schema.additionalProperties === 'object') {
+        const additionalSchema = convertJsonSchemaToZod(schema.additionalProperties as JsonSchema)
+        objectSchema = objectSchema.and(z.record(z.string(), additionalSchema)) as any
+      }
+
+      return objectSchema
+    }
+    case 'array': {
+      if (!schema.items) {
+        return z.array(z.any())
+      }
+      const itemSchema = convertJsonSchemaToZod(schema.items as JsonSchema)
+      return z.array(itemSchema)
+    }
+    default:
+      return z.any()
+  }
+}
 
 /**
  * Tool groups that can be used in step.tools arrays.
@@ -25,6 +150,79 @@ export type DynamicWorkflowRegistry = ToolRegistry & { runWorkflow: RunWorkflowT
 
 export type DynamicWorkflowParseResult = { success: true; definition: WorkflowFile } | { success: false; error: string }
 
+/**
+ * Validate a workflow file for common issues
+ */
+export function validateWorkflowFile(definition: WorkflowFile): ValidationResult {
+  const errors: string[] = []
+
+  // Check each workflow
+  for (const [workflowId, workflow] of Object.entries(definition.workflows)) {
+    // Validate steps exist
+    if (!workflow.steps || workflow.steps.length === 0) {
+      errors.push(`Workflow '${workflowId}' has no steps`)
+      continue
+    }
+
+    // Check for break/continue outside loops
+    const checkBreakOutsideLoop = (steps: WorkflowControlFlowStep[], inLoop: boolean, path: string): void => {
+      for (const step of steps) {
+        if (isBreakStep(step) || isContinueStep(step)) {
+          if (!inLoop) {
+            errors.push(`${path} has break/continue outside of a loop`)
+          }
+        }
+        if (isWhileLoopStep(step)) {
+          checkBreakOutsideLoop(step.while.steps, true, `${path}/${step.id}`)
+        }
+        if (isIfElseStep(step)) {
+          if (step.if.thenBranch) {
+            checkBreakOutsideLoop(step.if.thenBranch, inLoop, `${path}/${step.id}/then`)
+          }
+          if (step.if.elseBranch) {
+            checkBreakOutsideLoop(step.if.elseBranch, inLoop, `${path}/${step.id}/else`)
+          }
+        }
+        if (isTryCatchStep(step)) {
+          checkBreakOutsideLoop(step.try.trySteps, inLoop, `${path}/${step.id}/try`)
+          checkBreakOutsideLoop(step.try.catchSteps, inLoop, `${path}/${step.id}/catch`)
+        }
+      }
+    }
+
+    checkBreakOutsideLoop(workflow.steps, false, workflowId)
+
+    // Check for runWorkflow calls to non-existent workflows
+    const findRunWorkflowCalls = (steps: WorkflowControlFlowStep[], path: string): void => {
+      for (const step of steps) {
+        if (isWhileLoopStep(step)) {
+          findRunWorkflowCalls(step.while.steps, `${path}/${step.id}`)
+        }
+        if (isIfElseStep(step)) {
+          if (step.if.thenBranch) {
+            findRunWorkflowCalls(step.if.thenBranch, `${path}/${step.id}/then`)
+          }
+          if (step.if.elseBranch) {
+            findRunWorkflowCalls(step.if.elseBranch, `${path}/${step.id}/else`)
+          }
+        }
+        if (isTryCatchStep(step)) {
+          findRunWorkflowCalls(step.try.trySteps, `${path}/${step.id}/try`)
+          findRunWorkflowCalls(step.try.catchSteps, `${path}/${step.id}/catch`)
+        }
+      }
+    }
+
+    findRunWorkflowCalls(workflow.steps, workflowId)
+  }
+
+  if (errors.length > 0) {
+    return { success: false, errors }
+  }
+
+  return { success: true }
+}
+
 export function parseDynamicWorkflowDefinition(source: string): DynamicWorkflowParseResult {
   try {
     const raw = parse(source)
@@ -32,6 +230,13 @@ export function parseDynamicWorkflowDefinition(source: string): DynamicWorkflowP
     if (!validated.success) {
       return { success: false, error: z.prettifyError(validated.error) }
     }
+
+    // Additional validation for structural issues
+    const validation = validateWorkflowFile(validated.data)
+    if (!validation.success) {
+      return { success: false, error: `Workflow validation failed:\n${validation.errors.map((e: string) => `  - ${e}`).join('\n')}` }
+    }
+
     return { success: true, definition: validated.data }
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : String(error) }
@@ -66,11 +271,6 @@ export type DynamicWorkflowRunnerOptions = {
    */
   maxToolRoundTrips?: number
   /**
-   * Opt-in to execute persisted step `code` strings.
-   * When false, steps without code must be agent-executed.
-   */
-  allowUnsafeCodeExecution?: boolean
-  /**
    * Customize per-step system prompt for agent-executed steps.
    */
   stepSystemPrompt?: (args: { workflowId: string; step: WorkflowStepDefinition; input: any; state: any }) => string
@@ -83,11 +283,15 @@ export type DynamicWorkflowRunnerOptions = {
    * Built-in workflows that can be called by name if not found in the definition.
    */
   builtInWorkflows?: Record<string, WorkflowFn<any, any, any>>
+  /**
+   * Allow unsafe code execution in condition expressions.
+   * When false (default), only simple comparisons and property access are allowed.
+   * When true, arbitrary JavaScript code can be executed in conditions.
+   * WARNING: Setting to true with untrusted workflow definitions is a security risk.
+   * @default false
+   */
+  allowUnsafeCodeExecution?: boolean
 }
-
-type CompiledStepFn<TTools extends ToolRegistry> = (ctx: DynamicStepRuntimeContext<TTools>) => Promise<any>
-
-const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor as new (arg1: string, arg2: string) => (ctx: any) => Promise<any>
 
 function validateAndApplyDefaults(workflowId: string, workflow: WorkflowDefinition, input: Record<string, any>): Record<string, any> {
   if (!workflow.inputs || workflow.inputs.length === 0) {
@@ -116,6 +320,320 @@ function validateAndApplyDefaults(workflowId: string, workflow: WorkflowDefiniti
   return validatedInput
 }
 
+/**
+ * Safely evaluate a condition expression with access to input and state
+ *
+ * Security: When allowUnsafeCodeExecution is false (default), only supports:
+ * - Property access: input.foo, state.bar
+ * - Comparisons: ==, !=, ===, !==, <, >, <=, >=
+ * - Logical operators: &&, ||, !
+ * - Parentheses for grouping
+ * - Literals: strings, numbers, booleans, null
+ *
+ * When allowUnsafeCodeExecution is true, arbitrary JavaScript is executed.
+ * WARNING: Only set to true for trusted workflow definitions!
+ */
+function evaluateCondition(
+  condition: string,
+  input: Record<string, any>,
+  state: Record<string, any>,
+  allowUnsafeCodeExecution = false,
+): boolean {
+  if (allowUnsafeCodeExecution) {
+    // Unsafe mode: use new Function for full JavaScript support
+    const functionBody = `
+      try {
+        return ${condition};
+      } catch (error) {
+        throw new Error('Condition evaluation failed: ' + (error instanceof Error ? error.message : String(error)));
+      }
+    `
+
+    try {
+      const fn = new Function('input', 'state', functionBody)
+      const result = fn(input, state)
+      return Boolean(result)
+    } catch (error) {
+      throw new Error(`Failed to evaluate condition: ${condition}. Error: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  } else {
+    // Safe mode: use a simple, restricted evaluator
+    return evaluateConditionSafe(condition, input, state)
+  }
+}
+
+/**
+ * Safe condition evaluator that supports a restricted subset of JavaScript
+ * Prevents code injection by not using eval or new Function
+ *
+ * Operator precedence (from lowest to highest):
+ * 1. || (logical OR)
+ * 2. && (logical AND)
+ * 3. ===, !==, ==, !=, >=, <=, >, < (comparisons)
+ * 4. ! (negation)
+ * 5. (...) (parentheses - highest precedence, evaluated first)
+ */
+function evaluateConditionSafe(condition: string, input: Record<string, any>, state: Record<string, any>): boolean {
+  // Trim whitespace
+  condition = condition.trim()
+
+  // Handle simple boolean literals
+  if (condition === 'true') return true
+  if (condition === 'false') return false
+
+  // Handle logical OR (lowest precedence)
+  const orIndex = findTopLevelOperator(condition, '||')
+  if (orIndex !== -1) {
+    const left = condition.slice(0, orIndex).trim()
+    const right = condition.slice(orIndex + 2).trim()
+    return evaluateConditionSafe(left, input, state) || evaluateConditionSafe(right, input, state)
+  }
+
+  // Handle logical AND
+  const andIndex = findTopLevelOperator(condition, '&&')
+  if (andIndex !== -1) {
+    const left = condition.slice(0, andIndex).trim()
+    const right = condition.slice(andIndex + 2).trim()
+    return evaluateConditionSafe(left, input, state) && evaluateConditionSafe(right, input, state)
+  }
+
+  // Handle comparisons
+  const comparisonOps = ['===', '!==', '==', '!=', '>=', '<=', '>', '<']
+  for (const op of comparisonOps) {
+    const opIndex = findTopLevelOperator(condition, op)
+    if (opIndex !== -1) {
+      const left = evaluateValue(condition.slice(0, opIndex).trim(), input, state)
+      const right = evaluateValue(condition.slice(opIndex + op.length).trim(), input, state)
+      return compareValues(left, right, op)
+    }
+  }
+
+  // Handle negation (higher precedence than comparisons)
+  if (condition.startsWith('!')) {
+    return !evaluateConditionSafe(condition.slice(1).trim(), input, state)
+  }
+
+  // Handle parentheses (highest precedence)
+  if (hasEnclosingParens(condition)) {
+    const inner = condition.slice(1, -1)
+    return evaluateConditionSafe(inner, input, state)
+  }
+
+  // If we get here, it's a simple value
+  const value = evaluateValue(condition, input, state)
+  return Boolean(value)
+}
+
+/**
+ * Find index of operator at top level (not inside parentheses or string literals)
+ */
+function findTopLevelOperator(expr: string, op: string): number {
+  let parenDepth = 0
+  let inString = false
+  let stringChar = ''
+  let escapeNext = false
+
+  for (let i = 0; i <= expr.length - op.length; i++) {
+    const char = expr[i]
+
+    if (escapeNext) {
+      escapeNext = false
+      continue
+    }
+
+    if (char === '\\') {
+      escapeNext = true
+      continue
+    }
+
+    if (!inString && (char === '"' || char === "'")) {
+      inString = true
+      stringChar = char
+      continue
+    }
+
+    if (inString && char === stringChar) {
+      inString = false
+      stringChar = ''
+      continue
+    }
+
+    if (inString) continue
+
+    if (char === '(') parenDepth++
+    if (char === ')') parenDepth--
+
+    if (parenDepth === 0 && expr.slice(i, i + op.length) === op) {
+      return i
+    }
+  }
+  return -1
+}
+
+/**
+ * Check if expression is wrapped in enclosing parentheses
+ * (e.g., "(A && B)" returns true, "(A) && (B)" returns false)
+ */
+function hasEnclosingParens(expr: string): boolean {
+  expr = expr.trim()
+
+  if (!expr.startsWith('(') || !expr.endsWith(')')) {
+    return false
+  }
+
+  // Check if the opening and closing parentheses enclose the entire expression
+  let depth = 0
+  let inString = false
+  let stringChar = ''
+  let escapeNext = false
+
+  for (let i = 0; i < expr.length; i++) {
+    const char = expr[i]
+
+    if (escapeNext) {
+      escapeNext = false
+      continue
+    }
+
+    if (char === '\\') {
+      escapeNext = true
+      continue
+    }
+
+    if (!inString && (char === '"' || char === "'")) {
+      inString = true
+      stringChar = char
+      continue
+    }
+
+    if (inString && char === stringChar) {
+      inString = false
+      stringChar = ''
+      continue
+    }
+
+    if (inString) continue
+
+    if (char === '(') {
+      depth++
+      // First paren is at index 0
+      if (i === 0) depth = 1
+    }
+    if (char === ')') {
+      depth--
+      // Last paren should be at the last index
+      if (depth === 0 && i === expr.length - 1) {
+        return true
+      }
+      if (depth === 0 && i < expr.length - 1) {
+        // Found closing paren before end of expression
+        return false
+      }
+    }
+  }
+
+  return false
+}
+
+/**
+ * Evaluate a simple value (property access or literal)
+ */
+function evaluateValue(expr: string, input: Record<string, any>, state: Record<string, any>): any {
+  expr = expr.trim()
+
+  // String literals (with proper handling of escaped quotes)
+  // Use stricter check - ensure entire expression is a quoted string
+  const stringMatch = expr.match(/^(["'])(?:(?=(\\?))\2.)*?\1$/)
+  if (stringMatch) {
+    const quote = stringMatch[1]
+    if (quote === '"') {
+      // Use JSON.parse for double-quoted strings (handles all JSON escape sequences correctly)
+      try {
+        return JSON.parse(expr)
+      } catch (error) {
+        throw new Error(`Invalid string literal: "${expr}". Error: ${error instanceof Error ? error.message : String(error)}`)
+      }
+    } else {
+      // Single-quoted strings: convert to double-quoted and use JSON.parse
+      // Need to handle both \' and \" escape sequences
+      let inner = expr.slice(1, -1)
+      // Replace \' with ' (unescape single quotes)
+      inner = inner.replace(/\\'/g, "'")
+      // Replace \" with " (unescape double quotes)
+      inner = inner.replace(/\\"/g, '"')
+      // Now escape any double quotes and backslashes for JSON
+      const converted = `"${inner.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
+      try {
+        return JSON.parse(converted)
+      } catch (error) {
+        throw new Error(`Invalid string literal: "${expr}". Error: ${error instanceof Error ? error.message : String(error)}`)
+      }
+    }
+  }
+
+  // Number literals (more permissive regex)
+  if (/^-?\d*\.?\d+(?:[eE][+-]?\d+)?$/.test(expr)) {
+    return Number.parseFloat(expr)
+  }
+
+  // Boolean literals
+  if (expr === 'true') return true
+  if (expr === 'false') return false
+  if (expr === 'null') return null
+
+  // Property access: input.foo or state.bar.baz
+  if (expr.startsWith('input.')) {
+    return getNestedProperty(input, expr.slice(6))
+  }
+  if (expr.startsWith('state.')) {
+    return getNestedProperty(state, expr.slice(6))
+  }
+
+  // If we get here, the expression is not recognized
+  throw new Error(
+    `Unrecognized expression in condition: "${expr}". Valid expressions are: string literals, numbers, boolean literals, null, or property access like "input.foo" or "state.bar"`,
+  )
+}
+
+/**
+ * Get nested property from object
+ */
+function getNestedProperty(obj: any, path: string): any {
+  const parts = path.split('.')
+  let current = obj
+  for (const part of parts) {
+    if (current == null) return undefined
+    current = current[part]
+  }
+  return current
+}
+
+/**
+ * Compare two values using the specified operator
+ */
+function compareValues(left: any, right: any, op: string): boolean {
+  switch (op) {
+    case '===':
+      return left === right
+    case '!==':
+      return left !== right
+    case '==':
+      return Object.is(left, right)
+    case '!=':
+      return !Object.is(left, right)
+    case '>=':
+      return left >= right
+    case '<=':
+      return left <= right
+    case '>':
+      return left > right
+    case '<':
+      return left < right
+    default:
+      throw new Error(`Unknown comparison operator: ${op}`)
+  }
+}
+
 function createRunWorkflowFn<TTools extends ToolRegistry>(args: {
   input: Record<string, any>
   state: Record<string, any>
@@ -130,39 +648,6 @@ function createRunWorkflowFn<TTools extends ToolRegistry>(args: {
   return async (subWorkflowId: string, subInput?: Record<string, any>) => {
     const mergedInput = { ...args.input, ...args.state, ...(subInput ?? {}) }
     return await args.runInternal(subWorkflowId, mergedInput, args.context, args.state)
-  }
-}
-
-function compileStep<TTools extends ToolRegistry>(
-  stepDef: WorkflowStepDefinition,
-  workflowId: string,
-  compiledSteps: Map<string, CompiledStepFn<TTools>>,
-): CompiledStepFn<TTools> {
-  const key = `${workflowId}.${stepDef.id}`
-  const existing = compiledSteps.get(key)
-  if (existing) {
-    return existing
-  }
-
-  if (!stepDef.code) {
-    throw new Error(`Step '${stepDef.id}' in workflow '${workflowId}' has no code`)
-  }
-
-  try {
-    const fn = new AsyncFunction('ctx', stepDef.code) as CompiledStepFn<TTools>
-    compiledSteps.set(key, fn)
-    return fn
-  } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error)
-    const codePreview = stepDef.code.length > 200 ? `${stepDef.code.substring(0, 200)}...` : stepDef.code
-    throw new Error(
-      `Failed to compile code for step '${stepDef.id}' in workflow '${workflowId}':\n` +
-        `  Error: ${errorMsg}\n` +
-        `  Code:\n${codePreview
-          .split('\n')
-          .map((line) => `    ${line}`)
-          .join('\n')}`,
-    )
   }
 }
 
@@ -290,7 +775,7 @@ async function executeStepWithAgent<TTools extends ToolRegistry>(
         }
         try {
           const output = await runWorkflow(subWorkflowId, subInput)
-          const jsonResult: ToolResponseResult = { type: 'json', value: output as any }
+          const jsonResult: ToolResponseResult = { type: 'json', value: output }
           return { success: true, message: jsonResult }
         } catch (error) {
           return {
@@ -342,7 +827,9 @@ async function executeStepWithAgent<TTools extends ToolRegistry>(
     throw new Error(`Agent step '${stepDef.id}' in workflow '${workflowId}' exceeded usage limits (tokens or rounds)`)
   }
 
-  throw new Error(`Agent step '${stepDef.id}' in workflow '${workflowId}' exited unexpectedly with type: ${(result as any).type}`)
+  // Exhaustive check: TypeScript should ensure all result types are handled above
+  const _exhaustiveCheck: never = result
+  throw new Error(`Agent step '${stepDef.id}' in workflow '${workflowId}' exited unexpectedly with unhandled type`)
 }
 
 async function executeStepWithTimeout<TTools extends ToolRegistry>(
@@ -352,7 +839,6 @@ async function executeStepWithTimeout<TTools extends ToolRegistry>(
   state: Record<string, any>,
   context: WorkflowContext<TTools>,
   options: DynamicWorkflowRunnerOptions,
-  compiledSteps: Map<string, CompiledStepFn<TTools>>,
   runInternal: (
     workflowId: string,
     input: Record<string, any>,
@@ -361,38 +847,6 @@ async function executeStepWithTimeout<TTools extends ToolRegistry>(
   ) => Promise<any>,
 ): Promise<any> {
   const executeStepLogic = async (): Promise<any> => {
-    if (stepDef.code && options.allowUnsafeCodeExecution) {
-      context.logger.debug(`[Step] Executing step '${stepDef.id}' with compiled code`)
-      const fn = compileStep(stepDef, workflowId, compiledSteps)
-      const runWorkflow = createRunWorkflowFn({ input, state, context, runInternal })
-
-      const agentTools: Record<string, (input: any) => Promise<any>> = {}
-      if (options.toolInfo) {
-        for (const tool of options.toolInfo) {
-          if (typeof (context.tools as any)[tool.name] === 'function') {
-            agentTools[tool.name] = (context.tools as any)[tool.name]
-          }
-        }
-      }
-
-      const runtimeCtx: DynamicStepRuntimeContext<TTools> = {
-        workflowId,
-        stepId: stepDef.id,
-        input,
-        state,
-        tools: context.tools,
-        logger: context.logger,
-        step: context.step,
-        runWorkflow,
-        toolInfo: options.toolInfo,
-        agentTools,
-      }
-
-      const result = await fn(runtimeCtx)
-      context.logger.debug(`[Step] Compiled code execution completed for step '${stepDef.id}'`)
-      return result
-    }
-
     context.logger.debug(`[Step] Executing step '${stepDef.id}' with agent`)
     const result = await executeStepWithAgent(stepDef, workflowId, input, state, context, options, runInternal)
     context.logger.debug(`[Step] Agent execution completed for step '${stepDef.id}'`)
@@ -427,7 +881,6 @@ async function executeStep<TTools extends ToolRegistry>(
   state: Record<string, any>,
   context: WorkflowContext<TTools>,
   options: DynamicWorkflowRunnerOptions,
-  compiledSteps: Map<string, CompiledStepFn<TTools>>,
   runInternal: (
     workflowId: string,
     input: Record<string, any>,
@@ -435,25 +888,25 @@ async function executeStep<TTools extends ToolRegistry>(
     inheritedState: Record<string, any>,
   ) => Promise<any>,
 ): Promise<any> {
-  const result = await executeStepWithTimeout(stepDef, workflowId, input, state, context, options, compiledSteps, runInternal)
+  const result = await executeStepWithTimeout(stepDef, workflowId, input, state, context, options, runInternal)
 
   // Validate output against schema if provided
   if (stepDef.outputSchema) {
     try {
-      const _schema = z.any() // TODO: Convert outputSchema to Zod schema
-      // For now, we'll just validate that it's a valid JSON structure
-      if (typeof stepDef.outputSchema === 'object') {
-        context.logger.debug(`[Step] Validating output for step '${stepDef.id}' against schema`)
-        // Basic validation: ensure result matches expected type
-        if (stepDef.outputSchema.type === 'object') {
-          if (typeof result !== 'object' || result === null || Array.isArray(result)) {
-            throw new Error(`Expected object output, got ${Array.isArray(result) ? 'array' : result === null ? 'null' : typeof result}`)
-          }
-        }
-        if (stepDef.outputSchema.type === 'array' && !Array.isArray(result)) {
-          throw new Error(`Expected array output, got ${typeof result}`)
-        }
+      context.logger.debug(`[Step] Validating output for step '${stepDef.id}' against schema`)
+
+      // Convert JSON Schema to Zod schema
+      const zodSchema = convertJsonSchemaToZod(stepDef.outputSchema)
+
+      // Validate the result
+      const validationResult = zodSchema.safeParse(result)
+
+      if (!validationResult.success) {
+        const errorDetails = validationResult.error.issues.map((e) => `  - ${e.path.join('.') || 'root'}: ${e.message}`).join('\n')
+        throw new Error(`Output does not match expected schema:\n${errorDetails}`)
       }
+
+      context.logger.debug(`[Step] Output validation successful for step '${stepDef.id}'`)
     } catch (error) {
       throw new Error(
         `Step '${stepDef.id}' in workflow '${workflowId}' output validation failed: ${error instanceof Error ? error.message : String(error)}`,
@@ -462,6 +915,313 @@ async function executeStep<TTools extends ToolRegistry>(
   }
 
   return result
+}
+
+/**
+ * Check if a step is a break statement
+ */
+function isBreakStep(step: WorkflowControlFlowStep): step is BreakStep {
+  return typeof step === 'object' && step !== null && 'break' in step && step.break === true
+}
+
+/**
+ * Check if a step is a continue statement
+ */
+function isContinueStep(step: WorkflowControlFlowStep): step is ContinueStep {
+  return typeof step === 'object' && step !== null && 'continue' in step && step.continue === true
+}
+
+/**
+ * Check if a step is a while loop
+ */
+function isWhileLoopStep(step: WorkflowControlFlowStep): step is WhileLoopStep {
+  return typeof step === 'object' && step !== null && 'while' in step
+}
+
+/**
+ * Check if a step is an if/else branch
+ */
+function isIfElseStep(step: WorkflowControlFlowStep): step is IfElseStep {
+  return typeof step === 'object' && step !== null && 'if' in step
+}
+
+/**
+ * Check if a step is a try/catch block
+ */
+function isTryCatchStep(step: WorkflowControlFlowStep): step is TryCatchStep {
+  return typeof step === 'object' && step !== null && 'try' in step
+}
+
+/**
+ * Store step output in state if output key is specified
+ */
+function storeStepOutput(step: WorkflowControlFlowStep, result: any, state: Record<string, any>): void {
+  if ('id' in step && step.output) {
+    const outputKey = step.output
+    state[outputKey] = result
+  }
+}
+
+/**
+ * Get step ID for logging purposes
+ */
+function getStepId(step: WorkflowControlFlowStep): string {
+  if ('id' in step && step.id) {
+    return step.id
+  }
+  if (isWhileLoopStep(step)) {
+    return 'while'
+  }
+  if (isIfElseStep(step)) {
+    return 'if'
+  }
+  if (isTryCatchStep(step)) {
+    return 'try'
+  }
+  return 'control'
+}
+
+/**
+ * Execute a single control flow step (basic step, while loop, if/else, break, continue)
+ */
+async function executeControlFlowStep<TTools extends ToolRegistry>(
+  step: WorkflowControlFlowStep,
+  workflowId: string,
+  input: Record<string, any>,
+  state: Record<string, any>,
+  context: WorkflowContext<TTools>,
+  options: DynamicWorkflowRunnerOptions,
+  runInternal: (
+    workflowId: string,
+    input: Record<string, any>,
+    context: WorkflowContext<TTools>,
+    inheritedState: Record<string, any>,
+  ) => Promise<any>,
+  loopDepth: number,
+  breakFlag: { value: boolean },
+  continueFlag: { value: boolean },
+): Promise<{ result: any; shouldBreak: boolean; shouldContinue: boolean }> {
+  // Handle break statement
+  if (isBreakStep(step)) {
+    if (loopDepth === 0) {
+      throw new Error(`'break' statement found outside of a loop in workflow '${workflowId}'`)
+    }
+    context.logger.debug(`[ControlFlow] Executing break statement (loop depth: ${loopDepth})`)
+    return { result: undefined, shouldBreak: true, shouldContinue: false }
+  }
+
+  // Handle continue statement
+  if (isContinueStep(step)) {
+    if (loopDepth === 0) {
+      throw new Error(`'continue' statement found outside of a loop in workflow '${workflowId}'`)
+    }
+    context.logger.debug(`[ControlFlow] Executing continue statement (loop depth: ${loopDepth})`)
+    return { result: undefined, shouldBreak: false, shouldContinue: true }
+  }
+
+  // Handle while loop
+  if (isWhileLoopStep(step)) {
+    context.logger.info(`[ControlFlow] Executing while loop '${step.id}'`)
+    context.logger.debug(`[ControlFlow] Condition: ${step.while.condition}`)
+    context.logger.debug(`[ControlFlow] Loop body has ${step.while.steps.length} step(s)`)
+
+    let iterationCount = 0
+    let loopResult: any
+
+    while (true) {
+      iterationCount++
+      if (iterationCount > MAX_WHILE_LOOP_ITERATIONS) {
+        throw new Error(
+          `While loop '${step.id}' in workflow '${workflowId}' exceeded maximum iteration limit of ${MAX_WHILE_LOOP_ITERATIONS}`,
+        )
+      }
+
+      // Evaluate condition
+      const conditionResult = evaluateCondition(step.while.condition, input, state, options.allowUnsafeCodeExecution)
+      context.logger.debug(`[ControlFlow] While loop '${step.id}' iteration ${iterationCount}: condition = ${conditionResult}`)
+
+      if (!conditionResult) {
+        context.logger.info(`[ControlFlow] While loop '${step.id}' terminated after ${iterationCount - 1} iteration(s)`)
+        break
+      }
+
+      // Execute loop body steps
+      for (const bodyStep of step.while.steps) {
+        const { result, shouldBreak, shouldContinue } = await executeControlFlowStep(
+          bodyStep,
+          workflowId,
+          input,
+          state,
+          context,
+          options,
+          runInternal,
+          loopDepth + 1,
+          breakFlag,
+          continueFlag,
+        )
+
+        if (shouldBreak) {
+          context.logger.debug(`[ControlFlow] Breaking from while loop '${step.id}'`)
+          breakFlag.value = false
+          return { result: loopResult, shouldBreak: false, shouldContinue: false }
+        }
+
+        if (shouldContinue) {
+          context.logger.debug(`[ControlFlow] Continuing to next iteration of while loop '${step.id}'`)
+          continueFlag.value = false
+          break
+        }
+
+        // Store output if specified
+        storeStepOutput(bodyStep, result, state)
+
+        // Last result becomes loop result
+        loopResult = result
+      }
+    }
+
+    // Store loop output if specified
+    const outputKey = step.output ?? step.id
+    state[outputKey] = loopResult
+    context.logger.debug(`[ControlFlow] While loop '${step.id}' stored output as '${outputKey}'`)
+
+    return { result: loopResult, shouldBreak: false, shouldContinue: false }
+  }
+
+  // Handle if/else branch
+  if (isIfElseStep(step)) {
+    const ifStep = step as IfElseStep
+    context.logger.info(`[ControlFlow] Executing if/else branch '${ifStep.id}'`)
+    context.logger.debug(`[ControlFlow] Condition: ${ifStep.if.condition}`)
+    context.logger.debug(`[ControlFlow] Then branch has ${ifStep.if.thenBranch.length} step(s)`)
+    if (ifStep.if.elseBranch) {
+      context.logger.debug(`[ControlFlow] Else branch has ${ifStep.if.elseBranch.length} step(s)`)
+    }
+
+    const conditionResult = evaluateCondition(ifStep.if.condition, input, state, options.allowUnsafeCodeExecution)
+    context.logger.debug(`[ControlFlow] If/else '${ifStep.id}' condition = ${conditionResult}`)
+
+    const branchSteps = conditionResult ? ifStep.if.thenBranch : (ifStep.if.elseBranch ?? [])
+    const branchName = conditionResult ? 'then' : ifStep.if.elseBranch ? 'else' : 'else (empty)'
+
+    context.logger.info(`[ControlFlow] Taking '${branchName}' branch of '${ifStep.id}'`)
+
+    let branchResult: any
+
+    for (const branchStep of branchSteps) {
+      const { result, shouldBreak, shouldContinue } = await executeControlFlowStep(
+        branchStep,
+        workflowId,
+        input,
+        state,
+        context,
+        options,
+        runInternal,
+        loopDepth,
+        breakFlag,
+        continueFlag,
+      )
+
+      // Propagate break/continue from within branches
+      if (shouldBreak || shouldContinue) {
+        return { result, shouldBreak, shouldContinue }
+      }
+
+      // Store output if specified
+      storeStepOutput(branchStep, result, state)
+
+      // Last result becomes branch result
+      branchResult = result
+    }
+
+    // Store branch output if specified
+    const outputKey = ifStep.output ?? ifStep.id
+    state[outputKey] = branchResult
+    context.logger.debug(`[ControlFlow] If/else '${ifStep.id}' stored output as '${outputKey}'`)
+
+    return { result: branchResult, shouldBreak: false, shouldContinue: false }
+  }
+
+  // Handle try/catch block
+  if (isTryCatchStep(step)) {
+    const tryStep = step as TryCatchStep
+    context.logger.info(`[ControlFlow] Executing try/catch block '${tryStep.id}'`)
+    context.logger.debug(`[ControlFlow] Try block has ${tryStep.try.trySteps.length} step(s)`)
+    context.logger.debug(`[ControlFlow] Catch block has ${tryStep.try.catchSteps.length} step(s)`)
+
+    let tryResult: any
+    let caughtError: Error | undefined
+
+    try {
+      // Execute try steps
+      for (const tryStepItem of tryStep.try.trySteps) {
+        const { result } = await executeControlFlowStep(
+          tryStepItem,
+          workflowId,
+          input,
+          state,
+          context,
+          options,
+          runInternal,
+          loopDepth,
+          breakFlag,
+          continueFlag,
+        )
+
+        // Store output if specified
+        storeStepOutput(tryStepItem, result, state)
+
+        // Last result becomes try result
+        tryResult = result
+      }
+
+      // Store try/catch output if specified
+      const outputKey = tryStep.output ?? tryStep.id
+      state[outputKey] = tryResult
+      context.logger.debug(`[ControlFlow] Try/catch '${tryStep.id}' completed successfully`)
+
+      return { result: tryResult, shouldBreak: false, shouldContinue: false }
+    } catch (error) {
+      caughtError = error instanceof Error ? error : new Error(String(error))
+      context.logger.warn(`[ControlFlow] Try/catch '${tryStep.id}' caught error: ${caughtError.message}`)
+
+      // Execute catch steps
+      let catchResult: any
+      for (const catchStepItem of tryStep.try.catchSteps) {
+        const { result } = await executeControlFlowStep(
+          catchStepItem,
+          workflowId,
+          input,
+          state,
+          context,
+          options,
+          runInternal,
+          loopDepth,
+          breakFlag,
+          continueFlag,
+        )
+
+        // Store output if specified
+        storeStepOutput(catchStepItem, result, state)
+
+        // Last result becomes catch result
+        catchResult = result
+      }
+
+      // Store try/catch output if specified
+      const outputKey = tryStep.output ?? tryStep.id
+      state[outputKey] = catchResult
+      context.logger.debug(`[ControlFlow] Try/catch '${tryStep.id}' caught error and executed catch block`)
+
+      return { result: catchResult, shouldBreak: false, shouldContinue: false }
+    }
+  }
+
+  // Handle basic step (must be WorkflowStepDefinition at this point)
+  const stepDef = step as WorkflowStepDefinition
+  const stepResult = await executeStep(stepDef, workflowId, input, state, context, options, runInternal)
+
+  return { result: stepResult, shouldBreak: false, shouldContinue: false }
 }
 
 export function createDynamicWorkflow<TTools extends ToolRegistry = DynamicWorkflowRegistry>(
@@ -476,8 +1236,6 @@ export function createDynamicWorkflow<TTools extends ToolRegistry = DynamicWorkf
     definition = res.definition
   }
 
-  const compiledSteps = new Map<string, CompiledStepFn<TTools>>()
-
   const runInternal = async (
     workflowId: string,
     input: Record<string, any>,
@@ -489,6 +1247,8 @@ export function createDynamicWorkflow<TTools extends ToolRegistry = DynamicWorkf
       const builtIn = options.builtInWorkflows?.[workflowId]
       if (builtIn) {
         context.logger.info(`[Workflow] Delegating to built-in workflow '${workflowId}'`)
+        // Built-in workflows are typed as WorkflowFn<any, any, any>, so we need to cast context
+        // TODO: Improve built-in workflow typing to preserve context type constraints
         return await builtIn(input, context as any)
       }
       throw new Error(`Workflow '${workflowId}' not found`)
@@ -500,32 +1260,44 @@ export function createDynamicWorkflow<TTools extends ToolRegistry = DynamicWorkf
     context.logger.info(`[Workflow] Starting workflow '${workflowId}'`)
     context.logger.debug(`[Workflow] Input: ${JSON.stringify(validatedInput)}`)
     context.logger.debug(`[Workflow] Inherited state: ${JSON.stringify(inheritedState)}`)
-    context.logger.debug(`[Workflow] Steps: ${workflow.steps.map((s) => s.id).join(', ')}`)
+    context.logger.debug(`[Workflow] Steps: ${workflow.steps.map((s) => ('id' in s ? s.id : '<control flow>')).join(', ')}`)
 
     const state: Record<string, any> = { ...inheritedState }
     let lastOutput: any
 
+    const breakFlag = { value: false }
+    const continueFlag = { value: false }
+
     for (let i = 0; i < workflow.steps.length; i++) {
       const stepDef = workflow.steps[i]
-      const stepName = `${workflowId}.${stepDef.id}`
+      const stepId = getStepId(stepDef)
 
-      context.logger.info(`[Workflow] Step ${i + 1}/${workflow.steps.length}: ${stepDef.id}`)
-      context.logger.debug(`[Workflow] Step task: ${stepDef.task}`)
-      if (stepDef.expected_outcome) {
-        context.logger.debug(`[Workflow] Expected outcome: ${stepDef.expected_outcome}`)
-      }
-      context.logger.debug(`[Workflow] Current state keys: ${Object.keys(state).join(', ')}`)
+      context.logger.info(`[Workflow] Step ${i + 1}/${workflow.steps.length}: ${stepId}`)
 
-      lastOutput = await context.step(stepName, async () => {
-        return await executeStep(stepDef, workflowId, validatedInput, state, context, options, compiledSteps, runInternal)
-      })
-
-      const outputKey = stepDef.output ?? stepDef.id
-      state[outputKey] = lastOutput
-
-      context.logger.debug(
-        `[Workflow] Step output stored as '${outputKey}': ${typeof lastOutput === 'object' ? JSON.stringify(lastOutput).substring(0, 200) : lastOutput}`,
+      // Execute control flow step
+      const { result } = await executeControlFlowStep(
+        stepDef,
+        workflowId,
+        validatedInput,
+        state,
+        context,
+        options,
+        runInternal,
+        0, // loop depth
+        breakFlag,
+        continueFlag,
       )
+
+      lastOutput = result
+
+      // Store output if specified
+      storeStepOutput(stepDef, result, state)
+
+      if ('id' in stepDef && stepDef.output) {
+        context.logger.debug(
+          `[Workflow] Step output stored as '${stepDef.output}': ${typeof lastOutput === 'object' ? JSON.stringify(lastOutput).substring(0, 200) : lastOutput}`,
+        )
+      }
     }
 
     context.logger.info(`[Workflow] Completed workflow '${workflowId}'`)
