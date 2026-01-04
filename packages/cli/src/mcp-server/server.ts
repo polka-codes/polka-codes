@@ -163,6 +163,8 @@ export class McpServer {
     const { id, method, params } = message
 
     // Check rate limit for requests
+    // Note: Using 'default' as a global client ID since stdio transport typically serves one client.
+    // For transports with multiple clients, consider using client-specific IDs from the transport layer.
     if (id !== undefined && !this.checkRateLimit('default')) {
       this.transport.sendError(id, -32603, 'Rate limit exceeded')
       return

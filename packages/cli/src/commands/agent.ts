@@ -67,6 +67,7 @@ export async function runAgent(goal: string | undefined, options: any, _command:
   // TODO: Refactor agent.ts to use runWorkflow infrastructure for full tool support
   const asyncExec = promisify(exec)
 
+  // Create minimal tools implementation for agent context
   const tools = {
     executeCommand: async (input: { command: string; args?: string[]; shell?: boolean }) => {
       // Build command from input with proper shell quoting
@@ -107,6 +108,20 @@ export async function runAgent(goal: string | undefined, options: any, _command:
     },
   } as WorkflowTools<AgentToolsRegistry>
 
+  // Add runtime guard to catch attempts to use unavailable tools
+  const toolsWithGuard = new Proxy(tools, {
+    get(_target, prop: string) {
+      if (prop in tools) {
+        return (tools as any)[prop]
+      }
+      throw new Error(
+        `Tool "${prop}" is not available in agent context. ` +
+          `Available tools: executeCommand, readFile. ` +
+          `See packages/cli/src/commands/agent.ts for details on how to enable full tool support.`,
+      )
+    },
+  })
+
   // Simple step function for workflow execution tracking
   // NOTE: This is a minimal implementation that bypasses some workflow step features:
   // - No retry logic on failures
@@ -129,7 +144,7 @@ export async function runAgent(goal: string | undefined, options: any, _command:
     workingDir,
     stateDir,
     sessionId,
-    tools,
+    tools: toolsWithGuard,
     env: process.env,
   }
 

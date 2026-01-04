@@ -139,18 +139,20 @@ export class ResourceMonitor {
 
   /**
    * Get memory usage percentage
+   * @returns percentage (0-100) or undefined if no memory limit is set
    */
-  getMemoryUsagePercentage(): number {
-    if (!this.limits.maxMemory) return 0
+  getMemoryUsagePercentage(): number | undefined {
+    if (!this.limits.maxMemory) return undefined
     const current = this.getCurrentUsage().memoryMB
     return (current / this.limits.maxMemory) * 100
   }
 
   /**
    * Get session time percentage
+   * @returns percentage (0-100) or undefined if no session time limit is set
    */
-  getSessionTimePercentage(): number {
-    if (!this.limits.maxSessionTime) return 0
+  getSessionTimePercentage(): number | undefined {
+    if (!this.limits.maxSessionTime) return undefined
     const current = this.getCurrentUsage().sessionTimeMinutes
     return (current / this.limits.maxSessionTime) * 100
   }
