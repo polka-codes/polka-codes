@@ -150,8 +150,10 @@ export class TaskExecutor {
         if (error instanceof TaskExecutionError) {
           throw error
         }
-        // Otherwise wrap it
-        const abortReason = error instanceof Error ? error.message : 'Task was cancelled'
+        // Otherwise wrap it, prioritizing signal.reason over error.message
+        // signal.reason contains the actual cancellation reason (e.g., 'Task cancelled manually')
+        // while error might be a generic 'AbortError'
+        const abortReason = signal.reason ? String(signal.reason) : error instanceof Error ? error.message : 'Task was cancelled'
         throw new TaskExecutionError(task.id, abortReason, error instanceof Error ? error : undefined)
       }
 

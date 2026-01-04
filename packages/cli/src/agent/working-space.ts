@@ -491,20 +491,27 @@ ${task.files.length > 0 ? task.files.map((f) => `- \`${f}\``).join('\n') : 'None
       pendingTaskCount = pending.filter((f) => f.endsWith('.md')).length
       completedTaskCount = completed.filter((f) => f.endsWith('.md')).length
 
-      // Calculate total size
-      const allFiles: string[] = [...plans, ...pending, ...completed]
-      for (const file of allFiles) {
-        let filepath: string
-        if (file.endsWith('.md') && plans.includes(file)) {
-          filepath = path.join(this.plansDir, file)
-        } else if (pending.includes(file)) {
-          filepath = path.join(this.pendingTasksDir, file)
-        } else {
-          filepath = path.join(this.completedTasksDir, file)
-        }
-
+      // Calculate total size by iterating through each directory independently
+      // to avoid double-counting when files have the same name in different directories
+      for (const file of plans) {
         try {
-          const stat = await fs.stat(filepath)
+          const stat = await fs.stat(path.join(this.plansDir, file))
+          totalSize += stat.size
+        } catch {
+          // File might not exist
+        }
+      }
+      for (const file of pending) {
+        try {
+          const stat = await fs.stat(path.join(this.pendingTasksDir, file))
+          totalSize += stat.size
+        } catch {
+          // File might not exist
+        }
+      }
+      for (const file of completed) {
+        try {
+          const stat = await fs.stat(path.join(this.completedTasksDir, file))
           totalSize += stat.size
         } catch {
           // File might not exist
