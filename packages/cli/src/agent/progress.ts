@@ -70,11 +70,14 @@ export class Progress {
   private render(): void {
     const { total, width = 40, label, showPercentage = true, showETA = false } = this.options
 
+    const progressRatio = total > 0 ? this.current / total : 0
+    const clampedRatio = Math.min(Math.max(progressRatio, 0), 1)
+
     // Calculate percentage
-    const percentage = Math.min((this.current / total) * 100, 100)
+    const percentage = Math.min(Math.max(progressRatio * 100, 0), 100)
 
     // Calculate filled width
-    const filledWidth = Math.floor((this.current / total) * width)
+    const filledWidth = Math.floor(clampedRatio * width)
     const emptyWidth = width - filledWidth
 
     // Build bar
