@@ -399,4 +399,18 @@ export class McpServer {
   isInitialized(): boolean {
     return this.initialized
   }
+
+  /**
+   * Get server state (for testing)
+   */
+  getState() {
+    return {
+      config: this.config,
+      transport: this.transport,
+      tools: this.tools,
+      resources: this.resources,
+      initialized: this.initialized,
+      requestCounts: this.requestCounts,
+    }
+  }
 }
