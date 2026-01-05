@@ -330,7 +330,7 @@ The server exposes these workflow tools:
 Add the MCP server to your Claude Code configuration:
 
 ```bash
-claude mcp add polka-codes
+claude mcp add polka polka mcp-server
 ```
 
 Or manually edit `~/.claude/config.json`:
@@ -338,7 +338,7 @@ Or manually edit `~/.claude/config.json`:
 ```json
 {
   "mcpServers": {
-    "polka-codes": {
+    "polka": {
       "command": "polka",
       "args": ["mcp-server"]
     }

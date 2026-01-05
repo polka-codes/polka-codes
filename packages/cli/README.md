@@ -218,7 +218,7 @@ polka mcp-server
 **Configure with Claude Code:**
 
 ```bash
-claude mcp add polka-codes
+claude mcp add polka polka mcp-server
 ```
 
 Or manually edit `~/.claude/config.json`:
@@ -226,7 +226,7 @@ Or manually edit `~/.claude/config.json`:
 ```json
 {
   "mcpServers": {
-    "polka-codes": {
+    "polka": {
       "command": "polka",
       "args": ["mcp-server"]
     }
