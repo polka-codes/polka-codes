@@ -1,4 +1,4 @@
-import type { FullToolInfo, ToolResponse } from '@polka-codes/core'
+import type { ToolResponse } from '../tool'
 
 /**
  * Create a standardized error response for provider method not available
@@ -14,31 +14,11 @@ export function createProviderError(action: string): ToolResponse {
 }
 
 /**
- * Create a tool export with default pattern
- */
-export function createTool<T extends Record<string, unknown>>(
-  toolInfo: T,
-  handler: T extends { inputSchema: any } ? never : any,
-): FullToolInfo {
-  return {
-    ...toolInfo,
-    handler,
-  } as unknown as FullToolInfo
-}
-
-/**
  * Simplify boolean string preprocessing
  * Converts 'true'/'false' strings to actual booleans
  */
 export function preprocessBoolean(val: unknown): unknown {
   return typeof val === 'string' ? val.toLowerCase() === 'true' : val
-}
-
-/**
- * Format topic attribute for XML elements
- */
-export function formatTopicAttribute(topic?: string): string {
-  return topic ? ` topic="${topic}"` : ''
 }
 
 /**
