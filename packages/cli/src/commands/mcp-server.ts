@@ -17,9 +17,9 @@ export const mcpServerCommand = new Command('mcp-server')
 
     // Print usage information to stderr via logger
     logger.info('')
-    logger.info('╔════════════════════════════════════════════════════════════════╗')
-    logger.info('║           Polka Codes MCP Server                                 ║')
-    logger.info('╚════════════════════════════════════════════════════════════════╝')
+    logger.info('╔════════════════════════════════════════════════╗')
+    logger.info('║           Polka Codes MCP Server               ║')
+    logger.info('╚════════════════════════════════════════════════╝')
     logger.info('')
     logger.info('Available Tools:')
 
