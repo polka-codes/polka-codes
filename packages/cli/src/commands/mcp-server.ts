@@ -13,7 +13,13 @@ export const mcpServerCommand = new Command('mcp-server')
       verbose: options.verbose ? 1 : 0,
     })
 
-    logger.info('Starting polka-codes MCP server...')
+    // Print usage information
+    console.log('')
+    console.log('╔════════════════════════════════════════════════════════════════╗')
+    console.log('║           Polka Codes MCP Server                                 ║')
+    console.log('╚════════════════════════════════════════════════════════════════╝')
+    console.log('')
+    console.log('Available Tools:')
 
     // Create MCP server
     const server = new McpServer(
@@ -35,17 +41,61 @@ export const mcpServerCommand = new Command('mcp-server')
     const tools = createPolkaCodesServerTools()
     server.registerTools(tools)
 
-    logger.info(`Registered ${tools.length} tools`)
+    // Print available tools
+    for (const tool of tools) {
+      const requiredParams = (tool.inputSchema.required || []).filter((param: string) => param in (tool.inputSchema.properties || {}))
+      console.log(`  • ${tool.name}`)
+      console.log(`    ${tool.description}`)
+      if (requiredParams.length > 0) {
+        console.log(`    Required: ${requiredParams.join(', ')}`)
+      }
+      console.log('')
+    }
+
+    console.log('Client Configuration Examples:')
+    console.log('')
+    console.log('  Claude Desktop (~/Library/Application Support/Claude/claude_desktop_config.json):')
+    console.log('  {')
+    console.log('    "mcpServers": {')
+    console.log('      "polka-codes": {')
+    console.log('        "command": "polka",')
+    console.log('        "args": ["mcp-server"]')
+    console.log('      }')
+    console.log('    }')
+    console.log('  }')
+    console.log('')
+    console.log('  Continue.dev (~/.continue/config.json):')
+    console.log('  {')
+    console.log('    "experimental": {')
+    console.log('      "mcpServers": [')
+    console.log('        {')
+    console.log('          "name": "polka-codes",')
+    console.log('          "command": "polka",')
+    console.log('          "args": ["mcp-server"]')
+    console.log('        }')
+    console.log('      ]')
+    console.log('    }')
+    console.log('  }')
+    console.log('')
+    console.log('Testing with MCP Inspector:')
+    console.log('  $ npm install -g @modelcontextprotocol/inspector')
+    console.log('  $ mcp-inspector stdio polka mcp-server')
+    console.log('')
+    console.log('Press Ctrl+C to stop the server')
+    console.log('═════════════════════════════════════════════════════════════════')
+    console.log('')
+
+    logger.info('Starting MCP server...')
 
     // Start server
     await server.start()
 
-    // Keep process alive
-    logger.info('MCP server is running. Press Ctrl+C to stop.')
+    logger.info('MCP server is running and listening for connections...')
 
     // Handle shutdown gracefully
     process.on('SIGINT', async () => {
-      logger.info('\nShutting down MCP server...')
+      console.log('')
+      logger.info('Shutting down MCP server...')
       await server.stop()
       process.exit(0)
     })
