@@ -7,28 +7,30 @@
 [![Bun Version](https://img.shields.io/badge/Bun-v1.0.0+-brightgreen)](https://bun.sh)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue)](https://www.typescriptlang.org)
 
-> **Warning**
-> This project is still in very early stages of development. Please use with caution as APIs and features may change frequently.
+> **Note**
+> This project is under active development. APIs and features may evolve, but we strive to maintain backward compatibility when possible.
 
 Polka Codes is a powerful TypeScript-based AI coding assistant framework that helps developers with epic decomposition, task planning, code generation, and more. It uses natural language interactions, a multi-agent system, a command-line interface, and seamless GitHub integration to streamline your development workflow.
 
-## Features
+## ✨ Features
 
-- ✨ **Epic Decomposition**: Break down large features into smaller, manageable tasks with the `epic` command.
-- 📝 **Task Planning**: Create detailed implementation plans for your tasks using the `plan` command.
-- 💻 **Code Generation**: Implement features from a plan or a simple description with the `code` command.
-- 🐛 **Automated Debugging**: Automatically fix failing tests or commands with the `fix` command.
-- 🤖 **AI-Assisted Git Workflow**: Generate commit messages and create pull requests with the `commit` and `pr` commands.
-- 🕵️ **Code Review**: Get AI-powered feedback on your pull requests and local changes, and even have the AI apply the fixes for you.
-- 🎯 **Custom Scripts**: Define and execute custom TypeScript scripts and shell commands with the `run` and `init` commands.
-- 🤝 **Multi-Agent System**: Specialized AI agents (Architect, Coder, etc.) collaborate on complex tasks like planning, coding, and fixing.
-- 🔧 **Simple Setup**: Quickly initialize your project configuration with `init`.
-- 🔄 **GitHub Integration**: A GitHub Action that allows you to run Polka Codes by mentioning it in pull requests and issues.
-- 📦 **Extensible Architecture**: A modular design that allows for adding new AI providers, tools, and agents.
-- ⚡ **Type Safety**: Fully typed with TypeScript for a better developer experience.
-- 🧪 **Thoroughly Tested**: Comprehensive test suite using `bun:test` with snapshot testing.
-- 🤖 **Multiple AI Providers**: Supports Google Vertex, DeepSeek (recommended), Anthropic Claude, Ollama, and OpenRouter.
-- 🔌 **MCP Support**: Consume tools from external MCP servers and expose your workflows via MCP server.
+- ✨ **Epic Decomposition**: Break down large features into smaller, manageable tasks with the `epic` command
+- 📝 **Task Planning**: Create detailed implementation plans for your tasks using the `plan` command
+- 💻 **Code Generation**: Implement features from a plan or a simple description with the `code` command
+- 🐛 **Automated Debugging**: Automatically fix failing tests or commands with the `fix` command
+- 🔍 **Code Review**: Get AI-powered feedback on your pull requests and local changes with automatic fix application
+- 🤖 **AI-Assisted Git Workflow**: Generate commit messages and create pull requests with the `commit` and `pr` commands
+- 💾 **Checkpoint & Resume**: Save and restore work state with the `checkpoints` and `continue` commands
+- 🎯 **Custom Scripts**: Define and execute custom TypeScript scripts and shell commands with the `run` and `init` commands
+- 🤝 **Multi-Agent System**: Specialized AI agents (Architect, Coder, etc.) collaborate on complex tasks
+- 🔧 **Simple Setup**: Quickly initialize your project configuration with `init`
+- 🔄 **GitHub Integration**: GitHub Actions integration for PR/issue mentions
+- 📦 **Extensible Architecture**: Modular design for adding AI providers, tools, and agents
+- ⚡ **Type Safety**: Fully typed with TypeScript for better DX
+- 🧪 **Thoroughly Tested**: 800+ tests using `bun:test` with snapshot testing
+- 🤖 **Multiple AI Providers**: Anthropic Claude, Google Vertex, DeepSeek, OpenAI, OpenRouter, Ollama
+- 🔌 **MCP Support**: Consume tools from external MCP servers and expose workflows via MCP server
+- 🚀 **Auto-Fix**: Automatically detect and fix lint/type errors after code changes
 
 ## Quick Start
 
@@ -212,6 +214,70 @@ scripts:
 
 The following command names are reserved and cannot be used for custom scripts:
 - `code`, `commit`, `pr`, `review`, `fix`, `plan`, `workflow`, `run`, `init`, `meta`
+
+## Checkpoint & Resume
+
+Polka Codes automatically creates checkpoints during agent runs, allowing you to save your work state and resume later.
+
+### Listing Checkpoints
+
+View all available checkpoints:
+
+```bash
+polka checkpoints
+```
+
+Output example:
+```
+Found 2 checkpoint(s):
+
+1. feature-complete - Jan 4, 2025, 3:00:00 PM (5m ago)
+   Completed: 10 task(s)
+
+2. initial-state - Jan 4, 2025, 2:00:00 PM (1h 5m ago)
+   Queue: 15 task(s)
+   Next: Implement user authentication
+
+Resume with:
+  bun polka continue feature-complete
+```
+
+For more details:
+
+```bash
+polka checkpoints --verbose
+```
+
+### Resuming from Checkpoints
+
+Resume from the most recent checkpoint:
+
+```bash
+polka continue
+```
+
+Resume from a specific checkpoint:
+
+```bash
+polka continue feature-complete
+```
+
+The continue command will show you:
+- What tasks were completed
+- What tasks failed
+- What tasks are pending
+- Instructions to manually restore and continue
+
+**Note**: Full automatic resume is planned for a future release. Currently, the command provides clear instructions for manual restoration.
+
+### Working Directory
+
+Checkpoints are stored in your project's `.polka/agent-state/checkpoints/` directory. Each checkpoint contains:
+- Session ID and timestamp
+- Task queue status
+- Completed and failed tasks
+- Execution history
+- Metrics and performance data
 
 ## MCP Integration
 

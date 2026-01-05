@@ -35,61 +35,197 @@ polka "implement user authentication"
 
 The CLI will intelligently determine the best workflow to handle your request. For more specific tasks, you can use the following commands:
 
-### `code`
+### Core Commands
 
-Generate code based on a description.
+#### `code`
+
+Plan and implement a feature or task using AI agents.
 
 ```bash
-polka code "create a React component for a login form"
+polka code "Add user authentication with OAuth"
+polka code --preview "Add login form"  # Show diff before applying
 ```
 
-### `plan`
+**Features:**
+- Architect agent creates implementation plan
+- Coder agent implements the plan
+- Automatic fix workflow runs after implementation
+- Optional diff preview mode
+
+#### `plan`
 
 Create an implementation plan for a new feature or refactor.
 
 ```bash
-polka plan "refactor the database schema to support multi-tenancy"
+polka plan "Add user authentication"
+polka plan --plan-file auth-plan.md "Update auth system"
 ```
 
-### `epic`
+**Features:**
+- Creates detailed step-by-step plans
+- Saves to markdown files for review
+- Can update existing plans
 
-Break down a large task into smaller, manageable sub-tasks.
+#### `epic`
+
+Orchestrate a large feature or epic, breaking it down into smaller tasks and executing them sequentially.
 
 ```bash
-polka epic "build a new e-commerce platform"
+polka epic "Build a complete e-commerce platform"
+polka epic --no-review "Quick prototype"  # Skip review step
 ```
 
-### `fix`
+**Features:**
+- Breaks large features into manageable tasks
+- Maintains context across tasks
+- Persistent todo list
+- Optional review step
 
-Identify and fix bugs in your codebase by running a command (like tests) and letting Polka fix the issues.
+#### `fix`
+
+Automatically fix failing tests or commands by running them and letting AI fix errors.
 
 ```bash
-polka fix "npm test"
+polka fix                    # Uses default check/test scripts
+polka fix "bun test"         # Fix specific test failures
+polka fix -p "Focus on auth"  # Provide additional context
 ```
 
-### `review`
+**Features:**
+- Iterative fixing with bail conditions
+- Uses check/test/format scripts from `.polkacodes.yml`
+- Supports custom commands
 
-Review a pull request.
+#### `review`
+
+Review code changes (GitHub PR or local) with AI-powered feedback.
 
 ```bash
-polka review --pr 123
+polka review                      # Review local changes
+polka review --pr 123             # Review GitHub PR
+polka review --range HEAD~5..HEAD # Review commit range
+polka review --loop 3              # Re-review until clean
+polka review --json               # JSON output for automation
 ```
 
-### `meta`
+**Features:**
+- Reviews staged changes, unstaged changes, or commit ranges
+- GitHub PR review with `gh` integration
+- Iterative remediation with `--loop`
+- Can automatically apply fixes
 
-The `meta` command orchestrates complex workflows by running other commands in sequence. It's used internally by the CLI but can also be used for advanced use cases.
+#### `commit`
 
-### `init`
-
-Initialize Polka Codes configuration for your project.
+Generate a commit message based on your staged changes.
 
 ```bash
-# Create local config
-polka init
-
-# Create global config
-polka init --global
+polka commit          # Generate message for staged changes
+polka commit -a       # Stage all changes first
+polka commit --context "Fixed login bug"  # Add context
 ```
+
+#### `pr`
+
+Create a GitHub pull request with AI-generated title and description.
+
+```bash
+polka pr
+polka pr --context "Implements user authentication"
+```
+
+#### `workflow`
+
+Run custom workflow files.
+
+```bash
+polka workflow -f my-workflow.workflow
+polka workflow -f custom.workflow -w customWorkflow
+```
+
+### Checkpoint Commands
+
+#### `checkpoints`
+
+List available checkpoints for resuming work.
+
+```bash
+polka checkpoints              # List all checkpoints
+polka checkpoints --verbose    # Show detailed info
+```
+
+**Output shows:**
+- Checkpoint name and timestamp
+- Completed, failed, and pending tasks
+- Instructions to resume
+
+#### `continue`
+
+Resume work from a checkpoint.
+
+```bash
+polka continue                    # Resume latest checkpoint
+polka continue <checkpoint-name>  # Resume specific checkpoint
+polka continue --list             # List checkpoints in continue mode
+```
+
+**Features:**
+- Shows task status (completed, failed, pending)
+- Provides instructions to restore state
+- Helps continue from where you left off
+
+### Utility Commands
+
+#### `init`
+
+Initialize Polka Codes configuration.
+
+```bash
+polka init                    # Create local config
+polka init --global           # Create global config
+polka init script my-script   # Generate script template
+polka init skill              # Generate skill template
+```
+
+#### `run`
+
+Run custom scripts from `.polkacodes.yml`.
+
+```bash
+polka run                     # List available scripts
+polka run deploy              # Run specific script
+polka run deploy -- --prod    # Pass arguments to script
+```
+
+#### `skills`
+
+Manage agent skills.
+
+```bash
+polka skills                   # List available skills
+polka skills create            # Create new skill
+```
+
+### Advanced Commands
+
+#### `mcp-server`
+
+Start Polka Codes as an MCP server.
+
+```bash
+polka mcp-server
+```
+
+Exposes workflows as MCP tools for use with Claude Desktop, Continue.dev, etc.
+
+#### `agent`
+
+Run autonomous agent for continuous improvement.
+
+```bash
+polka agent "Fix all failing tests"
+```
+
+**Note:** This is experimental and primarily used for task discovery and planning.
 
 ### Git Integration
 

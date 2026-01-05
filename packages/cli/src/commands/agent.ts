@@ -37,8 +37,19 @@ export async function runAgent(goal: string | undefined, options: any, _command:
   console.log('='.repeat(60))
   console.log('')
 
+  // Map CLI options to config format
+  // --continuous flag maps to strategy: 'continuous-improvement'
+  // --approval-level maps to approval.level in config
+  const configOptions = {
+    ...options,
+    strategy: options.continuous ? 'continuous-improvement' : options.strategy,
+    approval: {
+      level: options.approvalLevel,
+    },
+  }
+
   // Load configuration
-  const config = await loadConfig(options, options.config)
+  const config = await loadConfig(configOptions, options.config)
 
   // Create workflow context
   const logger = createLogger({ verbose: options.verbose || 0 })
@@ -169,7 +180,6 @@ export async function runAgent(goal: string | undefined, options: any, _command:
         console.error('Or use --continuous for autonomous improvement mode')
         await agent.cleanup()
         process.exit(1)
-        return
       }
 
       console.log(`📝 Goal: ${goal}`)
@@ -206,10 +216,5 @@ export const agentCommand = new Command('agent')
   .option('--continuous', 'Run in continuous improvement mode')
   .option('--preset <name>', 'Configuration preset', 'balanced')
   .option('--config <path>', 'Configuration file path')
-  .option('-y, --yes', 'Auto-approve all tasks')
-  .option('--max-iterations <n>', 'Maximum iterations in continuous mode', '0')
-  .option('--require-approval <level>', 'Approval level (none|destructive|commits|all)', 'destructive')
-  .option('--timeout <minutes>', 'Session timeout in minutes', '0')
-  .option('--dry-run', 'Show plan without executing')
-  .option('--stop', 'Stop running agent')
+  .option('--approval-level <level>', 'Approval level (none|destructive|commits|all)', 'destructive')
   .action(runAgent)
