@@ -209,13 +209,32 @@ polka skills create            # Create new skill
 
 #### `mcp-server`
 
-Start Polka Codes as an MCP server.
+Start Polka Codes as an MCP server for Claude Code.
 
 ```bash
 polka mcp-server
 ```
 
-Exposes workflows as MCP tools for use with Claude Desktop, Continue.dev, etc.
+**Configure with Claude Code:**
+
+```bash
+claude mcp add polka-codes
+```
+
+Or manually edit `~/.claude/config.json`:
+
+```json
+{
+  "mcpServers": {
+    "polka-codes": {
+      "command": "polka",
+      "args": ["mcp-server"]
+    }
+  }
+}
+```
+
+Exposes workflows as MCP tools for use with Claude Code.
 
 #### `agent`
 

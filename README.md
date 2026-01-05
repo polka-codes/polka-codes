@@ -309,7 +309,7 @@ When MCP servers are configured, their tools are automatically exposed to AI age
 
 ### Exposing Workflows via MCP Server
 
-Polka Codes can also run as an MCP server, exposing your high-level workflows to MCP-compatible clients like Claude Desktop, Continue.dev, and others.
+Polka Codes can run as an MCP server, exposing your high-level workflows to Claude Code.
 
 Start the MCP server:
 
@@ -325,19 +325,22 @@ The server exposes these workflow tools:
 - `epic`: Decompose large features into tasks
 - `commit`: Generate commit messages
 
-Example Claude Desktop configuration:
+**Configuration with Claude Code:**
+
+Add the MCP server to your Claude Code configuration:
+
+```bash
+claude mcp add polka-codes
+```
+
+Or manually edit `~/.claude/config.json`:
 
 ```json
 {
   "mcpServers": {
     "polka-codes": {
       "command": "polka",
-      "args": ["mcp-server"],
-      "env": {
-        "POLKA_API_PROVIDER": "google-vertex",
-        "POLKA_MODEL": "gemini-2.0-flash-exp",
-        "POLKA_API_KEY": "your-api-key"
-      }
+      "args": ["mcp-server"]
     }
   }
 }
