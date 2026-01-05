@@ -13,13 +13,13 @@ export const mcpServerCommand = new Command('mcp-server')
       verbose: options.verbose ? 1 : 0,
     })
 
-    // Print usage information
-    console.log('')
-    console.log('╔════════════════════════════════════════════════════════════════╗')
-    console.log('║           Polka Codes MCP Server                                 ║')
-    console.log('╚════════════════════════════════════════════════════════════════╝')
-    console.log('')
-    console.log('Available Tools:')
+    // Print usage information to stderr (not stdout which is used for MCP protocol)
+    console.error('')
+    console.error('╔════════════════════════════════════════════════════════════════╗')
+    console.error('║           Polka Codes MCP Server                                 ║')
+    console.error('╚════════════════════════════════════════════════════════════════╝')
+    console.error('')
+    console.error('Available Tools:')
 
     // Create MCP server
     const server = new McpServer(
@@ -41,36 +41,36 @@ export const mcpServerCommand = new Command('mcp-server')
     const tools = createPolkaCodesServerTools()
     server.registerTools(tools)
 
-    // Print available tools
+    // Print available tools to stderr
     for (const tool of tools) {
       const requiredParams = (tool.inputSchema.required || []).filter((param: string) => param in (tool.inputSchema.properties || {}))
-      console.log(`  • ${tool.name}`)
-      console.log(`    ${tool.description}`)
+      console.error(`  • ${tool.name}`)
+      console.error(`    ${tool.description}`)
       if (requiredParams.length > 0) {
-        console.log(`    Required: ${requiredParams.join(', ')}`)
+        console.error(`    Required: ${requiredParams.join(', ')}`)
       }
-      console.log('')
+      console.error('')
     }
 
-    console.log('Configuration:')
-    console.log('')
-    console.log('  To use this MCP server with Claude Code, add to your config:')
-    console.log('')
-    console.log('  claude mcp add polka polka mcp-server')
-    console.log('')
-    console.log('  Or manually add to ~/.claude/config.json:')
-    console.log('  {')
-    console.log('    "mcpServers": {')
-    console.log('      "polka": {')
-    console.log('        "command": "polka",')
-    console.log('        "args": ["mcp-server"]')
-    console.log('      }')
-    console.log('    }')
-    console.log('  }')
-    console.log('')
-    console.log('Press Ctrl+C to stop the server')
-    console.log('═════════════════════════════════════════════════════════════════')
-    console.log('')
+    console.error('Configuration:')
+    console.error('')
+    console.error('  To use this MCP server with Claude Code, add to your config:')
+    console.error('')
+    console.error('  claude mcp add polka polka mcp-server')
+    console.error('')
+    console.error('  Or manually add to ~/.claude/config.json:')
+    console.error('  {')
+    console.error('    "mcpServers": {')
+    console.error('      "polka": {')
+    console.error('        "command": "polka",')
+    console.error('        "args": ["mcp-server"]')
+    console.error('      }')
+    console.error('    }')
+    console.error('  }')
+    console.error('')
+    console.error('Press Ctrl+C to stop the server')
+    console.error('═════════════════════════════════════════════════════════════════')
+    console.error('')
 
     logger.info('Starting MCP server...')
 
@@ -81,7 +81,7 @@ export const mcpServerCommand = new Command('mcp-server')
 
     // Handle shutdown gracefully
     process.on('SIGINT', async () => {
-      console.log('')
+      console.error('')
       logger.info('Shutting down MCP server...')
       await server.stop()
       process.exit(0)
