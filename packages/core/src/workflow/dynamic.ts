@@ -47,8 +47,11 @@ interface JsonSchema {
 /**
  * Convert a JSON Schema to a Zod schema
  * Supports a subset of JSON SchemaDraft 7
+ *
+ * This is exported to allow reuse in other parts of the codebase that need to
+ * convert JSON schemas to Zod schemas (e.g., MCP server tool schema conversion).
  */
-function convertJsonSchemaToZod(schema: JsonSchema): z.ZodTypeAny {
+export function convertJsonSchemaToZod(schema: JsonSchema): z.ZodTypeAny {
   // Handle enum types
   if (schema.enum) {
     // JSON Schema enums can contain strings, numbers, or booleans
@@ -370,8 +373,17 @@ function evaluateCondition(
   // SECURITY: Default must remain false for safe evaluation of untrusted workflows
   // Only set to true for trusted, vetted workflow definitions
   allowUnsafeCodeExecution = false,
+  logger?: { warn: (message: string) => void },
 ): boolean {
   if (allowUnsafeCodeExecution) {
+    // SECURITY WARNING: Unsafe code execution allows arbitrary JavaScript execution
+    // This should only be used for trusted, vetted workflow definitions
+    if (logger) {
+      logger.warn(
+        `[SECURITY] Executing unsafe code evaluation for condition: ${condition}. This allows arbitrary JavaScript execution and should only be used for trusted workflows.`,
+      )
+    }
+
     // Unsafe mode: use new Function for full JavaScript support
     const functionBody = `
       try {

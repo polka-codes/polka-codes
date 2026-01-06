@@ -114,6 +114,14 @@ export async function runAgent(goal: string | undefined, options: any, _command:
         })
         return { exitCode: 0, stdout, stderr }
       } catch (error: any) {
+        // Handle ENOBUFS errors (buffer overflow) explicitly
+        if (error.errno === 'ENOBUFS' || error.code === 'ENOBUFS') {
+          return {
+            exitCode: 1,
+            stdout: error.stdout || '',
+            stderr: `Command output exceeded buffer limit (10MB). The command produced too much output. Try using different arguments or redirecting output to a file. Original error: ${error.message}`,
+          }
+        }
         return {
           exitCode: error.code || 1,
           stdout: error.stdout || '',
