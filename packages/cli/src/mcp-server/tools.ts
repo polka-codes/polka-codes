@@ -3,6 +3,7 @@
 import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { Logger, ToolRegistry } from '@polka-codes/core'
+import { z } from 'zod'
 import { commit, epic } from '../api'
 import { runWorkflow } from '../runWorkflow'
 import { codeWorkflow } from '../workflows/code.workflow'
@@ -90,7 +91,7 @@ export function createMcpServerTools(tools: ToolRegistry): McpServerTool[] {
     mcpTools.push({
       name,
       description: `Tool: ${name}`,
-      inputSchema: {},
+      inputSchema: z.object({}).optional(),
       handler: async (args: Record<string, unknown>) => {
         // This will be called when the tool is invoked via MCP
         // We'll need to integrate with the actual tool execution
@@ -113,23 +114,10 @@ export function createPolkaCodesServerTools(logger: Logger): McpServerTool[] {
     {
       name: 'code',
       description: 'Execute a coding task using AI. Analyzes the codebase, makes changes, and ensures tests pass.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          task: {
-            type: 'string',
-            description: 'The coding task to execute',
-          },
-          files: {
-            type: 'array',
-            items: {
-              type: 'string',
-            },
-            description: 'Specific files to focus on (optional)',
-          },
-        },
-        required: ['task'],
-      },
+      inputSchema: z.object({
+        task: z.string().describe('The coding task to execute'),
+        files: z.array(z.string()).optional().describe('Specific files to focus on (optional)'),
+      }),
       handler: async (args: Record<string, unknown>) => {
         const { task, files } = args as { task: string; files?: string[] }
         logger.info(`MCP: Executing code workflow - task: "${task}"${files ? `, files: ${files.join(', ')}` : ''}`)
@@ -139,31 +127,12 @@ export function createPolkaCodesServerTools(logger: Logger): McpServerTool[] {
     {
       name: 'review',
       description: 'Review code changes (local changes, branch diff, git range, or pull request)',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          pr: {
-            type: 'number',
-            description: 'Pull request number to review (optional)',
-          },
-          range: {
-            type: 'string',
-            description: 'Git range to review (e.g., HEAD~3..HEAD, origin/main..HEAD) (optional)',
-          },
-          files: {
-            type: 'array',
-            items: {
-              type: 'string',
-            },
-            description: 'Specific files to review (optional)',
-          },
-          context: {
-            type: 'string',
-            description: 'Additional context for the review (optional)',
-          },
-        },
-        required: [],
-      },
+      inputSchema: z.object({
+        pr: z.number().optional().describe('Pull request number to review (optional)'),
+        range: z.string().optional().describe('Git range to review (e.g., HEAD~3..HEAD, origin/main..HEAD) (optional)'),
+        files: z.array(z.string()).optional().describe('Specific files to review (optional)'),
+        context: z.string().optional().describe('Additional context for the review (optional)'),
+      }),
       handler: async (args: Record<string, unknown>) => {
         const { pr, range, files, context } = args as { pr?: number; range?: string; files?: string[]; context?: string }
         logger.info(`MCP: Executing review workflow${pr ? ` - PR: ${pr}` : ''}${range ? ` - range: ${range}` : ''}`)
@@ -173,16 +142,9 @@ export function createPolkaCodesServerTools(logger: Logger): McpServerTool[] {
     {
       name: 'plan',
       description: 'Create a plan for implementing a feature or solving a problem',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          task: {
-            type: 'string',
-            description: 'The task or feature to plan',
-          },
-        },
-        required: ['task'],
-      },
+      inputSchema: z.object({
+        task: z.string().describe('The task or feature to plan'),
+      }),
       handler: async (args: Record<string, unknown>) => {
         const { task } = args as { task: string }
         logger.info(`MCP: Executing plan workflow - task: "${task}"`)
@@ -192,16 +154,9 @@ export function createPolkaCodesServerTools(logger: Logger): McpServerTool[] {
     {
       name: 'fix',
       description: 'Fix issues, bugs, or test failures',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          task: {
-            type: 'string',
-            description: 'Description of the issue to fix',
-          },
-        },
-        required: ['task'],
-      },
+      inputSchema: z.object({
+        task: z.string().describe('Description of the issue to fix'),
+      }),
       handler: async (args: Record<string, unknown>) => {
         const { task } = args as { task: string }
         logger.info(`MCP: Executing fix workflow - task: "${task}"`)
@@ -211,16 +166,9 @@ export function createPolkaCodesServerTools(logger: Logger): McpServerTool[] {
     {
       name: 'epic',
       description: 'Break down a large feature into smaller tasks and implement them',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          epic: {
-            type: 'string',
-            description: 'Description of the epic to implement',
-          },
-        },
-        required: ['epic'],
-      },
+      inputSchema: z.object({
+        epic: z.string().describe('Description of the epic to implement'),
+      }),
       handler: async (args: Record<string, unknown>) => {
         const { epic: epicTask } = args as { epic: string }
         logger.info(`MCP: Executing epic workflow - epic: "${epicTask}"`)
@@ -239,16 +187,9 @@ export function createPolkaCodesServerTools(logger: Logger): McpServerTool[] {
     {
       name: 'commit',
       description: 'Create a git commit with AI-generated message based on changes',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          message: {
-            type: 'string',
-            description: 'Optional commit message (AI generates if not provided)',
-          },
-        },
-        required: [],
-      },
+      inputSchema: z.object({
+        message: z.string().optional().describe('Optional commit message (AI generates if not provided)'),
+      }),
       handler: async (args: Record<string, unknown>) => {
         const { message } = args as { message?: string }
         logger.info(`MCP: Executing commit workflow${message ? ` - message: "${message}"` : ''}`)

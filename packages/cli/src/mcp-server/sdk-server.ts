@@ -35,9 +35,7 @@ export function createPolkaCodesMcpServer(tools: McpServerTool[], logger?: Logge
         tool.name,
         {
           description: tool.description,
-          // McpInputSchema is JSON Schema compatible with SDK's expected format
-          // Type assertion needed because SDK uses internal Zod types
-          inputSchema: tool.inputSchema as any,
+          inputSchema: tool.inputSchema,
         },
         async (args: Record<string, unknown>) => {
           try {

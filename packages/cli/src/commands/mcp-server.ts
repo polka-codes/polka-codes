@@ -31,12 +31,8 @@ export const mcpServerCommand = new Command('mcp-server')
 
     // Print available tools to stderr via logger
     for (const tool of tools) {
-      const requiredParams = (tool.inputSchema.required || []).filter((param: string) => param in (tool.inputSchema.properties || {}))
       logger.info(`  • ${tool.name}`)
       logger.info(`    ${tool.description}`)
-      if (requiredParams.length > 0) {
-        logger.info(`    Required: ${requiredParams.join(', ')}`)
-      }
       logger.info('')
     }
 

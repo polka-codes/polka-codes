@@ -4,7 +4,7 @@
  * MCP Server type definitions
  */
 
-import type { McpInputSchema } from '../mcp/shared-types'
+import type { AnySchema } from '@modelcontextprotocol/sdk/server/zod-compat'
 
 /**
  * Tool that can be exposed via MCP server
@@ -12,7 +12,7 @@ import type { McpInputSchema } from '../mcp/shared-types'
 export interface McpServerTool {
   name: string
   description: string
-  inputSchema: McpInputSchema
+  inputSchema: AnySchema
   handler: (args: Record<string, unknown>) => Promise<unknown>
 }
 
