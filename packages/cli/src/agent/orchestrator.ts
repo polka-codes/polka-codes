@@ -463,7 +463,21 @@ export class AutonomousAgent {
 
         // Document completed task in working space if configured
         if (this.workingSpace) {
-          const resultText = result.output || result.data?.toString() || 'Task completed successfully'
+          // Convert result data to readable string (handle objects, strings, primitives)
+          let resultText = result.output
+          if (!resultText) {
+            if (result.data !== null && result.data !== undefined) {
+              if (typeof result.data === 'string') {
+                resultText = result.data
+              } else if (typeof result.data === 'object') {
+                resultText = JSON.stringify(result.data, null, 2)
+              } else {
+                resultText = String(result.data)
+              }
+            } else {
+              resultText = 'Task completed successfully'
+            }
+          }
           await this.workingSpace.documentCompletedTask(task, resultText)
         }
 
