@@ -59,8 +59,13 @@ export function convertJsonSchemaToZod(schema: JsonSchema): z.ZodTypeAny {
     // For string-only enums, use z.enum for better performance
     const enumValues = schema.enum
 
+    // Handle empty enum - no valid values
+    if (enumValues.length === 0) {
+      return z.never()
+    }
+
     // Check if all values are strings
-    if (enumValues.length > 0 && enumValues.every((v) => typeof v === 'string')) {
+    if (enumValues.every((v) => typeof v === 'string')) {
       return z.enum(enumValues as [string, ...string[]])
     }
 

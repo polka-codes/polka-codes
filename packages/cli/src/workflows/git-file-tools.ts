@@ -142,7 +142,9 @@ export function createGitListFiles(commit: string): FullToolInfo {
       }
     }
 
-    const { path = '.', maxCount } = toolInfo.parameters.parse(args)
+    // Parse with fallback for empty string to '.'
+    const parsed = toolInfo.parameters.parse(args)
+    const path = parsed.path || '.'
 
     // SECURITY: Use quoteForShell to prevent command injection
     const quotedCommit = quoteForShell(commit)
