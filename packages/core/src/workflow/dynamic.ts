@@ -55,9 +55,23 @@ export function convertJsonSchemaToZod(schema: JsonSchema): z.ZodTypeAny {
   // Handle enum types
   if (schema.enum) {
     // JSON Schema enums can contain strings, numbers, or booleans
-    // Convert them all to strings for the Zod enum
-    const enumValues = schema.enum.map((v) => String(v))
-    return z.enum(enumValues as [string, ...string[]])
+    // For non-string or mixed enums, use z.union with z.literal
+    // For string-only enums, use z.enum for better performance
+    const enumValues = schema.enum
+
+    // Check if all values are strings
+    if (enumValues.length > 0 && enumValues.every((v) => typeof v === 'string')) {
+      return z.enum(enumValues as [string, ...string[]])
+    }
+
+    // Mixed or non-string enums: use z.union with z.literal
+    const literals = enumValues.map((v) => z.literal(v as any))
+    if (literals.length === 1) {
+      return literals[0]
+    }
+    // z.union can take an array of schemas
+    // Cast to any because Zod's union type inference is complex
+    return z.union([literals[0], literals[1], ...literals.slice(2)]) as any
   }
 
   // Handle union types (type: ["string", "null"])
@@ -656,6 +670,10 @@ function getNestedProperty(obj: Record<string, unknown>, path: string): unknown 
 /**
  * Compare two values using the specified operator
  * For comparison operators, we assume the values are comparable (strings, numbers, etc.)
+ *
+ * NOTE: Using 'as any' for comparisons because values are typed as 'unknown'
+ * This is an unsafe operation that relies on runtime behavior (string/number comparisons work)
+ * but violates type safety. Using 'as any' explicitly acknowledges this limitation.
  */
 function compareValues(left: unknown, right: unknown, op: string): boolean {
   switch (op) {
@@ -668,13 +686,13 @@ function compareValues(left: unknown, right: unknown, op: string): boolean {
     case '!=':
       return !Object.is(left, right)
     case '>=':
-      return (left as number) >= (right as number)
+      return (left as any) >= (right as any)
     case '<=':
-      return (left as number) <= (right as number)
+      return (left as any) <= (right as any)
     case '>':
-      return (left as number) > (right as number)
+      return (left as any) > (right as any)
     case '<':
-      return (left as number) < (right as number)
+      return (left as any) < (right as any)
     default:
       throw new Error(`Unknown comparison operator: ${op}`)
   }

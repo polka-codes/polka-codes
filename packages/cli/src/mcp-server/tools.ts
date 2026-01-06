@@ -63,7 +63,10 @@ async function executeWorkflow<TInput>(
     })
 
     if (!result) {
-      return 'Workflow completed with no output'
+      // Result is undefined - this could indicate an internal error in runWorkflow
+      // that was caught and not re-thrown, or a workflow that completed with no output
+      // Return an error to avoid masking potential failures
+      return 'Error: Workflow returned no result (possible internal error or workflow produced no output)'
     }
 
     // Format the result based on its structure

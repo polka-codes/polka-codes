@@ -3,6 +3,7 @@
 import type { FullToolInfo, ToolHandler, ToolInfo } from '@polka-codes/core'
 import type { CommandProvider } from '@polka-codes/core/src/tools/provider'
 import { z } from 'zod'
+import { quoteForShell } from '../utils/shell'
 
 /**
  * Helper to extract the target commit from a git range
@@ -79,8 +80,10 @@ export function createGitReadFile(commit: string): FullToolInfo {
 
     const results: string[] = []
     for (const filePath of paths) {
-      // Use git show to read file at specific commit
-      const result = await provider.executeCommand(`git show ${commit}:${filePath}`, false)
+      // SECURITY: Use quoteForShell to prevent command injection
+      // File paths could contain shell metacharacters that would be executed
+      const quotedPath = quoteForShell(filePath)
+      const result = await provider.executeCommand(`git show ${commit}:${quotedPath}`, false)
 
       if (result.exitCode === 0) {
         results.push(`<read_file_file_content file="${filePath}">${result.stdout}</read_file_file_content>`)
@@ -140,8 +143,10 @@ export function createGitListFiles(commit: string): FullToolInfo {
 
     const { path = '.', maxCount } = toolInfo.parameters.parse(args)
 
+    // SECURITY: Use quoteForShell to prevent command injection
+    const quotedPath = quoteForShell(path)
     // Use git ls-tree to list files at the specific commit
-    const result = await provider.executeCommand(`git ls-tree -r --name-only ${commit} ${path}`, false)
+    const result = await provider.executeCommand(`git ls-tree -r --name-only ${commit} ${quotedPath}`, false)
 
     if (result.exitCode !== 0) {
       return {
@@ -205,8 +210,10 @@ export function createGitReadBinaryFile(commit: string): FullToolInfo {
 
     const { path } = toolInfo.parameters.parse(args)
 
+    // SECURITY: Use quoteForShell to prevent command injection
+    const quotedPath = quoteForShell(path)
     // Use git show to read binary file and encode as base64
-    const result = await provider.executeCommand(`git show ${commit}:${path} | base64`, false)
+    const result = await provider.executeCommand(`git show ${commit}:${quotedPath} | base64`, false)
 
     if (result.exitCode === 0) {
       return {
