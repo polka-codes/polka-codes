@@ -200,7 +200,7 @@ async function createAndApprovePlan(
           return null
         }
         default: {
-          logger.error(`Unknown response type from planner: ${(result as any).type}`)
+          logger.error(`Unknown response type from planner`)
           return null
         }
       }

@@ -34,7 +34,7 @@ export type AgentToolRegistry = {
     output: void
   }
   invokeTool: {
-    input: { toolName: string; input: any }
+    input: { toolName: string; input: unknown }
     output: ToolResponse
   }
 }
@@ -157,7 +157,7 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
       await event(`event-tool-use-${toolCall.toolName}-${toolCall.toolCallId}`, {
         kind: TaskEventKind.ToolUse,
         tool: toolCall.toolName,
-        params: toolCall.input as any,
+        params: toolCall.input as Record<string, any>,
       })
       const toolResponse: ToolResponse = await step(`invoke-tool-${toolCall.toolName}-${toolCall.toolCallId}`, async () => {
         return await tools.invokeTool({

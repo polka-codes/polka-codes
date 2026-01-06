@@ -369,12 +369,13 @@ export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
     search:
       searchModel &&
       (async (query: string) => {
+        const googleSearchTool = vertex.tools.googleSearch({})
         const resp = await generateText({
           model: searchModel,
           system:
             'You are a web search assistant. When searching for information, provide comprehensive and detailed results. Include relevant facts, statistics, dates, and key details from the search results. Synthesize information from multiple sources when available. Structure your response clearly with the most relevant information first. Reference or cite sources when presenting specific claims or data.',
           tools: {
-            google_search: vertex.tools.googleSearch({}) as any,
+            google_search: googleSearchTool,
           },
           prompt: query,
           stopWhen: stepCountIs(5),

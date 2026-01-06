@@ -235,7 +235,7 @@ async function tryExecuteCommand(commandName: string, logger: Logger): Promise<b
     const runtime = process.argv[0] // The node/bun runtime
     const script = process.argv[1] // The script being executed
     const args = [commandName]
-    execSync(`"${runtime}" "${script}" ${args.join(' ')}`, { stdio: 'inherit', shell: true } as any)
+    execSync(`"${runtime}" "${script}" ${args.join(' ')}`, { stdio: 'inherit' })
     return true
   }
 

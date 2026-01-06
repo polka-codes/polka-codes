@@ -145,7 +145,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
       return async (input: any) => {
         logger.debug(`Running tool: ${tool}`)
         return await toolCall(
-          { tool: tool as any, input },
+          { tool: tool as never, input },
           {
             parameters,
             model,
@@ -182,7 +182,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
     logger.info(usage.getUsageText())
     return output
   } catch (e) {
-    const error = e as any
+    const error = e as unknown
 
     // Handle different error types with appropriate messaging
     if (error instanceof UserCancelledError) {
@@ -249,13 +249,14 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
       })
     } else {
       // Generic error handling
-      const errorMessage = error?.message || 'Unknown error'
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      const errorStack = error instanceof Error ? error.stack : undefined
       logger.error(`\n❌ Error: ${errorMessage}`)
       onEvent({
         kind: TaskEventKind.EndTask,
         exitReason: {
           type: 'Error',
-          error: { message: errorMessage, stack: error?.stack },
+          error: { message: errorMessage, stack: errorStack },
           messages: [],
         },
       })

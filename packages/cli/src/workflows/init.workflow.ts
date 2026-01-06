@@ -41,7 +41,8 @@ export const initWorkflow: WorkflowFn<InitWorkflowInput & BaseWorkflowInput, Ini
     )
   })
 
-  let generatedConfig: any = {}
+  // Parse YAML output - this will be a partial config object
+  let generatedConfig: Partial<Config> = {}
   if (result.type === 'Exit' && result.object) {
     const yamlConfig = result.object.yaml
     generatedConfig = yamlConfig ? parse(yamlConfig) : {}

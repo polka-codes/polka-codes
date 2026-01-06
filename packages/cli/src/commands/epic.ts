@@ -1,7 +1,7 @@
 import { getProvider } from '@polka-codes/cli-shared'
 import type { UsageMeter } from '@polka-codes/core'
 import { Command } from 'commander'
-import { epic } from '../api'
+import { type EpicOptions, epic } from '../api'
 import { createLogger } from '../logger'
 import { getUserInput } from '../utils/userInput'
 import {
@@ -77,7 +77,11 @@ export async function runEpic(task: string | undefined, options: any, command: C
           await persistEpicContext(epicContext)
         }
       },
-    } as any)
+    } as EpicOptions & {
+      _workflowInput?: unknown
+      _saveEpicContext?: (context: EpicContext) => Promise<void>
+      _saveUsageSnapshot?: () => Promise<void>
+    })
   } catch (error) {
     if (error instanceof Error && error.message.includes('Existing epic context found')) {
       logger.error(`Error: ${error.message}`)

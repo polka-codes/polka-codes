@@ -1,5 +1,13 @@
+import type { CliToolRegistry } from '../workflow-tools'
+import type { BaseWorkflowInput } from '../workflows'
+import type { CodeWorkflowInput } from '../workflows/code.workflow'
+import type { CommitWorkflowInput } from '../workflows/commit.workflow'
+import type { EpicWorkflowInput } from '../workflows/epic.workflow'
+import type { FixWorkflowInput } from '../workflows/fix.workflow'
+import type { PlanWorkflowInput } from '../workflows/plan.workflow'
+import type { ReviewWorkflowInput } from '../workflows/review.workflow'
 import { WorkflowInvocationError } from './errors'
-import type { ToolRegistry, WorkflowContext, WorkflowExecutionResult } from './types'
+import type { WorkflowContext, WorkflowExecutionResult } from './types'
 
 /**
  * Adapts existing workflow outputs to WorkflowExecutionResult format
@@ -12,15 +20,15 @@ import type { ToolRegistry, WorkflowContext, WorkflowExecutionResult } from './t
 /**
  * Adapt code workflow result
  */
-export async function adaptCodeWorkflow<TTools extends ToolRegistry = ToolRegistry>(
-  input: Record<string, unknown>,
-  context: WorkflowContext<TTools>,
+export async function adaptCodeWorkflow(
+  input: CodeWorkflowInput & BaseWorkflowInput,
+  context: WorkflowContext<CliToolRegistry>,
 ): Promise<WorkflowExecutionResult> {
   try {
     // Dynamic import to avoid circular dependencies
     const { codeWorkflow } = await import('../workflows/code.workflow')
 
-    const result = await codeWorkflow(input as any, context as any)
+    const result = await codeWorkflow(input, context)
 
     if (result.success) {
       return {
@@ -46,14 +54,14 @@ export async function adaptCodeWorkflow<TTools extends ToolRegistry = ToolRegist
 /**
  * Adapt fix workflow result
  */
-export async function adaptFixWorkflow<TTools extends ToolRegistry = ToolRegistry>(
-  input: Record<string, unknown>,
-  context: WorkflowContext<TTools>,
+export async function adaptFixWorkflow(
+  input: FixWorkflowInput & BaseWorkflowInput,
+  context: WorkflowContext<CliToolRegistry>,
 ): Promise<WorkflowExecutionResult> {
   try {
     const { fixWorkflow } = await import('../workflows/fix.workflow')
 
-    const result = await fixWorkflow(input as any, context as any)
+    const result = await fixWorkflow(input, context)
 
     if (result.success) {
       return {
@@ -79,14 +87,14 @@ export async function adaptFixWorkflow<TTools extends ToolRegistry = ToolRegistr
 /**
  * Adapt plan workflow result
  */
-export async function adaptPlanWorkflow<TTools extends ToolRegistry = ToolRegistry>(
-  input: Record<string, unknown>,
-  context: WorkflowContext<TTools>,
+export async function adaptPlanWorkflow(
+  input: PlanWorkflowInput & BaseWorkflowInput,
+  context: WorkflowContext<CliToolRegistry>,
 ): Promise<WorkflowExecutionResult> {
   try {
     const { planWorkflow } = await import('../workflows/plan.workflow')
 
-    const result = await planWorkflow(input as any, context as any)
+    const result = await planWorkflow(input, context)
 
     if (!result) {
       return {
@@ -113,14 +121,14 @@ export async function adaptPlanWorkflow<TTools extends ToolRegistry = ToolRegist
 /**
  * Adapt review workflow result
  */
-export async function adaptReviewWorkflow<TTools extends ToolRegistry = ToolRegistry>(
-  input: Record<string, unknown>,
-  context: WorkflowContext<TTools>,
+export async function adaptReviewWorkflow(
+  input: ReviewWorkflowInput & BaseWorkflowInput,
+  context: WorkflowContext<CliToolRegistry>,
 ): Promise<WorkflowExecutionResult> {
   try {
     const { reviewWorkflow } = await import('../workflows/review.workflow')
 
-    const result = await reviewWorkflow(input as any, context as any)
+    const result = await reviewWorkflow(input, context)
 
     // Review workflow always returns successfully
     return {
@@ -140,14 +148,14 @@ export async function adaptReviewWorkflow<TTools extends ToolRegistry = ToolRegi
 /**
  * Adapt commit workflow result
  */
-export async function adaptCommitWorkflow<TTools extends ToolRegistry = ToolRegistry>(
-  input: Record<string, unknown>,
-  context: WorkflowContext<TTools>,
+export async function adaptCommitWorkflow(
+  input: CommitWorkflowInput & BaseWorkflowInput,
+  context: WorkflowContext<CliToolRegistry>,
 ): Promise<WorkflowExecutionResult> {
   try {
     const { commitWorkflow } = await import('../workflows/commit.workflow')
 
-    const result = await commitWorkflow(input as any, context as any)
+    const result = await commitWorkflow(input, context)
 
     // Commit workflow returns string | void
     if (typeof result === 'string') {
@@ -175,14 +183,14 @@ export async function adaptCommitWorkflow<TTools extends ToolRegistry = ToolRegi
 /**
  * Adapt epic workflow result (if exists)
  */
-export async function adaptEpicWorkflow<TTools extends ToolRegistry = ToolRegistry>(
-  input: Record<string, unknown>,
-  context: WorkflowContext<TTools>,
+export async function adaptEpicWorkflow(
+  input: EpicWorkflowInput & BaseWorkflowInput,
+  context: WorkflowContext<CliToolRegistry>,
 ): Promise<WorkflowExecutionResult> {
   try {
     const { epicWorkflow } = await import('../workflows/epic.workflow')
 
-    const _result = await epicWorkflow(input as any, context as any)
+    const _result = await epicWorkflow(input, context)
 
     // Epic workflow returns void
     return {
@@ -230,22 +238,26 @@ export async function invokeWorkflow(
       }
     : context
 
-  // Cast input to Record<string, unknown> for compatibility
-  const workflowInput = input as Record<string, unknown>
+  // Cast input to proper workflow input type based on workflow name
+  // The caller is responsible for passing the correct input structure
+  const workflowInput = input as Record<string, unknown> & BaseWorkflowInput
+
+  // Cast context to CliToolRegistry since all workflows expect that
+  const cliContext = wrappedContext as WorkflowContext<CliToolRegistry>
 
   switch (workflowName) {
     case 'code':
-      return adaptCodeWorkflow(workflowInput, wrappedContext)
+      return adaptCodeWorkflow(workflowInput as CodeWorkflowInput & BaseWorkflowInput, cliContext)
     case 'fix':
-      return adaptFixWorkflow(workflowInput, wrappedContext)
+      return adaptFixWorkflow(workflowInput as FixWorkflowInput & BaseWorkflowInput, cliContext)
     case 'plan':
-      return adaptPlanWorkflow(workflowInput, wrappedContext)
+      return adaptPlanWorkflow(workflowInput as PlanWorkflowInput & BaseWorkflowInput, cliContext)
     case 'review':
-      return adaptReviewWorkflow(workflowInput, wrappedContext)
+      return adaptReviewWorkflow(workflowInput as ReviewWorkflowInput & BaseWorkflowInput, cliContext)
     case 'commit':
-      return adaptCommitWorkflow(workflowInput, wrappedContext)
+      return adaptCommitWorkflow(workflowInput as CommitWorkflowInput & BaseWorkflowInput, cliContext)
     case 'epic':
-      return adaptEpicWorkflow(workflowInput, wrappedContext)
+      return adaptEpicWorkflow(workflowInput as EpicWorkflowInput & BaseWorkflowInput, cliContext)
     default:
       throw new WorkflowInvocationError(workflowName, `Unknown workflow: ${workflowName}`)
   }
@@ -268,7 +280,7 @@ export async function invokeWorkflowWithTimeout(
   })
 
   try {
-    return await Promise.race([invokeWorkflow(workflowName, input as Record<string, unknown>, context), timeoutPromise])
+    return await Promise.race([invokeWorkflow(workflowName, input as Record<string, unknown> & BaseWorkflowInput, context), timeoutPromise])
   } catch (error) {
     if (error instanceof Error && error.message.includes('timed out')) {
       return {

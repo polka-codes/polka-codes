@@ -1,4 +1,5 @@
 import { expect, mock } from 'bun:test'
+import type { WorkflowTools } from '@polka-codes/core'
 import { createContext } from '@polka-codes/core'
 import type { CliToolRegistry } from '../../workflow-tools'
 
@@ -15,9 +16,10 @@ export type ExpectedToolCall<T extends keyof CliToolRegistry> = {
 export function createTestProxy(expectedCalls: ExpectedToolCall<keyof CliToolRegistry>[]) {
   const remainingCalls = [...expectedCalls]
 
-  const proxy = new Proxy({} as any, {
-    get(_target, prop: string | symbol) {
-      return async (args: any) => {
+  // Create a properly typed proxy that matches WorkflowTools<CliToolRegistry>
+  const proxyHandler = {
+    get(_target: unknown, prop: string | symbol) {
+      return async (args: Record<string, unknown>) => {
         switch (prop) {
           case 'taskEvent':
             return undefined
@@ -37,7 +39,9 @@ export function createTestProxy(expectedCalls: ExpectedToolCall<keyof CliToolReg
         return Promise.resolve(returnValue)
       }
     },
-  })
+  }
+
+  const proxy = new Proxy({}, proxyHandler) as WorkflowTools<CliToolRegistry>
 
   const logger = {
     info: mock(() => {}),

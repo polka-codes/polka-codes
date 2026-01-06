@@ -143,7 +143,7 @@ export async function runAgent(goal: string | undefined, options: any, _command:
   const toolsWithGuard = new Proxy(tools, {
     get(_target, prop: string) {
       if (prop in tools) {
-        return (tools as any)[prop]
+        return tools[prop as keyof typeof tools]
       }
       throw new Error(
         `Tool "${prop}" is not available in agent context. ` +

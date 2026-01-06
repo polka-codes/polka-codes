@@ -16,8 +16,8 @@
  * ```
  */
 
-import { getProvider as getDefaultProvider } from '@polka-codes/cli-shared'
-import type { UsageMeter } from '@polka-codes/core'
+import { getProvider as getDefaultProvider, type ProviderOptions } from '@polka-codes/cli-shared'
+import type { ToolProvider, UsageMeter } from '@polka-codes/core'
 import { createLogger } from './logger'
 import type { ExecutionContext } from './runWorkflow'
 import { runWorkflow } from './runWorkflow'
@@ -490,7 +490,7 @@ export interface EpicOptions extends Partial<ExecutionContext> {
   /**
    * @internal Custom provider getter for epic-specific stores
    */
-  getProvider?: (opt: any) => any
+  getProvider?: (opt: ProviderOptions) => ToolProvider
 }
 
 /**
@@ -515,7 +515,7 @@ export interface EpicOptions extends Partial<ExecutionContext> {
  */
 export async function epic(options: EpicOptions = {}): Promise<void> {
   const { task, noReview, interactive, onUsage, getProvider, _workflowInput, _saveEpicContext, _saveUsageSnapshot, ...context } =
-    options as any
+    options as EpicOptions & { _workflowInput?: any; _saveEpicContext?: any; _saveUsageSnapshot?: any }
 
   const verbose = context.silent ? -1 : (context.verbose ?? 0)
   const logger = createLogger({ verbose })
@@ -537,7 +537,7 @@ export async function epic(options: EpicOptions = {}): Promise<void> {
 
   const providerGetter =
     getProvider ||
-    ((opt: any) =>
+    ((opt: ProviderOptions) =>
       getDefaultProvider({
         ...opt,
         todoItemStore: new EpicTodoItemStore(epicContext),

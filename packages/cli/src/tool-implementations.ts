@@ -11,6 +11,7 @@ import type {
   SkillContext,
   TodoItem,
   TodoProvider,
+  ToolParameterValue,
   ToolResponse,
   UpdateTodoItemInput,
   UpdateTodoItemOutput,
@@ -435,7 +436,7 @@ async function generateText(input: { messages: JsonModelMessage[]; tools: ToolSe
 }
 
 async function invokeTool(input: { toolName: string; input: any }, context: ToolCallContext): Promise<ToolResponse> {
-  const tool = toolHandlers.get(input.toolName as any)
+  const tool = toolHandlers.get(input.toolName)
   if (!tool) {
     return {
       success: false,
@@ -638,7 +639,9 @@ export async function toolCall(toolCall: ToolCall<CliToolRegistry>, context: Too
   // Check localToolHandlers first
   const handler = localToolHandlers[toolCall.tool]
   if (handler) {
-    return handler(toolCall.input as any, context)
+    // Runtime tool selection means TypeScript can't infer the correct input type
+    // We use 'as never' to bypass the type check since the actual type is validated at runtime
+    return handler(toolCall.input as never, context)
   }
 
   // Check MCP tools
@@ -674,7 +677,9 @@ export async function toolCall(toolCall: ToolCall<CliToolRegistry>, context: Too
   // Check toolHandlers Map (for core/registered tools)
   const toolHandler = toolHandlers.get(toolCall.tool as keyof ToolRegistry)
   if (toolHandler) {
-    return toolHandler.handler(context.toolProvider, toolCall.input as any)
+    // The tool handler expects specific input types based on the tool
+    // We cast to satisfy TypeScript since the exact type varies by tool
+    return toolHandler.handler(context.toolProvider, toolCall.input as Partial<Record<string, ToolParameterValue>>)
   }
 
   throw new Error(`Unknown tool: ${toolCall.tool}`)

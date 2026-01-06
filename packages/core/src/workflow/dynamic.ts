@@ -28,15 +28,20 @@ const MAX_WHILE_LOOP_ITERATIONS = 1000
  */
 type JsonSchemaType = 'string' | 'number' | 'integer' | 'boolean' | 'object' | 'array' | 'null'
 
+/**
+ * JSON Schema enum values - can be string, number, or boolean
+ */
+type JsonSchemaEnum = (string | number | boolean)[]
+
 interface JsonSchema {
   type?: JsonSchemaType | JsonSchemaType[]
-  enum?: any[]
+  enum?: JsonSchemaEnum
   properties?: Record<string, JsonSchema>
   required?: string[]
   items?: JsonSchema
   additionalProperties?: boolean | JsonSchema
   description?: string
-  [key: string]: any
+  [key: string]: unknown // Allow additional JSON Schema fields
 }
 
 /**
@@ -46,7 +51,10 @@ interface JsonSchema {
 function convertJsonSchemaToZod(schema: JsonSchema): z.ZodTypeAny {
   // Handle enum types
   if (schema.enum) {
-    return z.enum(schema.enum.map((v: any) => String(v)))
+    // JSON Schema enums can contain strings, numbers, or booleans
+    // Convert them all to strings for the Zod enum
+    const enumValues = schema.enum.map((v) => String(v))
+    return z.enum(enumValues as [string, ...string[]])
   }
 
   // Handle union types (type: ["string", "null"])
@@ -107,17 +115,24 @@ function convertJsonSchemaToZod(schema: JsonSchema): z.ZodTypeAny {
         }
       }
 
-      let objectSchema = z.object(shape)
-
       // Handle additionalProperties
       if (schema.additionalProperties === true) {
-        objectSchema = objectSchema.and(z.any()) as any
-      } else if (typeof schema.additionalProperties === 'object') {
-        const additionalSchema = convertJsonSchemaToZod(schema.additionalProperties as JsonSchema)
-        objectSchema = objectSchema.and(z.record(z.string(), additionalSchema)) as any
+        // Use passthrough to allow additional properties without validation
+        return z.object(shape).passthrough()
       }
 
-      return objectSchema
+      if (typeof schema.additionalProperties === 'object') {
+        const additionalSchema = convertJsonSchemaToZod(schema.additionalProperties as JsonSchema)
+        // Use explicit intersection for additional properties
+        // Note: We use z.intersection() instead of .and() for better readability
+        // The cast to z.ZodTypeAny is necessary because Zod's intersection types
+        // have complex type inference that TypeScript cannot always resolve correctly.
+        // This is a known limitation of Zod's type system.
+        return z.intersection(z.object(shape), z.record(z.string(), additionalSchema)) as z.ZodTypeAny
+      }
+
+      // No additionalProperties (defaults to false) - strict object
+      return z.object(shape)
     }
     case 'array': {
       if (!schema.items) {
@@ -144,7 +159,13 @@ export const TOOL_GROUPS: Record<string, string[]> = {
   internet: ['fetchUrl', 'search'],
 }
 
-export type RunWorkflowTool = { input: { workflowId: string; input?: any }; output: any }
+/**
+ * Type for the runWorkflow tool that allows workflows to call other workflows
+ */
+export type RunWorkflowTool = {
+  input: { workflowId: string; input?: Record<string, unknown> }
+  output: unknown
+}
 
 export type DynamicWorkflowRegistry = ToolRegistry & { runWorkflow: RunWorkflowTool }
 
@@ -246,14 +267,14 @@ export function parseDynamicWorkflowDefinition(source: string): DynamicWorkflowP
 export type DynamicStepRuntimeContext<TTools extends ToolRegistry> = {
   workflowId: string
   stepId: string
-  input: Record<string, any>
-  state: Record<string, any>
+  input: Record<string, unknown>
+  state: Record<string, unknown>
   tools: WorkflowTools<TTools>
   logger: Logger
   step: StepFn
-  runWorkflow: (workflowId: string, input?: Record<string, any>) => Promise<any>
+  runWorkflow: (workflowId: string, input?: Record<string, unknown>) => Promise<unknown>
   toolInfo: Readonly<FullToolInfo[]> | undefined
-  agentTools: Record<string, (input: any) => Promise<any>>
+  agentTools: Record<string, (input: unknown) => Promise<unknown>>
 }
 
 export type DynamicWorkflowRunnerOptions = {
@@ -273,7 +294,12 @@ export type DynamicWorkflowRunnerOptions = {
   /**
    * Customize per-step system prompt for agent-executed steps.
    */
-  stepSystemPrompt?: (args: { workflowId: string; step: WorkflowStepDefinition; input: any; state: any }) => string
+  stepSystemPrompt?: (args: {
+    workflowId: string
+    step: WorkflowStepDefinition
+    input: Record<string, unknown>
+    state: Record<string, unknown>
+  }) => string
   /**
    * Whether to wrap plain text agent responses in an object { result: ... }.
    * Defaults to false.
@@ -293,12 +319,16 @@ export type DynamicWorkflowRunnerOptions = {
   allowUnsafeCodeExecution?: boolean
 }
 
-function validateAndApplyDefaults(workflowId: string, workflow: WorkflowDefinition, input: Record<string, any>): Record<string, any> {
+function validateAndApplyDefaults(
+  workflowId: string,
+  workflow: WorkflowDefinition,
+  input: Record<string, unknown>,
+): Record<string, unknown> {
   if (!workflow.inputs || workflow.inputs.length === 0) {
     return input
   }
 
-  const validatedInput: Record<string, any> = { ...input }
+  const validatedInput: Record<string, unknown> = { ...input }
   const errors: string[] = []
 
   for (const inputDef of workflow.inputs) {
@@ -335,8 +365,8 @@ function validateAndApplyDefaults(workflowId: string, workflow: WorkflowDefiniti
  */
 function evaluateCondition(
   condition: string,
-  input: Record<string, any>,
-  state: Record<string, any>,
+  input: Record<string, unknown>,
+  state: Record<string, unknown>,
   // SECURITY: Default must remain false for safe evaluation of untrusted workflows
   // Only set to true for trusted, vetted workflow definitions
   allowUnsafeCodeExecution = false,
@@ -375,7 +405,7 @@ function evaluateCondition(
  * 4. ! (negation)
  * 5. (...) (parentheses - highest precedence, evaluated first)
  */
-function evaluateConditionSafe(condition: string, input: Record<string, any>, state: Record<string, any>): boolean {
+function evaluateConditionSafe(condition: string, input: Record<string, unknown>, state: Record<string, unknown>): boolean {
   // Trim whitespace
   condition = condition.trim()
 
@@ -540,7 +570,7 @@ function hasEnclosingParens(expr: string): boolean {
 /**
  * Evaluate a simple value (property access or literal)
  */
-function evaluateValue(expr: string, input: Record<string, any>, state: Record<string, any>): any {
+function evaluateValue(expr: string, input: Record<string, unknown>, state: Record<string, unknown>): unknown {
   expr = expr.trim()
 
   // String literals (with proper handling of escaped quotes)
@@ -600,20 +630,22 @@ function evaluateValue(expr: string, input: Record<string, any>, state: Record<s
 /**
  * Get nested property from object
  */
-function getNestedProperty(obj: any, path: string): any {
+function getNestedProperty(obj: Record<string, unknown>, path: string): unknown {
   const parts = path.split('.')
-  let current = obj
+  let current: unknown = obj
   for (const part of parts) {
     if (current == null) return undefined
-    current = current[part]
+    if (typeof current !== 'object') return undefined
+    current = (current as Record<string, unknown>)[part]
   }
   return current
 }
 
 /**
  * Compare two values using the specified operator
+ * For comparison operators, we assume the values are comparable (strings, numbers, etc.)
  */
-function compareValues(left: any, right: any, op: string): boolean {
+function compareValues(left: unknown, right: unknown, op: string): boolean {
   switch (op) {
     case '===':
       return left === right
@@ -624,30 +656,30 @@ function compareValues(left: any, right: any, op: string): boolean {
     case '!=':
       return !Object.is(left, right)
     case '>=':
-      return left >= right
+      return (left as number) >= (right as number)
     case '<=':
-      return left <= right
+      return (left as number) <= (right as number)
     case '>':
-      return left > right
+      return (left as number) > (right as number)
     case '<':
-      return left < right
+      return (left as number) < (right as number)
     default:
       throw new Error(`Unknown comparison operator: ${op}`)
   }
 }
 
 function createRunWorkflowFn<TTools extends ToolRegistry>(args: {
-  input: Record<string, any>
-  state: Record<string, any>
+  input: Record<string, unknown>
+  state: Record<string, unknown>
   context: WorkflowContext<TTools>
   runInternal: (
     workflowId: string,
-    input: Record<string, any>,
+    input: Record<string, unknown>,
     context: WorkflowContext<TTools>,
-    inheritedState: Record<string, any>,
-  ) => Promise<any>
+    inheritedState: Record<string, unknown>,
+  ) => Promise<unknown>
 }) {
-  return async (subWorkflowId: string, subInput?: Record<string, any>) => {
+  return async (subWorkflowId: string, subInput?: Record<string, unknown>) => {
     const mergedInput = { ...args.input, ...args.state, ...(subInput ?? {}) }
     return await args.runInternal(subWorkflowId, mergedInput, args.context, args.state)
   }
@@ -656,17 +688,17 @@ function createRunWorkflowFn<TTools extends ToolRegistry>(args: {
 async function executeStepWithAgent<TTools extends ToolRegistry>(
   stepDef: WorkflowStepDefinition,
   workflowId: string,
-  input: Record<string, any>,
-  state: Record<string, any>,
+  input: Record<string, unknown>,
+  state: Record<string, unknown>,
   context: WorkflowContext<TTools>,
   options: DynamicWorkflowRunnerOptions,
   runInternal: (
     workflowId: string,
-    input: Record<string, any>,
+    input: Record<string, unknown>,
     context: WorkflowContext<TTools>,
-    inheritedState: Record<string, any>,
-  ) => Promise<any>,
-): Promise<any> {
+    inheritedState: Record<string, unknown>,
+  ) => Promise<unknown>,
+): Promise<unknown> {
   const tools = context.tools as unknown as WorkflowTools<AgentToolRegistry>
   if (typeof tools.generateText !== 'function' || typeof tools.invokeTool !== 'function' || typeof tools.taskEvent !== 'function') {
     throw new Error(
@@ -758,7 +790,7 @@ async function executeStepWithAgent<TTools extends ToolRegistry>(
   const agentTools: WorkflowTools<AgentToolRegistry> = {
     generateText: tools.generateText.bind(tools),
     taskEvent: tools.taskEvent.bind(tools),
-    invokeTool: async ({ toolName, input: toolInput }: { toolName: string; input: any }) => {
+    invokeTool: async ({ toolName, input: toolInput }: { toolName: string; input: unknown }) => {
       if (!allowedToolNameSet.has(toolName)) {
         return {
           success: false,
@@ -767,8 +799,10 @@ async function executeStepWithAgent<TTools extends ToolRegistry>(
       }
 
       if (toolName === 'runWorkflow') {
-        const subWorkflowId = toolInput?.workflowId
-        const subInput = toolInput?.input
+        // Type guard for runWorkflow input
+        const runWorkflowInput = toolInput as Record<string, unknown> | undefined
+        const subWorkflowId = runWorkflowInput?.workflowId
+        const subInput = runWorkflowInput?.input as Record<string, unknown> | undefined
         if (typeof subWorkflowId !== 'string') {
           return {
             success: false,
@@ -777,7 +811,7 @@ async function executeStepWithAgent<TTools extends ToolRegistry>(
         }
         try {
           const output = await runWorkflow(subWorkflowId, subInput)
-          const jsonResult: ToolResponseResult = { type: 'json', value: output }
+          const jsonResult: ToolResponseResult = { type: 'json', value: output as never }
           return { success: true, message: jsonResult }
         } catch (error) {
           return {
@@ -837,18 +871,18 @@ async function executeStepWithAgent<TTools extends ToolRegistry>(
 async function executeStepWithTimeout<TTools extends ToolRegistry>(
   stepDef: WorkflowStepDefinition,
   workflowId: string,
-  input: Record<string, any>,
-  state: Record<string, any>,
+  input: Record<string, unknown>,
+  state: Record<string, unknown>,
   context: WorkflowContext<TTools>,
   options: DynamicWorkflowRunnerOptions,
   runInternal: (
     workflowId: string,
-    input: Record<string, any>,
+    input: Record<string, unknown>,
     context: WorkflowContext<TTools>,
-    inheritedState: Record<string, any>,
-  ) => Promise<any>,
-): Promise<any> {
-  const executeStepLogic = async (): Promise<any> => {
+    inheritedState: Record<string, unknown>,
+  ) => Promise<unknown>,
+): Promise<unknown> {
+  const executeStepLogic = async (): Promise<unknown> => {
     context.logger.debug(`[Step] Executing step '${stepDef.id}' with agent`)
     const result = await executeStepWithAgent(stepDef, workflowId, input, state, context, options, runInternal)
     context.logger.debug(`[Step] Agent execution completed for step '${stepDef.id}'`)
@@ -879,17 +913,17 @@ async function executeStepWithTimeout<TTools extends ToolRegistry>(
 async function executeStep<TTools extends ToolRegistry>(
   stepDef: WorkflowStepDefinition,
   workflowId: string,
-  input: Record<string, any>,
-  state: Record<string, any>,
+  input: Record<string, unknown>,
+  state: Record<string, unknown>,
   context: WorkflowContext<TTools>,
   options: DynamicWorkflowRunnerOptions,
   runInternal: (
     workflowId: string,
-    input: Record<string, any>,
+    input: Record<string, unknown>,
     context: WorkflowContext<TTools>,
-    inheritedState: Record<string, any>,
-  ) => Promise<any>,
-): Promise<any> {
+    inheritedState: Record<string, unknown>,
+  ) => Promise<unknown>,
+): Promise<unknown> {
   const result = await executeStepWithTimeout(stepDef, workflowId, input, state, context, options, runInternal)
 
   // Validate output against schema if provided
@@ -957,7 +991,7 @@ function isTryCatchStep(step: WorkflowControlFlowStep): step is TryCatchStep {
 /**
  * Store step output in state if output key is specified
  */
-function storeStepOutput(step: WorkflowControlFlowStep, result: any, state: Record<string, any>): void {
+function storeStepOutput(step: WorkflowControlFlowStep, result: unknown, state: Record<string, unknown>): void {
   if ('id' in step && step.output) {
     const outputKey = step.output
     state[outputKey] = result
@@ -989,20 +1023,20 @@ function getStepId(step: WorkflowControlFlowStep): string {
 async function executeControlFlowStep<TTools extends ToolRegistry>(
   step: WorkflowControlFlowStep,
   workflowId: string,
-  input: Record<string, any>,
-  state: Record<string, any>,
+  input: Record<string, unknown>,
+  state: Record<string, unknown>,
   context: WorkflowContext<TTools>,
   options: DynamicWorkflowRunnerOptions,
   runInternal: (
     workflowId: string,
-    input: Record<string, any>,
+    input: Record<string, unknown>,
     context: WorkflowContext<TTools>,
-    inheritedState: Record<string, any>,
-  ) => Promise<any>,
+    inheritedState: Record<string, unknown>,
+  ) => Promise<unknown>,
   loopDepth: number,
   breakFlag: { value: boolean },
   continueFlag: { value: boolean },
-): Promise<{ result: any; shouldBreak: boolean; shouldContinue: boolean }> {
+): Promise<{ result: unknown; shouldBreak: boolean; shouldContinue: boolean }> {
   // Handle break statement
   if (isBreakStep(step)) {
     if (loopDepth === 0) {
@@ -1028,7 +1062,7 @@ async function executeControlFlowStep<TTools extends ToolRegistry>(
     context.logger.debug(`[ControlFlow] Loop body has ${step.while.steps.length} step(s)`)
 
     let iterationCount = 0
-    let loopResult: any
+    let loopResult: unknown
 
     while (true) {
       iterationCount++
@@ -1108,7 +1142,7 @@ async function executeControlFlowStep<TTools extends ToolRegistry>(
 
     context.logger.info(`[ControlFlow] Taking '${branchName}' branch of '${ifStep.id}'`)
 
-    let branchResult: any
+    let branchResult: unknown
 
     for (const branchStep of branchSteps) {
       const { result, shouldBreak, shouldContinue } = await executeControlFlowStep(
@@ -1151,7 +1185,7 @@ async function executeControlFlowStep<TTools extends ToolRegistry>(
     context.logger.debug(`[ControlFlow] Try block has ${tryStep.try.trySteps.length} step(s)`)
     context.logger.debug(`[ControlFlow] Catch block has ${tryStep.try.catchSteps.length} step(s)`)
 
-    let tryResult: any
+    let tryResult: unknown
     let caughtError: Error | undefined
 
     try {
@@ -1188,7 +1222,7 @@ async function executeControlFlowStep<TTools extends ToolRegistry>(
       context.logger.warn(`[ControlFlow] Try/catch '${tryStep.id}' caught error: ${caughtError.message}`)
 
       // Execute catch steps
-      let catchResult: any
+      let catchResult: unknown
       for (const catchStepItem of tryStep.try.catchSteps) {
         const { result } = await executeControlFlowStep(
           catchStepItem,
@@ -1240,10 +1274,10 @@ export function createDynamicWorkflow<TTools extends ToolRegistry = DynamicWorkf
 
   const runInternal = async (
     workflowId: string,
-    input: Record<string, any>,
+    input: Record<string, unknown>,
     context: WorkflowContext<TTools>,
-    inheritedState: Record<string, any>,
-  ): Promise<any> => {
+    inheritedState: Record<string, unknown>,
+  ): Promise<unknown> => {
     const workflow = definition.workflows[workflowId]
     if (!workflow) {
       const builtIn = options.builtInWorkflows?.[workflowId]
@@ -1251,7 +1285,7 @@ export function createDynamicWorkflow<TTools extends ToolRegistry = DynamicWorkf
         context.logger.info(`[Workflow] Delegating to built-in workflow '${workflowId}'`)
         // Built-in workflows are typed as WorkflowFn<any, any, any>, so we need to cast context
         // TODO: Improve built-in workflow typing to preserve context type constraints
-        return await builtIn(input, context as any)
+        return await builtIn(input, context as WorkflowContext<ToolRegistry>)
       }
       throw new Error(`Workflow '${workflowId}' not found`)
     }
@@ -1264,8 +1298,8 @@ export function createDynamicWorkflow<TTools extends ToolRegistry = DynamicWorkf
     context.logger.debug(`[Workflow] Inherited state: ${JSON.stringify(inheritedState)}`)
     context.logger.debug(`[Workflow] Steps: ${workflow.steps.map((s) => ('id' in s ? s.id : '<control flow>')).join(', ')}`)
 
-    const state: Record<string, any> = { ...inheritedState }
-    let lastOutput: any
+    const state: Record<string, unknown> = { ...inheritedState }
+    let lastOutput: unknown
 
     const breakFlag = { value: false }
     const continueFlag = { value: false }
@@ -1311,7 +1345,7 @@ export function createDynamicWorkflow<TTools extends ToolRegistry = DynamicWorkf
     return state
   }
 
-  return async (workflowId: string, input: Record<string, any>, context: WorkflowContext<TTools>) => {
+  return async (workflowId: string, input: Record<string, unknown>, context: WorkflowContext<TTools>) => {
     return await runInternal(workflowId, input, context, {})
   }
 }

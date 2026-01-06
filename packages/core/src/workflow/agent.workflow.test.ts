@@ -67,7 +67,8 @@ test('should run agent workflow with a tool call and reply', async () => {
       const { toolName, input: toolInput } = input
       const toolInfo = allTools.find((t) => t.name === toolName)
       if (!toolInfo) throw new Error(`Tool not found: ${toolName}`)
-      return toolInfo.handler({} as any, toolInput)
+      // Type assertion needed for test mock - real tool handlers validate their own inputs
+      return toolInfo.handler({} as any, toolInput as any)
     },
     taskEvent: async (input) => {
       taskEventSpy(input)
@@ -113,7 +114,8 @@ test('should fail if maxToolRoundTrips is exceeded', async () => {
       const { toolName, input: toolInput } = input
       const toolInfo = allTools.find((t) => t.name === toolName)
       if (!toolInfo) throw new Error(`Tool not found: ${toolName}`)
-      return toolInfo.handler({} as any, toolInput)
+      // Type assertion needed for test mock - real tool handlers validate their own inputs
+      return toolInfo.handler({} as any, toolInput as any)
     },
     taskEvent: async () => {},
   }
@@ -182,7 +184,8 @@ test('should handle mixed valid and invalid tool calls by returning results for 
       const { toolName, input: toolInput } = input
       const toolInfo = allTools.find((t) => t.name === toolName)
       if (!toolInfo) throw new Error(`Tool not found: ${toolName}`)
-      return toolInfo.handler({} as any, toolInput)
+      // Type assertion needed for test mock - real tool handlers validate their own inputs
+      return toolInfo.handler({} as any, toolInput as any)
     },
     taskEvent: async () => {},
   }

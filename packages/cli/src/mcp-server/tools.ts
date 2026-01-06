@@ -60,13 +60,13 @@ async function executeWorkflow<TInput, _TOutput>(workflow: any, input: TInput, c
       if ('success' in result) {
         if (result.success === true) {
           // Include summary, summaries, or output if available
-          const workflowResult = result as any
+          const workflowResult = result as { summary?: string; summaries?: string[]; output?: string }
           return (
             workflowResult.summary || workflowResult.summaries?.join('\n') || workflowResult.output || 'Workflow completed successfully'
           )
         } else {
           // Workflow failed
-          const workflowResult = result as any
+          const workflowResult = result as { reason?: string; error?: string }
           return `Error: ${workflowResult.reason || workflowResult.error || 'Workflow failed'}`
         }
       }
@@ -82,15 +82,66 @@ async function executeWorkflow<TInput, _TOutput>(workflow: any, input: TInput, c
 }
 
 /**
- * Convert polka-codes tools to MCP server tools
+ * Detailed descriptions for each tool in the CliToolRegistry
+ */
+const TOOL_DESCRIPTIONS: Record<string, string> = {
+  // Agent tools
+  runAgent: 'Execute an AI agent workflow with the specified parameters. Returns the exit reason and any results.',
+  generateText: 'Generate text using AI model with optional tools and structured output.',
+  taskEvent: 'Emit a task event for progress tracking and orchestration.',
+  invokeTool: 'Invoke a specific tool by name with the provided input arguments.',
+
+  // Git & repository tools
+  createPullRequest: 'Create a new pull request with the specified title and description.',
+  createCommit: 'Create a git commit with the specified commit message.',
+  printChangeFile: 'Display staged and unstaged file changes in the repository.',
+
+  // User interaction tools
+  confirm: 'Prompt user for yes/no confirmation with optional default value.',
+  input: 'Prompt user for text input with optional default value.',
+  select: 'Present user with a selection menu and return the chosen value.',
+
+  // File system tools
+  writeToFile: 'Write content to a file at the specified path. Creates parent directories if needed.',
+  readFile: 'Read and return the contents of a file at the specified path.',
+  listFiles: 'List files and directories in the specified path with optional recursion.',
+  searchFiles: 'Search for files matching a pattern or containing specific content.',
+  replaceInFile: 'Replace text patterns in a file using regex or string replacement.',
+  removeFile: 'Delete a file at the specified path.',
+  renameFile: 'Move or rename a file from source to destination path.',
+  readBinaryFile: 'Read binary file contents and return as base64 encoded data.',
+
+  // Command execution
+  executeCommand: 'Execute a shell command with arguments and return exit code, stdout, and stderr.',
+
+  // Memory & context tools
+  getMemoryContext: 'Retrieve the current memory context as a formatted string.',
+  readMemory: 'Read stored memory entries for a specific topic or all topics.',
+  listMemoryTopics: 'List all available memory topics.',
+  updateMemory: 'Update memory by appending, replacing, or removing entries for a topic.',
+
+  // Todo management
+  listTodoItems: 'List todo items with optional filtering by ID or status.',
+  getTodoItem: 'Get details of a specific todo item by ID.',
+  updateTodoItem: 'Update a todo item (mark as complete/incomplete, change title, etc.).',
+
+  // Network tools
+  fetchUrl: 'Make HTTP request to a URL and return the response content.',
+  search: 'Perform web search using the search API and return results.',
+}
+
+/**
+ * Convert polka-codes tools to MCP server tools with detailed descriptions
  */
 export function createMcpServerTools(tools: ToolRegistry): McpServerTool[] {
   const mcpTools: McpServerTool[] = []
 
   for (const [name] of Object.entries(tools)) {
+    const description = TOOL_DESCRIPTIONS[name] || `Execute the ${name} tool with provided arguments.`
+
     mcpTools.push({
       name,
-      description: `Tool: ${name}`,
+      description,
       inputSchema: z.object({}).optional(),
       handler: async (args: Record<string, unknown>) => {
         // This will be called when the tool is invoked via MCP
@@ -113,9 +164,24 @@ export function createPolkaCodesServerTools(logger: Logger): McpServerTool[] {
   return [
     {
       name: 'code',
-      description: 'Execute a coding task using AI. Analyzes the codebase, makes changes, and ensures tests pass.',
+      description: `Execute a coding task using AI with comprehensive codebase analysis and modification capabilities.
+
+The workflow will:
+- Analyze the current codebase structure, patterns, and dependencies
+- Understand existing conventions and architectural decisions
+- Make targeted code changes to accomplish the specified task
+- Ensure all changes compile and pass type checking
+- Run and fix any failing tests
+- Handle complex multi-file changes and refactoring
+- Provide a detailed summary of changes made
+
+Best used for implementing new features, refactoring existing code, fixing bugs across multiple files, adding tests, or code modernization.
+
+Parameters:
+- task (required): Detailed description of what needs to be implemented or changed
+- files (optional): Specific file paths to focus on. When provided, the AI will primarily analyze and modify these files`,
       inputSchema: z.object({
-        task: z.string().describe('The coding task to execute'),
+        task: z.string().describe('The coding task to execute - be specific about what needs to be done'),
         files: z.array(z.string()).optional().describe('Specific files to focus on (optional)'),
       }),
       handler: async (args: Record<string, unknown>) => {
@@ -126,12 +192,41 @@ export function createPolkaCodesServerTools(logger: Logger): McpServerTool[] {
     },
     {
       name: 'review',
-      description: 'Review code changes (local changes, branch diff, git range, or pull request)',
+      description: `Perform comprehensive code review with actionable, structured feedback.
+
+This workflow can review:
+- Uncommitted local changes (git diff)
+- Branch comparisons (e.g., feature branch vs main)
+- Specific git ranges (e.g., HEAD~3..HEAD, origin/main..HEAD)
+- Pull requests from GitHub/GitLab by number
+
+The review provides:
+- Code quality and style analysis
+- Bug identification and potential issues
+- Security and performance concerns
+- Improvement suggestions with examples
+- Best practices compliance feedback
+- Documentation review
+
+Output is structured with:
+- Categorized feedback (bugs, style, performance, etc.)
+- Specific file/line references
+- Severity levels (critical, major, minor, nitpick)
+- Actionable recommendations
+
+Parameters:
+- pr (optional): Pull request number to review
+- range (optional): Git range to review (e.g., HEAD~3..HEAD, origin/main..HEAD)
+- files (optional): Specific files to review
+- context (optional): Additional context about the changes (purpose, constraints, technical background)`,
       inputSchema: z.object({
         pr: z.number().optional().describe('Pull request number to review (optional)'),
         range: z.string().optional().describe('Git range to review (e.g., HEAD~3..HEAD, origin/main..HEAD) (optional)'),
         files: z.array(z.string()).optional().describe('Specific files to review (optional)'),
-        context: z.string().optional().describe('Additional context for the review (optional)'),
+        context: z
+          .string()
+          .optional()
+          .describe('Additional context for the review - explains the purpose of changes, constraints, or areas of focus (optional)'),
       }),
       handler: async (args: Record<string, unknown>) => {
         const { pr, range, files, context } = args as { pr?: number; range?: string; files?: string[]; context?: string }
@@ -141,21 +236,126 @@ export function createPolkaCodesServerTools(logger: Logger): McpServerTool[] {
     },
     {
       name: 'plan',
-      description: 'Create a plan for implementing a feature or solving a problem',
+      description: `Create a detailed, actionable implementation plan for features or problems.
+
+The workflow will:
+- Analyze the current codebase to understand existing architecture
+- Identify key files, dependencies, and potential challenges
+- Create a step-by-step implementation roadmap
+- Consider edge cases, error handling, and validation
+- Suggest testing strategies and test cases
+- Identify potential risks and mitigation approaches
+- Recommend refactoring or preparatory work if needed
+
+The plan includes:
+- Overview with recommended approach
+- Ordered list of implementation steps
+- Files to create or modify (file paths only, no content)
+- Dependencies and prerequisites
+- Testing strategy
+- Risk assessment and mitigations
+- Rollback strategy if applicable
+
+Best used for complex features, architecture changes, large refactorings, or migration strategies.
+
+Parameters:
+- task (required): Detailed description of what needs to be planned`,
       inputSchema: z.object({
-        task: z.string().describe('The task or feature to plan'),
+        task: z.string().describe('The task or feature to plan - provide details about requirements, constraints, and goals'),
       }),
       handler: async (args: Record<string, unknown>) => {
         const { task } = args as { task: string }
         logger.info(`MCP: Executing plan workflow - task: "${task}"`)
-        return await executeWorkflow(planWorkflow, { task }, 'plan', logger)
+
+        try {
+          const context = createExecutionContext(logger)
+          const result = await runWorkflow(
+            planWorkflow,
+            { task },
+            {
+              commandName: 'plan',
+              context,
+              logger,
+              requiresProvider: true,
+              interactive: false,
+            },
+          )
+
+          // Format plan result for MCP response
+          if (result && typeof result === 'object') {
+            const planResult = result as {
+              plan?: string
+              question?: unknown
+              reason?: string
+              files?: Array<{ path: string; content: string }>
+            }
+
+            // If there's a question, return it
+            if (planResult.question) {
+              return JSON.stringify({ question: planResult.question }, null, 2)
+            }
+
+            // If there's a reason (no plan needed), return it
+            if (planResult.reason) {
+              return `No plan needed: ${planResult.reason}`
+            }
+
+            // Format the plan result with file paths only (no content)
+            let output = ''
+            if (planResult.plan) {
+              output += planResult.plan
+            }
+
+            if (planResult.files && planResult.files.length > 0) {
+              output += '\n\nFiles to modify:\n'
+              // Extract only the file paths, not the content
+              output += planResult.files.map((f) => `  - ${f.path}`).join('\n')
+            }
+
+            return output || 'Plan created successfully'
+          }
+
+          return 'Plan created successfully'
+        } catch (error) {
+          logger.error(`Error executing plan workflow:`, error)
+          return `Error: ${error instanceof Error ? error.message : String(error)}`
+        }
       },
     },
     {
       name: 'fix',
-      description: 'Fix issues, bugs, or test failures',
+      description: `Diagnose and resolve issues, bugs, or test failures systematically.
+
+The workflow will:
+- Analyze error messages, stack traces, and failing tests
+- Identify root causes through code examination
+- Review relevant code and dependencies
+- Implement targeted fixes with proper error handling
+- Run tests to verify the fix
+- Check for regressions in related functionality
+- Iterate if the issue persists
+
+Can handle:
+- Test failures (unit, integration, e2e)
+- Build and compilation errors
+- Type checking errors
+- Runtime errors and exceptions
+- Logic bugs
+- Performance issues
+- Security vulnerabilities
+
+Process:
+1. Thoroughly analyze the failure or error
+2. Identify and understand the root cause
+3. Implement a minimal, targeted fix
+4. Test to verify the fix works
+5. Check for regressions
+6. Iterate if needed until resolved
+
+Parameters:
+- task (required): Description of the issue - include error messages, stack traces, or describe what's not working`,
       inputSchema: z.object({
-        task: z.string().describe('Description of the issue to fix'),
+        task: z.string().describe("Description of the issue to fix - include error messages, stack traces, or describe what's not working"),
       }),
       handler: async (args: Record<string, unknown>) => {
         const { task } = args as { task: string }
@@ -165,9 +365,35 @@ export function createPolkaCodesServerTools(logger: Logger): McpServerTool[] {
     },
     {
       name: 'epic',
-      description: 'Break down a large feature into smaller tasks and implement them',
+      description: `Break down large features into manageable tasks and implement them systematically.
+
+The workflow will:
+- Take a high-level feature or goal description
+- Decompose it into smaller, concrete tasks
+- Create an ordered todo list with clear definitions
+- Implement tasks sequentially, handling dependencies
+- Track progress and provide summaries after each task
+- Continue until the entire epic is complete
+
+Process:
+1. Understand epic requirements and constraints
+2. Break down into specific, actionable tasks
+3. Create and prioritize the todo list
+4. For each task:
+   - Analyze what needs to be done
+   - Make necessary code changes
+   - Test and verify the implementation
+   - Mark task complete and move to next
+5. Provide final completion summary
+
+Best used for large features, multi-component implementations, or complex refactoring projects that span multiple files or modules.
+
+Parameters:
+- epic (required): High-level description of the epic/feature to implement`,
       inputSchema: z.object({
-        epic: z.string().describe('Description of the epic to implement'),
+        epic: z
+          .string()
+          .describe('Description of the epic to implement - describe the overall feature or goal, not specific implementation steps'),
       }),
       handler: async (args: Record<string, unknown>) => {
         const { epic: epicTask } = args as { epic: string }
@@ -186,9 +412,33 @@ export function createPolkaCodesServerTools(logger: Logger): McpServerTool[] {
     },
     {
       name: 'commit',
-      description: 'Create a git commit with AI-generated message based on changes',
+      description: `Create a git commit with an AI-generated, well-formatted commit message.
+
+The workflow will:
+- Stage all changes (git add .)
+- Analyze the diff to understand what changed
+- Generate a clear, descriptive commit message following best practices
+- Create the commit with the generated message
+
+Commit message format:
+- Clear subject line (50 chars or less)
+- Detailed body explaining what changed and why
+- References to issues/PRs if applicable
+- Conventional commits format when appropriate
+
+Best practices followed:
+- Separate subject from body with blank line
+- Use imperative mood in subject line (e.g., "Add feature" not "Added feature")
+- Explain what and why, not how
+- Wrap body lines at 72 characters
+
+Parameters:
+- message (optional): Custom commit message. If not provided, AI analyzes changes and generates an appropriate message following best practices`,
       inputSchema: z.object({
-        message: z.string().optional().describe('Optional commit message (AI generates if not provided)'),
+        message: z
+          .string()
+          .optional()
+          .describe('Optional commit message - if not provided, AI will analyze changes and generate an appropriate message'),
       }),
       handler: async (args: Record<string, unknown>) => {
         const { message } = args as { message?: string }
