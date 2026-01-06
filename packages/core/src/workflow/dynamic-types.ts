@@ -2,6 +2,52 @@ import { z } from 'zod'
 
 export type ValidationResult = { success: true } | { success: false; errors: string[] }
 
+// Forward declarations of types for use in circular schema references
+// These will be properly inferred from the schemas below
+export interface WhileLoopStep {
+  id: string
+  while: {
+    condition: string
+    steps: WorkflowControlFlowStep[]
+  }
+  output?: string | null
+}
+
+export interface IfElseStep {
+  id: string
+  if: {
+    condition: string
+    thenBranch: WorkflowControlFlowStep[]
+    elseBranch?: WorkflowControlFlowStep[]
+  }
+  output?: string | null
+}
+
+export interface BreakStep {
+  break: true
+}
+
+export interface ContinueStep {
+  continue: true
+}
+
+export interface TryCatchStep {
+  id: string
+  try: {
+    trySteps: WorkflowControlFlowStep[]
+    catchSteps: WorkflowControlFlowStep[]
+  }
+  output?: string | null
+}
+
+export type WorkflowControlFlowStep =
+  | z.infer<typeof WorkflowStepDefinitionSchema>
+  | WhileLoopStep
+  | IfElseStep
+  | BreakStep
+  | ContinueStep
+  | TryCatchStep
+
 export const WorkflowInputDefinitionSchema = z.object({
   id: z.string(),
   description: z.string().nullish(),
@@ -35,19 +81,23 @@ export const WorkflowStepDefinitionSchema = z.object({
 /**
  * While loop - repeats steps while condition is true
  */
-export const WhileLoopStepSchema: any = z.object({
+// Type annotation required due to circular reference via z.lazy()
+// The 'as unknown as' cast breaks the circular type inference dependency
+export const WhileLoopStepSchema = z.object({
   id: z.string(),
   while: z.object({
     condition: z.string().describe('JavaScript expression that evaluates to true/false'),
     steps: z.array(z.lazy(() => WorkflowControlFlowStepSchema)),
   }),
   output: z.string().nullish(),
-})
+}) as unknown as z.ZodType<WhileLoopStep>
 
 /**
  * If/else branch - conditionally executes steps
  */
-export const IfElseStepSchema: any = z.object({
+// Type annotation required due to circular reference via z.lazy()
+// The 'as unknown as' cast breaks the circular type inference dependency
+export const IfElseStepSchema = z.object({
   id: z.string(),
   if: z.object({
     condition: z.string().describe('JavaScript expression that evaluates to true/false'),
@@ -55,7 +105,7 @@ export const IfElseStepSchema: any = z.object({
     elseBranch: z.array(z.lazy(() => WorkflowControlFlowStepSchema)).optional(),
   }),
   output: z.string().nullish(),
-})
+}) as unknown as z.ZodType<IfElseStep>
 
 /**
  * Break statement - exits the nearest enclosing loop
@@ -87,14 +137,16 @@ export const TryCatchStepSchema = z.object({
  * Any step that can appear in a workflow's steps array
  * Can be a basic step, control flow, or jump statement
  */
-export const WorkflowControlFlowStepSchema: any = z.union([
+// Type annotation required due to circular reference via z.lazy() in other schemas
+// The 'as unknown as' cast breaks the circular type inference dependency
+export const WorkflowControlFlowStepSchema = z.union([
   WorkflowStepDefinitionSchema,
   WhileLoopStepSchema,
   IfElseStepSchema,
   BreakStepSchema,
   ContinueStepSchema,
   TryCatchStepSchema,
-])
+]) as unknown as z.ZodType<WorkflowControlFlowStep>
 
 /**
  * Workflow definition - now supports control flow in steps
@@ -110,13 +162,10 @@ export const WorkflowFileSchema = z.object({
   workflows: z.record(z.string(), WorkflowDefinitionSchema),
 })
 
+// Re-export inferred types for consistency
 export type WorkflowInputDefinition = z.infer<typeof WorkflowInputDefinitionSchema>
 export type WorkflowStepDefinition = z.infer<typeof WorkflowStepDefinitionSchema>
-export type WhileLoopStep = z.infer<typeof WhileLoopStepSchema>
-export type IfElseStep = z.infer<typeof IfElseStepSchema>
-export type BreakStep = z.infer<typeof BreakStepSchema>
-export type ContinueStep = z.infer<typeof ContinueStepSchema>
-export type TryCatchStep = z.infer<typeof TryCatchStepSchema>
-export type WorkflowControlFlowStep = z.infer<typeof WorkflowControlFlowStepSchema>
+// Note: WhileLoopStep, IfElseStep, BreakStep, ContinueStep, TryCatchStep, and WorkflowControlFlowStep
+// are already exported above as forward declarations to support circular references
 export type WorkflowDefinition = z.infer<typeof WorkflowDefinitionSchema>
 export type WorkflowFile = z.infer<typeof WorkflowFileSchema>

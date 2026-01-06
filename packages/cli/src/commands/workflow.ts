@@ -107,7 +107,18 @@ export async function runWorkflowCommand(task: string | undefined, _options: any
   }
 
   logger.info(`Workflow has ${selectedWorkflow.steps.length} step(s)`)
-  logger.debug(`Steps: ${selectedWorkflow.steps.map((s) => `${s.id} (${s.task})`).join(', ')}`)
+  logger.debug(
+    `Steps: ${selectedWorkflow.steps
+      .map((s) => {
+        // Type guard to check if step has id and task properties (basic workflow step)
+        if ('id' in s && 'task' in s) {
+          return `${s.id} (${s.task})`
+        }
+        // For control flow steps, just show the id
+        return 'id' in s ? String(s.id) : '(unnamed step)'
+      })
+      .join(', ')}`,
+  )
 
   await runWorkflow(workflowFn, workflowInput, { commandName: 'workflow', context: globalOpts, logger })
 }
