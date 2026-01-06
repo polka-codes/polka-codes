@@ -23,8 +23,8 @@ export const mcpServerCommand = new Command('mcp-server')
     logger.info('')
     logger.info('Available Tools:')
 
-    // Create tools
-    const tools = createPolkaCodesServerTools()
+    // Create tools (pass logger for workflow execution)
+    const tools = createPolkaCodesServerTools(logger)
 
     // Create and start server using official SDK
     const server = createPolkaCodesMcpServer(tools, logger)

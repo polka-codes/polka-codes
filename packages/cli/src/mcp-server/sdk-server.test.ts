@@ -287,7 +287,7 @@ describe('SDK-based McpServer', () => {
 
   describe('Polka-Codes Tools', () => {
     test('should work with polka-codes server tools', () => {
-      const tools = createPolkaCodesServerTools()
+      const tools = createPolkaCodesServerTools(mockLogger)
 
       expect(tools.length).toBeGreaterThan(0)
 
@@ -297,7 +297,7 @@ describe('SDK-based McpServer', () => {
     })
 
     test('should register all polka-codes tools', () => {
-      const tools = createPolkaCodesServerTools()
+      const tools = createPolkaCodesServerTools(mockLogger)
 
       const toolNames = tools.map((t: McpServerTool) => t.name)
 
