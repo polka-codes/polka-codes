@@ -81,9 +81,10 @@ export function createGitReadFile(commit: string): FullToolInfo {
     const results: string[] = []
     for (const filePath of paths) {
       // SECURITY: Use quoteForShell to prevent command injection
-      // File paths could contain shell metacharacters that would be executed
+      // Both commit and filePath could contain shell metacharacters
+      const quotedCommit = quoteForShell(commit)
       const quotedPath = quoteForShell(filePath)
-      const result = await provider.executeCommand(`git show ${commit}:${quotedPath}`, false)
+      const result = await provider.executeCommand(`git show ${quotedCommit}:${quotedPath}`, false)
 
       if (result.exitCode === 0) {
         results.push(`<read_file_file_content path="${filePath}">${result.stdout}</read_file_file_content>`)
@@ -144,9 +145,10 @@ export function createGitListFiles(commit: string): FullToolInfo {
     const { path = '.', maxCount } = toolInfo.parameters.parse(args)
 
     // SECURITY: Use quoteForShell to prevent command injection
+    const quotedCommit = quoteForShell(commit)
     const quotedPath = quoteForShell(path)
     // Use git ls-tree to list files at the specific commit
-    const result = await provider.executeCommand(`git ls-tree -r --name-only ${commit} ${quotedPath}`, false)
+    const result = await provider.executeCommand(`git ls-tree -r --name-only ${quotedCommit} ${quotedPath}`, false)
 
     if (result.exitCode !== 0) {
       return {
@@ -211,9 +213,10 @@ export function createGitReadBinaryFile(commit: string): FullToolInfo {
     const { path } = toolInfo.parameters.parse(args)
 
     // SECURITY: Use quoteForShell to prevent command injection
+    const quotedCommit = quoteForShell(commit)
     const quotedPath = quoteForShell(path)
     // Use git show to read binary file and encode as base64
-    const result = await provider.executeCommand(`git show ${commit}:${quotedPath} | base64`, false)
+    const result = await provider.executeCommand(`git show ${quotedCommit}:${quotedPath} | base64`, false)
 
     if (result.exitCode === 0) {
       // Return media type for compatibility with multimodal models
