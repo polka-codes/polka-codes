@@ -2,7 +2,10 @@
  * Core type definitions for the autonomous agent system
  */
 
-import type { Logger, StepFn, ToolRegistry, WorkflowTools } from '@polka-codes/core'
+import type { ToolRegistry as CoreToolRegistry, Logger, StepFn, WorkflowTools } from '@polka-codes/core'
+
+// Re-export ToolRegistry for use in other agent modules
+export type ToolRegistry = CoreToolRegistry
 
 /**
  * Agent operation modes with explicit state machine

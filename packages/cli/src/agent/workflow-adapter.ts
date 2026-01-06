@@ -53,7 +53,7 @@ export async function adaptFixWorkflow<TTools extends ToolRegistry = ToolRegistr
   try {
     const { fixWorkflow } = await import('../workflows/fix.workflow')
 
-    const result = await fixWorkflow(input as any, context)
+    const result = await fixWorkflow(input as any, context as any)
 
     if (result.success) {
       return {
@@ -79,11 +79,14 @@ export async function adaptFixWorkflow<TTools extends ToolRegistry = ToolRegistr
 /**
  * Adapt plan workflow result
  */
-export async function adaptPlanWorkflow(input: Record<string, unknown>, context: WorkflowContext): Promise<WorkflowExecutionResult> {
+export async function adaptPlanWorkflow<TTools extends ToolRegistry = ToolRegistry>(
+  input: Record<string, unknown>,
+  context: WorkflowContext<TTools>,
+): Promise<WorkflowExecutionResult> {
   try {
     const { planWorkflow } = await import('../workflows/plan.workflow')
 
-    const result = await planWorkflow(input as any, context)
+    const result = await planWorkflow(input as any, context as any)
 
     if (!result) {
       return {
@@ -110,11 +113,14 @@ export async function adaptPlanWorkflow(input: Record<string, unknown>, context:
 /**
  * Adapt review workflow result
  */
-export async function adaptReviewWorkflow(input: Record<string, unknown>, context: WorkflowContext): Promise<WorkflowExecutionResult> {
+export async function adaptReviewWorkflow<TTools extends ToolRegistry = ToolRegistry>(
+  input: Record<string, unknown>,
+  context: WorkflowContext<TTools>,
+): Promise<WorkflowExecutionResult> {
   try {
     const { reviewWorkflow } = await import('../workflows/review.workflow')
 
-    const result = await reviewWorkflow(input as any, context)
+    const result = await reviewWorkflow(input as any, context as any)
 
     // Review workflow always returns successfully
     return {
@@ -134,11 +140,14 @@ export async function adaptReviewWorkflow(input: Record<string, unknown>, contex
 /**
  * Adapt commit workflow result
  */
-export async function adaptCommitWorkflow(input: Record<string, unknown>, context: WorkflowContext): Promise<WorkflowExecutionResult> {
+export async function adaptCommitWorkflow<TTools extends ToolRegistry = ToolRegistry>(
+  input: Record<string, unknown>,
+  context: WorkflowContext<TTools>,
+): Promise<WorkflowExecutionResult> {
   try {
     const { commitWorkflow } = await import('../workflows/commit.workflow')
 
-    const result = await commitWorkflow(input as any, context)
+    const result = await commitWorkflow(input as any, context as any)
 
     // Commit workflow returns string | void
     if (typeof result === 'string') {
@@ -166,11 +175,14 @@ export async function adaptCommitWorkflow(input: Record<string, unknown>, contex
 /**
  * Adapt epic workflow result (if exists)
  */
-export async function adaptEpicWorkflow(input: Record<string, unknown>, context: WorkflowContext): Promise<WorkflowExecutionResult> {
+export async function adaptEpicWorkflow<TTools extends ToolRegistry = ToolRegistry>(
+  input: Record<string, unknown>,
+  context: WorkflowContext<TTools>,
+): Promise<WorkflowExecutionResult> {
   try {
     const { epicWorkflow } = await import('../workflows/epic.workflow')
 
-    const _result = await epicWorkflow(input as any, context)
+    const _result = await epicWorkflow(input as any, context as any)
 
     // Epic workflow returns void
     return {
