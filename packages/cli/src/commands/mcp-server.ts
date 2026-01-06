@@ -2,7 +2,7 @@
 
 import { Command } from 'commander'
 import { createLogger } from '../logger'
-import { McpServer } from '../mcp-server/server'
+import { createPolkaCodesMcpServer, startStdioServer } from '../mcp-server/sdk-server'
 import { createPolkaCodesServerTools } from '../mcp-server/tools'
 
 export const mcpServerCommand = new Command('mcp-server')
@@ -23,25 +23,11 @@ export const mcpServerCommand = new Command('mcp-server')
     logger.info('')
     logger.info('Available Tools:')
 
-    // Create MCP server
-    const server = new McpServer(
-      {
-        serverInfo: {
-          name: 'polka-codes',
-          version: '1.0.0',
-        },
-        capabilities: {
-          tools: true,
-          resources: false,
-          prompts: false,
-        },
-      },
-      logger,
-    )
-
-    // Register tools
+    // Create tools
     const tools = createPolkaCodesServerTools()
-    server.registerTools(tools)
+
+    // Create and start server using official SDK
+    const server = createPolkaCodesMcpServer(tools, logger)
 
     // Print available tools to stderr via logger
     for (const tool of tools) {
@@ -74,24 +60,32 @@ export const mcpServerCommand = new Command('mcp-server')
     logger.info('═════════════════════════════════════════════════════════════════')
     logger.info('')
 
-    logger.info('Starting MCP server...')
+    logger.info('Starting MCP server using official @modelcontextprotocol/sdk...')
 
     // Start server
-    await server.start()
+    await startStdioServer(server, logger)
 
     logger.info('MCP server is running and listening for connections...')
 
     // Handle shutdown gracefully
-    process.on('SIGINT', async () => {
-      logger.info('')
+    const shutdown = async () => {
       logger.info('Shutting down MCP server...')
-      await server.stop()
-      process.exit(0)
-    })
+      // Force exit after 5 seconds if graceful shutdown takes too long
+      const timeout = setTimeout(() => {
+        logger.warn('Forcing exit after timeout')
+        process.exit(1)
+      }, 5000)
 
-    process.on('SIGTERM', async () => {
-      logger.info('Shutting down MCP server...')
-      await server.stop()
+      try {
+        await server.close()
+      } catch (error) {
+        logger.error('Error closing server:', error)
+      } finally {
+        clearTimeout(timeout)
+      }
       process.exit(0)
-    })
+    }
+
+    process.on('SIGINT', shutdown)
+    process.on('SIGTERM', shutdown)
   })
