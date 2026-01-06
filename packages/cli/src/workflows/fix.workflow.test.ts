@@ -149,22 +149,7 @@ describe('fixWorkflow', () => {
 
     expect(tools.executeCommand).toHaveBeenCalledTimes(10)
     expect(tools.generateText).toHaveBeenCalledTimes(10)
-    expect(result).toStrictEqual({
-      success: false,
-      reason: 'Failed to fix the issue after maximum attempts.',
-      summaries: [
-        'I did a fix',
-        'I did a fix',
-        'I did a fix',
-        'I did a fix',
-        'I did a fix',
-        'I did a fix',
-        'I did a fix',
-        'I did a fix',
-        'I did a fix',
-        'I did a fix',
-      ],
-    })
+    expect(result).toMatchSnapshot()
   })
 
   test('should return bailReason when agent cannot fix', async () => {
@@ -182,11 +167,7 @@ describe('fixWorkflow', () => {
 
     expect(tools.executeCommand).toHaveBeenCalledTimes(1)
     expect(tools.generateText).toHaveBeenCalledTimes(1)
-    expect(result).toStrictEqual({
-      success: false,
-      summaries: [],
-      reason: 'Unable to identify the root cause of the error',
-    })
+    expect(result).toMatchSnapshot()
   })
 
   test('should pass task to agent prompt', async () => {

@@ -384,6 +384,6 @@ ${JSON.stringify(generatedPlan)}
     const result = await planWorkflow({ task, mode: 'noninteractive', interactive: false, additionalTools: {} }, context)
 
     expect(result.plan).toBe(generatedPlan.plan)
-    expect(result.files).toEqual([{ path: 'src/index.ts', content: fileContent }])
+    expect(result.files).toMatchSnapshot()
   })
 })

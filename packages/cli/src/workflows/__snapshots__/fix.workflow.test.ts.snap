@@ -1,0 +1,28 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`fixWorkflow should fail after exhausting all retries 1`] = `
+{
+  "reason": "Failed to fix the issue after maximum attempts.",
+  "success": false,
+  "summaries": [
+    "I did a fix",
+    "I did a fix",
+    "I did a fix",
+    "I did a fix",
+    "I did a fix",
+    "I did a fix",
+    "I did a fix",
+    "I did a fix",
+    "I did a fix",
+    "I did a fix",
+  ],
+}
+`;
+
+exports[`fixWorkflow should return bailReason when agent cannot fix 1`] = `
+{
+  "reason": "Unable to identify the root cause of the error",
+  "success": false,
+  "summaries": [],
+}
+`;
