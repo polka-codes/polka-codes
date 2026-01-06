@@ -153,6 +153,12 @@ export class StdioTransport extends EventEmitter {
    * Supports both Content-Length header framing and newline-delimited messages
    */
   private handleData(data: string): void {
+    // Prevent memory exhaustion from malicious or malfunctioning servers
+    const MAX_BUFFER_SIZE = 10 * 1024 * 1024 // 10MB
+    if (this.buffer.length + data.length > MAX_BUFFER_SIZE) {
+      throw new Error(`Buffer exceeded maximum size of ${MAX_BUFFER_SIZE} bytes. Possible malicious server or malformed data.`)
+    }
+
     this.buffer += data
 
     // Try to parse messages using Content-Length framing first

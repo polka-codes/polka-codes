@@ -31,14 +31,25 @@ function validateFilePath(param: string, paramName: string): void {
 
 /**
  * Validate git range parameters (commit hashes, refs, ranges)
+ *
+ * SECURITY: Spaces are allowed to support range syntax like "HEAD~3..HEAD" or "origin/main..HEAD".
+ * This could theoretically allow passing multiple arguments to git diff (e.g., "--option value").
+ * However, we block `=` characters to prevent the most dangerous flags like `--output=<file>`.
+ * The remaining git diff flags that accept space-separated values are low-risk.
  */
 function validateGitRange(param: string, paramName: string): void {
   // Allow: alphanumeric, dots, hyphens, underscores, forward slashes, @, :, ~, ^, and spaces
   // Ranges can include spaces (e.g., "HEAD..main")
+  // Block: `=` to prevent --option=value style flags
   const safePattern = /^[a-zA-Z0-9._\-/@:~^ \s]+$/
 
   if (!safePattern.test(param)) {
     throw new Error(`Invalid ${paramName}: contains potentially unsafe characters.`)
+  }
+
+  // Double-check that = is not present (defensive in case regex changes)
+  if (param.includes('=')) {
+    throw new Error(`Invalid ${paramName}: '=' characters are not allowed for security reasons.`)
   }
 }
 
