@@ -13,6 +13,15 @@ export interface ErrorSuggestions {
 }
 
 /**
+ * Individual error detail item
+ */
+export interface ErrorDetail {
+  field?: string
+  message: string
+  value?: unknown
+}
+
+/**
  * Format any error for display
  * Uses enhanced formatting for AgentError, basic formatting for other errors
  */
@@ -35,7 +44,7 @@ export class AgentError extends Error {
   constructor(
     message: string,
     public readonly code: string,
-    public readonly details?: any,
+    public readonly details?: Record<string, unknown> | ErrorDetail[],
     public readonly suggestions?: ErrorSuggestions,
   ) {
     super(message)
@@ -186,7 +195,7 @@ export class WorkflowInvocationError extends AgentError {
 export class StateCorruptionError extends AgentError {
   constructor(
     message: string,
-    public readonly details?: any,
+    public readonly details?: Record<string, unknown> | ErrorDetail[],
   ) {
     const suggestions: ErrorSuggestions = {
       suggestions: [

@@ -115,9 +115,14 @@ type ToolCallContext = {
   parameters: AgentContextParameters
   model: LanguageModelV2
   agentCallback?: TaskEventCallback
-  toolProvider: any
+  // ToolProvider and WorkflowContext use `any` here because:
+  // 1. ToolProvider has optional properties that MemoryProvider/TodoProvider require
+  // 2. WorkflowContext generic causes complex type constraints with CliToolRegistry
+  // 3. These are internal implementation details validated at runtime
+  // TODO: Refactor to use proper discriminated unions for provider types
+  toolProvider: any // ToolProvider with MemoryProvider & TodoProvider capabilities
   yes?: boolean
-  workflowContext: any
+  workflowContext: any // WorkflowContext<CliToolRegistry> with proper generic constraints
 }
 
 async function createPullRequest(input: { title: string; description: string }, _context: ToolCallContext) {
