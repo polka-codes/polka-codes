@@ -4,6 +4,7 @@ import path from 'node:path'
 import { agentWorkflow, listFiles, readBinaryFile, readFile, searchFiles, type WorkflowFn } from '@polka-codes/core'
 import { gitDiff } from '../tools'
 import type { CliToolRegistry } from '../workflow-tools'
+import { createGitAwareTools, extractTargetCommit } from './git-file-tools'
 import { CODE_REVIEW_SYSTEM_PROMPT, formatReviewToolInput, type ReviewToolInput } from './prompts'
 import {
   type BaseWorkflowInput,
@@ -325,6 +326,19 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput,
 
   const finalChangeInfo = changeInfo
 
+  // Detect if we're reviewing a specific commit (not HEAD)
+  const targetCommit = extractTargetCommit(range, pr)
+  const isReviewingCommit = targetCommit !== null
+
+  // If reviewing a specific commit, use git-aware tools
+  // Otherwise, use regular filesystem tools
+  const fileTools = isReviewingCommit && targetCommit ? createGitAwareTools(targetCommit) : { readFile, listFiles, readBinaryFile }
+
+  // Remove searchFiles when reviewing commits as it doesn't work with git history
+  const reviewTools = isReviewingCommit
+    ? [fileTools.readFile, fileTools.readBinaryFile, fileTools.listFiles, gitDiff]
+    : [readFile, readBinaryFile, searchFiles, listFiles, gitDiff]
+
   const result = await step('review', async () => {
     const defaultContext = await getDefaultContext('review')
     const memoryContext = await tools.getMemoryContext()
@@ -340,7 +354,7 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput,
             content: fullContent,
           },
         ],
-        tools: [readFile, readBinaryFile, searchFiles, listFiles, gitDiff],
+        tools: reviewTools,
         outputSchema: reviewOutputSchema,
       },
       context,
