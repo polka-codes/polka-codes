@@ -7,7 +7,6 @@ import { version } from '../package.json'
 import { agentCommand } from './commands/agent'
 import { codeCommand } from './commands/code'
 import { commitCommand } from './commands/commit'
-import { epicCommand } from './commands/epic'
 import { fixCommand } from './commands/fix'
 import { initCommand } from './commands/init'
 import { mcpServerCommand } from './commands/mcp-server'
@@ -49,9 +48,6 @@ program.addCommand(planCommand)
 
 // Code command
 program.addCommand(codeCommand)
-
-// Epic command
-program.addCommand(epicCommand)
 
 // Fix command
 program.addCommand(fixCommand)

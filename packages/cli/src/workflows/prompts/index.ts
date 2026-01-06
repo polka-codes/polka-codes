@@ -1,6 +1,5 @@
 export * from './coder'
 export * from './commit'
-export * from './epic'
 export * from './fix'
 export * from './init'
 export * from './meta'

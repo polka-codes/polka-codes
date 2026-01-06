@@ -2,14 +2,16 @@
 
 import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import type { Logger, ToolRegistry } from '@polka-codes/core'
+import type { Logger, ToolRegistry, WorkflowFn } from '@polka-codes/core'
 import { z } from 'zod'
-import { commit, epic } from '../api'
+import { commit } from '../api'
 import { runWorkflow } from '../runWorkflow'
+import type { CliToolRegistry } from '../workflow-tools'
 import { codeWorkflow } from '../workflows/code.workflow'
 import { fixWorkflow } from '../workflows/fix.workflow'
 import { planWorkflow } from '../workflows/plan.workflow'
 import { reviewWorkflow } from '../workflows/review.workflow'
+import type { BaseWorkflowInput } from '../workflows/workflow.utils'
 import type { McpServerTool } from './types'
 
 // Get the project root directory (assuming we're in packages/cli/src/mcp-server)
@@ -36,11 +38,23 @@ function createExecutionContext(_logger: Logger) {
 /**
  * Helper to run a workflow and format the result for MCP response
  */
-async function executeWorkflow<TInput, _TOutput>(workflow: any, input: TInput, commandName: string, logger: Logger): Promise<string> {
+async function executeWorkflow<TInput>(
+  workflow: WorkflowFn<TInput & BaseWorkflowInput, unknown, CliToolRegistry>,
+  input: TInput,
+  commandName: string,
+  logger: Logger,
+): Promise<string> {
   try {
     const context = createExecutionContext(logger)
 
-    const result = await runWorkflow(workflow, input, {
+    // Add default values for BaseWorkflowInput properties
+    const workflowInput = {
+      ...input,
+      interactive: false,
+      additionalTools: {},
+    } as TInput & BaseWorkflowInput
+
+    const result = await runWorkflow(workflow, workflowInput, {
       commandName,
       context,
       logger,
@@ -178,16 +192,14 @@ The workflow will:
 Best used for implementing new features, refactoring existing code, fixing bugs across multiple files, adding tests, or code modernization.
 
 Parameters:
-- task (required): Detailed description of what needs to be implemented or changed
-- files (optional): Specific file paths to focus on. When provided, the AI will primarily analyze and modify these files`,
+- task (required): Detailed description of what needs to be implemented or changed`,
       inputSchema: z.object({
         task: z.string().describe('The coding task to execute - be specific about what needs to be done'),
-        files: z.array(z.string()).optional().describe('Specific files to focus on (optional)'),
       }),
       handler: async (args: Record<string, unknown>) => {
-        const { task, files } = args as { task: string; files?: string[] }
-        logger.info(`MCP: Executing code workflow - task: "${task}"${files ? `, files: ${files.join(', ')}` : ''}`)
-        return await executeWorkflow(codeWorkflow, { task, files }, 'code', logger)
+        const { task } = args as { task: string }
+        logger.info(`MCP: Executing code workflow - task: "${task}"`)
+        return await executeWorkflow(codeWorkflow, { task }, 'code', logger)
       },
     },
     {
@@ -361,53 +373,6 @@ Parameters:
         const { task } = args as { task: string }
         logger.info(`MCP: Executing fix workflow - task: "${task}"`)
         return await executeWorkflow(fixWorkflow, { task }, 'fix', logger)
-      },
-    },
-    {
-      name: 'epic',
-      description: `Break down large features into manageable tasks and implement them systematically.
-
-The workflow will:
-- Take a high-level feature or goal description
-- Decompose it into smaller, concrete tasks
-- Create an ordered todo list with clear definitions
-- Implement tasks sequentially, handling dependencies
-- Track progress and provide summaries after each task
-- Continue until the entire epic is complete
-
-Process:
-1. Understand epic requirements and constraints
-2. Break down into specific, actionable tasks
-3. Create and prioritize the todo list
-4. For each task:
-   - Analyze what needs to be done
-   - Make necessary code changes
-   - Test and verify the implementation
-   - Mark task complete and move to next
-5. Provide final completion summary
-
-Best used for large features, multi-component implementations, or complex refactoring projects that span multiple files or modules.
-
-Parameters:
-- epic (required): High-level description of the epic/feature to implement`,
-      inputSchema: z.object({
-        epic: z
-          .string()
-          .describe('Description of the epic to implement - describe the overall feature or goal, not specific implementation steps'),
-      }),
-      handler: async (args: Record<string, unknown>) => {
-        const { epic: epicTask } = args as { epic: string }
-        logger.info(`MCP: Executing epic workflow - epic: "${epicTask}"`)
-        try {
-          await epic({
-            ...createExecutionContext(logger),
-            task: epicTask,
-            interactive: false,
-          })
-          return 'Epic workflow completed successfully'
-        } catch (error) {
-          return `Error: ${error instanceof Error ? error.message : String(error)}`
-        }
       },
     },
     {

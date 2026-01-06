@@ -16,8 +16,7 @@
  * ```
  */
 
-import { getProvider as getDefaultProvider, type ProviderOptions } from '@polka-codes/cli-shared'
-import type { ToolProvider, UsageMeter } from '@polka-codes/core'
+import type { UsageMeter } from '@polka-codes/core'
 import { createLogger } from './logger'
 import type { ExecutionContext } from './runWorkflow'
 import { runWorkflow } from './runWorkflow'
@@ -38,8 +37,6 @@ import {
   type ReviewWorkflowInput,
   reviewWorkflow,
 } from './workflows'
-import { epicWorkflow } from './workflows/epic.workflow'
-import { EpicMemoryStore, EpicTodoItemStore } from './workflows/epic-context'
 
 /**
  * Reusable execution context for CLI options.
@@ -458,116 +455,5 @@ export async function plan(options: PlanOptions = {}): Promise<PlanWorkflowOutpu
     logger,
     interactive: interactive !== false,
     onUsageMeterCreated: onUsage,
-  })
-}
-
-/**
- * Options for epic function
- */
-export interface EpicOptions extends Partial<ExecutionContext> {
-  /**
-   * The epic task to plan and implement
-   */
-  task?: string
-
-  /**
-   * Disable the review step
-   * @default false
-   */
-  noReview?: boolean
-
-  /**
-   * Whether to prompt for confirmations
-   * @default true
-   */
-  interactive?: boolean
-
-  /**
-   * Callback invoked when usage meter is created, allowing tracking of API costs
-   */
-  onUsage?: (meter: UsageMeter) => void
-
-  /**
-   * @internal Custom provider getter for epic-specific stores
-   */
-  getProvider?: (opt: ProviderOptions) => ToolProvider
-}
-
-/**
- * Orchestrates a large feature or epic, breaking it down into smaller tasks
- *
- * @param options - Epic workflow options
- * @returns Promise that resolves when epic is complete
- *
- * @example
- * ```typescript
- * // Run epic workflow
- * await epic({
- *   task: 'Implement complete user authentication system'
- * })
- *
- * // Disable review step for faster iteration
- * await epic({
- *   task: 'Add basic CRUD operations',
- *   noReview: true
- * })
- * ```
- */
-export async function epic(options: EpicOptions = {}): Promise<void> {
-  const { task, noReview, interactive, onUsage, getProvider, _workflowInput, _saveEpicContext, _saveUsageSnapshot, ...context } =
-    options as EpicOptions & { _workflowInput?: any; _saveEpicContext?: any; _saveUsageSnapshot?: any }
-
-  const verbose = context.silent ? -1 : (context.verbose ?? 0)
-  const logger = createLogger({ verbose })
-
-  // Use provided workflow input or load epic context
-  let epicContext = _workflowInput
-  if (!epicContext) {
-    const { loadEpicContext } = await import('./workflows/epic-context')
-    epicContext = await loadEpicContext()
-  }
-
-  if (task && epicContext.task) {
-    throw new Error('Existing epic context found, but task was provided. Exiting.')
-  }
-
-  if (task) {
-    epicContext.task = task
-  }
-
-  const providerGetter =
-    getProvider ||
-    ((opt: ProviderOptions) =>
-      getDefaultProvider({
-        ...opt,
-        todoItemStore: new EpicTodoItemStore(epicContext),
-        memoryStore: new EpicMemoryStore(epicContext),
-      }))
-
-  const workflowInput = {
-    ...epicContext,
-    interactive: interactive !== false,
-    noReview: noReview ?? false,
-    saveEpicContext:
-      _saveEpicContext ||
-      (async (ctx: typeof epicContext) => {
-        Object.assign(epicContext, ctx)
-        const { saveEpicContext } = await import('./workflows/epic-context')
-        await saveEpicContext(epicContext)
-      }),
-    saveUsageSnapshot:
-      _saveUsageSnapshot ||
-      (async () => {
-        // Usage tracking will be handled by onUsageMeterCreated
-      }),
-  }
-
-  await runWorkflow(epicWorkflow, workflowInput, {
-    commandName: 'epic',
-    context,
-    logger,
-    onUsageMeterCreated: onUsage,
-    getProvider: providerGetter,
-    interactive: interactive !== false,
   })
 }

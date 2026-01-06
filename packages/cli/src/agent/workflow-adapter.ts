@@ -2,7 +2,6 @@ import type { CliToolRegistry } from '../workflow-tools'
 import type { BaseWorkflowInput } from '../workflows'
 import type { CodeWorkflowInput } from '../workflows/code.workflow'
 import type { CommitWorkflowInput } from '../workflows/commit.workflow'
-import type { EpicWorkflowInput } from '../workflows/epic.workflow'
 import type { FixWorkflowInput } from '../workflows/fix.workflow'
 import type { PlanWorkflowInput } from '../workflows/plan.workflow'
 import type { ReviewWorkflowInput } from '../workflows/review.workflow'
@@ -181,30 +180,6 @@ export async function adaptCommitWorkflow(
 }
 
 /**
- * Adapt epic workflow result (if exists)
- */
-export async function adaptEpicWorkflow(
-  input: EpicWorkflowInput & BaseWorkflowInput,
-  context: WorkflowContext<CliToolRegistry>,
-): Promise<WorkflowExecutionResult> {
-  try {
-    const { epicWorkflow } = await import('../workflows/epic.workflow')
-
-    const _result = await epicWorkflow(input, context)
-
-    // Epic workflow returns void
-    return {
-      success: true,
-      data: null,
-      output: 'Epic workflow completed',
-    }
-  } catch (error) {
-    // Epic workflow might not exist
-    throw new WorkflowInvocationError('epic', 'Epic workflow not available', error instanceof Error ? error : undefined)
-  }
-}
-
-/**
  * Generic workflow invoker
  * Routes to the appropriate adapter based on workflow name
  *
@@ -256,8 +231,6 @@ export async function invokeWorkflow(
       return adaptReviewWorkflow(workflowInput as ReviewWorkflowInput & BaseWorkflowInput, cliContext)
     case 'commit':
       return adaptCommitWorkflow(workflowInput as CommitWorkflowInput & BaseWorkflowInput, cliContext)
-    case 'epic':
-      return adaptEpicWorkflow(workflowInput as EpicWorkflowInput & BaseWorkflowInput, cliContext)
     default:
       throw new WorkflowInvocationError(workflowName, `Unknown workflow: ${workflowName}`)
   }
@@ -301,7 +274,6 @@ export const WorkflowAdapter = {
   adaptPlanWorkflow,
   adaptReviewWorkflow,
   adaptCommitWorkflow,
-  adaptEpicWorkflow,
   invokeWorkflow,
   invokeWorkflowWithTimeout,
 }
