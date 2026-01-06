@@ -27,6 +27,15 @@ export function createMcpServerTools(tools: ToolRegistry): McpServerTool[] {
 
 /**
  * Create high-level polka-codes workflow tools for MCP server
+ *
+ * NOTE: These tools are currently placeholders. To make them functional,
+ * the handlers need to:
+ * 1. Import the actual workflow functions from ../workflows/
+ * 2. Create a WorkflowContext with proper tools
+ * 3. Call the workflows and return results
+ *
+ * This is a significant refactor that requires setting up the full
+ * workflow infrastructure (models, tools, logger, etc.) in the MCP server context.
  */
 export function createPolkaCodesServerTools(): McpServerTool[] {
   return [
@@ -52,8 +61,9 @@ export function createPolkaCodesServerTools(): McpServerTool[] {
       },
       handler: async (args: Record<string, unknown>) => {
         const { task, files } = args as { task: string; files?: string[] }
-        // This would integrate with the actual code workflow
-        return JSON.stringify({ task, files, status: 'Workflow execution not yet implemented' }, null, 2)
+        // TODO: Integrate with actual code workflow from ../workflows/code.workflow
+        // For now, return a structured error response
+        return `Error: Workflow execution not yet implemented for MCP tool 'code'. Task: "${task}"${files ? `, Files: ${files.join(', ')}` : ''}`
       },
     },
     {
@@ -86,8 +96,13 @@ export function createPolkaCodesServerTools(): McpServerTool[] {
       },
       handler: async (args: Record<string, unknown>) => {
         const { pr, range, files, context } = args as { pr?: number; range?: string; files?: string[]; context?: string }
-        // This would integrate with the actual review workflow
-        return JSON.stringify({ pr, range, files, context, status: 'Workflow execution not yet implemented' }, null, 2)
+        const params = []
+        if (pr) params.push(`PR: ${pr}`)
+        if (range) params.push(`Range: ${range}`)
+        if (files) params.push(`Files: ${files.join(', ')}`)
+        if (context) params.push(`Context: ${context}`)
+        // TODO: Integrate with actual review workflow from ../workflows/review.workflow
+        return `Error: Workflow execution not yet implemented for MCP tool 'review'. ${params.join(', ')}`
       },
     },
     {
@@ -105,8 +120,8 @@ export function createPolkaCodesServerTools(): McpServerTool[] {
       },
       handler: async (args: Record<string, unknown>) => {
         const { task } = args as { task: string }
-        // This would integrate with the actual plan workflow
-        return JSON.stringify({ task, status: 'Workflow execution not yet implemented' }, null, 2)
+        // TODO: Integrate with actual plan workflow from ../workflows/plan.workflow
+        return `Error: Workflow execution not yet implemented for MCP tool 'plan'. Task: "${task}"`
       },
     },
     {
@@ -124,8 +139,8 @@ export function createPolkaCodesServerTools(): McpServerTool[] {
       },
       handler: async (args: Record<string, unknown>) => {
         const { task } = args as { task: string }
-        // This would integrate with the actual fix workflow
-        return JSON.stringify({ task, status: 'Workflow execution not yet implemented' }, null, 2)
+        // TODO: Integrate with actual fix workflow from ../workflows/fix.workflow
+        return `Error: Workflow execution not yet implemented for MCP tool 'fix'. Task: "${task}"`
       },
     },
     {
@@ -143,8 +158,8 @@ export function createPolkaCodesServerTools(): McpServerTool[] {
       },
       handler: async (args: Record<string, unknown>) => {
         const { epic } = args as { epic: string }
-        // This would integrate with the actual epic workflow
-        return JSON.stringify({ epic, status: 'Workflow execution not yet implemented' }, null, 2)
+        // TODO: Integrate with actual epic workflow from ../workflows/epic-context
+        return `Error: Workflow execution not yet implemented for MCP tool 'epic'. Epic: "${epic}"`
       },
     },
     {
@@ -162,8 +177,8 @@ export function createPolkaCodesServerTools(): McpServerTool[] {
       },
       handler: async (args: Record<string, unknown>) => {
         const { message } = args as { message?: string }
-        // This would integrate with the actual commit command
-        return JSON.stringify({ message, status: 'Command execution not yet implemented' }, null, 2)
+        // TODO: Integrate with actual commit command from ../commands/commit
+        return `Error: Command execution not yet implemented for MCP tool 'commit'. ${message ? `Message: "${message}"` : 'AI will generate commit message'}`
       },
     },
   ]

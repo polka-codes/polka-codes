@@ -268,6 +268,9 @@ export class McpManager {
   /**
    * Convert JSON Schema to Zod schema
    * This is a simplified converter that handles common cases
+   *
+   * NOTE: This function is duplicated in packages/core/src/workflow/dynamic.ts.
+   * TODO: Extract to a shared utility in packages/core or packages/cli-shared to reduce duplication.
    */
   private jsonSchemaToZod(schema: Record<string, unknown>): z.ZodObject<any> {
     const properties: Record<string, z.ZodTypeAny> = {}

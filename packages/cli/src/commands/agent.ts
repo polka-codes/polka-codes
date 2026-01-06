@@ -81,6 +81,16 @@ export async function runAgent(goal: string | undefined, options: any, _command:
   // Create minimal tools implementation for agent context
   const tools = {
     executeCommand: async (input: { command: string; args?: string[]; shell?: boolean }) => {
+      // SECURITY: We use child_process.exec (not spawn) to enable shell features needed by git commands.
+      // This is safe because:
+      // 1. All arguments are quoted using quoteForShell() to prevent injection
+      // 2. The agent is intended for local development where the user has full shell access anyway
+      // 3. Working directory is restricted to the project root
+      //
+      // Trade-off: Using exec with a string is riskier than spawn with an argument array, but
+      // necessary for shell operations like git which require shell expansion. The quoteForShell
+      // function is designed to handle all shell special characters safely.
+
       // Build command from input with proper shell quoting
       let fullCommand: string
       if (input.args && input.args.length > 0) {
@@ -115,6 +125,10 @@ export async function runAgent(goal: string | undefined, options: any, _command:
     readFile: async ({ path: filePath }: { path: string }) => {
       const fullPath = path.resolve(workingDir, filePath)
       // Validate path is within working directory to prevent reading arbitrary files
+      // NOTE: This validation prevents basic path traversal but doesn't protect against:
+      // - Symlinks that point outside the working directory
+      // - Case-insensitive filesystems (Windows/macOS) where paths could differ in case
+      // For a local CLI tool, this level of protection is reasonable to prevent accidental reads
       const normalizedPath = path.normalize(fullPath)
       const normalizedWorkingDir = path.normalize(workingDir)
       if (!normalizedPath.startsWith(normalizedWorkingDir + path.sep) && normalizedPath !== normalizedWorkingDir) {
