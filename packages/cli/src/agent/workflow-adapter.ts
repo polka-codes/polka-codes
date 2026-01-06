@@ -1,5 +1,5 @@
 import { WorkflowInvocationError } from './errors'
-import type { WorkflowContext, WorkflowExecutionResult } from './types'
+import type { ToolRegistry, WorkflowContext, WorkflowExecutionResult } from './types'
 
 /**
  * Adapts existing workflow outputs to WorkflowExecutionResult format
@@ -12,12 +12,15 @@ import type { WorkflowContext, WorkflowExecutionResult } from './types'
 /**
  * Adapt code workflow result
  */
-export async function adaptCodeWorkflow(input: Record<string, unknown>, context: WorkflowContext): Promise<WorkflowExecutionResult> {
+export async function adaptCodeWorkflow<TTools extends ToolRegistry = ToolRegistry>(
+  input: Record<string, unknown>,
+  context: WorkflowContext<TTools>,
+): Promise<WorkflowExecutionResult> {
   try {
     // Dynamic import to avoid circular dependencies
     const { codeWorkflow } = await import('../workflows/code.workflow')
 
-    const result = await codeWorkflow(input as any, context)
+    const result = await codeWorkflow(input as any, context as any)
 
     if (result.success) {
       return {
@@ -43,7 +46,10 @@ export async function adaptCodeWorkflow(input: Record<string, unknown>, context:
 /**
  * Adapt fix workflow result
  */
-export async function adaptFixWorkflow(input: Record<string, unknown>, context: WorkflowContext): Promise<WorkflowExecutionResult> {
+export async function adaptFixWorkflow<TTools extends ToolRegistry = ToolRegistry>(
+  input: Record<string, unknown>,
+  context: WorkflowContext<TTools>,
+): Promise<WorkflowExecutionResult> {
   try {
     const { fixWorkflow } = await import('../workflows/fix.workflow')
 

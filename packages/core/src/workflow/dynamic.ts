@@ -337,6 +337,8 @@ function evaluateCondition(
   condition: string,
   input: Record<string, any>,
   state: Record<string, any>,
+  // SECURITY: Default must remain false for safe evaluation of untrusted workflows
+  // Only set to true for trusted, vetted workflow definitions
   allowUnsafeCodeExecution = false,
 ): boolean {
   if (allowUnsafeCodeExecution) {

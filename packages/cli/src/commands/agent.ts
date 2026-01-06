@@ -114,6 +114,12 @@ export async function runAgent(goal: string | undefined, options: any, _command:
 
     readFile: async ({ path: filePath }: { path: string }) => {
       const fullPath = path.resolve(workingDir, filePath)
+      // Validate path is within working directory to prevent reading arbitrary files
+      const normalizedPath = path.normalize(fullPath)
+      const normalizedWorkingDir = path.normalize(workingDir)
+      if (!normalizedPath.startsWith(normalizedWorkingDir + path.sep) && normalizedPath !== normalizedWorkingDir) {
+        throw new Error(`Path "${filePath}" is outside working directory "${workingDir}"`)
+      }
       const content = await fs.readFile(fullPath, 'utf-8')
       return { content }
     },

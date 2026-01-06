@@ -347,8 +347,10 @@ export class McpManager {
         return z.record(z.string(), z.any())
       default:
         // Log unsupported types for debugging
+        // NOTE: Fallback to z.any() is pragmatic for dynamic conversion but may mask schema issues.
+        // Tools expecting specific types should validate at runtime to catch type mismatches early.
         if (this.logger) {
-          this.logger.debug(`Unsupported JSON Schema type: ${type}, falling back to z.any()`)
+          this.logger.warn(`Unsupported JSON Schema type: ${type}, falling back to z.any(). Tools should validate their inputs.`)
         }
         return z.any()
     }

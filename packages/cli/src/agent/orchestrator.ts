@@ -1,4 +1,3 @@
-import * as crypto from 'node:crypto'
 import * as path from 'node:path'
 import { ulid } from 'ulid'
 import { AgentStatusError, SafetyViolationError } from './errors'
@@ -506,7 +505,7 @@ export class AutonomousAgent {
    * Generate unique session ID
    */
   private generateSessionId(): string {
-    return `agent-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`
+    return `agent-${ulid()}`
   }
 
   /**
