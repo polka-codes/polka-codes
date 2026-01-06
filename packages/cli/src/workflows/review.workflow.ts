@@ -334,9 +334,11 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput,
   // Otherwise, use regular filesystem tools
   const fileTools = isReviewingCommit && targetCommit ? createGitAwareTools(targetCommit) : { readFile, listFiles, readBinaryFile }
 
-  // Remove searchFiles when reviewing commits as it doesn't work with git history
+  // Remove searchFiles and gitDiff when reviewing commits as they don't work with git history
+  // gitDiff shows local/staged changes which are irrelevant when reviewing a past commit
+  // The commit's diff is already provided in the review context
   const reviewTools = isReviewingCommit
-    ? [fileTools.readFile, fileTools.readBinaryFile, fileTools.listFiles, gitDiff]
+    ? [fileTools.readFile, fileTools.readBinaryFile, fileTools.listFiles]
     : [readFile, readBinaryFile, searchFiles, listFiles, gitDiff]
 
   const result = await step('review', async () => {

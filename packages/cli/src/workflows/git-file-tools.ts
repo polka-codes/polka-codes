@@ -86,10 +86,10 @@ export function createGitReadFile(commit: string): FullToolInfo {
       const result = await provider.executeCommand(`git show ${commit}:${quotedPath}`, false)
 
       if (result.exitCode === 0) {
-        results.push(`<read_file_file_content file="${filePath}">${result.stdout}</read_file_file_content>`)
+        results.push(`<read_file_file_content path="${filePath}">${result.stdout}</read_file_file_content>`)
       } else {
         // File not found or doesn't exist at this commit
-        results.push(`<read_file_file_content file="${filePath}" file_not_found="true"></read_file_file_content>`)
+        results.push(`<read_file_file_content path="${filePath}" file_not_found="true"></read_file_file_content>`)
       }
     }
 
@@ -216,11 +216,19 @@ export function createGitReadBinaryFile(commit: string): FullToolInfo {
     const result = await provider.executeCommand(`git show ${commit}:${quotedPath} | base64`, false)
 
     if (result.exitCode === 0) {
+      // Return media type for compatibility with multimodal models
+      // Match the structure of the standard readBinaryFile tool
       return {
         success: true,
         message: {
-          type: 'text',
-          value: `<read_binary_file_file_content file="${path}">${result.stdout.trim()}</read_binary_file_file_content>`,
+          type: 'content',
+          value: [
+            {
+              type: 'media',
+              url: path,
+              data: result.stdout.trim(),
+            },
+          ],
         },
       }
     } else {
@@ -228,7 +236,7 @@ export function createGitReadBinaryFile(commit: string): FullToolInfo {
         success: true,
         message: {
           type: 'text',
-          value: `<read_binary_file_file_content file="${path}" file_not_found="true"></read_binary_file_file_content>`,
+          value: `<read_binary_file_file_content path="${path}" file_not_found="true"></read_binary_file_file_content>`,
         },
       }
     }
