@@ -48,6 +48,9 @@ export function createGitReadFile(commit: string): FullToolInfo {
           .preprocess((val) => {
             if (!val) return []
             const values = Array.isArray(val) ? val : [val]
+            // NOTE: Comma-splitting matches standard readFile tool behavior
+            // This prevents reading files with commas in their names, but allows
+            // reading multiple files in a single call (e.g., "file1.ts,file2.ts")
             return values.flatMap((i) => (typeof i === 'string' ? i.split(',') : [])).filter((s) => s.length > 0)
           }, z.array(z.string()))
           .describe('The path of the file to read (relative to git root)')
@@ -223,6 +226,8 @@ export function createGitReadBinaryFile(commit: string): FullToolInfo {
     if (result.exitCode === 0) {
       // Return media type for compatibility with multimodal models
       // Match the structure of the standard readBinaryFile tool
+      // Remove all newlines from base64 output (base64 may wrap at 76 chars)
+      const base64Data = result.stdout.replace(/\n/g, '')
       return {
         success: true,
         message: {
@@ -231,7 +236,7 @@ export function createGitReadBinaryFile(commit: string): FullToolInfo {
             {
               type: 'media',
               url: path,
-              data: result.stdout.trim(),
+              data: base64Data,
             },
           ],
         },
