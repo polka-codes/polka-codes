@@ -25,6 +25,10 @@ export interface CliOptions {
 }
 
 export function addSharedOptions(command: Command) {
+  // Note: Commander.js v14+ has strict validation enabled by default:
+  // - Unknown options are automatically rejected with error messages
+  // - Excess arguments beyond what's defined are rejected
+  // - This helps catch typos and prevent silent failures
   return command
     .option('-c --config <paths>', 'Path to config file(s)', (value: string, prev: string[]) => prev.concat(value), [])
     .option('--api-provider <provider>', 'API provider')
