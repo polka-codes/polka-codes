@@ -10,6 +10,7 @@ import { type BaseWorkflowInput, parseGitDiffNameStatus } from './workflow.utils
 
 export type CommitWorkflowInput = {
   all?: boolean
+  files?: string[]
   context?: string
 }
 
@@ -32,6 +33,14 @@ export const commitWorkflow: WorkflowFn<CommitWorkflowInput & BaseWorkflowInput,
     if (input.all) {
       await step('stage-all', async () => {
         await tools.executeCommand({ command: 'git', args: ['add', '.'] })
+      })
+      hasStaged = true
+    } else if (input.files && input.files.length > 0) {
+      await step('stage-files', async () => {
+        await tools.executeCommand({
+          command: 'git',
+          args: ['add', ...input.files!],
+        })
       })
       hasStaged = true
     } else if (hasUnstaged) {

@@ -61,6 +61,12 @@ export interface CommitOptions extends BaseOptions {
   all?: boolean
 
   /**
+   * Specific files to stage before committing
+   * If provided, only these files will be staged
+   */
+  files?: string[]
+
+  /**
    * Additional context for commit message generation
    */
   context?: string
@@ -91,7 +97,7 @@ export interface CommitOptions extends BaseOptions {
  * ```
  */
 export async function commit(options: CommitOptions = {}): Promise<string | undefined> {
-  const { all, context: messageContext, interactive, onUsage, ...context } = options
+  const { all, files, context: messageContext, interactive, onUsage, ...context } = options
 
   // Create logger from options
   const verbose = context.silent ? -1 : (context.verbose ?? 0)
@@ -100,6 +106,7 @@ export async function commit(options: CommitOptions = {}): Promise<string | unde
   // Build workflow input
   const workflowInput = {
     ...(all && { all: true }),
+    ...(files && { files }),
     ...(messageContext && { context: messageContext }),
     interactive: interactive !== false,
   }

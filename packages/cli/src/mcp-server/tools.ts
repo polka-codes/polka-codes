@@ -310,7 +310,7 @@ Parameters:
       description: `Create a git commit with an AI-generated, well-formatted commit message.
 
 The workflow will:
-- Stage all changes (git add .)
+- Stage specified files (all files or specific files)
 - Analyze the diff to understand what changed
 - Generate a clear, descriptive commit message following best practices
 - Create the commit with the generated message
@@ -328,20 +328,29 @@ Best practices followed:
 - Wrap body lines at 72 characters
 
 Parameters:
-- message (optional): Custom commit message. If not provided, AI analyzes changes and generates an appropriate message following best practices`,
+- message (optional): Custom commit message. If not provided, AI analyzes changes and generates an appropriate message following best practices
+- stageFiles (optional): Files to stage before committing. Use "all" to stage all files, or provide an array of specific file paths to stage`,
       inputSchema: z.object({
         message: z
           .string()
           .optional()
           .describe('Optional commit message - if not provided, AI will analyze changes and generate an appropriate message'),
+        stageFiles: z
+          .union([z.literal('all'), z.array(z.string())])
+          .optional()
+          .describe('Files to stage: "all" for all files, or array of specific file paths'),
       }),
       handler: async (args: Record<string, unknown>) => {
-        const { message } = args as { message?: string }
-        logger.info(`MCP: Executing commit workflow${message ? ` - message: "${message}"` : ''}`)
+        const { message, stageFiles } = args as { message?: string; stageFiles?: 'all' | string[] }
+        logger.info(
+          `MCP: Executing commit workflow${message ? ` - message: "${message}"` : ''}${stageFiles ? ` - stageFiles: "${JSON.stringify(stageFiles)}"` : ''}`,
+        )
         try {
           await commit({
             ...createExecutionContext(logger),
             context: message,
+            all: stageFiles === 'all',
+            files: Array.isArray(stageFiles) ? stageFiles : undefined,
             interactive: false,
           })
           return 'Commit created successfully'
