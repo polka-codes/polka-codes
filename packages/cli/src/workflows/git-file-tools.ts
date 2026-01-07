@@ -200,7 +200,7 @@ export function createGitReadBinaryFile(commit: string): FullToolInfo {
     name: 'readBinaryFile',
     description: `Read binary file contents from git commit ${commit} and return as base64 encoded data. Use for images, fonts, and other binary files.`,
     parameters: z.object({
-      path: z.string().describe('The path of the binary file to read (relative to git root)'),
+      url: z.string().describe('The path of the binary file to read (relative to git root)'),
     }),
   } as const satisfies ToolInfo
 
@@ -215,13 +215,13 @@ export function createGitReadBinaryFile(commit: string): FullToolInfo {
       }
     }
 
-    const { path } = toolInfo.parameters.parse(args)
+    const { url } = toolInfo.parameters.parse(args)
 
     // SECURITY: Use quoteForShell to prevent command injection
     const quotedCommit = quoteForShell(commit)
-    const quotedPath = quoteForShell(path)
+    const quotedUrl = quoteForShell(url)
     // Use git show to read binary file and encode as base64
-    const result = await provider.executeCommand(`git show ${quotedCommit}:${quotedPath} | base64`, false)
+    const result = await provider.executeCommand(`git show ${quotedCommit}:${quotedUrl} | base64`, false)
 
     if (result.exitCode === 0) {
       // Return media type for compatibility with multimodal models
@@ -235,7 +235,7 @@ export function createGitReadBinaryFile(commit: string): FullToolInfo {
           value: [
             {
               type: 'media',
-              url: path,
+              url,
               data: base64Data,
             },
           ],
@@ -246,7 +246,7 @@ export function createGitReadBinaryFile(commit: string): FullToolInfo {
         success: true,
         message: {
           type: 'text',
-          value: `<read_binary_file_file_content path="${path}" file_not_found="true"></read_binary_file_file_content>`,
+          value: `<read_binary_file_file_content url="${url}" file_not_found="true"></read_binary_file_file_content>`,
         },
       }
     }

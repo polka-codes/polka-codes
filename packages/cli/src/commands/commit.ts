@@ -10,7 +10,7 @@ export const commitCommand = new Command('commit')
     await commit({
       all: localOptions.all,
       context: message,
+      files: globalOpts.file,
       interactive: !globalOpts.yes,
-      ...globalOpts,
     })
   })
