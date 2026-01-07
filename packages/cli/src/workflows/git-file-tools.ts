@@ -170,8 +170,8 @@ export function createGitListFiles(commit: string): FullToolInfo {
       .split('\n')
       .filter((f) => f.length > 0)
 
-    const truncated = files.length > maxCount
-    const displayFiles = truncated ? files.slice(0, maxCount) : files
+    const truncated = files.length > parsed.maxCount
+    const displayFiles = truncated ? files.slice(0, parsed.maxCount) : files
 
     return {
       success: true,
