@@ -220,7 +220,20 @@ export function createGitReadBinaryFile(commit: string): FullToolInfo {
     // SECURITY: Use quoteForShell to prevent command injection
     const quotedCommit = quoteForShell(commit)
     const quotedUrl = quoteForShell(url)
-    // Use git show to read binary file and encode as base64
+
+    // First verify the file exists at the commit to avoid pipe masking errors
+    const checkResult = await provider.executeCommand(`git cat-file -e ${quotedCommit}:${quotedUrl}`, false)
+    if (checkResult.exitCode !== 0) {
+      return {
+        success: true,
+        message: {
+          type: 'text',
+          value: `<read_binary_file_file_content url="${url}" file_not_found="true"></read_binary_file_file_content>`,
+        },
+      }
+    }
+
+    // File exists, read it and encode as base64
     const result = await provider.executeCommand(`git show ${quotedCommit}:${quotedUrl} | base64`, false)
 
     if (result.exitCode === 0) {
@@ -243,10 +256,10 @@ export function createGitReadBinaryFile(commit: string): FullToolInfo {
       }
     } else {
       return {
-        success: true,
+        success: false,
         message: {
-          type: 'text',
-          value: `<read_binary_file_file_content url="${url}" file_not_found="true"></read_binary_file_file_content>`,
+          type: 'error-text',
+          value: `Failed to read binary file: ${result.stderr}`,
         },
       }
     }

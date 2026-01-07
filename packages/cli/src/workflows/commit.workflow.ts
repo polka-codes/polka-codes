@@ -29,21 +29,22 @@ export const commitWorkflow: WorkflowFn<CommitWorkflowInput & BaseWorkflowInput,
   let hasStaged = stagedFiles.length > 0
   const hasUnstaged = unstagedFiles.length > 0
 
-  if (!hasStaged) {
+  // Handle explicit file staging (even if files are already staged)
+  if (input.files && input.files.length > 0) {
+    await step('stage-files', async () => {
+      const result = await tools.executeCommand({
+        command: 'git',
+        args: ['add', ...input.files!],
+      })
+      if (result.exitCode !== 0) {
+        throw new Error(`Failed to stage files: ${result.stderr}`)
+      }
+    })
+    hasStaged = true
+  } else if (!hasStaged) {
     if (input.all) {
       await step('stage-all', async () => {
         const result = await tools.executeCommand({ command: 'git', args: ['add', '.'] })
-        if (result.exitCode !== 0) {
-          throw new Error(`Failed to stage files: ${result.stderr}`)
-        }
-      })
-      hasStaged = true
-    } else if (input.files && input.files.length > 0) {
-      await step('stage-files', async () => {
-        const result = await tools.executeCommand({
-          command: 'git',
-          args: ['add', ...input.files!],
-        })
         if (result.exitCode !== 0) {
           throw new Error(`Failed to stage files: ${result.stderr}`)
         }
