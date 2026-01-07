@@ -200,7 +200,7 @@ export function createGitReadBinaryFile(commit: string): FullToolInfo {
     name: 'readBinaryFile',
     description: `Read binary file contents from git commit ${commit} and return as base64 encoded data. Use for images, fonts, and other binary files.`,
     parameters: z.object({
-      url: z.string().describe('The path of the binary file to read (relative to git root)'),
+      url: z.string().describe('The URL or path of the binary file to read (relative to git root)'),
     }),
   } as const satisfies ToolInfo
 

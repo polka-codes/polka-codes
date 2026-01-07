@@ -32,15 +32,21 @@ export const commitWorkflow: WorkflowFn<CommitWorkflowInput & BaseWorkflowInput,
   if (!hasStaged) {
     if (input.all) {
       await step('stage-all', async () => {
-        await tools.executeCommand({ command: 'git', args: ['add', '.'] })
+        const result = await tools.executeCommand({ command: 'git', args: ['add', '.'] })
+        if (result.exitCode !== 0) {
+          throw new Error(`Failed to stage files: ${result.stderr}`)
+        }
       })
       hasStaged = true
     } else if (input.files && input.files.length > 0) {
       await step('stage-files', async () => {
-        await tools.executeCommand({
+        const result = await tools.executeCommand({
           command: 'git',
           args: ['add', ...input.files!],
         })
+        if (result.exitCode !== 0) {
+          throw new Error(`Failed to stage files: ${result.stderr}`)
+        }
       })
       hasStaged = true
     } else if (hasUnstaged) {
@@ -54,10 +60,13 @@ export const commitWorkflow: WorkflowFn<CommitWorkflowInput & BaseWorkflowInput,
 
       if (confirmed) {
         await step('stage-all', async () => {
-          await tools.executeCommand({
+          const result = await tools.executeCommand({
             command: 'git',
             args: ['add', '.'],
           })
+          if (result.exitCode !== 0) {
+            throw new Error(`Failed to stage files: ${result.stderr}`)
+          }
         })
         hasStaged = true
       } else if (input.interactive !== false) {

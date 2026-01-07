@@ -324,11 +324,12 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput,
     return { overview: 'No changes to review.', specificReviews: [] }
   }
 
-  const finalChangeInfo = changeInfo
-
   // Detect if we're reviewing a specific commit (not HEAD)
   const targetCommit = extractTargetCommit(range, pr)
   const isReviewingCommit = targetCommit !== null
+
+  // Add targetCommit to changeInfo if present
+  const finalChangeInfo = targetCommit ? { ...changeInfo, targetCommit } : changeInfo
 
   // If reviewing a specific commit, use git-aware tools
   // Otherwise, use regular filesystem tools
@@ -336,7 +337,7 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput,
 
   // Remove searchFiles and gitDiff when reviewing commits as they don't work with git history
   // gitDiff shows local/staged changes which are irrelevant when reviewing a past commit
-  // The commit's diff is already provided in the review context
+  // Use git-aware file tools instead to read files at the specific commit
   const reviewTools = isReviewingCommit
     ? [fileTools.readFile, fileTools.readBinaryFile, fileTools.listFiles]
     : [readFile, readBinaryFile, searchFiles, listFiles, gitDiff]

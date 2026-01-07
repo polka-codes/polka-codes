@@ -11,17 +11,19 @@ ${TOOL_USAGE_INSTRUCTION}
 2.  **Select Files for Diff**: From the modified files, select only the reviewable source and configuration files.
     -   **Include**: Source code, config files, and template files.
     -   **Exclude**: Lockfiles, build artifacts, test snapshots, binary/media files, data and fixtures and other generated files.
-3.  **Inspect Changes**: Use the \`gitDiff\` tool on one file at a time to see the exact changes. When reviewing pull requests, use the \`commitRange\` parameter provided in the review instructions.
-4.  **Analyze and Review**: Analyze only the modified lines (additions/deletions) for issues. Provide specific, actionable feedback with accurate line numbers.
+3.  **Inspect Changes**:
+    -   When the \`gitDiff\` tool is available: Use it on one file at a time to see the exact changes. When reviewing pull requests, use the \`commitRange\` parameter provided in the review instructions.
+    -   When the \`gitDiff\` tool is NOT available (reviewing past commits): Use \`readFile\` to inspect the file contents. You will not have access to the exact diff, so focus on reviewing the code for issues in the modified files listed in \`<file_status>\`.
+4.  **Analyze and Review**: Analyze the code for issues. When using \`gitDiff\`, focus only on the modified lines (additions/deletions). Provide specific, actionable feedback with accurate line numbers.
 
 ## Critical Rules
 
--   **Focus on Changes**: ONLY review the actual changes shown in the diff. Do not comment on existing, unmodified code.
+-   **Focus on Changes**: When using \`gitDiff\`, ONLY review the actual changes shown in the diff. Do not comment on existing, unmodified code. When \`gitDiff\` is not available, focus on the modified files listed in \`<file_status>\`.
 -   **Focus Scope**: Do not comment on overall project structure or architecture unless directly impacted by the changes in the diff.
 -   **No Feature Requests**: Do not comment on missing features or functionality that are not part of this diff.
--   **One File at a Time**: Review files individually using \`gitDiff\` with the specific file path.
--   **No Empty Diffs**: MUST NOT call \`gitDiff\` with an empty or omitted file parameter.
--   **Accurate Line Numbers**: Use the line numbers from the diff annotations (\`[Line N]\` for additions, \`[Line N removed]\` for deletions).
+-   **One File at a Time**: Review files individually using \`gitDiff\` (when available) with the specific file path, or \`readFile\` when reviewing past commits.
+-   **No Empty Diffs**: MUST NOT call \`gitDiff\` with an empty or omitted file parameter when the tool is available.
+-   **Accurate Line Numbers**: When using \`gitDiff\`, use the line numbers from the diff annotations (\`[Line N]\` for additions, \`[Line N removed]\` for deletions). When \`gitDiff\` is not available, use line numbers from \`readFile\` output.
 -   **No Praise**: Provide only reviews for actual issues found. Do not include praise or positive feedback.
 -   **Clear Reasoning**: For each issue, provide clear reasoning explaining why it's a problem and what the impact could be.
 -   **Specific Advice**: Avoid generic advice. Provide concrete, actionable suggestions specific to the code being reviewed.
@@ -33,6 +35,7 @@ You may receive the following context:
 -   \`<user_context>\`: Specific review focus from the user
 -   \`<file_status>\`: List of modified files with their status
 -   \`<review_instructions>\`: Specific instructions for this review
+-   \`<target_commit>\`: The specific commit being reviewed (when reviewing past commits)
 
 ## Output Format
 
@@ -95,6 +98,7 @@ export type ReviewToolInput = {
   pullRequestDescription?: string
   commitMessages?: string
   commitRange?: string
+  targetCommit?: string
   staged?: boolean
   changedFiles?: { path: string; status: string; insertions?: number; deletions?: number }[]
   context?: string
@@ -108,6 +112,9 @@ function formatContext(tag: string, value: string | undefined): string | undefin
 }
 
 function getReviewInstructions(params: ReviewToolInput): string {
+  if (params.targetCommit) {
+    return `Review the changes in commit '${params.targetCommit}'. The gitDiff tool is NOT available for past commits. Use readFile to inspect the file contents and identify issues in the modified files listed in <file_status>.`
+  }
   if (params.commitRange) {
     return `Review the pull request. Use the gitDiff tool with commit range '${params.commitRange}' to inspect the actual code changes.`
   }
@@ -137,6 +144,7 @@ export function formatReviewToolInput(params: ReviewToolInput): string {
     formatContext('pr_title', params.pullRequestTitle),
     formatContext('pr_description', params.pullRequestDescription),
     formatContext('commit_messages', params.commitMessages),
+    formatContext('target_commit', params.targetCommit),
     formatContext('user_context', params.context),
     formatContext('file_status', fileList),
     formatContext('review_instructions', getReviewInstructions(params)),
