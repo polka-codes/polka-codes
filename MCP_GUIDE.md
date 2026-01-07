@@ -145,8 +145,7 @@ The MCP server exposes high-level polka-codes workflows:
 2. **review** - Review code changes
 3. **plan** - Create implementation plans
 4. **fix** - Fix bugs and issues
-5. **epic** - Break down and implement large features
-6. **commit** - Create git commits with AI
+5. **commit** - Create git commits with AI
 
 ### Documentation
 

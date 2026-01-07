@@ -92,7 +92,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
   }
   const model = getModel(commandConfig)
 
-  const excludeFiles = ['.epic.yml', ...(config.excludeFiles ?? [])]
+  const excludeFiles = [...(config.excludeFiles ?? [])]
 
   const toolProvider = (options.getProvider ?? getProvider)({
     excludeFiles,

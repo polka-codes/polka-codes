@@ -273,7 +273,6 @@ describe('SDK-based McpServer', () => {
       expect(toolNames).toContain('review')
       expect(toolNames).toContain('plan')
       expect(toolNames).toContain('fix')
-      expect(toolNames).toContain('epic')
       expect(toolNames).toContain('commit')
     })
   })

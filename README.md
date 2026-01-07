@@ -10,11 +10,10 @@
 > **Note**
 > This project is under active development. APIs and features may evolve, but we strive to maintain backward compatibility when possible.
 
-Polka Codes is a powerful TypeScript-based AI coding assistant framework that helps developers with epic decomposition, task planning, code generation, and more. It uses natural language interactions, a multi-agent system, a command-line interface, and seamless GitHub integration to streamline your development workflow.
+Polka Codes is a powerful TypeScript-based AI coding assistant framework that helps developers with task planning, code generation, and more. It uses natural language interactions, a multi-agent system, a command-line interface, and seamless GitHub integration to streamline your development workflow.
 
 ## ✨ Features
 
-- ✨ **Epic Decomposition**: Break down large features into smaller, manageable tasks with the `epic` command
 - 📝 **Task Planning**: Create detailed implementation plans for your tasks using the `plan` command
 - 💻 **Code Generation**: Implement features from a plan or a simple description with the `code` command
 - 🐛 **Automated Debugging**: Automatically fix failing tests or commands with the `fix` command
@@ -49,22 +48,19 @@ npx @polka-codes/cli "your task description"
 Here's an example of a typical development workflow using Polka Codes:
 
 ```bash
-# 1. Break down a large feature into tasks
-polka epic "Implement user authentication"
-
-# 2. Create a detailed implementation plan for a task
+# 1. Create a detailed implementation plan for a task
 polka plan --plan-file auth.plan.md "Implement JWT-based auth"
 
-# 3. Implement the feature based on the plan
+# 2. Implement the feature based on the plan
 polka code --file auth.plan.md
 
-# 4. Fix any issues that arise (e.g., failing tests)
+# 3. Fix any issues that arise (e.g., failing tests)
 polka fix "bun test"
 
-# 5. Commit your changes with an AI-generated message
+# 4. Commit your changes with an AI-generated message
 polka commit -a
 
-# 6. Create a pull request
+# 5. Create a pull request
 polka pr
 ```
 
@@ -159,7 +155,7 @@ polka run deploy
 # Run with arguments
 polka run deploy -- --production --force
 
-# Quick execution (when no epic context)
+# Quick execution - runs script directly
 polka test  # Runs the 'test' script
 ```
 
@@ -322,7 +318,6 @@ The server exposes these workflow tools:
 - `review`: Review code changes
 - `plan`: Create implementation plans
 - `fix`: Fix failing tests or commands
-- `epic`: Decompose large features into tasks
 - `commit`: Generate commit messages
 
 **Configuration with Claude Code:**

@@ -4,7 +4,7 @@ This file provides guidance to AI agents when working with code in this reposito
 
 ## Overview
 
-Polka Codes is an AI-powered coding assistant framework built with TypeScript and Bun. It provides a CLI tool that helps developers with epic decomposition, task planning, code generation, debugging, and git workflows through natural language interactions and a multi-agent system.
+Polka Codes is an AI-powered coding assistant framework built with TypeScript and Bun. It provides a CLI tool that helps developers with task planning, code generation, debugging, and git workflows through natural language interactions and a multi-agent system.
 
 ## Development Commands
 
@@ -78,8 +78,8 @@ The workflow system is the foundation of how tasks are orchestrated:
 - Safe code execution with `allowUnsafeCodeExecution` option
 
 **CLI Workflow Implementations** (`packages/cli/src/workflows/`):
-- Each CLI command maps to a workflow (e.g., `epic.workflow.ts`, `code.workflow.ts`)
-- Workflows compose together (e.g., `epic` → `plan` → `code` → `fix` → `commit`)
+- Each CLI command maps to a workflow (e.g., `plan.workflow.ts`, `code.workflow.ts`)
+- Workflows compose together (e.g., `plan` → `code` → `fix` → `commit`)
 - `runWorkflow()` in `packages/cli/src/runWorkflow.ts` orchestrates workflow execution with provider setup
 
 ### Tool System
@@ -177,7 +177,7 @@ When generating React components:
 
 **Agent Organization**:
 - Agents are implemented as specialized workflows that use `agentWorkflow`
-- Each command (epic, plan, code, fix, review) has its own agent with specific tools and prompts
+- Each command (plan, code, fix, review) has its own agent with specific tools and prompts
 - Agents collaborate by calling each other as workflow steps
 
 **Agent Execution Pattern**:
@@ -188,8 +188,7 @@ When generating React components:
 5. Agent returns structured output (often with Zod schema validation)
 
 **Key Agents**:
-- **Epic/Planner**: Breaks down large features into tasks (`epic.workflow.ts`)
-- **Code Planner**: Creates implementation plans (`plan.workflow.ts`)
+- **Planner**: Creates implementation plans (`plan.workflow.ts`)
 - **Coder**: Implements code from plans (`code.workflow.ts`)
 - **Fixer**: Debugs and fixes failing tests/commands (`fix.workflow.ts`)
 - **Reviewer**: Provides code review feedback (`review.workflow.ts`)

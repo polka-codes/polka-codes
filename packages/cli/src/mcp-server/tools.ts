@@ -2,7 +2,7 @@
 
 import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import type { Logger, ToolRegistry, WorkflowFn } from '@polka-codes/core'
+import type { Logger, WorkflowFn } from '@polka-codes/core'
 import { z } from 'zod'
 import { commit } from '../api'
 import { runWorkflow } from '../runWorkflow'
@@ -96,79 +96,6 @@ async function executeWorkflow<TInput>(
     logger.error(`Error executing ${commandName} workflow:`, error)
     return `Error: ${error instanceof Error ? error.message : String(error)}`
   }
-}
-
-/**
- * Detailed descriptions for each tool in the CliToolRegistry
- */
-const TOOL_DESCRIPTIONS: Record<string, string> = {
-  // Agent tools
-  runAgent: 'Execute an AI agent workflow with the specified parameters. Returns the exit reason and any results.',
-  generateText: 'Generate text using AI model with optional tools and structured output.',
-  taskEvent: 'Emit a task event for progress tracking and orchestration.',
-  invokeTool: 'Invoke a specific tool by name with the provided input arguments.',
-
-  // Git & repository tools
-  createPullRequest: 'Create a new pull request with the specified title and description.',
-  createCommit: 'Create a git commit with the specified commit message.',
-  printChangeFile: 'Display staged and unstaged file changes in the repository.',
-
-  // User interaction tools
-  confirm: 'Prompt user for yes/no confirmation with optional default value.',
-  input: 'Prompt user for text input with optional default value.',
-  select: 'Present user with a selection menu and return the chosen value.',
-
-  // File system tools
-  writeToFile: 'Write content to a file at the specified path. Creates parent directories if needed.',
-  readFile: 'Read and return the contents of a file at the specified path.',
-  listFiles: 'List files and directories in the specified path with optional recursion.',
-  searchFiles: 'Search for files matching a pattern or containing specific content.',
-  replaceInFile: 'Replace text patterns in a file using regex or string replacement.',
-  removeFile: 'Delete a file at the specified path.',
-  renameFile: 'Move or rename a file from source to destination path.',
-  readBinaryFile: 'Read binary file contents and return as base64 encoded data.',
-
-  // Command execution
-  executeCommand: 'Execute a shell command with arguments and return exit code, stdout, and stderr.',
-
-  // Memory & context tools
-  getMemoryContext: 'Retrieve the current memory context as a formatted string.',
-  readMemory: 'Read stored memory entries for a specific topic or all topics.',
-  listMemoryTopics: 'List all available memory topics.',
-  updateMemory: 'Update memory by appending, replacing, or removing entries for a topic.',
-
-  // Todo management
-  listTodoItems: 'List todo items with optional filtering by ID or status.',
-  getTodoItem: 'Get details of a specific todo item by ID.',
-  updateTodoItem: 'Update a todo item (mark as complete/incomplete, change title, etc.).',
-
-  // Network tools
-  fetchUrl: 'Make HTTP request to a URL and return the response content.',
-  search: 'Perform web search using the search API and return results.',
-}
-
-/**
- * Convert polka-codes tools to MCP server tools with detailed descriptions
- */
-export function createMcpServerTools(tools: ToolRegistry): McpServerTool[] {
-  const mcpTools: McpServerTool[] = []
-
-  for (const [name] of Object.entries(tools)) {
-    const description = TOOL_DESCRIPTIONS[name] || `Execute the ${name} tool with provided arguments.`
-
-    mcpTools.push({
-      name,
-      description,
-      inputSchema: z.object({}).optional(),
-      handler: async (args: Record<string, unknown>) => {
-        // This will be called when the tool is invoked via MCP
-        // We'll need to integrate with the actual tool execution
-        return JSON.stringify({ result: `Tool ${name} called with args: ${JSON.stringify(args)}` }, null, 2)
-      },
-    })
-  }
-
-  return mcpTools
 }
 
 /**

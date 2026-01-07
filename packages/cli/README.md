@@ -66,21 +66,6 @@ polka plan --plan-file auth-plan.md "Update auth system"
 - Saves to markdown files for review
 - Can update existing plans
 
-#### `epic`
-
-Orchestrate a large feature or epic, breaking it down into smaller tasks and executing them sequentially.
-
-```bash
-polka epic "Build a complete e-commerce platform"
-polka epic --no-review "Quick prototype"  # Skip review step
-```
-
-**Features:**
-- Breaks large features into manageable tasks
-- Maintains context across tasks
-- Persistent todo list
-- Optional review step
-
 #### `fix`
 
 Automatically fix failing tests or commands by running them and letting AI fix errors.
