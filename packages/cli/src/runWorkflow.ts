@@ -87,9 +87,12 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
   const onEvent = printEvent(verbose, usage, process.stderr)
 
   const commandConfig = providerConfig.getConfigForCommand(commandName)
-  if (!commandConfig) {
-    throw new Error(`No provider configured for command: ${commandName}`)
+  if (!commandConfig || !commandConfig.provider || !commandConfig.model) {
+    const error = new Error(`No provider configured for command: ${commandName}. Please run "polka init" to configure your AI provider.`)
+    logger.error(`Error: ${error.message}`)
+    throw error
   }
+
   const model = getModel(commandConfig)
 
   const excludeFiles = [...(config.excludeFiles ?? [])]
