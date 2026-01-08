@@ -57,8 +57,8 @@ export function extractTargetCommit(range?: string, pr?: number): string | null 
     return null
   }
 
-  // No range means local changes, use working directory
-  if (!range) {
+  // No range or empty range means local changes, use working directory
+  if (!range || range.trim() === '') {
     return null
   }
 
@@ -72,7 +72,8 @@ export function extractTargetCommit(range?: string, pr?: number): string | null 
   }
 
   // Single commit reference
-  return range.trim() || null
+  const trimmed = range.trim()
+  return trimmed || null
 }
 
 /**
