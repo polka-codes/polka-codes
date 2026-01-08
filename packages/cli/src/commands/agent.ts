@@ -147,6 +147,9 @@ export async function runAgent(goal: string | undefined, options: any, _command:
     },
   } as WorkflowTools<AgentToolsRegistry>
 
+  // Available tools in agent context
+  const AVAILABLE_TOOLS = Object.keys(tools).join(', ')
+
   // Add runtime guard to catch attempts to use unavailable tools
   const toolsWithGuard = new Proxy(tools, {
     get(_target, prop: string) {
@@ -155,7 +158,7 @@ export async function runAgent(goal: string | undefined, options: any, _command:
       }
       throw new Error(
         `Tool "${prop}" is not available in agent context. ` +
-          `Available tools: executeCommand, readFile. ` +
+          `Available tools: ${AVAILABLE_TOOLS}. ` +
           `See packages/cli/src/commands/agent.ts for details on how to enable full tool support.`,
       )
     },

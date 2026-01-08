@@ -30,8 +30,9 @@ export async function runWorkflowCommand(task: string | undefined, _options: any
   let content: string
   try {
     content = await readFile(file, 'utf-8')
-  } catch (e) {
-    logger.error(`Error reading file '${file}': ${e}`)
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    logger.error(`Error reading file '${file}': ${errorMessage}`)
     return
   }
 
