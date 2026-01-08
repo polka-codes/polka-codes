@@ -5,6 +5,46 @@ import type { CommandProvider } from '@polka-codes/core/src/tools/provider'
 import { z } from 'zod'
 import { quoteForShell } from '../utils/shell'
 
+function getMediaType(path: string): string {
+  // Use lastIndexOf to handle paths with dots, and basename to handle dotfiles correctly
+  const lastDotIndex = path.lastIndexOf('.')
+  const ext = lastDotIndex > 0 && lastDotIndex < path.length - 1 ? path.slice(lastDotIndex + 1).toLowerCase() : undefined
+
+  const mediaTypes: Record<string, string> = {
+    // Images
+    png: 'image/png',
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    gif: 'image/gif',
+    svg: 'image/svg+xml',
+    webp: 'image/webp',
+    ico: 'image/x-icon',
+    bmp: 'image/bmp',
+
+    // Fonts
+    woff: 'font/woff',
+    woff2: 'font/woff2',
+    ttf: 'font/ttf',
+    otf: 'font/otf',
+    eot: 'application/vnd.ms-fontobject',
+
+    // Documents
+    pdf: 'application/pdf',
+
+    // Audio
+    mp3: 'audio/mpeg',
+    wav: 'audio/wav',
+    ogg: 'audio/ogg',
+
+    // Video
+    mp4: 'video/mp4',
+    webm: 'video/webm',
+    avi: 'video/x-msvideo',
+  }
+
+  return mediaTypes[ext || ''] || 'application/octet-stream'
+}
+
 /**
  * Helper to extract the target commit from a git range
  * For ranges like "A..B", "A...B", or "HEAD~3..HEAD", returns B
@@ -250,6 +290,7 @@ export function createGitReadBinaryFile(commit: string): FullToolInfo {
               type: 'media',
               url,
               data: base64Data,
+              mediaType: getMediaType(url),
             },
           ],
         },
