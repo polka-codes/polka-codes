@@ -1,0 +1,301 @@
+# Worker Workflow
+# Executes tasks from a plan file until completion
+#
+# Usage:
+#   polka workflow -f examples/worker.yml "planFile:plans/active/feature.md"
+
+workflows:
+  main:
+    task: "Execute all tasks from a plan file"
+
+    inputs:
+      - id: "planFile"
+        description: "Path to the plan markdown file"
+        required: true
+
+      - id: "autoCommit"
+        description: "Automatically commit completed tasks"
+        default: true
+
+    steps:
+      # Step 1: Read and parse the plan
+      - id: "read-plan"
+        task: |
+          Read the plan file: {{ planFile }}
+
+          Parse and extract:
+          - Plan title
+          - All tasks with their status
+          - Task dependencies
+          - Acceptance criteria
+          - Priority levels
+        tools: ["readFile"]
+        output: "plan"
+        expected_outcome: "Plan loaded and parsed"
+
+      # Step 2: Validate plan structure
+      - id: "validate"
+        task: |
+          Validate the plan has:
+          - At least one task
+          - Proper markdown format
+          - Task status markers ( [ ] or [x] )
+          - No circular dependencies
+        tools: []
+        input: {
+          "plan": "{{ plan }}"
+        }
+        output: "validation"
+        expected_outcome: "Plan is valid"
+
+      # Step 3: Main execution loop
+      - id: "execution-loop"
+        while:
+          condition: "plan.hasIncompleteTasks"
+          steps:
+            # Step 3a: Find next executable task
+            - id: "find-next-task"
+              task: |
+                Find the next task that can be executed:
+
+                Requirements:
+                - Status is TODO ( [ ] )
+                - All dependency tasks are COMPLETED
+                - Highest priority available
+
+                Search order:
+                1. Critical priority
+                2. High priority
+                3. Medium priority
+                4. Low priority
+              tools: ["readFile"]
+              input: {
+                "plan": "{{ plan }}",
+                "planFile": "{{ planFile }}"
+              }
+              output: "nextTask"
+              expected_outcome: "Next task to execute or null"
+
+            # Step 3b: Check if we found a task
+            - id: "check-task"
+              if:
+                condition: "nextTask === null"
+                thenBranch:
+                  # No executable task found
+                  - id: "no-task"
+                    task: |
+                      No executable tasks found.
+
+                      This could mean:
+                      1. All tasks are completed ✅
+                      2. Tasks are blocked (dependencies not met)
+                      3. Circular dependency detected
+
+                      Current plan status:
+                      {{ plan.statusSummary }}
+
+                      Exiting execution loop.
+                    tools: ["executeCommand"]
+                    expected_outcome: "Status logged"
+
+                  # Exit the while loop
+                  - id: "break-loop"
+                    break: true
+
+                elseBranch:
+                  # We have a task - execute it!
+                  - id: "log-task-start"
+                    task: |
+                      ============================================================
+                      📋 Task: {{ nextTask.title }}
+                      Priority: {{ nextTask.priority }}
+                      Dependencies: {{ nextTask.dependencies || 'None' }}
+                      ============================================================
+
+                      Description:
+                      {{ nextTask.description }}
+                    tools: ["executeCommand"]
+                    expected_outcome: "Task logged"
+
+                  # Step 3c: Mark task as IN_PROGRESS
+                  - id: "mark-in-progress"
+                    task: |
+                      Update plan file to mark task as IN_PROGRESS:
+
+                      Task: {{ nextTask.title }}
+                      Status: TODO → IN_PROGRESS
+                    tools: ["readFile", "writeFile"]
+                    input: {
+                      "planFile": "{{ planFile }}",
+                      "taskId": "{{ nextTask.id }}",
+                      "newStatus": "IN_PROGRESS"
+                    }
+                    output: "plan"
+                    expected_outcome: "Task marked as IN_PROGRESS"
+
+                  # Step 3d: Execute the task
+                  - id: "execute-task"
+                    task: |
+                      Execute the task using AI code generation:
+
+                      {{ nextTask.title }}
+
+                      {{ nextTask.description }}
+
+                      Use appropriate tools:
+                      - Read files to understand context
+                      - Search for relevant code
+                      - Generate implementation
+                      - Write new/modified files
+                      - Run tests/verification
+                    tools: ["executeCommand", "readFile", "writeFile", "searchFiles"]
+                    input: {
+                      "task": "{{ nextTask }}"
+                    }
+                    output: "result"
+                    expected_outcome: "Task completed successfully"
+
+                  # Step 3e: Verify completion
+                  - id: "verify-task"
+                    task: |
+                      Verify the task meets acceptance criteria:
+
+                      {{ nextTask.acceptanceCriteria }}
+
+                      Verification steps:
+                      1. Check code compiles
+                      2. Run tests if applicable
+                      3. Verify requirements met
+                      4. Check for regressions
+                    tools: ["executeCommand"]
+                    input: {
+                      "criteria": "{{ nextTask.acceptanceCriteria }}"
+                    }
+                    output: "verification"
+                    expected_outcome: "Task verified"
+
+                  # Step 3f: Handle verification result
+                  - id: "handle-verification"
+                    if:
+                      condition: "verification.passed"
+                      thenBranch:
+                        # Task passed verification
+                        - id: "log-success"
+                          task: |
+                            ✅ Task completed successfully: {{ nextTask.title }}
+
+                            Summary:
+                            {{ result.summary }}
+                          tools: ["executeCommand"]
+                          expected_outcome: "Success logged"
+
+                        - id: "mark-completed"
+                          task: |
+                            Mark task as COMPLETED in plan file:
+
+                            Task: {{ nextTask.title }}
+                            Status: IN_PROGRESS → COMPLETED
+                          tools: ["readFile", "writeFile"]
+                          input: {
+                            "planFile": "{{ planFile }}",
+                            "taskId": "{{ nextTask.id }}",
+                            "newStatus": "COMPLETED",
+                            "result": "{{ result }}"
+                          }
+                          output: "plan"
+
+                        # Optional: Auto-commit work
+                        - id: "commit-work"
+                          if:
+                            condition: "{{ autoCommit }}"
+                            thenBranch:
+                              - id: "do-commit"
+                                task: |
+                                  Commit the completed work with AI-generated message:
+
+                                  Task: {{ nextTask.title }}
+                                  {{ result.summary }}
+                                tools: ["executeCommand"]
+                                expected_outcome: "Work committed"
+
+                      elseBranch:
+                        # Task failed verification
+                        - id: "log-failure"
+                          task: |
+                            ❌ Task verification failed: {{ nextTask.title }}
+
+                            Reasons:
+                            {{ verification.reasons }}
+
+                            Stopping execution. Please fix the issues
+                            and re-run the worker.
+                          tools: ["executeCommand"]
+                          expected_outcome: "Failure logged"
+
+                        - id: "mark-failed"
+                          task: |
+                            Mark task as FAILED in plan file:
+
+                            Task: {{ nextTask.title }}
+                            Status: IN_PROGRESS → FAILED
+
+                            Failure reasons:
+                            {{ verification.reasons }}
+                          tools: ["readFile", "writeFile"]
+                          input: {
+                            "planFile": "{{ planFile }}",
+                            "taskId": "{{ nextTask.id }}",
+                            "newStatus": "FAILED"
+                          }
+                          output: "plan"
+
+                        # Stop execution on failure
+                        - id: "stop-on-failure"
+                          task: "Task failed - stopping worker execution"
+                          tools: ["executeCommand"]
+                          expected_outcome: "Stopping execution"
+
+                        - id: "break-on-failure"
+                          break: true
+
+      # Step 4: All tasks complete
+      - id: "complete-plan"
+        task: |
+          All tasks in the plan have been completed! 🎉
+
+          Plan: {{ plan.title }}
+          File: {{ planFile }}
+
+          Moving plan from plans/active/ to plans/completed/
+        tools: ["executeCommand", "readFile", "writeFile"]
+        input: {
+          "planFile": "{{ planFile }}"
+        }
+        output: "completedPath"
+        expected_outcome: "Plan moved to completed directory"
+
+      # Step 5: Generate final summary
+      - id: "final-summary"
+        task: |
+          Generate final execution summary:
+
+          ✅ Plan Execution Complete
+
+          Plan: {{ plan.title }}
+          File: {{ completedPath }}
+
+          Statistics:
+          - Total tasks: {{ plan.totalTasks }}
+          - Completed: {{ plan.completedTasks }}
+          - Failed: {{ plan.failedTasks }}
+          - Duration: {{ plan.duration }}
+
+          Files modified:
+          {{ plan.filesChanged }}
+
+          Next steps:
+          1. Review the completed plan
+          2. Test the implementation
+          3. Deploy if ready
+        tools: ["executeCommand", "readFile"]
+        expected_outcome: "Summary report generated"

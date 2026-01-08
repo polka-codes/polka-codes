@@ -1,0 +1,141 @@
+# Planner Workflow
+# Creates implementation plans from user goals
+#
+# Usage:
+#   polka workflow -f examples/planner.yml "goal: Add user authentication"
+
+workflows:
+  main:
+    task: "Create implementation plan from user goal"
+
+    inputs:
+      - id: "goal"
+        description: "High-level feature or goal to implement"
+        required: true
+
+      - id: "planName"
+        description: "Name for the plan file (without extension)"
+        default: "feature"
+
+      - id: "priority"
+        description: "Default priority for tasks"
+        default: "High"
+
+    steps:
+      # Step 1: Analyze the goal
+      - id: "analyze-goal"
+        task: |
+          Analyze the goal and understand what needs to be done:
+
+          Goal: {{ goal }}
+
+          Consider:
+          - What are the main components?
+          - What are the dependencies?
+          - What is the logical order of tasks?
+          - What are the acceptance criteria?
+
+          Examine the codebase to understand:
+          - Current architecture
+          - Existing patterns
+          - Relevant files and directories
+        tools: ["listFiles", "searchFiles", "readFile"]
+        output: "analysis"
+        expected_outcome: "Goal analyzed and broken down"
+
+      # Step 2: Create task list
+      - id: "create-tasks"
+        task: |
+          Create a structured task list from the analysis:
+
+          For each task, define:
+          1. Title (clear and specific)
+          2. Description (what needs to be done)
+          3. Dependencies (what must come first)
+          4. Priority ({{ priority }})
+          5. Acceptance criteria (how to verify completion)
+
+          Order tasks by dependencies so earlier tasks
+          are listed before later tasks.
+        tools: []
+        input: {
+          "analysis": "{{ analysis }}",
+          "goal": "{{ goal }}"
+        }
+        output: "tasks"
+        expected_outcome: "Structured task list with dependencies"
+
+      # Step 3: Generate plan markdown
+      - id: "generate-markdown"
+        task: |
+          Generate a markdown plan file with this structure:
+
+          # {{ goal }}
+
+          **Created:** {{ tasks.date }}
+          **Status:** TODO
+          **Priority:** {{ priority }}
+
+          ## Overview
+          [Brief description of what this feature does]
+
+          ## Tasks
+
+          [List of tasks with checkboxes]
+
+          ## Dependencies
+          [Task dependency graph]
+
+          ## Notes
+          [Any additional context or notes]
+
+          Each task should have:
+          - Title
+          - Description
+          - Dependencies (if any)
+          - Acceptance criteria (checklist)
+          - Priority level
+        tools: []
+        input: {
+          "tasks": "{{ tasks }}",
+          "goal": "{{ goal }}"
+        }
+        output: "markdown"
+        expected_outcome: "Complete plan markdown content"
+
+      # Step 4: Write plan file
+      - id: "write-plan"
+        task: |
+          Write the plan to: plans/active/{{ planName }}.md
+
+          The plan file will be picked up by the worker workflow
+          for execution.
+        tools: ["writeFile"]
+        input: {
+          "path": "plans/active/{{ planName }}.md",
+          "content": "{{ markdown }}"
+        }
+        output: "planPath"
+        expected_outcome: "Plan file created successfully"
+
+      # Step 5: Log success
+      - id: "log-success"
+        task: |
+          ✅ Plan created successfully!
+
+          Location: {{ planPath }}
+
+          Plan contains {{ tasks.count }} tasks:
+          {{ tasks.summary }}
+
+          Next steps:
+          1. Review the plan:
+             cat {{ planPath }}
+
+          2. Execute the plan:
+             polka workflow -f examples/worker.yml "planFile:{{ planPath }}"
+
+          3. Monitor progress:
+             tail -f {{ planPath }}
+        tools: ["executeCommand"]
+        expected_outcome: "Success message with next steps"
