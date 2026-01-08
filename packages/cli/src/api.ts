@@ -20,6 +20,7 @@ import type { UsageMeter } from '@polka-codes/core'
 import { createLogger } from './logger'
 import type { ExecutionContext } from './runWorkflow'
 import { runWorkflow } from './runWorkflow'
+import type { ScriptContext } from './script/runner'
 import {
   type CodeWorkflowInput,
   codeWorkflow,
@@ -464,3 +465,8 @@ export async function plan(options: PlanOptions = {}): Promise<PlanWorkflowOutpu
     onUsageMeterCreated: onUsage,
   })
 }
+
+/**
+ * Export ScriptContext for use in user scripts
+ */
+export type { ScriptContext }
