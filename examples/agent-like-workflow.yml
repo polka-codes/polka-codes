@@ -1,0 +1,200 @@
+# Agent-Like Workflow Example
+# This demonstrates how to use workflows with --continuous to achieve
+# agent-like behavior for common use cases
+#
+# Usage:
+#   polka workflow -f examples/agent-like-workflow.yml --continuous
+
+workflows:
+  # Continuous improvement workflow - agent-like behavior
+  continuous-improvement:
+    task: "Continuously improve codebase quality"
+
+    inputs:
+      - id: "focus-area"
+        description: "Area to focus on"
+        default: "all"
+
+      - id: "state-file"
+        description: "File to persist state between iterations"
+        default: ".workflow-state.json"
+
+    steps:
+      # STEP 1: Load previous state (simulates state persistence)
+      - id: "load-state"
+        task: |
+          Load workflow state from previous iteration to maintain context.
+          Read from {{ state-file }} if it exists, otherwise initialize empty state.
+        tools: ["readFile"]
+        output: "previousState"
+        expected_outcome: "State loaded or initialized"
+
+      # STEP 2: Discover issues (simulates task discovery)
+      - id: "discover-issues"
+        task: |
+          Discover issues in the codebase based on focus area:
+          {{ focus-area }}.
+
+          Run commands to find:
+          - Build errors: bun run build
+          - Test failures: bun test
+          - Type errors: bun run typecheck
+          - Lint issues: bun run lint
+
+          Collect all issues found and categorize by severity.
+        tools: ["executeCommand", "readFile"]
+        output: "issues"
+        expected_outcome: "List of discovered issues"
+
+      # STEP 3: Check if we should continue (simulates agent decision-making)
+      - id: "check-continuation"
+        if:
+          condition: "issues && issues.count > 0"
+          thenBranch:
+            # STEP 4a: Pick next task (simulates task prioritization)
+            - id: "pick-task"
+              task: |
+                Pick the highest priority issue to fix from the discovered issues.
+                Consider:
+                - Severity (critical > major > minor)
+                - Previous failures (avoid repeating failed tasks)
+                - Dependencies (fix prerequisites first)
+
+                Update state to track current task.
+              tools: ["readFile", "writeFile"]
+              output: "currentTask"
+              expected_outcome: "Selected task with priority"
+
+            # STEP 5a: Execute task (simulates agent execution)
+            - id: "execute-task"
+              task: |
+                Fix the selected issue using AI code generation.
+                Use the code workflow to:
+                1. Analyze the issue
+                2. Generate a fix
+                3. Apply the fix
+                4. Verify the fix works
+              tools: ["executeCommand", "readFile", "writeFile", "searchFiles", "runWorkflow"]
+              expected_outcome: "Issue fixed and verified"
+
+            # STEP 6a: Update state (simulates state persistence)
+            - id: "update-state-success"
+              task: |
+                Update workflow state:
+                - Mark current task as completed
+                - Update issue count
+                - Record success metrics
+                - Save to {{ state-file }}
+              tools: ["writeFile", "executeCommand"]
+              output: "updatedState"
+              expected_outcome: "State saved successfully"
+
+          elseBranch:
+            # STEP 4b: No issues found
+            - id: "no-issues"
+              task: |
+                No issues discovered in this iteration.
+                Codebase is healthy!
+
+                Log this iteration and prepare to sleep.
+              tools: ["executeCommand"]
+              output: "status"
+              expected_outcome: "Healthy status logged"
+
+      # STEP 7: Generate summary (simulates agent reporting)
+      - id: "summary"
+        task: |
+          Generate iteration summary:
+          - Issues found: {{ issues.count }}
+          - Tasks completed: {{ updatedState.tasksCompleted }}
+          - Success rate: {{ updatedState.successRate }}%
+          - Next focus: {{ updatedState.nextFocus }}
+
+          Log summary and prepare for next iteration.
+        tools: ["executeCommand", "readFile", "writeFile"]
+        output: "iterationSummary"
+        expected_outcome: "Summary logged and saved"
+
+  # Task executor workflow - for executing specific plans
+  execute-plan:
+    task: "Execute tasks from a plan file"
+
+    inputs:
+      - id: "plan-file"
+        description: "Path to plan markdown file"
+        default: "plans/active/my-plan.md"
+
+    steps:
+      # STEP 1: Read plan
+      - id: "read-plan"
+        task: |
+          Read and parse the plan file at {{ plan-file }}.
+          Extract all tasks from the plan, including:
+          - Task descriptions
+          - Task status (todo/in-progress/completed)
+          - Task dependencies
+          - Task assignments
+        tools: ["readFile"]
+        output: "plan"
+        expected_outcome: "Plan parsed into task list"
+
+      # STEP 2: Filter incomplete tasks
+      - id: "filter-tasks"
+        task: |
+          Filter the plan to find incomplete tasks.
+          Exclude tasks marked as completed.
+          Respect task dependencies (only pick tasks with all prerequisites done).
+        tools: []
+        output: "incompleteTasks"
+        expected_outcome: "List of tasks ready to execute"
+
+      # STEP 3: Execute tasks in loop
+      - id: "execute-tasks-loop"
+        while:
+          condition: "incompleteTasks && incompleteTasks.length > 0"
+          steps:
+            - id: "pick-next-task"
+              task: |
+                Pick the next task from incomplete tasks.
+                Prefer:
+                - Tasks marked as in-progress
+                - Tasks with no incomplete dependencies
+                - Higher priority tasks
+              tools: ["readFile"]
+              output: "nextTask"
+              expected_outcome: "Selected task"
+
+            - id: "execute-task"
+              task: |
+                Execute the selected task:
+                {{ nextTask.description }}
+
+                Use appropriate workflow (code, fix, etc.) based on task type.
+              tools: ["executeCommand", "readFile", "writeFile", "searchFiles", "runWorkflow"]
+              expected_outcome: "Task completed successfully"
+
+            - id: "update-plan"
+              task: |
+                Update the plan file to mark the task as completed.
+                Update task status in {{ plan-file }}.
+              tools: ["readFile", "writeFile"]
+              output: "updatedPlan"
+              expected_outcome: "Plan file updated"
+
+            - id: "update-task-list"
+              task: |
+                Remove completed task from incomplete tasks list.
+                Update loop state for next iteration.
+              tools: []
+              output: "incompleteTasks"
+              expected_outcome: "Task list updated"
+
+      # STEP 4: Final summary
+      - id: "final-summary"
+        task: |
+          All tasks from the plan have been executed!
+          Generate final summary and mark plan as completed.
+          Move plan from active/ to completed/ if desired.
+        tools: ["executeCommand", "readFile", "writeFile"]
+        output: "finalSummary"
+        expected_outcome: "Plan completed and archived"
