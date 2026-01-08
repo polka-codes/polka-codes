@@ -91,12 +91,12 @@ export async function runWorkflowCommand(task: string | undefined, _options: any
     return
   }
 
-  const workflowFn: WorkflowFn<BaseWorkflowInput, any, DynamicWorkflowRegistry> = async (input, context) => {
+  const workflowFn: WorkflowFn<BaseWorkflowInput, unknown, DynamicWorkflowRegistry> = async (input, context) => {
     return dynamicRunner(workflowId, input, context)
   }
 
   const selectedWorkflow = workflowDef.workflows[workflowId]
-  const workflowInput: Record<string, any> = {}
+  const workflowInput: Record<string, unknown> = {}
   if (selectedWorkflow.inputs && selectedWorkflow.inputs.length > 0 && task) {
     const firstInput = selectedWorkflow.inputs[0]
     workflowInput[firstInput.id] = task
