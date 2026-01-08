@@ -1,0 +1,61 @@
+# Continuous Improvement Workflow
+# This workflow demonstrates agent-like behavior using the workflow command
+# It continuously discovers and fixes issues in the codebase
+#
+# Usage:
+#   polka workflow -f examples/continuous-improvement.yml --continuous
+#   polka workflow -f examples/continuous-improvement.yml --until success --max-iterations 10
+
+workflows:
+  main:
+    task: "Continuously improve codebase quality"
+
+    inputs:
+      - id: "goal"
+        description: "Overall improvement goal"
+        default: "Maintain code quality and fix issues"
+
+    steps:
+      # Step 1: Check for build errors
+      - id: "check-build"
+        task: "Run build command to check for errors"
+        tools: ["executeCommand"]
+        expected_outcome: "Build succeeds or errors are identified"
+
+      # Step 2: Check for test failures
+      - id: "check-tests"
+        task: "Run test suite to identify failing tests"
+        tools: ["executeCommand"]
+        expected_outcome: "Tests pass or failures are identified"
+
+      # Step 3: Analyze issues found
+      - id: "analyze-issues"
+        task: "Analyze any build or test failures found"
+        tools: ["executeCommand", "readFile"]
+        output: "issueAnalysis"
+
+      # Step 4: Conditional fix step
+      - id: "conditional-fix"
+        if:
+          condition: "issueAnalysis && issueAnalysis.hasIssues === true"
+          thenBranch:
+            - id: "fix-issues"
+              task: "Fix the identified issues using AI"
+              tools: ["executeCommand", "readFile", "writeFile", "searchFiles"]
+              expected_outcome: "Issues are resolved"
+
+            - id: "verify-fix"
+              task: "Verify the fixes by running tests again"
+              tools: ["executeCommand"]
+              expected_outcome: "Tests pass"
+          elseBranch:
+            - id: "no-issues"
+              task: "No issues found - codebase is healthy"
+              tools: []
+              output: "status"
+
+      # Step 5: Report status
+      - id: "report"
+        task: "Generate summary report of this iteration"
+        tools: ["executeCommand", "readFile"]
+        output: "summary"

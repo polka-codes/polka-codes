@@ -1,0 +1,54 @@
+# Task Discovery Workflow
+# This workflow demonstrates continuous task discovery and execution
+# Similar to how the agent command works but using workflow YAML
+#
+# Usage:
+#   polka workflow -f examples/task-discovery.yml --continuous --interval 10000
+#   polka workflow -f examples/task-discovery.yml --until success --max-iterations 5
+
+workflows:
+  main:
+    task: "Discover and complete tasks autonomously"
+
+    inputs:
+      - id: "focus"
+        description: "Area to focus on (e.g., 'tests', 'lint', 'type-check')"
+        default: "all"
+
+    steps:
+      # Step 1: Discover issues
+      - id: "discover"
+        task: "Check for issues in the codebase"
+        tools: ["executeCommand"]
+        output: "issues"
+
+      # Step 2: While loop to fix all issues
+      - id: "fix-loop"
+        while:
+          condition: "issues && issues.count > 0"
+          steps:
+            - id: "pick-task"
+              task: "Pick the highest priority issue to fix"
+              tools: []
+              output: "currentTask"
+
+            - id: "fix"
+              task: "Fix the current issue using AI code generation"
+              tools: ["executeCommand", "readFile", "writeFile", "searchFiles"]
+              expected_outcome: "Issue is resolved"
+
+            - id: "verify"
+              task: "Verify the fix worked"
+              tools: ["executeCommand"]
+              expected_outcome: "Checks pass"
+
+            - id: "update-count"
+              task: "Update the issue count"
+              tools: []
+              output: "issues"
+
+      # Step 3: Final summary
+      - id: "summary"
+        task: "Generate final summary of all completed tasks"
+        tools: ["executeCommand", "readFile"]
+        output: "finalReport"
