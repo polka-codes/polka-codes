@@ -13,7 +13,7 @@ import { createLogger } from '../logger'
 import { runWorkflow } from '../runWorkflow'
 import { type BaseWorkflowInput, commitWorkflow, fixWorkflow, planWorkflow, prWorkflow, reviewWorkflow } from '../workflows'
 
-export async function runWorkflowCommand(task: string | undefined, _options: any, command: Command) {
+export async function runWorkflowCommand(task: string | undefined, _options: unknown, command: Command) {
   const globalOpts = (command.parent ?? command).opts()
   const { verbose } = globalOpts
   const logger = createLogger({ verbose })
@@ -86,8 +86,9 @@ export async function runWorkflowCommand(task: string | undefined, _options: any
         pr: prWorkflow,
       },
     })
-  } catch (error: any) {
-    logger.error(`Failed to parse workflow: ${error.message}`)
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    logger.error(`Failed to parse workflow: ${errorMessage}`)
     return
   }
 

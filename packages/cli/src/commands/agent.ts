@@ -32,7 +32,7 @@ type AgentToolsRegistry = ToolRegistry & {
  *   bun run agent --continuous                       # Continuous improvement mode
  *   bun run agent --preset conservative "Fix tests"  # Use preset configuration
  */
-export async function runAgent(goal: string | undefined, options: any, _command: Command) {
+export async function runAgent(goal: string | undefined, options: Record<string, unknown>, _command: Command) {
   console.log('🤖 Polka Agent')
   console.log('='.repeat(60))
   console.log('')
@@ -113,19 +113,27 @@ export async function runAgent(goal: string | undefined, options: any, _command:
           maxBuffer: 10 * 1024 * 1024, // 10MB
         })
         return { exitCode: 0, stdout, stderr }
-      } catch (error: any) {
+      } catch (error) {
         // Handle ENOBUFS errors (buffer overflow) explicitly
-        if (error.errno === 'ENOBUFS' || error.code === 'ENOBUFS') {
+        const errorCode = error && typeof error === 'object' && 'code' in error ? String(error.code) : undefined
+        const errorErrno = error && typeof error === 'object' && 'errno' in error ? String(error.errno) : undefined
+        const errorMessage = error instanceof Error ? error.message : String(error)
+
+        if (errorErrno === 'ENOBUFS' || errorCode === 'ENOBUFS') {
+          const errorStdout = error && typeof error === 'object' && 'stdout' in error ? String(error.stdout) : ''
           return {
             exitCode: 1,
-            stdout: error.stdout || '',
-            stderr: `Command output exceeded buffer limit (10MB). The command produced too much output. Try using different arguments or redirecting output to a file. Original error: ${error.message}`,
+            stdout: errorStdout,
+            stderr: `Command output exceeded buffer limit (10MB). The command produced too much output. Try using different arguments or redirecting output to a file. Original error: ${errorMessage}`,
           }
         }
+
+        const errorStdout = error && typeof error === 'object' && 'stdout' in error ? String(error.stdout) : ''
+        const errorStderr = error && typeof error === 'object' && 'stderr' in error ? String(error.stderr) : errorMessage
         return {
-          exitCode: error.code || 1,
-          stdout: error.stdout || '',
-          stderr: error.stderr || error.message,
+          exitCode: parseInt(errorCode || '1', 10),
+          stdout: errorStdout,
+          stderr: errorStderr,
         }
       }
     },
@@ -172,7 +180,7 @@ export async function runAgent(goal: string | undefined, options: any, _command:
   // This is acceptable for the agent command context where the autonomous agent
   // handles its own retries and error recovery. The step function exists primarily
   // for compatibility with the workflow system.
-  const step: StepFn = async <T>(_name: string, optionsOrFn: any, fn?: () => Promise<T>) => {
+  const step: StepFn = async <T>(_name: string, optionsOrFn: unknown, fn?: () => Promise<T>) => {
     const actualFn = fn || optionsOrFn
     if (typeof actualFn === 'function') {
       return await actualFn()
