@@ -4,6 +4,7 @@ import { createDeepSeek } from '@ai-sdk/deepseek'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createVertex } from '@ai-sdk/google-vertex'
 import { createOpenAI } from '@ai-sdk/openai'
+import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
 import type { LanguageModelV2 } from '@ai-sdk/provider'
 import { createOpenRouter } from '@openrouter/ai-sdk-provider'
 import { createOllama } from 'ollama-ai-provider-v2'
@@ -43,6 +44,7 @@ export enum AiProvider {
   DeepSeek = 'deepseek',
   OpenRouter = 'openrouter',
   OpenAI = 'openai',
+  OpenAICompatible = 'openai-compatible',
   GoogleVertex = 'google-vertex',
   Google = 'google',
 }
@@ -55,6 +57,7 @@ export type ModelConfig = {
   location?: string
   project?: string
   keyFile?: string
+  name?: string // For OpenAI-compatible providers
 }
 
 export const getModel = (config: ModelConfig, debugLogging = false): LanguageModelV2 => {
@@ -250,6 +253,19 @@ export const getModel = (config: ModelConfig, debugLogging = false): LanguageMod
         fetch: fetchOverride,
       })
       return openai(config.model)
+    }
+
+    case AiProvider.OpenAICompatible: {
+      if (!config.baseUrl) {
+        throw new Error('OpenAI-compatible providers require a baseUrl')
+      }
+      const openaiCompatible = createOpenAICompatible({
+        apiKey: config.apiKey,
+        baseURL: config.baseUrl,
+        name: config.name || 'OpenAI Compatible',
+        fetch: fetchOverride,
+      })
+      return openaiCompatible(config.model)
     }
 
     case AiProvider.GoogleVertex: {

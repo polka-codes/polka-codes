@@ -75,4 +75,16 @@ describe('getModel', () => {
 
     expect(model).toBeDefined()
   })
+
+  it('should create OpenAI-compatible model', () => {
+    const model = getModel({
+      provider: AiProvider.OpenAICompatible,
+      model: 'gpt-4o',
+      apiKey: 'test-key',
+      baseUrl: 'https://api.together.xyz/v1',
+    })
+
+    expect(model).toBeDefined()
+    expect(model.modelId).toBe('gpt-4o')
+  })
 })

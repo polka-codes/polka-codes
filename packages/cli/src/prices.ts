@@ -67,6 +67,11 @@ export default {
     'gpt-5.1-codex': { inputPrice: 1.25, outputPrice: 10, cacheWritesPrice: 0, cacheReadsPrice: 0.125, supportsThinking: true },
   },
 
+  [AiProvider.OpenAICompatible]: {
+    // OpenAI-compatible providers have varying pricing
+    // Configure pricing in your config file for accurate cost tracking
+  },
+
   [AiProvider.GoogleVertex]: googleModelPrices,
   [AiProvider.Google]: googleModelPrices,
 } as const satisfies Record<AiProvider, Record<string, ModelInfo>>

@@ -215,7 +215,9 @@ export class McpManager {
       let zodSchema: z.ZodObject<any>
 
       try {
-        zodSchema = convertJsonSchemaToZod(tool.inputSchema) as z.ZodObject<any>
+        // MCP schemas are JSON Schema compatible, but use looser types
+        // Cast to JsonSchema to satisfy convertJsonSchemaToZod
+        zodSchema = convertJsonSchemaToZod(tool.inputSchema as any) as z.ZodObject<any>
       } catch (error) {
         // If schema conversion fails, skip the tool rather than using a dangerous fallback
         const errorMessage = error instanceof Error ? error.message : String(error)

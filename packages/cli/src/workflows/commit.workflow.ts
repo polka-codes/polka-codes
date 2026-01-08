@@ -34,7 +34,7 @@ export const commitWorkflow: WorkflowFn<CommitWorkflowInput & BaseWorkflowInput,
     await step('stage-files', async () => {
       const result = await tools.executeCommand({
         command: 'git',
-        args: ['add', ...input.files!],
+        args: ['add', ...(input.files ?? [])],
       })
       if (result.exitCode !== 0) {
         throw new Error(`Failed to stage files: ${result.stderr}`)

@@ -20,7 +20,7 @@
     },
     "packages/cli": {
       "name": "@polka-codes/cli",
-      "version": "0.9.84",
+      "version": "0.9.86",
       "bin": {
         "polka": "cli.mjs",
       },
@@ -30,6 +30,7 @@
         "@ai-sdk/google": "^2.0.52",
         "@ai-sdk/google-vertex": "^3.0.97",
         "@ai-sdk/openai": "^2.0.89",
+        "@ai-sdk/openai-compatible": "^1.0.30",
         "@ai-sdk/provider": "^2.0.1",
         "@ai-sdk/provider-utils": "^3.0.20",
         "@inquirer/prompts": "^8.1.0",
@@ -56,7 +57,7 @@
     },
     "packages/cli-shared": {
       "name": "@polka-codes/cli-shared",
-      "version": "0.9.84",
+      "version": "0.9.86",
       "dependencies": {
         "@ai-sdk/google-vertex": "^3.0.97",
         "@ai-sdk/provider": "^2.0.1",
@@ -78,7 +79,7 @@
     },
     "packages/core": {
       "name": "@polka-codes/core",
-      "version": "0.9.84",
+      "version": "0.9.86",
       "dependencies": {
         "@ai-sdk/provider": "^2.0.1",
         "@ai-sdk/provider-utils": "^3.0.20",
@@ -89,7 +90,7 @@
     },
     "packages/github": {
       "name": "@polka-codes/github",
-      "version": "0.9.84",
+      "version": "0.9.86",
       "dependencies": {
         "@octokit/core": "^6.1.4",
         "mdast": "^3.0.0",
@@ -105,7 +106,7 @@
     },
     "packages/runner": {
       "name": "@polka-codes/runner",
-      "version": "0.9.84",
+      "version": "0.9.86",
       "bin": {
         "polka-runner": "cli.mjs",
       },
@@ -137,6 +138,8 @@
     "@ai-sdk/google-vertex": ["@ai-sdk/google-vertex@3.0.97", "", { "dependencies": { "@ai-sdk/anthropic": "2.0.57", "@ai-sdk/google": "2.0.52", "@ai-sdk/provider": "2.0.1", "@ai-sdk/provider-utils": "3.0.20", "google-auth-library": "^10.5.0" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-s4tI7Z15i6FlbtCvS4SBRal8wRfkOXJzKxlS6cU4mJW/QfUfoVy4b22836NVNJwDvkG/HkDSfzwm/X8mn46MhA=="],
 
     "@ai-sdk/openai": ["@ai-sdk/openai@2.0.89", "", { "dependencies": { "@ai-sdk/provider": "2.0.1", "@ai-sdk/provider-utils": "3.0.20" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-4+qWkBCbL9HPKbgrUO/F2uXZ8GqrYxHa8SWEYIzxEJ9zvWw3ISr3t1/27O1i8MGSym+PzEyHBT48EV4LAwWaEw=="],
+
+    "@ai-sdk/openai-compatible": ["@ai-sdk/openai-compatible@1.0.30", "", { "dependencies": { "@ai-sdk/provider": "2.0.1", "@ai-sdk/provider-utils": "3.0.20" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-thubwhRtv9uicAxSWwNpinM7hiL/0CkhL/ymPaHuKvI494J7HIzn8KQZQ2ymRz284WTIZnI7VMyyejxW4RMM6w=="],
 
     "@ai-sdk/provider": ["@ai-sdk/provider@2.0.1", "", { "dependencies": { "json-schema": "^0.4.0" } }, "sha512-KCUwswvsC5VsW2PWFqF8eJgSCu5Ysj7m1TxiHTVA6g7k360bk0RNQENT8KTMAYEs+8fWPD3Uu4dEmzGHc+jGng=="],
 

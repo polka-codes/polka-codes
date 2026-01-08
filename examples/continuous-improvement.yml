@@ -1,61 +1,103 @@
-# Continuous Improvement Workflow
-# This workflow demonstrates agent-like behavior using the workflow command
-# It continuously discovers and fixes issues in the codebase
+# Continuous Improvement Workflow (Declarative)
+# This workflow demonstrates continuous execution using YAML while loops
+# No CLI flags needed - the loop is defined in the workflow itself
 #
 # Usage:
-#   polka workflow -f examples/continuous-improvement.yml --continuous
-#   polka workflow -f examples/continuous-improvement.yml --until success --max-iterations 10
+#   polka workflow -f examples/continuous-improvement.yml
 
 workflows:
   main:
     task: "Continuously improve codebase quality"
 
     inputs:
-      - id: "goal"
-        description: "Overall improvement goal"
-        default: "Maintain code quality and fix issues"
+      - id: "maxIterations"
+        description: "Maximum number of improvement cycles (0 = unlimited)"
+        default: 0
+
+      - id: "sleepInterval"
+        description: "Sleep between iterations in milliseconds"
+        default: 5000
 
     steps:
-      # Step 1: Check for build errors
-      - id: "check-build"
-        task: "Run build command to check for errors"
-        tools: ["executeCommand"]
-        expected_outcome: "Build succeeds or errors are identified"
+      # Step 1: Initialize iteration counter
+      - id: "init"
+        task: "Initialize iteration counter and state"
+        tools: []
+        output: "iteration"
 
-      # Step 2: Check for test failures
-      - id: "check-tests"
-        task: "Run test suite to identify failing tests"
-        tools: ["executeCommand"]
-        expected_outcome: "Tests pass or failures are identified"
-
-      # Step 3: Analyze issues found
-      - id: "analyze-issues"
-        task: "Analyze any build or test failures found"
-        tools: ["executeCommand", "readFile"]
-        output: "issueAnalysis"
-
-      # Step 4: Conditional fix step
-      - id: "conditional-fix"
-        if:
-          condition: "issueAnalysis && issueAnalysis.hasIssues === true"
-          thenBranch:
-            - id: "fix-issues"
-              task: "Fix the identified issues using AI"
-              tools: ["executeCommand", "readFile", "writeFile", "searchFiles"]
-              expected_outcome: "Issues are resolved"
-
-            - id: "verify-fix"
-              task: "Verify the fixes by running tests again"
-              tools: ["executeCommand"]
-              expected_outcome: "Tests pass"
-          elseBranch:
-            - id: "no-issues"
-              task: "No issues found - codebase is healthy"
+      # Step 2: Main improvement loop
+      - id: "improvement-loop"
+        while:
+          condition: "iteration.maxIterations === 0 || iteration.count < iteration.maxIterations"
+          steps:
+            # Step 2a: Increment counter
+            - id: "increment"
+              task: |
+                Increment iteration counter.
+                Current: {{ iteration.count }}
+                Max: {{ iteration.maxIterations }}
               tools: []
-              output: "status"
+              output: "iteration"
 
-      # Step 5: Report status
-      - id: "report"
-        task: "Generate summary report of this iteration"
+            - id: "log-iteration"
+              task: |
+                Log iteration start:
+                ============================================================
+                Iteration {{ iteration.count }} / {{ iteration.maxIterations || '∞' }}
+                ============================================================
+              tools: ["executeCommand"]
+              expected_outcome: "Iteration logged"
+
+            # Step 2b: Check for build errors
+            - id: "check-build"
+              task: "Run build command to check for errors"
+              tools: ["executeCommand"]
+              output: "buildResult"
+              expected_outcome: "Build succeeds or errors are identified"
+
+            # Step 2c: Check for test failures
+            - id: "check-tests"
+              task: "Run test suite to identify failing tests"
+              tools: ["executeCommand"]
+              output: "testResult"
+              expected_outcome: "Tests pass or failures are identified"
+
+            # Step 2d: Conditional fix step
+            - id: "fix-if-needed"
+              if:
+                condition: "buildResult.hasErrors || testResult.hasFailures"
+                thenBranch:
+                  - id: "analyze-issues"
+                    task: "Analyze the build errors and test failures found"
+                    tools: ["executeCommand", "readFile"]
+                    output: "issueAnalysis"
+
+                  - id: "fix-issues"
+                    task: "Fix the identified issues using AI"
+                    tools: ["executeCommand", "readFile", "writeFile", "searchFiles"]
+                    expected_outcome: "Issues are resolved"
+
+                  - id: "verify-fix"
+                    task: "Verify the fixes by running tests again"
+                    tools: ["executeCommand"]
+                    expected_outcome: "Tests pass"
+
+                elseBranch:
+                  - id: "no-issues"
+                    task: "No issues found - codebase is healthy"
+                    tools: []
+                    output: "status"
+
+            # Step 2e: Sleep between iterations
+            - id: "sleep"
+              task: |
+                Sleep for {{ sleepInterval }}ms before next iteration.
+                This prevents busy-waiting and reduces resource usage.
+              tools: []
+              expected_outcome: "Slept for specified interval"
+
+      # Step 3: Final summary
+      - id: "summary"
+        task: "Generate final summary of improvement cycles"
         tools: ["executeCommand", "readFile"]
-        output: "summary"
+        output: "finalReport"

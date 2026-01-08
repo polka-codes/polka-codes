@@ -23,6 +23,7 @@ export const providerConfigSchema = z.object({
   project: z.string().optional(),
   keyFile: z.string().optional(),
   baseUrl: z.string().optional(),
+  name: z.string().optional(), // For OpenAI-compatible providers
 })
 
 export const providerModelSchema = z.object({

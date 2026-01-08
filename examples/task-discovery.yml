@@ -1,10 +1,9 @@
-# Task Discovery Workflow
-# This workflow demonstrates continuous task discovery and execution
-# Similar to how the agent command works but using workflow YAML
+# Task Discovery Workflow (Declarative)
+# This workflow demonstrates autonomous task discovery using while loops
+# The loop continues until no more issues remain
 #
 # Usage:
-#   polka workflow -f examples/task-discovery.yml --continuous --interval 10000
-#   polka workflow -f examples/task-discovery.yml --until success --max-iterations 5
+#   polka workflow -f examples/task-discovery.yml
 
 workflows:
   main:
@@ -12,43 +11,77 @@ workflows:
 
     inputs:
       - id: "focus"
-        description: "Area to focus on (e.g., 'tests', 'lint', 'type-check')"
+        description: "Area to focus on (e.g., 'tests', 'lint', 'type-check', 'all')"
         default: "all"
 
     steps:
       # Step 1: Discover issues
       - id: "discover"
-        task: "Check for issues in the codebase"
+        task: |
+          Check for issues in the codebase based on focus area: {{ focus }}.
+
+          Run appropriate commands:
+          - 'all': Run build, test, typecheck, and lint
+          - 'tests': Run test suite
+          - 'lint': Run linter
+          - 'type-check': Run type checker
+
+          Collect and count all issues found.
         tools: ["executeCommand"]
         output: "issues"
+        expected_outcome: "List of discovered issues with count"
 
-      # Step 2: While loop to fix all issues
+      # Step 2: Fix loop - continues while issues exist
       - id: "fix-loop"
         while:
           condition: "issues && issues.count > 0"
           steps:
+            - id: "log-progress"
+              task: |
+                ============================================================
+                Issues remaining: {{ issues.count }}
+                ============================================================
+              tools: ["executeCommand"]
+              expected_outcome: "Progress logged"
+
             - id: "pick-task"
-              task: "Pick the highest priority issue to fix"
-              tools: []
+              task: |
+                Pick the highest priority issue to fix from the discovered issues.
+                Consider:
+                - Severity (critical > major > minor)
+                - Previous failures (avoid repeating failed tasks)
+                - Dependencies (fix prerequisites first)
+              tools: ["readFile"]
               output: "currentTask"
+              expected_outcome: "Selected task with details"
 
             - id: "fix"
-              task: "Fix the current issue using AI code generation"
+              task: |
+                Fix the current issue using AI code generation:
+                {{ currentTask.description }}
+
+                Use appropriate tools to analyze, fix, and verify.
               tools: ["executeCommand", "readFile", "writeFile", "searchFiles"]
               expected_outcome: "Issue is resolved"
 
             - id: "verify"
-              task: "Verify the fix worked"
+              task: "Verify the fix worked by running checks"
               tools: ["executeCommand"]
               expected_outcome: "Checks pass"
 
             - id: "update-count"
-              task: "Update the issue count"
-              tools: []
+              task: |
+                Update the issue count by re-running discovery.
+                Decrement count if fix was successful.
+              tools: ["executeCommand"]
               output: "issues"
+              expected_outcome: "Updated issue count"
 
-      # Step 3: Final summary
-      - id: "summary"
-        task: "Generate final summary of all completed tasks"
+      # Step 3: All issues resolved
+      - id: "all-done"
+        task: |
+          All discovered issues have been resolved!
+          Generate final summary of completed work.
         tools: ["executeCommand", "readFile"]
         output: "finalReport"
+        expected_outcome: "Summary report generated"

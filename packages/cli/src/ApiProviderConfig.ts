@@ -8,6 +8,7 @@ const defaultModels = {
   [AiProvider.DeepSeek]: 'deepseek-chat',
   [AiProvider.OpenRouter]: 'google/gemini-2.5-pro',
   [AiProvider.OpenAI]: 'gpt-5-2025-08-07',
+  [AiProvider.OpenAICompatible]: 'gpt-4o',
   [AiProvider.GoogleVertex]: 'gemini-2.5-pro',
   [AiProvider.Google]: 'gemini-2.5-pro',
 }
@@ -39,7 +40,7 @@ export class ApiProviderConfig {
     if (!finalProvider) {
       return undefined
     }
-    const { apiKey, defaultModel, defaultParameters, location, project, keyFile, baseUrl } = this.providers[finalProvider] ?? {}
+    const { apiKey, defaultModel, defaultParameters, location, project, keyFile, baseUrl, name } = this.providers[finalProvider] ?? {}
     const finalModel = model ?? defaultModel ?? defaultModels[finalProvider]
     const finalParameters = {
       ...this.defaultParameters,
@@ -54,6 +55,7 @@ export class ApiProviderConfig {
       project,
       keyFile,
       baseUrl,
+      name,
       parameters: finalParameters,
       budget,
       rules,
