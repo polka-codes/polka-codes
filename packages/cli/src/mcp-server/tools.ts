@@ -21,6 +21,10 @@ const projectRoot = path.resolve(__dirname, '../../../..')
 
 /**
  * Create a minimal execution context for running workflows from MCP server
+ *
+ * NOTE: The context must include provider configuration options for workflows to work.
+ * The runWorkflow function will load the actual provider config from config files/env,
+ * but it needs these context fields to be present.
  */
 function createExecutionContext(_logger: Logger) {
   return {
@@ -32,6 +36,11 @@ function createExecutionContext(_logger: Logger) {
     verbose: 0,
     // No file specified
     file: undefined,
+    // Provider configuration fields (will be populated by runWorkflow from config/env)
+    // These are required for runWorkflow to properly initialize the AI provider
+    provider: undefined,
+    model: undefined,
+    apiProvider: undefined,
   }
 }
 
@@ -137,7 +146,7 @@ Parameters:
       description: `Perform comprehensive code review with actionable, structured feedback.
 
 This workflow can review:
-- Uncommitted local changes (git diff)
+- Uncommitted local changes (staged and/or unstaged files) - DEFAULT BEHAVIOR when no parameters provided
 - Branch comparisons (e.g., feature branch vs main)
 - Specific git ranges (e.g., HEAD~3..HEAD, origin/main..HEAD)
 - Pull requests from GitHub/GitLab by number
@@ -158,7 +167,7 @@ Output is structured with:
 
 Parameters:
 - pr (optional): Pull request number to review
-- range (optional): Git range to review (e.g., HEAD~3..HEAD, origin/main..HEAD)
+- range (optional): Git range to review (e.g., HEAD~3..HEAD, origin/main..HEAD). When omitted, reviews staged and unstaged local changes
 - files (optional): Specific files to review
 - context (optional): Additional context about the changes (purpose, constraints, technical background)`,
       inputSchema: z.object({
