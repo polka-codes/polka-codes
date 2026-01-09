@@ -33,9 +33,9 @@ type AgentToolsRegistry = ToolRegistry & {
  *   bun run agent --preset conservative "Fix tests"  # Use preset configuration
  */
 export async function runAgent(goal: string | undefined, options: Record<string, unknown>, _command: Command) {
-  console.log('🤖 Polka Agent')
-  console.log('='.repeat(60))
-  console.log('')
+  const logger = createLogger({ verbose: options.verbose || 0 })
+  logger.info('🤖 Polka Agent')
+  logger.info('='.repeat(60))
 
   // Map CLI options to config format
   // --continuous flag maps to strategy: 'continuous-improvement'
@@ -52,7 +52,6 @@ export async function runAgent(goal: string | undefined, options: Record<string,
   const config = await loadConfig(configOptions, options.config)
 
   // Create workflow context
-  const logger = createLogger({ verbose: options.verbose || 0 })
   const workingDir = process.cwd()
   const stateDir = path.join(workingDir, '.polka', 'agent-state')
   const sessionId = `agent-${Date.now()}-${randomUUID()}`
@@ -207,22 +206,20 @@ export async function runAgent(goal: string | undefined, options: Record<string,
 
     // Check mode
     if (options.continuous) {
-      console.log('🔄 Mode: Continuous Improvement')
-      console.log('')
+      logger.info('🔄 Mode: Continuous Improvement')
 
       await agent.runContinuous()
     } else {
       if (!goal) {
-        console.error('❌ Error: Goal is required for goal-directed mode')
-        console.error('Usage: bun run agent "your goal here"')
-        console.error('')
-        console.error('Or use --continuous for autonomous improvement mode')
+        logger.error('❌ Error: Goal is required for goal-directed mode')
+        logger.error('Usage: bun run agent "your goal here"')
+        logger.error('')
+        logger.error('Or use --continuous for autonomous improvement mode')
         await agent.cleanup()
-        process.exit(1)
+        return { success: false, error: 'Goal is required for goal-directed mode' }
       }
 
-      console.log(`📝 Goal: ${goal}`)
-      console.log('')
+      logger.info(`📝 Goal: ${goal}`)
 
       await agent.setGoal(goal)
       await agent.run()
@@ -231,21 +228,24 @@ export async function runAgent(goal: string | undefined, options: Record<string,
     // Cleanup
     await agent.cleanup()
 
-    console.log('')
-    console.log('✅ Agent session complete')
-    console.log('')
+    logger.info('')
+    logger.info('✅ Agent session complete')
+    logger.info('')
 
-    process.exit(0)
+    return { success: true }
   } catch (error) {
-    console.error('')
-    console.error('❌ Agent failed:', error)
-    console.error('')
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    logger.error('')
+    logger.error(`❌ Agent failed: ${errorMessage}`)
+    logger.error('')
 
     try {
       await agent.cleanup()
-    } catch {}
+    } catch {
+      // Ignore cleanup errors
+    }
 
-    process.exit(1)
+    return { success: false, error: errorMessage }
   }
 }
 
