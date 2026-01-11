@@ -145,18 +145,8 @@ Add additional files like:
  * Create a new TypeScript script template
  */
 async function createScript(name: string, logger: Logger, interactive: boolean) {
-  // Validate script name (prevent path traversal - must be flat in .polka-scripts)
-  if (name.includes('/') || name.includes('\\')) {
-    throw new Error('Script name cannot contain slashes. Use a simple name (e.g., "deploy" not "utils/deploy")')
-  }
-
-  // Check for conflicts with built-in commands
-  if (BUILT_IN_COMMANDS.includes(name as BuiltInCommand)) {
-    throw new Error(
-      `Script name '${name}' conflicts with a built-in command. ` +
-        `Please choose a different name (e.g., '${name}-script' or 'my-${name}')`,
-    )
-  }
+  // Note: Script name validation and built-in command checks are done at the
+  // higher level in the script type handler to apply to both AI and template paths
 
   const scriptDir = '.polka-scripts'
   // Use forward slashes for config (cross-platform), actual path for file operations
@@ -331,6 +321,20 @@ export const initCommand = new Command('init')
         process.exit(1)
       }
 
+      // Validate script name (prevent path traversal - must be flat in .polka-scripts)
+      // This validation applies to both AI and basic template generation
+      if (name.includes('/') || name.includes('\\')) {
+        throw new Error('Script name cannot contain slashes. Use a simple name (e.g., "deploy" not "utils/deploy")')
+      }
+
+      // Check for conflicts with built-in commands
+      if (BUILT_IN_COMMANDS.includes(name as BuiltInCommand)) {
+        throw new Error(
+          `Script name '${name}' conflicts with a built-in command. ` +
+            `Please choose a different name (e.g., '${name}-script' or 'my-${name}')`,
+        )
+      }
+
       // Check if AI-assisted generation is requested
       const useAI = options.ai === true
 
@@ -349,6 +353,25 @@ export const initCommand = new Command('init')
             logger.error('Error: Script instructions are required for AI generation')
             logger.info('Usage: polka init script <name> --ai --instructions "your instructions"')
             process.exit(1)
+          }
+
+          // Check if script already exists before running AI workflow
+          const scriptDir = '.polka-scripts'
+          const scriptPath = join(scriptDir, `${name}.ts`)
+
+          if (existsSync(scriptPath)) {
+            if (interactive) {
+              const proceed = await confirm({
+                message: `Script '${scriptPath}' already exists. Overwrite?`,
+                default: false,
+              })
+              if (!proceed) {
+                logger.info('Script generation cancelled')
+                return
+              }
+            } else {
+              throw new Error(`Script already exists: ${scriptPath}`)
+            }
           }
 
           // Get config path
