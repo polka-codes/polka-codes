@@ -137,6 +137,16 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput,
 
     printChangedFiles(logger, changedFiles)
 
+    // If no files remain after filtering, return early
+    if (changedFiles.length === 0) {
+      return {
+        overview: normalizedFiles
+          ? `No changes to review. The specified file(s) were not found in PR #${pr}: ${normalizedFiles.join(', ')}`
+          : `No changes to review in PR #${pr}.`,
+        specificReviews: [],
+      }
+    }
+
     changeInfo = {
       commitRange: prCommitRange,
       pullRequestTitle: prDetails.title,
@@ -179,6 +189,16 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput,
     const rangeChangedFiles = filterAndWarn(allRangeChangedFiles, `range '${range}'`)
 
     printChangedFiles(logger, rangeChangedFiles)
+
+    // If no files remain after filtering, return early
+    if (rangeChangedFiles.length === 0) {
+      return {
+        overview: normalizedFiles
+          ? `No changes to review. The specified file(s) were not found in range '${range}': ${normalizedFiles.join(', ')}`
+          : `No changes to review in range '${range}'.`,
+        specificReviews: [],
+      }
+    }
 
     // Get commit messages for the range
     const logResult = await tools.executeCommand({
@@ -246,6 +266,16 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput,
 
       printChangedFiles(logger, changedFiles)
 
+      // If no files remain after filtering, return early
+      if (changedFiles.length === 0) {
+        return {
+          overview: normalizedFiles
+            ? `No changes to review. The specified file(s) were not found in local changes: ${normalizedFiles.join(', ')}`
+            : 'No changes to review.',
+          specificReviews: [],
+        }
+      }
+
       changeInfo = {
         staged: hasStagedChanges,
         changedFiles,
@@ -312,6 +342,16 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput,
 
       printChangedFiles(logger, branchChangedFiles)
 
+      // If no files remain after filtering, return early
+      if (branchChangedFiles.length === 0) {
+        return {
+          overview: normalizedFiles
+            ? `No changes to review. The specified file(s) were not found in branch changes: ${normalizedFiles.join(', ')}`
+            : `No changes to review. The current branch has no differences from ${defaultBranch}.`,
+          specificReviews: [],
+        }
+      }
+
       changeInfo = {
         commitRange: branchCommitRange,
         changedFiles: branchChangedFiles,
@@ -321,6 +361,11 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput,
   }
 
   if (!changeInfo) {
+    return { overview: 'No changes to review.', specificReviews: [] }
+  }
+
+  // Final safety check: ensure we have files to review
+  if (!changeInfo.changedFiles || changeInfo.changedFiles.length === 0) {
     return { overview: 'No changes to review.', specificReviews: [] }
   }
 
