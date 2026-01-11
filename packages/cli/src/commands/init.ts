@@ -5,7 +5,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { confirm, select } from '@inquirer/prompts'
+import { confirm, input, select } from '@inquirer/prompts'
 import { type Config, getGlobalConfigPath, loadConfigAtPath, localConfigFileName, readConfig } from '@polka-codes/cli-shared'
 import type { Logger } from '@polka-codes/core'
 import { Command } from 'commander'
@@ -16,6 +16,7 @@ import { configPrompt } from '../configPrompt'
 import { createLogger } from '../logger'
 import { runWorkflow } from '../runWorkflow'
 import { initWorkflow } from '../workflows/init.workflow'
+import { initInteractiveWorkflow } from '../workflows/init-interactive.workflow'
 
 /**
  * Create a new Agent Skill template
@@ -288,7 +289,9 @@ export const initCommand = new Command('init')
   .argument('[type]', 'Type of resource to initialize (config, script, skill)')
   .argument('[name]', 'Name of the script or skill (only for type=script|skill)')
   .option('-g, --global', 'Use global config')
-  .action(async (type, name, options, command: Command) => {
+  .option('--ai', 'Use AI to generate custom script with interactive prompts (only for type=script)')
+  .option('-i, --instructions <string>', 'Script instructions for AI generation (only for type=script with --ai)')
+  .action(async (type, name, options: Record<string, unknown> & { ai?: boolean; instructions?: string }, command: Command) => {
     const globalOpts = (command.parent ?? command).opts()
     const { verbose, yes } = globalOpts
     const logger = createLogger({
@@ -319,14 +322,72 @@ export const initCommand = new Command('init')
       if (!name) {
         logger.error('Error: Script name is required when type=script')
         logger.info('Usage: polka init script <script-name>')
+        logger.info('')
+        logger.info('For interactive script generation with AI assistance:')
+        logger.info('  polka init script <name> --ai')
+        logger.info('')
+        logger.info('For basic template generation:')
+        logger.info('  polka init script <name>')
         process.exit(1)
       }
-      try {
-        await createScript(name, logger, interactive)
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error)
-        logger.error(`Script generation failed: ${message}`)
-        process.exit(1)
+
+      // Check if AI-assisted generation is requested
+      const useAI = options.ai === true
+
+      if (useAI) {
+        // Interactive AI-assisted script generation
+        try {
+          let scriptInstructions = options.instructions
+          if (!scriptInstructions && interactive) {
+            scriptInstructions = await input({
+              message: 'Describe what this script should do:',
+              validate: (input) => input.length > 0 || 'Please provide a description',
+            })
+          }
+
+          if (!scriptInstructions) {
+            logger.error('Error: Script instructions are required for AI generation')
+            logger.info('Usage: polka init script <name> --ai --instructions "your instructions"')
+            process.exit(1)
+          }
+
+          // Get config path
+          const globalConfigPath = getGlobalConfigPath()
+          const isGlobal = options.global ?? false
+          const configPath = isGlobal ? globalConfigPath : localConfigFileName
+
+          // Run interactive workflow
+          await runWorkflow(
+            initInteractiveWorkflow,
+            {
+              configPath,
+              scriptName: name,
+              scriptInstructions,
+              generateScript: true,
+              skipConfirmation: !interactive,
+            },
+            {
+              commandName: 'init',
+              context: globalOpts,
+              logger,
+              requiresProvider: true,
+              interactive,
+            },
+          )
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error)
+          logger.error(`AI script generation failed: ${message}`)
+          process.exit(1)
+        }
+      } else {
+        // Basic template generation
+        try {
+          await createScript(name, logger, interactive)
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error)
+          logger.error(`Script generation failed: ${message}`)
+          process.exit(1)
+        }
       }
       return
     }
