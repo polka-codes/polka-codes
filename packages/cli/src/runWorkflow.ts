@@ -61,7 +61,8 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
   const mcpManager = new McpManager(logger)
 
   // Determine interactive mode: respect explicit values in input, then options, then default based on yes flag
-  const resolvedInteractive = workflowInput.interactive ?? interactive ?? yes !== true
+  // Cast to BaseWorkflowInput to access the interactive property that's part of the intersection type
+  const resolvedInteractive = (workflowInput as BaseWorkflowInput).interactive ?? interactive ?? yes !== true
 
   const finalWorkflowInput: TInput & BaseWorkflowInput = {
     ...workflowInput,
