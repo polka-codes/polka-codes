@@ -184,10 +184,22 @@ export async function runAgent(goal: string | undefined, options: Record<string,
 
   // Add runtime guard to catch attempts to use unavailable tools
   const toolsWithGuard = new Proxy(tools, {
-    get(_target, prop: string) {
+    get(_target, prop) {
+      // Allow standard object properties to pass through
+      if (typeof prop === 'symbol') {
+        return Reflect.get(tools, prop)
+      }
+      // Check if property exists in tools
       if (prop in tools) {
         return tools[prop as keyof typeof tools]
       }
+      // For non-tool properties, use Reflect to get them from the original object
+      // This allows proper object inspection, JSON serialization, etc.
+      const reflected = Reflect.get(tools, prop)
+      if (reflected !== undefined) {
+        return reflected
+      }
+      // Only throw for actual tool access that doesn't exist
       throw new Error(
         `Tool "${prop}" is not available in agent context. ` +
           `Available tools: ${AVAILABLE_TOOLS}. ` +

@@ -233,14 +233,12 @@ Please:
         logger.info(`\nRun with: bun run polka run ${scriptName}`)
 
         // Update config if additional config provided
-        if (scriptConfig) {
-          const existingConfig = loadConfigAtPath(configPath) ?? {}
-          const finalConfig: Config = {
-            ...existingConfig,
-            ...scriptConfig,
-          }
-          await tools.writeToFile({ path: configPath, content: stringify(finalConfig) })
-          logger.info(`✅ Configuration updated with script settings`)
+        // Note: We don't merge scriptConfig directly to avoid type safety issues
+        // The AI-generated config is untyped and could corrupt the configuration
+        if (scriptConfig && Object.keys(scriptConfig).length > 0) {
+          logger.warn(`⚠️ AI suggested config updates, but they were not merged for safety:`)
+          logger.warn(JSON.stringify(scriptConfig, null, 2))
+          logger.warn(`To apply these changes, manually edit ${configPath}`)
         }
       })
 
