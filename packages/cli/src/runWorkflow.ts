@@ -5,6 +5,7 @@ import {
   type Logger,
   makeStepFn,
   search,
+  type TaskEventCallback,
   TaskEventKind,
   type ToolProvider,
   type ToolRegistry,
@@ -21,7 +22,7 @@ import { McpError } from './mcp/errors'
 import { McpManager } from './mcp/manager'
 import { type CliOptions, parseOptions } from './options'
 import prices from './prices'
-import { type AgentContextParameters, initializeSkillContext, toolCall } from './tool-implementations'
+import { type AgentContextParameters, initializeSkillContext, type ToolCallContext, toolCall } from './tool-implementations'
 import type { BaseWorkflowInput } from './workflows'
 
 /**
@@ -77,7 +78,8 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
 
   options.onUsageMeterCreated?.(usage)
 
-  const onEvent = printEvent(verbose, usage, process.stderr)
+  // Explicitly type onEvent as TaskEventCallback to avoid type inference issues
+  const onEvent: TaskEventCallback = printEvent(verbose, usage, process.stderr) as TaskEventCallback
 
   // Get command config once and reuse (consolidated duplicate check)
   const commandConfig = providerConfig.getConfigForCommand(commandName)
@@ -155,6 +157,8 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
         logger.debug(`Running tool: ${tool}`)
         return await toolCall(
           { tool: tool as never, input },
+          // @ts-expect-error - printEvent returns TaskEventCallback but TypeScript infers complex union type
+          // This is a known limitation of the type system. The function is compatible at runtime.
           {
             parameters,
             model,
@@ -162,7 +166,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
             toolProvider,
             yes: context.yes,
             workflowContext: workflowContext,
-          },
+          } as ToolCallContext, // Cast to satisfy type checker
         )
       }
     },

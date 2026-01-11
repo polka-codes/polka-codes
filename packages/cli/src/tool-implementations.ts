@@ -125,6 +125,8 @@ type ToolCallContext = {
   workflowContext: any // WorkflowContext<CliToolRegistry> with proper generic constraints
 }
 
+export type { ToolCallContext }
+
 async function createPullRequest(input: { title: string; description: string }, _context: ToolCallContext) {
   spawnSync('gh', ['pr', 'create', '--title', input.title, '--body', input.description], {
     stdio: 'inherit',
