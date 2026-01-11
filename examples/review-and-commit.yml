@@ -1,0 +1,186 @@
+# Review and Commit Workflow
+# This workflow reviews code changes and automatically commits them if the review passes
+#
+# Usage:
+#   polka workflow -f examples/review-and-commit.yml
+#
+# What it does:
+#   1. Reviews staged/local changes
+#   2. If no critical issues found, creates a commit with AI-generated message
+#   3. Can loop continuously to review-commit cycle
+#
+# Configuration:
+#   - maxIterations: Maximum review-commit cycles (0 = unlimited)
+#   - commitOnSuccess: Auto-commit if review finds no critical issues
+#   - sleepInterval: Sleep between iterations (for continuous mode)
+
+workflows:
+  main:
+    task: "Review code changes and create commits"
+
+    inputs:
+      - id: "maxIterations"
+        description: "Maximum number of review-commit cycles (0 = unlimited)"
+        default: 1
+
+      - id: "commitOnSuccess"
+        description: "Auto-commit when review finds no critical issues"
+        default: true
+
+      - id: "sleepInterval"
+        description: "Sleep between iterations in milliseconds"
+        default: 30000  # 30 seconds
+
+      - id: "reviewContext"
+        description: "Additional context for the code review"
+        default: ""
+
+    steps:
+      # Step 1: Initialize iteration state
+      - id: "init"
+        task: |
+          Initialize review-commit cycle state.
+          Max iterations: {{ maxIterations }}
+          Auto-commit: {{ commitOnSuccess }}
+        tools: []
+        output: "state"
+
+      # Step 2: Main review-commit loop
+      - id: "review-commit-loop"
+        while:
+          condition: "state.maxIterations === 0 || state.count < state.maxIterations"
+          steps:
+            # Step 2a: Increment and log iteration
+            - id: "log-iteration"
+              task: |
+                ========================================================================
+                Review-Commit Cycle {{ state.count + 1 }} / {{ state.maxIterations || '∞' }}
+                ========================================================================
+              tools: ["executeCommand"]
+              expected_outcome: "Iteration logged"
+
+            # Step 2b: Check if there are changes to review
+            - id: "check-changes"
+              task: |
+                Check git status to see if there are any changes to review.
+                If no changes, we can exit early.
+              tools: ["executeCommand"]
+              output: "gitStatus"
+              expected_outcome: "Git status checked"
+
+            # Step 2c: Exit if no changes
+            - id: "no-changes-exit"
+              if:
+                condition: "gitStatus.hasChanges === false"
+                thenBranch:
+                  - id: "log-no-changes"
+                    task: "No changes to review. Exiting review-commit cycle."
+                    tools: ["executeCommand"]
+                    expected_outcome: "Logged no changes message"
+
+                  - id: "break"
+                    break: true  # Exit the while loop
+
+            # Step 2d: Review the changes
+            - id: "review-changes"
+              task: |
+                Review all code changes (staged and unstaged).
+                {{ reviewContext }}
+              tools: ["executeCommand", "readFile", "listFiles", "searchFiles"]
+              output: "reviewResult"
+              expected_outcome: |
+                Complete code review with:
+                - Overview of changes
+                - Categorized issues (critical, major, minor, nitpick)
+                - Specific file/line references
+                - Actionable recommendations
+
+            # Step 2e: Analyze review results
+            - id: "analyze-review"
+              task: |
+                Analyze the review result to determine next steps.
+                Review result:
+                {{ reviewResult.overview }}
+
+                Check if there are any critical or major issues that need fixing.
+              tools: []
+              output: "analysis"
+              expected_outcome: "Analysis of review severity"
+
+            # Step 2f: Conditional commit or fix
+            - id: "commit-or-fix"
+              if:
+                condition: "analysis.hasCriticalOrMajorIssues === false && commitOnSuccess === true"
+                thenBranch:
+                  # No critical issues - commit the changes
+                  - id: "create-commit"
+                    task: |
+                      Create a commit with AI-generated message based on the review.
+                      The commit message should:
+                      - Have a clear subject line (50 chars or less)
+                      - Explain what changed and why
+                      - Follow conventional commits format if appropriate
+                    tools: ["executeCommand"]
+                    expected_outcome: "Changes committed successfully"
+
+                  - id: "log-commit-success"
+                    task: "✅ Commit created successfully!"
+                    tools: ["executeCommand"]
+                    expected_outcome: "Success message logged"
+
+                elseBranch:
+                  # Has issues - log and optionally fix
+                  - id: "log-issues-found"
+                    task: |
+                      ⚠️ Review found issues that need attention:
+                      {{ reviewResult.overview }}
+
+                      Specific issues:
+                      {{ reviewResult.specificReviews }}
+
+                      Auto-commit is disabled. Please review and fix manually, or re-run with fix workflow.
+                    tools: ["executeCommand"]
+                    expected_outcome: "Issues logged"
+
+                  - id: "suggest-fix"
+                    task: |
+                      Suggest running the fix workflow to automatically resolve issues:
+                      `bun run polka fix "fix issues from code review"`
+
+                      Or manually fix the issues and run this workflow again.
+                    tools: []
+                    expected_outcome: "Fix suggestion provided"
+
+                  # Optionally break if issues found (comment out to continue)
+                  - id: "break-on-issues"
+                    break: true
+
+            # Step 2g: Update iteration counter
+            - id: "increment"
+              task: "Increment iteration counter"
+              tools: []
+              output: "state"
+
+            # Step 2h: Sleep before next iteration
+            - id: "sleep-between-iterations"
+              if:
+                condition: "state.maxIterations === 0 || state.count < state.maxIterations"
+                thenBranch:
+                  - id: "sleep"
+                    task: |
+                      Sleeping for {{ sleepInterval }}ms before next review-commit cycle.
+                      Press Ctrl+C to stop the continuous review-commit loop.
+                    tools: []
+                    expected_outcome: "Slept for specified interval"
+
+      # Step 3: Final summary
+      - id: "final-summary"
+        task: |
+          Generate final summary of review-commit cycles.
+
+          Total iterations: {{ state.count }}
+          Commits created: {{ state.commitsCreated }}
+          Issues found: {{ state.issuesFound }}
+        tools: ["executeCommand"]
+        output: "summary"
+        expected_outcome: "Final summary logged"
