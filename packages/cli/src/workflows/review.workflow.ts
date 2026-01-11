@@ -105,7 +105,15 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput,
     })
     const prCommitRange = `${prDetails.baseRefOid}...HEAD`
     logger.info(`Reviewing PR #${pr} (commit range: ${prCommitRange})`)
-    const commitMessages = prDetails.commits.map((c: any) => c.messageBody).join('\n---\n')
+
+    // Type for PR commit objects from GitHub CLI
+    interface PRCommit {
+      messageBody: string
+      messageHeadline?: string
+      oid?: string
+    }
+
+    const commitMessages = prDetails.commits.map((c: PRCommit) => c.messageBody).join('\n---\n')
     const allChangedFiles: FileChange[] = await step('Getting file changes...', async () => {
       const diffResult = await tools.executeCommand({
         command: 'git',
@@ -365,7 +373,8 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput,
   }
 
   // Final safety check: ensure we have files to review
-  if (!changeInfo.changedFiles || changeInfo.changedFiles.length === 0) {
+  // Use optional chaining to handle undefined changedFiles
+  if (!changeInfo?.changedFiles || changeInfo.changedFiles.length === 0) {
     return { overview: 'No changes to review.', specificReviews: [] }
   }
 

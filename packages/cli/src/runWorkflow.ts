@@ -69,17 +69,6 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
     additionalTools,
   }
 
-  if (requiresProvider) {
-    const commandConfig = providerConfig.getConfigForCommand(commandName)
-    if (!commandConfig || !commandConfig.provider || !commandConfig.model) {
-      const error = new Error(`No provider specified for ${commandName}. Please run "polka init" to configure your AI provider.`)
-      logger.error(`Error: ${error.message}`)
-      throw error
-    }
-    logger.info('Provider:', commandConfig.provider)
-    logger.info('Model:', commandConfig.model)
-  }
-
   const usage = new UsageMeter(merge(prices, config.prices ?? {}), {
     maxMessages: config.maxMessageCount,
     maxCost: config.budget,
@@ -89,11 +78,16 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
 
   const onEvent = printEvent(verbose, usage, process.stderr)
 
+  // Get command config once and reuse (consolidated duplicate check)
   const commandConfig = providerConfig.getConfigForCommand(commandName)
-  if (!commandConfig || !commandConfig.provider || !commandConfig.model) {
-    const error = new Error(`No provider configured for command: ${commandName}. Please run "polka init" to configure your AI provider.`)
-    logger.error(`Error: ${error.message}`)
-    throw error
+  if (requiresProvider) {
+    if (!commandConfig || !commandConfig.provider || !commandConfig.model) {
+      const error = new Error(`No provider configured for command: ${commandName}. Please run "polka init" to configure your AI provider.`)
+      logger.error(`Error: ${error.message}`)
+      throw error
+    }
+    logger.info('Provider:', commandConfig.provider)
+    logger.info('Model:', commandConfig.model)
   }
 
   const model = getModel(commandConfig)
@@ -148,7 +142,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
 
   const tools = new Proxy({} as WorkflowTools<TTools>, {
     get: (_target, tool: string) => {
-      return async (input: any) => {
+      return async (input: unknown) => {
         logger.debug(`Running tool: ${tool}`)
         return await toolCall(
           { tool: tool as never, input },

@@ -212,12 +212,13 @@ export class McpManager {
     for (const [fullToolName, { tool }] of this.tools.entries()) {
       // Convert the MCP tool's inputSchema to a Zod schema
       // MCP tools use JSON Schema, we need to convert to Zod
-      let zodSchema: z.ZodObject<any>
+      let zodSchema: z.ZodUnknownDef
 
       try {
         // MCP schemas are JSON Schema compatible, but use looser types
         // Cast to JsonSchema to satisfy convertJsonSchemaToZod
-        zodSchema = convertJsonSchemaToZod(tool.inputSchema as any) as z.ZodObject<any>
+        // Note: convertJsonSchemaToZod doesn't have proper types, so we use unknown
+        zodSchema = convertJsonSchemaToZod(tool.inputSchema as unknown) as z.ZodUnknownDef
       } catch (error) {
         // If schema conversion fails, skip the tool rather than using a dangerous fallback
         const errorMessage = error instanceof Error ? error.message : String(error)

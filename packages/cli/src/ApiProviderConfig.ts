@@ -17,7 +17,7 @@ export class ApiProviderConfig {
   readonly defaultProvider?: AiProvider
   readonly providers: Readonly<Partial<Record<AiProvider, ProviderConfig>>>
   readonly commands?: Config['commands']
-  readonly defaultParameters: Record<string, any>
+  readonly defaultParameters: Record<string, unknown>
 
   constructor(config: Config) {
     this.defaultProvider = config.defaultProvider as AiProvider | undefined
@@ -34,7 +34,13 @@ export class ApiProviderConfig {
     return this.resolveModelConfig(mergedConfig)
   }
 
-  resolveModelConfig(config: { provider?: string; model?: string; parameters?: any; budget?: number; rules?: ConfigRule[] | string }) {
+  resolveModelConfig(config: {
+    provider?: string
+    model?: string
+    parameters?: Record<string, unknown>
+    budget?: number
+    rules?: ConfigRule[] | string
+  }) {
     const { provider, model, parameters, budget, rules } = config
     const finalProvider = (provider as AiProvider) ?? this.defaultProvider
     if (!finalProvider) {

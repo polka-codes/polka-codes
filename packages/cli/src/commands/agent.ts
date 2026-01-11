@@ -243,8 +243,8 @@ export async function runAgent(goal: string | undefined, options: Record<string,
 
     try {
       await agent.cleanup()
-    } catch {
-      // Ignore cleanup errors
+    } catch (cleanupError) {
+      logger.warn(`Warning: Error during agent cleanup: ${cleanupError instanceof Error ? cleanupError.message : String(cleanupError)}`)
     }
   }
 }
