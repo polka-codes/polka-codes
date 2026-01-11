@@ -91,6 +91,14 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
     logger.info('Model:', commandConfig.model)
   }
 
+  // At this point, if requiresProvider is true, commandConfig is guaranteed to be defined
+  // If requiresProvider is false, we need to handle the case where commandConfig might be undefined
+  if (!commandConfig) {
+    const error = new Error(`No provider configured for command: ${commandName}. Please run "polka init" to configure your AI provider.`)
+    logger.error(`Error: ${error.message}`)
+    throw error
+  }
+
   const model = getModel(commandConfig)
 
   const excludeFiles = [...(config.excludeFiles ?? [])]
