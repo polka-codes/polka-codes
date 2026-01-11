@@ -79,7 +79,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
   options.onUsageMeterCreated?.(usage)
 
   // Explicitly type onEvent as TaskEventCallback to avoid type inference issues
-  const onEvent: TaskEventCallback = printEvent(verbose, usage, process.stderr) as TaskEventCallback
+  const onEvent: TaskEventCallback = printEvent(verbose, usage, process.stderr)
 
   // Get command config once and reuse (consolidated duplicate check)
   const commandConfig = providerConfig.getConfigForCommand(commandName)
@@ -151,24 +151,23 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
 
   let workflowContext: WorkflowContext<TTools>
 
+  // Create a tools proxy with dynamic dispatch.
+  // Note: We cast to WorkflowTools<TTools> even though the actual return type is Promise<ToolResponse>.
+  // This is safe because ToolResponse is a union of all TTools[K]['output'] types, so at runtime
+  // the returned value is always compatible with the expected type for the called tool.
   const tools = new Proxy({} as WorkflowTools<TTools>, {
     get: (_target, tool: string) => {
-      return async (input: unknown) => {
+      return (async (input: unknown) => {
         logger.debug(`Running tool: ${tool}`)
-        return await toolCall(
-          { tool: tool as never, input },
-          // @ts-expect-error - printEvent returns TaskEventCallback but TypeScript infers complex union type
-          // This is a known limitation of the type system. The function is compatible at runtime.
-          {
-            parameters,
-            model,
-            agentCallback: onEvent,
-            toolProvider,
-            yes: context.yes,
-            workflowContext: workflowContext,
-          } as ToolCallContext, // Cast to satisfy type checker
-        )
-      }
+        return await toolCall({ tool: tool as never, input: input as never }, {
+          parameters,
+          model,
+          agentCallback: onEvent,
+          toolProvider,
+          yes: context.yes,
+          workflowContext: workflowContext,
+        } as ToolCallContext)
+      }) as WorkflowTools<TTools>[keyof TTools]
     },
   })
 

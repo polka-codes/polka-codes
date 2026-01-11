@@ -54,7 +54,7 @@ export function logGlobalToolCallStats(stream: Writable) {
 
 export const printEvent = (verbose: number, usageMeter: UsageMeter, stream: Writable = process.stdout) => {
   if (verbose < 0) {
-    return () => {}
+    return (_event: TaskEvent) => {}
   }
   const customConsole = new Console(stream, stream) as globalThis.Console
   let hadReasoning = false
