@@ -11,6 +11,22 @@ import { createLogger } from '../logger'
 import { quoteForShell } from '../utils/shell'
 
 /**
+ * Validates that a command string contains only safe characters
+ * (alphanumeric, hyphen, underscore, slash, dot, and colon)
+ * This prevents shell injection via malicious command strings
+ */
+function validateCommandName(command: string): void {
+  // Allow alphanumeric, hyphen, underscore, forward slash, dot, and colon
+  // This covers common cases like: git, npm, bun, node, ./script.sh, /usr/bin/command
+  const safeCommandPattern = /^[a-zA-Z0-9_\-./:]+$/
+  if (!safeCommandPattern.test(command)) {
+    throw new Error(
+      `Invalid command: '${command}' contains unsafe characters. Only alphanumeric, hyphen, underscore, slash, dot, and colon are allowed.`,
+    )
+  }
+}
+
+/**
  * Tool registry for agent command execution
  */
 type AgentToolsRegistry = ToolRegistry & {
@@ -84,11 +100,15 @@ export async function runAgent(goal: string | undefined, options: Record<string,
   // Create minimal tools implementation for agent context
   const tools = {
     executeCommand: async (input: { command: string; args?: string[]; shell?: boolean }) => {
+      // SECURITY: Validate command name to prevent shell injection
+      validateCommandName(input.command)
+
       // SECURITY: We use child_process.exec (not spawn) to enable shell features needed by git commands.
       // This is safe because:
-      // 1. All arguments are quoted using quoteForShell() to prevent injection
-      // 2. The agent is intended for local development where the user has full shell access anyway
-      // 3. Working directory is restricted to the project root
+      // 1. Command name is validated to contain only safe characters
+      // 2. All arguments are quoted using quoteForShell() to prevent injection
+      // 3. The agent is intended for local development where the user has full shell access anyway
+      // 4. Working directory is restricted to the project root
       //
       // Trade-off: Using exec with a string is riskier than spawn with an argument array, but
       // necessary for shell operations like git which require shell expansion. The quoteForShell
