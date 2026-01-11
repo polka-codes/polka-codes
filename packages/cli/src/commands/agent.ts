@@ -49,7 +49,8 @@ type AgentToolsRegistry = ToolRegistry & {
  *   bun run agent --preset conservative "Fix tests"  # Use preset configuration
  */
 export async function runAgent(goal: string | undefined, options: Record<string, unknown>, _command: Command) {
-  const verbose = typeof options.verbose === 'number' ? options.verbose : 0
+  const globalOpts = (_command.parent ?? _command).opts()
+  const verbose = typeof globalOpts.verbose === 'number' ? globalOpts.verbose : 0
   const logger = createLogger({ verbose })
   logger.info('🤖 Polka Agent')
   logger.info('='.repeat(60))

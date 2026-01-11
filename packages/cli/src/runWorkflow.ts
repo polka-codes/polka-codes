@@ -81,25 +81,18 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
   // Explicitly type onEvent as TaskEventCallback to avoid type inference issues
   const onEvent: TaskEventCallback = printEvent(verbose, usage, process.stderr)
 
-  // Get command config once and reuse (consolidated duplicate check)
+  // Get command config once and reuse
   const commandConfig = providerConfig.getConfigForCommand(commandName)
-  if (requiresProvider) {
-    if (!commandConfig || !commandConfig.provider || !commandConfig.model) {
-      const error = new Error(`No provider configured for command: ${commandName}. Please run "polka init" to configure your AI provider.`)
-      logger.error(`Error: ${error.message}`)
-      throw error
-    }
-    logger.info('Provider:', commandConfig.provider)
-    logger.info('Model:', commandConfig.model)
-  }
 
-  // At this point, if requiresProvider is true, commandConfig is guaranteed to be defined
-  // If requiresProvider is false, we need to handle the case where commandConfig might be undefined
-  if (!commandConfig) {
+  // All workflows currently require a provider, so validate config exists
+  if (!commandConfig || !commandConfig.provider || !commandConfig.model) {
     const error = new Error(`No provider configured for command: ${commandName}. Please run "polka init" to configure your AI provider.`)
     logger.error(`Error: ${error.message}`)
     throw error
   }
+
+  logger.info('Provider:', commandConfig.provider)
+  logger.info('Model:', commandConfig.model)
 
   const model = getModel(commandConfig)
 
