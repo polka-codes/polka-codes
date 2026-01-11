@@ -222,7 +222,7 @@ Parameters:
           const context = createExecutionContext(logger)
           const result = await runWorkflow(
             planWorkflow,
-            { task },
+            { task, interactive: false },
             {
               commandName: 'plan',
               context,

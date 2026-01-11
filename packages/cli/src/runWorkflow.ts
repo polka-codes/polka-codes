@@ -60,9 +60,12 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
   // Initialize MCP manager if MCP servers are configured
   const mcpManager = new McpManager(logger)
 
+  // Determine interactive mode: respect explicit values in input, then options, then default based on yes flag
+  const resolvedInteractive = workflowInput.interactive ?? interactive ?? yes !== true
+
   const finalWorkflowInput: TInput & BaseWorkflowInput = {
     ...workflowInput,
-    interactive: interactive ?? yes !== true,
+    interactive: resolvedInteractive,
     additionalTools,
   }
 
