@@ -5,6 +5,7 @@ import { checkbox, select } from '@inquirer/prompts'
 import { Command, InvalidOptionArgumentError } from 'commander'
 import { code, reviewCode } from '../api'
 import { createLogger } from '../logger'
+import { getBaseWorkflowOptions } from '../utils/command'
 import { formatReviewForConsole } from '../workflows/workflow.utils'
 
 export const reviewCommand = new Command('review')
@@ -61,8 +62,12 @@ export const reviewCommand = new Command('review')
         filesToReview = []
       }
 
-      const globalOpts = (command.parent ?? command).opts()
-      const { verbose } = globalOpts
+      const workflowOpts = getBaseWorkflowOptions(command)
+      // Override interactive mode: disable in JSON mode
+      if (json) {
+        workflowOpts.interactive = false
+      }
+      const { verbose } = workflowOpts
       // In JSON mode, force silent mode to suppress all non-JSON output
       const logger = createLogger({
         verbose: json ? -1 : verbose,
@@ -80,8 +85,7 @@ export const reviewCommand = new Command('review')
           range,
           files: filesToReview.length > 0 ? filesToReview : undefined,
           context,
-          interactive: !yes && !json,
-          ...globalOpts,
+          ...workflowOpts,
         })
 
         if (reviewResult) {
@@ -145,8 +149,7 @@ export const reviewCommand = new Command('review')
             const taskInstruction = `please address the review result:\n\n${formattedReview}`
             await code({
               task: taskInstruction,
-              interactive: !yes,
-              ...globalOpts,
+              ...workflowOpts,
             })
           }
         }

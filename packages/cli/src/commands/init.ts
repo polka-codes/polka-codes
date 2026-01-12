@@ -15,6 +15,7 @@ import { BUILT_IN_COMMANDS, type BuiltInCommand } from '../builtin-commands'
 import { configPrompt } from '../configPrompt'
 import { createLogger } from '../logger'
 import { runWorkflow } from '../runWorkflow'
+import { getBaseWorkflowOptions } from '../utils/command'
 import { initWorkflow } from '../workflows/init.workflow'
 import { initInteractiveWorkflow } from '../workflows/init-interactive.workflow'
 
@@ -282,8 +283,8 @@ export const initCommand = new Command('init')
   .option('--ai', 'Use AI to generate custom script with interactive prompts (only for type=script)')
   .option('-i, --instructions <string>', 'Script instructions for AI generation (only for type=script with --ai)')
   .action(async (type, name, options: Record<string, unknown> & { ai?: boolean; instructions?: string }, command: Command) => {
-    const globalOpts = (command.parent ?? command).opts()
-    const { verbose, yes } = globalOpts
+    const workflowOpts = getBaseWorkflowOptions(command)
+    const { verbose, yes } = workflowOpts
     const logger = createLogger({
       verbose: verbose,
     })
@@ -391,7 +392,7 @@ export const initCommand = new Command('init')
             },
             {
               commandName: 'init',
-              context: globalOpts,
+              context: workflowOpts,
               logger,
               requiresProvider: true,
               interactive,
@@ -541,7 +542,7 @@ export const initCommand = new Command('init')
         },
         {
           commandName: 'init',
-          context: globalOpts,
+          context: workflowOpts,
           logger,
           requiresProvider: true,
         },

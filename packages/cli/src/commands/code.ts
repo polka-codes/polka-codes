@@ -4,6 +4,7 @@ import { Command } from 'commander'
 import { lookup } from 'mime-types'
 import { code } from '../api'
 import { parseOptions } from '../options'
+import { getBaseWorkflowOptions } from '../utils/command'
 import { getUserInput } from '../utils/userInput'
 import type { JsonFilePart, JsonImagePart } from '../workflows/code.workflow'
 
@@ -98,13 +99,12 @@ export async function runCode(task: string | undefined, _options: any, command: 
     return
   }
 
-  const globalOpts = (command.parent ?? command).opts()
+  const workflowOpts = getBaseWorkflowOptions(command)
 
   await code({
     task: taskInput,
     files: fileContents,
-    interactive: !globalOpts.yes,
-    ...globalOpts,
+    ...workflowOpts,
   })
 }
 

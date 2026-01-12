@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { Command } from 'commander'
 import { plan } from '../api'
+import { getBaseWorkflowOptions } from '../utils/command'
 import { getUserInput } from '../utils/userInput'
 
 export const planCommand = new Command('plan')
@@ -30,13 +31,12 @@ export const planCommand = new Command('plan')
       }
     }
 
-    const globalOpts = (command.parent ?? command).opts()
+    const workflowOpts = getBaseWorkflowOptions(command)
 
     await plan({
       task: taskInput,
       fileContent,
       planFile: options.planFile,
-      interactive: !globalOpts.yes,
-      ...globalOpts,
+      ...workflowOpts,
     })
   })

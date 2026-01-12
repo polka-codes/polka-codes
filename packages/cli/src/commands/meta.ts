@@ -8,12 +8,13 @@ import { BUILT_IN_COMMANDS, type BuiltInCommand } from '../builtin-commands'
 import { createLogger } from '../logger'
 import { runWorkflow } from '../runWorkflow'
 import { executeScript, ScriptExecutionFailedError } from '../script/executor'
+import { getBaseWorkflowOptions } from '../utils/command'
 import { getUserInput } from '../utils/userInput'
 import { metaWorkflow } from '../workflows/meta.workflow'
 
 export async function runMeta(task: string | undefined, command: Command) {
-  const globalOpts = (command.parent ?? command).opts()
-  const { verbose } = globalOpts
+  const workflowOpts = getBaseWorkflowOptions(command)
+  const { verbose } = workflowOpts
   const logger = createLogger({
     verbose,
   })
@@ -59,16 +60,15 @@ export async function runMeta(task: string | undefined, command: Command) {
     // Execute meta workflow for the task
     const workflowInput = {
       task,
-      interactive: !globalOpts.yes,
-      additionalTools: {},
+      ...workflowOpts,
     }
 
     await runWorkflow(metaWorkflow, workflowInput, {
       commandName: 'meta',
-      context: globalOpts,
+      context: workflowOpts,
       logger,
       requiresProvider: true,
-      interactive: !globalOpts.yes,
+      ...workflowOpts,
     })
     return
   }
@@ -107,16 +107,15 @@ export async function runMeta(task: string | undefined, command: Command) {
   // Execute meta workflow for the task
   const workflowInput = {
     task: input,
-    interactive: !globalOpts.yes,
-    additionalTools: {},
+    ...workflowOpts,
   }
 
   await runWorkflow(metaWorkflow, workflowInput, {
     commandName: 'meta',
-    context: globalOpts,
+    context: workflowOpts,
     logger,
     requiresProvider: true,
-    interactive: !globalOpts.yes,
+    ...workflowOpts,
   })
 }
 

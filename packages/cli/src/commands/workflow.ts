@@ -11,11 +11,12 @@ import {
 import { Command } from 'commander'
 import { createLogger } from '../logger'
 import { runWorkflow } from '../runWorkflow'
+import { getBaseWorkflowOptions } from '../utils/command'
 import { type BaseWorkflowInput, commitWorkflow, fixWorkflow, planWorkflow, prWorkflow, reviewWorkflow } from '../workflows'
 
 export async function runWorkflowCommand(task: string | undefined, _options: unknown, command: Command) {
-  const globalOpts = (command.parent ?? command).opts()
-  const { verbose } = globalOpts
+  const workflowOpts = getBaseWorkflowOptions(command)
+  const { verbose } = workflowOpts
   const logger = createLogger({ verbose })
 
   const { file, workflow: workflowName } = command.opts()
@@ -122,7 +123,7 @@ export async function runWorkflowCommand(task: string | undefined, _options: unk
       .join(', ')}`,
   )
 
-  await runWorkflow(workflowFn, workflowInput, { commandName: 'workflow', context: globalOpts, logger })
+  await runWorkflow(workflowFn, workflowInput, { commandName: 'workflow', context: workflowOpts, logger })
 }
 
 export const workflowCommand = new Command('workflow')
