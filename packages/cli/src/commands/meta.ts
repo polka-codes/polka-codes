@@ -67,7 +67,6 @@ export async function runMeta(task: string | undefined, command: Command) {
       commandName: 'meta',
       context: workflowOpts,
       logger,
-      requiresProvider: true,
       ...workflowOpts,
     })
     return
@@ -114,7 +113,6 @@ export async function runMeta(task: string | undefined, command: Command) {
     commandName: 'meta',
     context: workflowOpts,
     logger,
-    requiresProvider: true,
     ...workflowOpts,
   })
 }

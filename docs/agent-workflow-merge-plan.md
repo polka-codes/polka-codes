@@ -151,7 +151,6 @@ await runWorkflow(agentWorkflow, agentInput, {
   commandName: 'agent',
   context: globalOpts,
   logger,
-  requiresProvider: true
 })
 ```
 

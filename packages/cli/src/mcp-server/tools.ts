@@ -67,7 +67,6 @@ async function executeWorkflow<TInput>(
       commandName,
       context,
       logger,
-      requiresProvider: true,
       interactive: false,
     })
 
@@ -227,7 +226,6 @@ Parameters:
               commandName: 'plan',
               context,
               logger,
-              requiresProvider: true,
               interactive: false,
             },
           )

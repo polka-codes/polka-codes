@@ -102,6 +102,66 @@ export const mcpServerConfigSchema = z
 
 export type McpServerConfig = z.infer<typeof mcpServerConfigSchema>
 
+// Agent configuration schema
+const agentContinuousImprovementSchema = z
+  .object({
+    sleepTimeOnNoTasks: z.number().int().optional(),
+    sleepTimeBetweenTasks: z.number().int().optional(),
+    maxCycles: z.number().int().optional(),
+  })
+  .strict()
+  .optional()
+
+const agentDiscoverySchema = z
+  .object({
+    enabledStrategies: z.array(z.string()).optional(),
+    cacheTime: z.number().int().optional(),
+    checkChanges: z.boolean().optional(),
+  })
+  .strict()
+  .optional()
+
+const agentSafetySchema = z
+  .object({
+    enabledChecks: z.array(z.string()).optional(),
+    blockDestructive: z.boolean().optional(),
+    maxFileSize: z.number().int().optional(),
+  })
+  .strict()
+  .optional()
+
+const agentHealthCheckSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    interval: z.number().int().optional(),
+  })
+  .strict()
+  .optional()
+
+const agentSchema = z
+  .object({
+    preset: z.string().optional(),
+    strategy: z.string().optional(),
+    continueOnCompletion: z.boolean().optional(),
+    maxIterations: z.number().int().optional(),
+    timeout: z.number().int().optional(),
+    requireApprovalFor: z.string().optional(),
+    autoApproveSafeTasks: z.boolean().optional(),
+    maxAutoApprovalCost: z.number().optional(),
+    pauseOnError: z.boolean().optional(),
+    workingBranch: z.string().optional(),
+    destructiveOperations: z.array(z.string()).optional(),
+    maxConcurrency: z.number().int().optional(),
+    autoSaveInterval: z.number().int().optional(),
+    workingDir: z.string().optional(),
+    continuousImprovement: agentContinuousImprovementSchema,
+    discovery: agentDiscoverySchema,
+    safety: agentSafetySchema,
+    healthCheck: agentHealthCheckSchema,
+  })
+  .strict()
+  .optional()
+
 export const configSchema = z
   .object({
     prices: z
@@ -137,6 +197,7 @@ export const configSchema = z
     mcpServers: z.record(z.string(), mcpServerConfigSchema).optional(),
     rules: z.array(ruleSchema).optional().or(z.string()).optional(),
     excludeFiles: z.array(z.string()).optional(),
+    agent: agentSchema,
   })
   .strict()
   .nullish()

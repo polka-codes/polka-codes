@@ -394,7 +394,6 @@ export const initCommand = new Command('init')
               commandName: 'init',
               context: workflowOpts,
               logger,
-              requiresProvider: true,
               interactive,
             },
           )
@@ -544,7 +543,6 @@ export const initCommand = new Command('init')
           commandName: 'init',
           context: workflowOpts,
           logger,
-          requiresProvider: true,
         },
       )
     }

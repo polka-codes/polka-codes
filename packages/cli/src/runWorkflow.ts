@@ -38,7 +38,6 @@ type RunWorkflowOptions = {
   commandName: string
   context: ExecutionContext
   logger: Logger
-  requiresProvider?: boolean
   interactive?: boolean
   getProvider?: (args: ProviderOptions) => ToolProvider
   onUsageMeterCreated?: (meter: UsageMeter) => void
@@ -49,7 +48,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
   workflowInput: TInput,
   options: RunWorkflowOptions,
 ): Promise<TOutput | undefined> {
-  const { commandName, context, logger, requiresProvider = true, interactive } = options
+  const { commandName, context, logger, interactive } = options
   const { providerConfig, config, verbose } = await parseOptions(context, {})
   const yes = context.yes
 
