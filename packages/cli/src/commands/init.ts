@@ -10,7 +10,7 @@ import { type Config, getGlobalConfigPath, loadConfigAtPath, localConfigFileName
 import type { Logger } from '@polka-codes/core'
 import { Command } from 'commander'
 import { set } from 'lodash-es'
-import { stringify } from 'yaml'
+import { parseDocument, stringify } from 'yaml'
 import { BUILT_IN_COMMANDS, type BuiltInCommand } from '../builtin-commands'
 import { configPrompt } from '../configPrompt'
 import { createLogger } from '../logger'
@@ -226,9 +226,8 @@ if (import.meta.main) {
       } else {
         // Parse YAML to safely insert into scripts section
         try {
-          const yaml = await import('yaml')
           // Use parseDocument to preserve comments
-          const doc = yaml.parseDocument(configContent)
+          const doc = parseDocument(configContent)
 
           if (!doc.has('scripts')) {
             doc.set('scripts', {})

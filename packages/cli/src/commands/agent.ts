@@ -194,7 +194,6 @@ export async function runAgent(goal: string | undefined, options: Record<string,
       }
       // For string properties that don't exist, return undefined (standard JS behavior)
       // This allows JSON.stringify, Promise checks, and other standard operations to work
-      // Only throws for explicit tool-like property access (string properties that look like tool names)
       if (typeof prop === 'string') {
         const reflected = Reflect.get(tools, prop)
         if (reflected !== undefined) {

@@ -56,6 +56,7 @@ import {
 import { McpError } from './mcp/errors'
 import type { McpManager } from './mcp/manager'
 import { createSkillContext, generateSkillsSystemPrompt } from './skillIntegration'
+import { quoteForShell } from './utils/shell'
 
 export type AgentContextParameters = {
   providerOptions?: Record<string, any>
@@ -234,7 +235,10 @@ async function executeCommand(input: { command: string; shell?: boolean; pipe?: 
   return new Promise((resolve, reject) => {
     const child =
       input.shell === true
-        ? spawn(input.command, { shell: true, stdio: 'pipe' })
+        ? spawn(input.args && input.args.length > 0 ? `${input.command} ${input.args.map(quoteForShell).join(' ')}` : input.command, {
+            shell: true,
+            stdio: 'pipe',
+          })
         : spawn(input.command, input.args, {
             shell: false,
             stdio: 'pipe',
