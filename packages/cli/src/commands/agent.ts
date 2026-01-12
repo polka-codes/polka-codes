@@ -3,7 +3,8 @@ import { randomUUID } from 'node:crypto'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import { promisify } from 'node:util'
-import type { StepFn, ToolRegistry, WorkflowTools } from '@polka-codes/core'
+import type { StepFn, ToolRegistry, ToolResponse, WorkflowTools } from '@polka-codes/core'
+import { createErrorResponse, createSuccessResponse } from '@polka-codes/core'
 import { Command } from 'commander'
 import { loadConfig } from '../agent/config'
 import { AutonomousAgent } from '../agent/orchestrator'
@@ -34,11 +35,11 @@ function validateCommandName(command: string): void {
 type AgentToolsRegistry = ToolRegistry & {
   executeCommand: {
     input: { command: string; args?: string[]; shell?: boolean }
-    output: { exitCode: number; stdout: string; stderr: string }
+    output: ToolResponse
   }
   readFile: {
     input: { path: string }
-    output: { content: string }
+    output: ToolResponse
   }
 }
 
@@ -138,7 +139,9 @@ export async function runAgent(goal: string | undefined, options: Record<string,
           cwd: workingDir,
           maxBuffer: 10 * 1024 * 1024, // 10MB
         })
-        return { exitCode: 0, stdout, stderr }
+        return createSuccessResponse(
+          `Command executed successfully\nExit code: 0\nStdout:\n${stdout}\n${stderr ? `Stderr:\n${stderr}` : ''}`,
+        )
       } catch (error) {
         // Handle ENOBUFS errors (buffer overflow) explicitly
         const errorCode = error && typeof error === 'object' && 'code' in error ? String(error.code) : undefined
@@ -147,20 +150,16 @@ export async function runAgent(goal: string | undefined, options: Record<string,
 
         if (errorErrno === 'ENOBUFS' || errorCode === 'ENOBUFS') {
           const errorStdout = error && typeof error === 'object' && 'stdout' in error ? String(error.stdout) : ''
-          return {
-            exitCode: 1,
-            stdout: errorStdout,
-            stderr: `Command output exceeded buffer limit (10MB). The command produced too much output. Try using different arguments or redirecting output to a file. Original error: ${errorMessage}`,
-          }
+          return createErrorResponse(
+            `Command output exceeded buffer limit (10MB). The command produced too much output. Try using different arguments or redirecting output to a file. Original error: ${errorMessage}\nStdout:\n${errorStdout}`,
+          )
         }
 
         const errorStdout = error && typeof error === 'object' && 'stdout' in error ? String(error.stdout) : ''
         const errorStderr = error && typeof error === 'object' && 'stderr' in error ? String(error.stderr) : errorMessage
-        return {
-          exitCode: parseInt(errorCode || '1', 10),
-          stdout: errorStdout,
-          stderr: errorStderr,
-        }
+        return createErrorResponse(
+          `Command failed with exit code ${errorCode || '1'}\n${errorStderr ? `Stderr:\n${errorStderr}` : errorMessage}${errorStdout ? `\nStdout:\n${errorStdout}` : ''}`,
+        )
       }
     },
 
@@ -174,10 +173,10 @@ export async function runAgent(goal: string | undefined, options: Record<string,
       const normalizedPath = path.normalize(fullPath)
       const normalizedWorkingDir = path.normalize(workingDir)
       if (!normalizedPath.startsWith(normalizedWorkingDir + path.sep) && normalizedPath !== normalizedWorkingDir) {
-        throw new Error(`Path "${filePath}" is outside working directory "${workingDir}"`)
+        return createErrorResponse(`Path "${filePath}" is outside working directory "${workingDir}"`)
       }
       const content = await fs.readFile(fullPath, 'utf-8')
-      return { content }
+      return createSuccessResponse(content)
     },
   } as WorkflowTools<AgentToolsRegistry>
 
@@ -185,24 +184,7 @@ export async function runAgent(goal: string | undefined, options: Record<string,
   const toolsWithGuard = new Proxy(tools, {
     get(_target, prop) {
       // Allow standard object properties to pass through (symbols, toJSON, then, etc.)
-      if (typeof prop === 'symbol') {
-        return Reflect.get(tools, prop)
-      }
-      // Check if property exists in tools
-      if (prop in tools) {
-        return tools[prop as keyof typeof tools]
-      }
-      // For string properties that don't exist, return undefined (standard JS behavior)
-      // This allows JSON.stringify, Promise checks, and other standard operations to work
-      if (typeof prop === 'string') {
-        const reflected = Reflect.get(tools, prop)
-        if (reflected !== undefined) {
-          return reflected
-        }
-        // Return undefined for non-existent properties (standard JS behavior)
-        // This fixes issues with JSON.stringify, Promise.then, etc.
-        return undefined
-      }
+      // For non-existent properties, Reflect.get returns undefined (standard JS behavior)
       return Reflect.get(tools, prop)
     },
   })
