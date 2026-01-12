@@ -152,7 +152,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
       // Return undefined for non-string properties (symbols, etc.)
       // and standard properties like 'then', 'toJSON' to avoid interfering
       // with JavaScript operations like Promise.then or JSON.stringify
-      if (typeof prop !== 'string') {
+      if (typeof prop !== 'string' || prop === 'then' || prop === 'toJSON') {
         return undefined
       }
       return (async (input: unknown) => {
