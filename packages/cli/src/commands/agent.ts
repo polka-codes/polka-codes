@@ -68,7 +68,7 @@ export async function runAgent(goal: string | undefined, options: Record<string,
 
   const configOptions = {
     strategy,
-    requireApprovalFor,
+    approval: { level: requireApprovalFor, autoApproveSafeTasks: true, maxAutoApprovalCost: 5 },
   }
 
   // Load configuration

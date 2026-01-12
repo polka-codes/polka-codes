@@ -138,14 +138,23 @@ const agentHealthCheckSchema = z
   .strict()
   .optional()
 
+const agentApprovalSchema = z
+  .object({
+    level: z.enum(['none', 'destructive', 'commits', 'all']).optional(),
+    autoApproveSafeTasks: z.boolean().optional(),
+    maxAutoApprovalCost: z.number().optional(),
+  })
+  .strict()
+  .optional()
+
 const agentSchema = z
   .object({
     preset: z.string().optional(),
-    strategy: z.string().optional(),
+    strategy: z.enum(['goal-directed', 'continuous-improvement']).optional(),
     continueOnCompletion: z.boolean().optional(),
     maxIterations: z.number().int().optional(),
     timeout: z.number().int().optional(),
-    requireApprovalFor: z.string().optional(),
+    requireApprovalFor: z.enum(['none', 'destructive', 'commits', 'all']).optional(),
     autoApproveSafeTasks: z.boolean().optional(),
     maxAutoApprovalCost: z.number().optional(),
     pauseOnError: z.boolean().optional(),
@@ -158,6 +167,7 @@ const agentSchema = z
     discovery: agentDiscoverySchema,
     safety: agentSafetySchema,
     healthCheck: agentHealthCheckSchema,
+    approval: agentApprovalSchema,
   })
   .strict()
   .optional()

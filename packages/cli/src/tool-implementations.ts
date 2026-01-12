@@ -205,11 +205,17 @@ async function select(input: { message: string; choices: { name: string; value: 
   return await inquirerSelect({ message: input.message, choices: input.choices })
 }
 
-async function writeToFile(input: { path: string; content: string }) {
+async function writeToFile(input: { path: string; content: string }): Promise<ToolResponse> {
   // generate parent directories if they don't exist
   await mkdir(dirname(input.path), { recursive: true })
   await fs.writeFile(input.path, input.content)
-  return {}
+  return {
+    success: true,
+    message: {
+      type: 'text',
+      value: `Successfully wrote to ${input.path}`,
+    },
+  }
 }
 
 async function readFile(input: { path: string }) {
