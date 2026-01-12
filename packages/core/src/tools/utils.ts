@@ -1,17 +1,5 @@
-import type { ToolResponse } from '../tool'
-
-/**
- * Create a standardized error response for provider method not available
- */
-export function createProviderError(action: string): ToolResponse {
-  return {
-    success: false,
-    message: {
-      type: 'error-text',
-      value: `Not possible to ${action}.`,
-    },
-  }
-}
+// Re-export from response-builders for backward compatibility
+export { createProviderErrorResponse as createProviderError } from './response-builders'
 
 /**
  * Simplify boolean string preprocessing
