@@ -324,15 +324,17 @@ export const initCommand = new Command('init')
       // Validate script name (prevent path traversal - must be flat in .polka-scripts)
       // This validation applies to both AI and basic template generation
       if (name.includes('/') || name.includes('\\')) {
-        throw new Error('Script name cannot contain slashes. Use a simple name (e.g., "deploy" not "utils/deploy")')
+        logger.error('Error: Script name cannot contain slashes. Use a simple name (e.g., "deploy" not "utils/deploy")')
+        process.exit(1)
       }
 
       // Check for conflicts with built-in commands
       if (BUILT_IN_COMMANDS.includes(name as BuiltInCommand)) {
-        throw new Error(
-          `Script name '${name}' conflicts with a built-in command. ` +
+        logger.error(
+          `Error: Script name '${name}' conflicts with a built-in command. ` +
             `Please choose a different name (e.g., '${name}-script' or 'my-${name}')`,
         )
+        process.exit(1)
       }
 
       // Check if AI-assisted generation is requested (presence of -i flag)

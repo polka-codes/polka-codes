@@ -180,15 +180,6 @@ export async function runAgent(goal: string | undefined, options: Record<string,
     },
   } as WorkflowTools<AgentToolsRegistry>
 
-  // Add runtime guard to catch attempts to use unavailable tools
-  const toolsWithGuard = new Proxy(tools, {
-    get(_target, prop) {
-      // Allow standard object properties to pass through (symbols, toJSON, then, etc.)
-      // For non-existent properties, Reflect.get returns undefined (standard JS behavior)
-      return Reflect.get(tools, prop)
-    },
-  })
-
   // Simple step function for workflow execution tracking
   // NOTE: This is a minimal implementation that bypasses some workflow step features:
   // - No retry logic on failures
@@ -211,7 +202,7 @@ export async function runAgent(goal: string | undefined, options: Record<string,
     workingDir,
     stateDir,
     sessionId,
-    tools: toolsWithGuard,
+    tools,
     env: process.env,
   }
 
