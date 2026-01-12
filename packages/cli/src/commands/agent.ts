@@ -181,13 +181,10 @@ export async function runAgent(goal: string | undefined, options: Record<string,
     },
   } as WorkflowTools<AgentToolsRegistry>
 
-  // Available tools in agent context
-  const AVAILABLE_TOOLS = Object.keys(tools).join(', ')
-
   // Add runtime guard to catch attempts to use unavailable tools
   const toolsWithGuard = new Proxy(tools, {
     get(_target, prop) {
-      // Allow standard object properties to pass through
+      // Allow standard object properties to pass through (symbols, toJSON, then, etc.)
       if (typeof prop === 'symbol') {
         return Reflect.get(tools, prop)
       }
@@ -195,18 +192,19 @@ export async function runAgent(goal: string | undefined, options: Record<string,
       if (prop in tools) {
         return tools[prop as keyof typeof tools]
       }
-      // For non-tool properties, use Reflect to get them from the original object
-      // This allows proper object inspection, JSON serialization, etc.
-      const reflected = Reflect.get(tools, prop)
-      if (reflected !== undefined) {
-        return reflected
+      // For string properties that don't exist, return undefined (standard JS behavior)
+      // This allows JSON.stringify, Promise checks, and other standard operations to work
+      // Only throws for explicit tool-like property access (string properties that look like tool names)
+      if (typeof prop === 'string') {
+        const reflected = Reflect.get(tools, prop)
+        if (reflected !== undefined) {
+          return reflected
+        }
+        // Return undefined for non-existent properties (standard JS behavior)
+        // This fixes issues with JSON.stringify, Promise.then, etc.
+        return undefined
       }
-      // Only throw for actual tool access that doesn't exist
-      throw new Error(
-        `Tool "${prop}" is not available in agent context. ` +
-          `Available tools: ${AVAILABLE_TOOLS}. ` +
-          `See packages/cli/src/commands/agent.ts for details on how to enable full tool support.`,
-      )
+      return Reflect.get(tools, prop)
     },
   })
 

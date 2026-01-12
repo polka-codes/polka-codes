@@ -22,23 +22,6 @@ type InitInteractiveWorkflowOutput = {
   generatedConfig?: Partial<Config>
 }
 
-const schemaExample = JSON.stringify(
-  {
-    plan: 'string - Describe your approach',
-    questions: [
-      {
-        question: 'string - What to ask',
-        options: ['array', 'of', 'options'],
-        default: 'default value',
-      },
-    ],
-    script: 'string - Generated TypeScript code',
-    config: 'object - Additional polka config if needed',
-  },
-  null,
-  2,
-)
-
 const scriptGenerationSystemPrompt = `Role: Expert TypeScript Developer and Automation Specialist
 
 Goal: Generate a custom polka script based on user requirements.
@@ -101,7 +84,12 @@ Return a JSON object with:
 - config: any additional configuration needed
 
 Example response format:
-${schemaExample}`
+\`\`\`json
+{
+  "plan": "Step-by-step plan for the script",
+  "script": "// Generated TypeScript code"
+}
+\`\`\``
 
 export const initInteractiveWorkflow: WorkflowFn<
   InitInteractiveWorkflowInput & BaseWorkflowInput,
@@ -202,9 +190,6 @@ Please:
           tools: [readFile, listFiles, searchFiles, askFollowupQuestion],
           outputSchema: z.object({
             plan: z.string(),
-            questions: z
-              .array(z.object({ question: z.string(), options: z.array(z.string()).optional(), default: z.string().optional() }))
-              .optional(),
             script: z.string(),
             config: z.record(z.string(), z.unknown()).optional(),
           }),
