@@ -281,9 +281,8 @@ export const initCommand = new Command('init')
   .argument('[type]', 'Type of resource to initialize (config, script, skill)')
   .argument('[name]', 'Name of the script or skill (only for type=script|skill)')
   .option('-g, --global', 'Use global config')
-  .option('--ai', 'Use AI to generate custom script with interactive prompts (only for type=script)')
-  .option('-i, --instructions <string>', 'Script instructions for AI generation (only for type=script with --ai)')
-  .action(async (type, name, options: Record<string, unknown> & { ai?: boolean; instructions?: string }, command: Command) => {
+  .option('-i, --instructions <string>', 'Script description for AI-assisted generation (only for type=script)')
+  .action(async (type, name, options: Record<string, unknown> & { instructions?: string }, command: Command) => {
     const workflowOpts = getBaseWorkflowOptions(command)
     const { verbose, yes } = workflowOpts
     const logger = createLogger({
@@ -315,8 +314,8 @@ export const initCommand = new Command('init')
         logger.error('Error: Script name is required when type=script')
         logger.info('Usage: polka init script <script-name>')
         logger.info('')
-        logger.info('For interactive script generation with AI assistance:')
-        logger.info('  polka init script <name> --ai')
+        logger.info('For AI-assisted script generation:')
+        logger.info('  polka init script <name> -i "description"')
         logger.info('')
         logger.info('For basic template generation:')
         logger.info('  polka init script <name>')
@@ -337,8 +336,8 @@ export const initCommand = new Command('init')
         )
       }
 
-      // Check if AI-assisted generation is requested
-      const useAI = options.ai === true
+      // Check if AI-assisted generation is requested (presence of -i flag)
+      const useAI = options.instructions !== undefined
 
       if (useAI) {
         // Interactive AI-assisted script generation
@@ -353,7 +352,7 @@ export const initCommand = new Command('init')
 
           if (!scriptInstructions) {
             logger.error('Error: Script instructions are required for AI generation')
-            logger.info('Usage: polka init script <name> --ai --instructions "your instructions"')
+            logger.info('Usage: polka init script <name> -i "your instructions"')
             process.exit(1)
           }
 
