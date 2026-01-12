@@ -21,7 +21,9 @@ function validateCommandName(command: string): void {
   const safeCommandPattern = /^[a-zA-Z0-9_\-./:]+$/
   if (!safeCommandPattern.test(command)) {
     throw new Error(
-      `Invalid command: '${command}' contains unsafe characters. Only alphanumeric, hyphen, underscore, slash, dot, and colon are allowed.`,
+      `Invalid command: '${command}' contains unsafe characters. ` +
+        `Commands must not contain spaces. If you need to pass arguments, use the 'args' array parameter instead. ` +
+        `Only alphanumeric, hyphen, underscore, slash, dot, and colon are allowed in the command field.`,
     )
   }
 }

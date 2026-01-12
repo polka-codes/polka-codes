@@ -145,7 +145,7 @@ Add additional files like:
 /**
  * Create a new TypeScript script template
  */
-async function createScript(name: string, logger: Logger, interactive: boolean) {
+async function createScript(name: string, logger: Logger, interactive: boolean, isGlobal: boolean = false) {
   // Note: Script name validation and built-in command checks are done at the
   // higher level in the script type handler to apply to both AI and template paths
 
@@ -203,9 +203,10 @@ if (import.meta.main) {
   logger.info(`Created script: ${scriptPathActual}`)
 
   // Add to config if it exists
-  if (existsSync(localConfigFileName)) {
+  const configPath = isGlobal ? getGlobalConfigPath() : localConfigFileName
+  if (existsSync(configPath)) {
     try {
-      const config = readConfig(localConfigFileName)
+      const config = readConfig(configPath)
       if (!config.scripts) {
         config.scripts = {}
       }
@@ -215,7 +216,7 @@ if (import.meta.main) {
       }
 
       // Append script to config file while preserving existing content
-      const configContent = readFileSync(localConfigFileName, 'utf-8')
+      const configContent = readFileSync(configPath, 'utf-8')
       let newContent = configContent
 
       // Check if scripts section exists
@@ -253,8 +254,8 @@ if (import.meta.main) {
         }
       }
 
-      writeFileSync(localConfigFileName, newContent)
-      logger.info(`Added script to config: ${localConfigFileName}`)
+      writeFileSync(configPath, newContent)
+      logger.info(`Added script to config: ${configPath}`)
       logger.info(`Run with: polka run ${name}`)
     } catch (error) {
       logger.warn('Could not update config file. Add the script manually:')
@@ -405,7 +406,8 @@ export const initCommand = new Command('init')
       } else {
         // Basic template generation
         try {
-          await createScript(name, logger, interactive)
+          const isGlobal = options.global ?? false
+          await createScript(name, logger, interactive, isGlobal)
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error)
           logger.error(`Script generation failed: ${message}`)
