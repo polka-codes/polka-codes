@@ -3,12 +3,13 @@ import { readFile } from 'node:fs/promises'
 import { Command } from 'commander'
 import { lookup } from 'mime-types'
 import { code } from '../api'
+import { COMMAND_CONSTANTS } from '../commands/command.constants'
 import { parseOptions } from '../options'
 import { getBaseWorkflowOptions } from '../utils/command'
 import { getUserInput } from '../utils/userInput'
 import type { JsonFilePart, JsonImagePart } from '../workflows/code.workflow'
 
-const readStdin = async (timeoutMs = 1000): Promise<string> => {
+const readStdin = async (timeoutMs = COMMAND_CONSTANTS.DEFAULT_STDIN_TIMEOUT_MS): Promise<string> => {
   if (process.stdin.isTTY) {
     return ''
   }

@@ -1,3 +1,4 @@
+import { PLANNER_CONSTANTS } from './planner.constants'
 import type { Plan, Task, WorkflowContext } from './types'
 
 /**
@@ -89,13 +90,13 @@ function identifyRisks(tasks: Task[]): string[] {
 
   // Check for tasks with many dependencies
   for (const task of tasks) {
-    if (task.dependencies.length > 5) {
+    if (task.dependencies.length > PLANNER_CONSTANTS.MAX_DEPENDENCIES) {
       risks.push(`Task "${task.title}" has ${task.dependencies.length} dependencies - could become blocked`)
     }
   }
 
   // Check for long-running tasks
-  const longTasks = tasks.filter((t) => t.estimatedTime > 120)
+  const longTasks = tasks.filter((t) => t.estimatedTime > PLANNER_CONSTANTS.LONG_TASK_MINUTES)
   if (longTasks.length > 0) {
     risks.push(`${longTasks.length} tasks have long estimated time (>2 hours)`)
   }
@@ -107,13 +108,13 @@ function identifyRisks(tasks: Task[]): string[] {
   }
 
   // Check for tasks affecting many files
-  const fileHeavyTasks = tasks.filter((t) => t.files.length > 10)
+  const fileHeavyTasks = tasks.filter((t) => t.files.length > PLANNER_CONSTANTS.FILE_HEAVY_THRESHOLD)
   if (fileHeavyTasks.length > 0) {
     risks.push(`${fileHeavyTasks.length} tasks affect >10 files - potential for merge conflicts`)
   }
 
   // Check for many critical tasks
-  const criticalTasks = tasks.filter((t) => t.priority === 1000)
+  const criticalTasks = tasks.filter((t) => t.priority === PLANNER_CONSTANTS.CRITICAL_PRIORITY)
   if (criticalTasks.length > 3) {
     risks.push(`${criticalTasks.length} critical-priority tasks - consider prioritizing`)
   }
