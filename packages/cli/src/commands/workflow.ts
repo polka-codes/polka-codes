@@ -6,6 +6,7 @@ import {
   type FullToolInfo,
   listFiles,
   parseDynamicWorkflowDefinition,
+  searchFiles,
   type WorkflowFn,
 } from '@polka-codes/core'
 import { Command } from 'commander'
@@ -73,7 +74,7 @@ export async function runWorkflowCommand(task: string | undefined, _options: unk
   }
 
   // Create dynamic workflow runner
-  const tools: FullToolInfo[] = [listFiles, askFollowupQuestion]
+  const tools: FullToolInfo[] = [listFiles, askFollowupQuestion, searchFiles]
 
   let dynamicRunner: ReturnType<typeof createDynamicWorkflow>
   try {

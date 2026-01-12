@@ -148,10 +148,16 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
   // This is safe because ToolResponse is a union of all TTools[K]['output'] types, so at runtime
   // the returned value is always compatible with the expected type for the called tool.
   const tools = new Proxy({} as WorkflowTools<TTools>, {
-    get: (_target, tool: string) => {
+    get: (_target, prop) => {
+      // Return undefined for non-string properties (symbols, etc.)
+      // and standard properties like 'then', 'toJSON' to avoid interfering
+      // with JavaScript operations like Promise.then or JSON.stringify
+      if (typeof prop !== 'string') {
+        return undefined
+      }
       return (async (input: unknown) => {
-        logger.debug(`Running tool: ${tool}`)
-        return await toolCall({ tool: tool as never, input: input as never }, {
+        logger.debug(`Running tool: ${prop}`)
+        return await toolCall({ tool: prop as never, input: input as never }, {
           parameters,
           model,
           agentCallback: onEvent,

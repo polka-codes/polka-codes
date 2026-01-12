@@ -13,6 +13,9 @@ export const PLANNER_CONSTANTS = {
   /** File count threshold for classifying a task as "file-heavy" */
   FILE_HEAVY_THRESHOLD: 10,
 
+  /** Priority value that indicates a high-priority task */
+  HIGH_PRIORITY: 800,
+
   /** Priority value that indicates a critical task */
   CRITICAL_PRIORITY: 1000,
 } as const

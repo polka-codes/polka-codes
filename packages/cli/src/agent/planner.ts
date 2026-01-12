@@ -102,7 +102,7 @@ function identifyRisks(tasks: Task[]): string[] {
   }
 
   // Check for high-priority tasks with high complexity
-  const riskyTasks = tasks.filter((t) => t.priority >= 800 && t.complexity === 'high')
+  const riskyTasks = tasks.filter((t) => t.priority >= PLANNER_CONSTANTS.HIGH_PRIORITY && t.complexity === 'high')
   if (riskyTasks.length > 0) {
     risks.push(`${riskyTasks.length} high-priority, high-complexity tasks`)
   }
