@@ -406,7 +406,7 @@ export const initCommand = new Command('init')
       } else {
         // Basic template generation
         try {
-          const isGlobal = options.global ?? false
+          const isGlobal = Boolean(options.global)
           await createScript(name, logger, interactive, isGlobal)
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error)
