@@ -1,7 +1,16 @@
 scripts:
-  test: AGENT=1 bun test -u
-  check: bun check
-  format: bun fix
+  format:
+    command: bun fix
+    description: Format code and fix lint issues
+  check:
+    command: bun check
+    description: Typecheck and lint
+  test:
+    command: bun test
+    description: Run tests
+  build:
+    command: bun build
+    description: Build packages
 commands:
   review:
     rules:
@@ -16,6 +25,12 @@ commands:
         branch: master
 excludeFiles:
   - .env
-  - bun.lock
-  - packages/cli/cli.mjs
-  - packages/github/schema.docs.graphql
+  - .env.*
+  - "*.pem"
+  - "*.key"
+  - .npmrc
+rules:
+  - Bun
+  - TypeScript
+  - Biome
+  - Monorepo

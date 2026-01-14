@@ -175,33 +175,6 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
     }
   }
 
-  const readSet = context?.readSet
-
-  // Normalize path for consistent tracking
-  const normalizedPath = join(args.path as string)
-
-  // Check if file has been read
-  if (readSet && !hasBeenRead(readSet, normalizedPath)) {
-    return {
-      success: false,
-      message: {
-        type: 'error-text',
-        value: `ERROR: You must read the file "${args.path}" first before editing it.
-
-This safety requirement ensures you understand the current file state before
-making changes, preventing edits based on incorrect assumptions.
-
-To fix this:
-1. Use readFile('${args.path}') to read the file first
-2. Verify the SEARCH sections match the file content exactly
-3. Then proceed with replaceInFile with the correct SEARCH/REPLACE blocks
-
-File: ${args.path}
-Error: Must read file before editing`,
-      },
-    }
-  }
-
   const parsed = toolInfo.parameters.safeParse(args)
   if (!parsed.success) {
     return {
@@ -212,7 +185,34 @@ Error: Must read file before editing`,
       },
     }
   }
+
   const { path, diff } = parsed.data
+  const readSet = context?.readSet
+
+  // Normalize path for consistent tracking
+  const normalizedPath = join(path)
+
+  // Check if file has been read
+  if (readSet && !hasBeenRead(readSet, normalizedPath)) {
+    return {
+      success: false,
+      message: {
+        type: 'error-text',
+        value: `ERROR: You must read the file "${path}" first before editing it.
+
+This safety requirement ensures you understand the current file state before
+making changes, preventing edits based on incorrect assumptions.
+
+To fix this:
+1. Use readFile('${path}') to read the file first
+2. Verify the SEARCH sections match the file content exactly
+3. Then proceed with replaceInFile with the correct SEARCH/REPLACE blocks
+
+File: ${path}
+Error: Must read file before editing`,
+      },
+    }
+  }
 
   try {
     const fileContent = await provider.readFile(path, false)

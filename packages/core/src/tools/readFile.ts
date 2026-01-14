@@ -79,7 +79,18 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
     return createProviderError('read file')
   }
 
-  const { path: paths, offset, limit, includeIgnored } = toolInfo.parameters.parse(args)
+  const parsed = toolInfo.parameters.safeParse(args)
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: {
+        type: 'error-text',
+        value: `Invalid arguments for readFile: ${parsed.error.message}`,
+      },
+    }
+  }
+
+  const { path: paths, offset, limit, includeIgnored } = parsed.data
   const readSet = context?.readSet
 
   const resp = []
