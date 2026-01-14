@@ -22,5 +22,12 @@ export {
 export { default as search } from './search'
 export { default as searchFiles } from './searchFiles'
 export * from './todo'
-
+// Export file read tracker utilities
+export {
+  createFileReadTracker,
+  getReadCount,
+  getReadFiles,
+  hasBeenRead,
+  markAsRead,
+} from './utils/fileReadTracker'
 export { default as writeToFile } from './writeToFile'

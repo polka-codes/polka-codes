@@ -63,4 +63,19 @@ export type ToolResponse = {
   message: ToolResponseResult
 }
 
-export type ToolHandler<_T, P> = (provider: P, args: Partial<Record<string, ToolParameterValue>>) => Promise<ToolResponse>
+/**
+ * Shared context for tool handlers.
+ * Provides access to session-level state like file read tracking.
+ */
+export type ToolContext = {
+  // Set of files that have been read (for read-first enforcement)
+  readSet?: Set<string>
+  // Additional metadata that can be shared across tool invocations
+  metadata?: Record<string, unknown>
+}
+
+export type ToolHandler<_T, P> = (
+  provider: P,
+  args: Partial<Record<string, ToolParameterValue>>,
+  context?: ToolContext,
+) => Promise<ToolResponse>

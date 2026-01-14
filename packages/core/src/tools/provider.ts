@@ -3,6 +3,7 @@ import type { TodoItem, UpdateTodoItemInput, UpdateTodoItemOutput } from './todo
 export type FilesystemProvider = {
   readFile?: (path: string, includeIgnored: boolean) => Promise<string | undefined>
   writeFile?: (path: string, content: string) => Promise<void>
+  fileExists?: (path: string) => Promise<boolean>
   removeFile?: (path: string) => Promise<void>
   renameFile?: (sourcePath: string, targetPath: string) => Promise<void>
   listFiles?: (path: string, recursive: boolean, maxCount: number, includeIgnored: boolean) => Promise<[string[], boolean]>

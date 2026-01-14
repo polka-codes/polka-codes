@@ -10,9 +10,10 @@ Core AI services and agent implementations for Polka Codes framework.
 
 - Multiple AI provider support (Anthropic, DeepSeek, GoogleVertex, Ollama, OpenAI, and OpenRouter)
 - Extensible agent architecture
-- Tool integration system
+- Tool integration system with safety enhancements
 - Type-safe API
 - Logging and monitoring
+- File operation safety (read-first enforcement, line numbers, partial reading)
 
 ## Installation
 
@@ -108,6 +109,122 @@ bun run build
 
 ```bash
 bun test
+```
+
+## File Operation Safety
+
+The core package includes built-in safety features for file operations to prevent accidental data loss and improve developer experience.
+
+### Read-First Enforcement
+
+File modification tools (`writeToFile` and `replaceInFile`) enforce a "read-first" policy. Before you can modify an existing file, you must read it first using `readFile`. This prevents accidental overwrites and ensures you understand the current file state before making changes.
+
+**Example:**
+
+```typescript
+import { readFile, writeToFile, replaceInFile, createFileReadTracker } from '@polka-codes/core';
+
+// Create a read tracker for your session
+const readSet = createFileReadTracker();
+const toolContext = { readSet };
+
+// 1. Read the file first (required for existing files)
+await readFile.handler(provider, { path: 'src/config.js' }, toolContext);
+
+// 2. Now you can write to it
+await writeToFile.handler(
+  provider,
+  { path: 'src/config.js', content: 'new content' },
+  toolContext
+);
+
+// 3. Or use replaceInFile for targeted edits
+await replaceInFile.handler(
+  provider,
+  {
+    path: 'src/config.js',
+    diff: `<<<<<<< SEARCH
+old value
+=======
+new value
+>>>>>>> REPLACE`
+  },
+  toolContext
+);
+```
+
+**Note:** New files can still be created without reading first. The read-first requirement only applies to existing files.
+
+### Line Numbers
+
+All file reads include line numbers for easy reference:
+
+```
+     1→import React from 'react';
+     2→
+     3→function App() {
+     4→  return <div>Hello</div>;
+     5→}
+```
+
+### Partial File Reading
+
+You can read specific sections of a file using `offset` and `limit` parameters:
+
+```typescript
+// Read lines 100-150 of a large file
+await readFile.handler(provider, {
+  path: 'large-file.ts',
+  offset: 100,  // Skip first 100 lines
+  limit: 50     // Read 50 lines
+});
+```
+
+### Tool Context
+
+The `ToolContext` type allows you to pass session-level state to tool handlers:
+
+```typescript
+import type { ToolContext } from '@polka-codes/core';
+
+interface ToolContext {
+  readSet?: Set<string>;           // Track which files have been read
+  metadata?: Record<string, unknown>; // Additional session data
+}
+
+// Create context for your workflow
+const context: ToolContext = {
+  readSet: createFileReadTracker(),
+  metadata: {
+    sessionId: 'my-session',
+    startTime: Date.now()
+  }
+};
+```
+
+### Backward Compatibility
+
+All safety features are **backward compatible**:
+
+- The `context` parameter in tool handlers is optional
+- Existing code without read tracking continues to work
+- Tools without context behave as before (no read-first enforcement)
+
+### File Read Tracker API
+
+```typescript
+import {
+  createFileReadTracker,  // Create a new tracking Set
+  markAsRead,             // Mark a file as read
+  hasBeenRead,            // Check if a file has been read
+  getReadFiles,           // Get all read file paths
+  getReadCount            // Get count of read files
+} from '@polka-codes/core';
+
+const readSet = createFileReadTracker();
+markAsRead(readSet, 'src/app.ts');
+console.log(hasBeenRead(readSet, 'src/app.ts')); // true
+console.log(getReadCount(readSet)); // 1
 ```
 
 ---

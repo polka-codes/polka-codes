@@ -2,11 +2,34 @@ import { z } from 'zod'
 import type { FullToolInfo, ToolHandler, ToolInfo } from '../tool'
 import type { FilesystemProvider } from './provider'
 import { createFileElement, createProviderError, preprocessBoolean } from './utils'
+import { markAsRead } from './utils/fileReadTracker'
 
 export const toolInfo = {
   name: 'readFile',
-  description:
-    'Request to read the contents of one or multiple files at the specified paths. Use comma separated paths to read multiple files. Use this when you need to examine the contents of an existing file you do not know the contents of, for example to analyze code, review text files, or extract information from configuration files. May not be suitable for other types of binary files, as it returns the raw content as a string. Try to list all the potential files are relevent to the task, and then use this tool to read all the relevant files.',
+  description: `Request to read the contents of one or multiple files at the specified paths.
+
+When to use:
+- Examining file contents you don't know
+- Analyzing code, reviewing text files, extracting configuration info
+- Reading multiple files at once (use comma-separated paths)
+- Understanding file structure before editing
+
+When NOT to use:
+- For file existence checks: Use listFiles instead
+- For searching within files: Use grep instead
+- For file name searches: Use searchFiles instead
+- Prefer this tool over executeCommand with cat/head/tail
+
+Features:
+- Supports comma-separated paths for multiple files
+- Line numbers included for easy reference
+- Optional offset/limit for partial file reading
+- Automatically handles different file types
+
+IMPORTANT:
+- Reading a file is required before writeToFile or replaceInFile
+- Line numbers are included for easy reference
+- Use offset/limit for large files to read specific sections`,
   parameters: z
     .object({
       path: z
@@ -17,6 +40,8 @@ export const toolInfo = {
         }, z.array(z.string()))
         .describe('The path of the file to read')
         .meta({ usageValue: 'Comma separated paths here' }),
+      offset: z.number().optional().describe('Skip first N lines (for partial file reading)').meta({ usageValue: '100' }),
+      limit: z.number().optional().describe('Read at most N lines (for partial file reading)').meta({ usageValue: '50' }),
       includeIgnored: z
         .preprocess(preprocessBoolean, z.boolean().nullish().default(false))
         .describe('Whether to include ignored files. Use true to include files ignored by .gitignore.')
@@ -36,25 +61,59 @@ export const toolInfo = {
             path: 'src/main.js,src/index.js',
           },
         },
+        {
+          description: 'Read partial file (lines 100-150)',
+          input: {
+            path: 'src/large-file.ts',
+            offset: 100,
+            limit: 50,
+          },
+        },
       ],
     }),
 } as const satisfies ToolInfo
 
-export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (provider, args) => {
+export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (provider, args, context) => {
   if (!provider.readFile) {
     return createProviderError('read file')
   }
 
-  const { path: paths, includeIgnored } = toolInfo.parameters.parse(args)
+  const { path: paths, offset, limit, includeIgnored } = toolInfo.parameters.parse(args)
+  const readSet = context?.readSet
 
   const resp = []
   for (const path of paths) {
     const fileContent = await provider.readFile(path, includeIgnored ?? false)
+
     if (!fileContent) {
       resp.push(createFileElement('read_file_file_content', path, undefined, { file_not_found: 'true' }))
-    } else {
-      resp.push(createFileElement('read_file_file_content', path, fileContent))
+      continue
     }
+
+    // Track that file was read
+    if (readSet) {
+      markAsRead(readSet, path)
+    }
+
+    // Apply offset/limit if specified
+    let lines = fileContent.split('\n')
+    const start = offset ?? 0
+    const end = limit ? start + limit : lines.length
+    if (offset !== undefined || limit !== undefined) {
+      lines = lines.slice(start, end)
+    }
+
+    // Add line numbers
+    const lineOffset = offset ?? 0
+    const numberedContent = lines
+      .map((line, i) => {
+        const lineNumber = lineOffset + i + 1
+        const paddedNumber = String(lineNumber).padStart(6, ' ')
+        return `${paddedNumber}→${line}`
+      })
+      .join('\n')
+
+    resp.push(createFileElement('read_file_file_content', path, numberedContent))
   }
 
   return {

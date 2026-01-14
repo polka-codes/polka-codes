@@ -2,12 +2,52 @@
 import { z } from 'zod'
 import type { FullToolInfo, ToolHandler, ToolInfo } from '../tool'
 import type { FilesystemProvider } from './provider'
+import { hasBeenRead } from './utils/fileReadTracker'
 import { replaceInFile } from './utils/replaceInFile'
 
 export const toolInfo = {
   name: 'replaceInFile',
-  description:
-    'Request to replace sections of content in an existing file using SEARCH/REPLACE blocks that define exact changes to specific parts of the file. This tool should be used when you need to make targeted changes to specific parts of a file.',
+  description: `Request to replace sections of content in an existing file using
+SEARCH/REPLACE blocks.
+
+IMPORTANT: You MUST use readFile at least once before using replaceInFile
+on an existing file. The system enforces this requirement.
+
+When to use:
+- Making targeted changes to specific parts of a file
+- Replacing variable names, function signatures, imports
+- Fixing bugs in existing code
+- When you know the exact content to replace
+
+When NOT to use:
+- For creating new files: Use writeToFile instead
+- For completely replacing file contents: Use writeToFile instead
+- When you don't know the exact content: Read file first
+
+SEARCH/REPLACE FORMAT:
+<<<<<<< SEARCH
+[exact content to find]
+=======
+[new content to replace with]
+>>>>>>> REPLACE
+
+Critical rules:
+1. SEARCH content must match EXACTLY (character-for-character including whitespace)
+2. Each block replaces only first occurrence
+3. Include just enough lines for uniqueness (not too many, not too few)
+4. Keep blocks concise (don't include long unchanged sections)
+5. List blocks in order they appear in file
+6. Use multiple blocks for multiple independent changes
+
+Special operations:
+- Move code: Two blocks (delete from original + insert at new location)
+- Delete code: Empty REPLACE section
+
+IMPORTANT CONSTRAINTS:
+- MUST read file first before editing (enforced by system)
+- SEARCH text must match file content exactly
+- Each block is independent (doesn't affect other blocks)
+- Cannot use for appending or inserting without SEARCH context`,
   parameters: z
     .object({
       path: z.string().describe('The path of the file to modify').meta({ usageValue: 'File path here' }),
@@ -37,7 +77,7 @@ Critical rules:
     * Each line must be complete. Never truncate lines mid-way through as this can cause matching failures.
 4. Special operations:
     * To move code: Use two SEARCH/REPLACE blocks (one to delete from original + one to insert at new location)
-    * To delete code: Use empty REPLACE section`,
+    * To delete code: Empty REPLACE section`,
         )
         .meta({ usageValue: 'Search and replace blocks here' }),
     })
@@ -123,13 +163,37 @@ function oldFeature() {
     }),
 } as const satisfies ToolInfo
 
-export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (provider, args) => {
+export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (provider, args, context) => {
   if (!provider.readFile || !provider.writeFile) {
     return {
       success: false,
       message: {
         type: 'error-text',
         value: 'Not possible to replace in file.',
+      },
+    }
+  }
+
+  const readSet = context?.readSet
+
+  // Check if file has been read
+  if (readSet && !hasBeenRead(readSet, args.path as string)) {
+    return {
+      success: false,
+      message: {
+        type: 'error-text',
+        value: `ERROR: You must read the file "${args.path}" first before editing it.
+
+This safety requirement ensures you understand the current file state before
+making changes, preventing edits based on incorrect assumptions.
+
+To fix this:
+1. Use readFile('${args.path}') to read the file first
+2. Verify the SEARCH sections match the file content exactly
+3. Then proceed with replaceInFile with the correct SEARCH/REPLACE blocks
+
+File: ${args.path}
+Error: Must read file before editing`,
       },
     }
   }
