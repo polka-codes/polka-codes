@@ -635,8 +635,7 @@ const localToolHandlers = {
   confirm,
   input,
   select,
-  writeToFile,
-  readFile,
+  // Note: writeToFile and readFile removed to use core implementations with safety features
   executeCommand,
   generateText,
   invokeTool,

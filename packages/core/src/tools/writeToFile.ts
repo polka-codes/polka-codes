@@ -90,8 +90,18 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
   const readSet = context?.readSet
 
   // Check if file exists and has been read
-  // Use optional chaining for fileExists method
-  const fileExists = provider.fileExists ? await provider.fileExists(path) : true
+  // Strategy: Only enforce read-first if we KNOW the file exists
+  // - If provider has fileExists, use it
+  // - If provider doesn't have fileExists, check if we've read it before
+  // - If we haven't read it and can't check existence, allow write (assume new file)
+  let fileExists: boolean
+  if (provider.fileExists) {
+    fileExists = await provider.fileExists(path)
+  } else {
+    // Without fileExists, we can only know if file exists if we've read it
+    fileExists = readSet ? hasBeenRead(readSet, path) : false
+  }
+
   if (fileExists && readSet && !hasBeenRead(readSet, path)) {
     return {
       success: false,
