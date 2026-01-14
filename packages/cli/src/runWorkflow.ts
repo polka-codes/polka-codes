@@ -2,7 +2,6 @@
 
 import { getProvider, logGlobalToolCallStats, type ProviderOptions, printEvent } from '@polka-codes/cli-shared'
 import {
-  createFileReadTracker,
   type Logger,
   makeStepFn,
   search,
@@ -144,9 +143,6 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
 
   let workflowContext: WorkflowContext<TTools>
 
-  // Initialize read tracking for file operation safety
-  const readSet = createFileReadTracker()
-
   // Create a tools proxy with dynamic dispatch.
   // Note: We cast to WorkflowTools<TTools> even though the actual return type is Promise<ToolResponse>.
   // This is safe because ToolResponse is a union of all TTools[K]['output'] types, so at runtime
@@ -168,7 +164,6 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
           toolProvider,
           yes: context.yes,
           workflowContext: workflowContext,
-          readSet,
         } as ToolCallContext)
       }) as WorkflowTools<TTools>[keyof TTools]
     },

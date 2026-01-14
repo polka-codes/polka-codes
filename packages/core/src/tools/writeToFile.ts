@@ -1,16 +1,11 @@
 import { z } from 'zod'
-import { join } from '../path'
 import type { FullToolInfo, ToolHandler, ToolInfo } from '../tool'
 import type { FilesystemProvider } from './provider'
 import { createProviderError } from './utils'
-import { hasBeenRead } from './utils/fileReadTracker'
 
 export const toolInfo = {
   name: 'writeToFile',
   description: `Request to write content to a file at the specified path.
-
-IMPORTANT: You MUST use readFile at least once before using writeToFile
-on an existing file. The system enforces this requirement.
 
 When to use:
 - Creating new files
@@ -25,19 +20,7 @@ When NOT to use:
 Features:
 - Automatically creates any directories needed
 - Overwrites existing files completely
-- Must provide complete file content (no truncation)
-
-IMPORTANT CONSTRAINTS:
-- If file exists, you MUST read it first (enforced by system)
-- Always provide COMPLETE intended content (no omissions)
-- Ensure no incorrect escape sequences (&lt;, &gt;, &amp;)
-- Ensure no unwanted CDATA tags in content
-- Use replaceInFile for modifications to existing files
-
-ERROR HANDLING:
-- If you attempt to write to a file without reading it first, the tool will
-  return an error requiring you to read the file first
-- This prevents accidental overwrites and ensures informed changes`,
+- Must provide complete file content (no truncation)`,
   parameters: z
     .object({
       path: z.string().describe('The path of the file to write to').meta({ usageValue: 'File path here' }),
@@ -72,7 +55,7 @@ export default App;
     }),
 } as const satisfies ToolInfo
 
-export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (provider, args, context) => {
+export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (provider, args) => {
   if (!provider.writeFile) {
     return createProviderError('write file')
   }
@@ -88,46 +71,6 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
     }
   }
   let { path, content } = parsed.data
-  const readSet = context?.readSet
-
-  // Normalize path for consistent tracking
-  const normalizedPath = join(path)
-
-  // Check if file exists and has been read
-  // Strategy: Only enforce read-first if we KNOW the file exists
-  // - If provider has fileExists, use it
-  // - If provider doesn't have fileExists, check if we've read it before
-  // - If we haven't read it and can't check existence, allow write (assume new file)
-  let fileExists: boolean
-  if (provider.fileExists) {
-    fileExists = await provider.fileExists(path)
-  } else {
-    // Without fileExists, we can only know if file exists if we've read it
-    fileExists = readSet ? hasBeenRead(readSet, normalizedPath) : false
-  }
-
-  if (fileExists && readSet && !hasBeenRead(readSet, normalizedPath)) {
-    return {
-      success: false,
-      message: {
-        type: 'error-text',
-        value: `ERROR: You must read the file "${path}" first before writing to it.
-
-This safety requirement ensures you understand the current file state before
-making changes, preventing accidental overwrites and data loss.
-
-To fix this:
-1. Use readFile('${path}') to read the file first
-2. Then proceed with writeToFile('${path}', content)
-
-If you intentionally want to create a new file, use a different filename or
-delete the existing file first.
-
-File: ${path}
-Error: Must read file before writing to existing file`,
-      },
-    }
-  }
 
   const trimmedContent = content.trim()
   if (trimmedContent.startsWith('<![CDATA[') && trimmedContent.endsWith(']]>')) {

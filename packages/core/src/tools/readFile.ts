@@ -1,9 +1,7 @@
 import { z } from 'zod'
-import { join } from '../path'
 import type { FullToolInfo, ToolHandler, ToolInfo } from '../tool'
 import type { FilesystemProvider } from './provider'
 import { createFileElement, createProviderError, preprocessBoolean } from './utils'
-import { markAsRead } from './utils/fileReadTracker'
 
 export const toolInfo = {
   name: 'readFile',
@@ -25,12 +23,7 @@ Features:
 - Supports comma-separated paths for multiple files
 - Line numbers included for easy reference
 - Optional offset/limit for partial file reading
-- Automatically handles different file types
-
-IMPORTANT:
-- Reading a file is required before writeToFile or replaceInFile
-- Line numbers are included for easy reference
-- Use offset/limit for large files to read specific sections`,
+- Automatically handles different file types`,
   parameters: z
     .object({
       path: z
@@ -74,7 +67,7 @@ IMPORTANT:
     }),
 } as const satisfies ToolInfo
 
-export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (provider, args, context) => {
+export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (provider, args) => {
   if (!provider.readFile) {
     return createProviderError('read file')
   }
@@ -91,7 +84,6 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
   }
 
   const { path: paths, offset, limit, includeIgnored } = parsed.data
-  const readSet = context?.readSet
 
   const resp = []
   for (const path of paths) {
@@ -100,13 +92,6 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
     if (!fileContent) {
       resp.push(createFileElement('read_file_file_content', path, undefined, { file_not_found: 'true' }))
       continue
-    }
-
-    // Track that file was read
-    if (readSet) {
-      // Normalize path to ensure consistency across different path formats
-      const normalizedPath = join(path)
-      markAsRead(readSet, normalizedPath)
     }
 
     // Apply offset/limit if specified

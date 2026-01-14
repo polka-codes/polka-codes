@@ -102,65 +102,68 @@ export const initInteractiveWorkflow: WorkflowFn<
   let generatedConfig: Partial<Config> = {}
   let generatedScriptPath: string | undefined
 
-  // Step 1: Analyze project and generate config
-  const analyzeResult = await step('analyze-project', async () => {
-    logger.info('Analyzing project structure and configuration...')
+  // Only analyze and generate config if we're NOT generating a script
+  if (!generateScript) {
+    // Step 1: Analyze project and generate config
+    const analyzeResult = await step('analyze-project', async () => {
+      logger.info('Analyzing project structure and configuration...')
 
-    return await agentWorkflow(
-      {
-        systemPrompt: INIT_WORKFLOW_ANALYZE_SYSTEM_PROMPT,
-        userMessage: [
-          {
-            role: 'user',
-            content: 'Please provide a valid polkacodes YAML configuration for the project.',
-          },
-        ],
-        tools: [readFile, listFiles, searchFiles],
-        outputSchema: z.object({ yaml: z.string() }),
-      },
-      { logger, tools, step },
-    )
-  })
+      return await agentWorkflow(
+        {
+          systemPrompt: INIT_WORKFLOW_ANALYZE_SYSTEM_PROMPT,
+          userMessage: [
+            {
+              role: 'user',
+              content: 'Please provide a valid polkacodes YAML configuration for the project.',
+            },
+          ],
+          tools: [readFile, listFiles, searchFiles],
+          outputSchema: z.object({ yaml: z.string() }),
+        },
+        { logger, tools, step },
+      )
+    })
 
-  if (analyzeResult.type === 'Exit' && analyzeResult.object) {
-    const yamlConfig = analyzeResult.object.yaml
-    generatedConfig = yamlConfig ? parse(yamlConfig) : {}
+    if (analyzeResult.type === 'Exit' && analyzeResult.object) {
+      const yamlConfig = analyzeResult.object.yaml
+      generatedConfig = yamlConfig ? parse(yamlConfig) : {}
+    }
+
+    // Step 2: Save generated config
+    await step('save-config', async () => {
+      const existingConfig = loadConfigAtPath(configPath) ?? {}
+
+      const finalConfig: Config = {
+        ...existingConfig,
+        ...generatedConfig,
+      }
+
+      await tools.writeToFile({ path: configPath, content: stringify(finalConfig) })
+      logger.info(`✅ Configuration saved to ${configPath}`)
+
+      // Show what was generated
+      if (generatedConfig.scripts) {
+        logger.info('\n📝 Generated scripts:')
+        Object.entries(generatedConfig.scripts).forEach(([name, scriptConfig]) => {
+          if (typeof scriptConfig === 'string') {
+            logger.info(`  - ${name}: ${scriptConfig}`)
+          } else if (typeof scriptConfig === 'object' && scriptConfig !== null) {
+            logger.info(`  - ${name}: ${scriptConfig.description || JSON.stringify(scriptConfig)}`)
+          }
+        })
+      }
+
+      if (generatedConfig.rules) {
+        const rules = Array.isArray(generatedConfig.rules) ? generatedConfig.rules : [generatedConfig.rules]
+        logger.info('\n📋 Identified project rules:')
+        rules.forEach((rule) => {
+          if (typeof rule === 'string') {
+            logger.info(`  - ${rule}`)
+          }
+        })
+      }
+    })
   }
-
-  // Step 2: Save generated config
-  await step('save-config', async () => {
-    const existingConfig = loadConfigAtPath(configPath) ?? {}
-
-    const finalConfig: Config = {
-      ...existingConfig,
-      ...generatedConfig,
-    }
-
-    await tools.writeToFile({ path: configPath, content: stringify(finalConfig) })
-    logger.info(`✅ Configuration saved to ${configPath}`)
-
-    // Show what was generated
-    if (generatedConfig.scripts) {
-      logger.info('\n📝 Generated scripts:')
-      Object.entries(generatedConfig.scripts).forEach(([name, scriptConfig]) => {
-        if (typeof scriptConfig === 'string') {
-          logger.info(`  - ${name}: ${scriptConfig}`)
-        } else if (typeof scriptConfig === 'object' && scriptConfig !== null) {
-          logger.info(`  - ${name}: ${scriptConfig.description || JSON.stringify(scriptConfig)}`)
-        }
-      })
-    }
-
-    if (generatedConfig.rules) {
-      const rules = Array.isArray(generatedConfig.rules) ? generatedConfig.rules : [generatedConfig.rules]
-      logger.info('\n📋 Identified project rules:')
-      rules.forEach((rule) => {
-        if (typeof rule === 'string') {
-          logger.info(`  - ${rule}`)
-        }
-      })
-    }
-  })
 
   // Step 3: Generate custom script if requested
   if (generateScript && scriptName && scriptInstructions) {
