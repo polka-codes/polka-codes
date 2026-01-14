@@ -124,6 +124,7 @@ type ToolCallContext = {
   toolProvider: any // ToolProvider with MemoryProvider & TodoProvider capabilities
   yes?: boolean
   workflowContext: any // WorkflowContext<CliToolRegistry> with proper generic constraints
+  readSet?: Set<string> // Track which files have been read for safety enforcement
 }
 
 export type { ToolCallContext }
@@ -696,7 +697,9 @@ export async function toolCall(toolCall: ToolCall<CliToolRegistry>, context: Too
   if (toolHandler) {
     // The tool handler expects specific input types based on the tool
     // We cast to satisfy TypeScript since the exact type varies by tool
-    return toolHandler.handler(context.toolProvider, toolCall.input as Partial<Record<string, ToolParameterValue>>)
+    return toolHandler.handler(context.toolProvider, toolCall.input as Partial<Record<string, ToolParameterValue>>, {
+      readSet: context.readSet,
+    })
   }
 
   throw new Error(`Unknown tool: ${toolCall.tool}`)

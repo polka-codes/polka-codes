@@ -4,7 +4,7 @@ import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import { promisify } from 'node:util'
 import type { StepFn, ToolRegistry, ToolResponse, WorkflowTools } from '@polka-codes/core'
-import { createErrorResponse, createSuccessResponse } from '@polka-codes/core'
+import { createErrorResponse, createFileReadTracker, createSuccessResponse, markAsRead } from '@polka-codes/core'
 import { Command } from 'commander'
 import { loadConfig } from '../agent/config'
 import { AutonomousAgent } from '../agent/orchestrator'
@@ -101,6 +101,9 @@ export async function runAgent(goal: string | undefined, options: Record<string,
   // TODO: Refactor agent.ts to use runWorkflow infrastructure for full tool support
   const asyncExec = promisify(exec)
 
+  // Initialize read tracking for file operation safety
+  const readSet = createFileReadTracker()
+
   // Create minimal tools implementation for agent context
   const tools = {
     executeCommand: async (input: { command: string; args?: string[]; shell?: boolean }) => {
@@ -176,6 +179,8 @@ export async function runAgent(goal: string | undefined, options: Record<string,
         return createErrorResponse(`Path "${filePath}" is outside working directory "${workingDir}"`)
       }
       const content = await fs.readFile(fullPath, 'utf-8')
+      // Track file read for safety enforcement
+      markAsRead(readSet, fullPath)
       return createSuccessResponse(content)
     },
   } as WorkflowTools<AgentToolsRegistry>
