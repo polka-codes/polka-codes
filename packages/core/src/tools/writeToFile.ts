@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { join } from '../path'
 import type { FullToolInfo, ToolHandler, ToolInfo } from '../tool'
 import type { FilesystemProvider } from './provider'
 import { createProviderError } from './utils'
@@ -89,6 +90,9 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
   let { path, content } = parsed.data
   const readSet = context?.readSet
 
+  // Normalize path for consistent tracking
+  const normalizedPath = join(path)
+
   // Check if file exists and has been read
   // Strategy: Only enforce read-first if we KNOW the file exists
   // - If provider has fileExists, use it
@@ -99,10 +103,10 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
     fileExists = await provider.fileExists(path)
   } else {
     // Without fileExists, we can only know if file exists if we've read it
-    fileExists = readSet ? hasBeenRead(readSet, path) : false
+    fileExists = readSet ? hasBeenRead(readSet, normalizedPath) : false
   }
 
-  if (fileExists && readSet && !hasBeenRead(readSet, path)) {
+  if (fileExists && readSet && !hasBeenRead(readSet, normalizedPath)) {
     return {
       success: false,
       message: {

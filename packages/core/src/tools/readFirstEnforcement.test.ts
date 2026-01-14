@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
+import { join } from '../path'
 import type { ToolContext } from '../tool'
 import { readFile, replaceInFile, writeToFile } from '.'
 import type { FilesystemProvider } from './provider'
@@ -7,19 +8,27 @@ import { createFileReadTracker, markAsRead } from './utils/fileReadTracker'
 describe('read-first enforcement', () => {
   const fileContents: Map<string, string> = new Map()
 
+  // Helper to normalize path for consistency in mock
+  const normalizeMockPath = (path: string) => join(path)
+
   const mockProvider: FilesystemProvider = {
     readFile: async (path, _includeIgnored) => {
-      if (path === 'test.txt') return 'line1\nline2\nline3'
-      if (path === 'multi.txt') return 'content1'
-      if (path === 'test.ts') return 'old content\nline2'
-      if (path === 'config.js') return "const API_URL = 'https://api.example.com';"
+      const normalizedPath = normalizeMockPath(path)
+      if (normalizedPath === 'test.txt') return 'line1\nline2\nline3'
+      if (normalizedPath === 'multi.txt') return 'content1'
+      if (normalizedPath === 'test.ts') return 'old content\nline2'
+      if (normalizedPath === 'config.js') return "const API_URL = 'https://api.example.com';"
       // Return from fileContents map (for existing.txt and dynamic files)
-      return fileContents.get(path) || undefined
+      return fileContents.get(normalizedPath) || undefined
     },
     writeFile: async (path, content) => {
-      fileContents.set(path, content)
+      const normalizedPath = normalizeMockPath(path)
+      fileContents.set(normalizedPath, content)
     },
-    fileExists: async (path) => fileContents.has(path),
+    fileExists: async (path) => {
+      const normalizedPath = normalizeMockPath(path)
+      return fileContents.has(normalizedPath)
+    },
   }
 
   function createToolContext(readSet?: Set<string>): ToolContext {
@@ -233,6 +242,41 @@ const API_URL = 'https://api.staging.example.com';
           path: 'existing.txt',
           diff: `<<<<<<< SEARCH
 updated content
+=======
+modified content
+>>>>>>> REPLACE`,
+        },
+        context,
+      )
+      if (!result.success) {
+        console.log('Error:', result.message.value)
+      }
+      expect(result.success).toBe(true)
+    })
+
+    test('should handle path normalization correctly', async () => {
+      const readSet = createFileReadTracker()
+      const context = createToolContext(readSet)
+
+      // Pre-populate a file (not one of the hardcoded ones)
+      fileContents.set('normfile.txt', 'original content')
+
+      // Read file with relative path
+      let result = await readFile.handler(mockProvider, { path: 'normfile.txt' }, context)
+      expect(result.success).toBe(true)
+      expect(readSet.has('normfile.txt')).toBe(true)
+
+      // Write to same file with different path format should succeed
+      result = await writeToFile.handler(mockProvider, { path: './normfile.txt', content: 'new content' }, context)
+      expect(result.success).toBe(true)
+
+      // Edit with different path format should also succeed
+      result = await replaceInFile.handler(
+        mockProvider,
+        {
+          path: 'normfile.txt',
+          diff: `<<<<<<< SEARCH
+new content
 =======
 modified content
 >>>>>>> REPLACE`,

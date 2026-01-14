@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { join } from '../path'
 import type { FullToolInfo, ToolHandler, ToolInfo } from '../tool'
 import type { FilesystemProvider } from './provider'
 import { createFileElement, createProviderError, preprocessBoolean } from './utils'
@@ -92,7 +93,9 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
 
     // Track that file was read
     if (readSet) {
-      markAsRead(readSet, path)
+      // Normalize path to ensure consistency across different path formats
+      const normalizedPath = join(path)
+      markAsRead(readSet, normalizedPath)
     }
 
     // Apply offset/limit if specified
