@@ -42,7 +42,7 @@ describe('writeToFile', () => {
     expect(mockProvider.writeFile).toHaveBeenCalledWith('error.txt', 'Test content')
   })
 
-  it('should remove CDATA tags when present', async () => {
+  it('should write content with CDATA tags as-is', async () => {
     const mockProvider = new MockProvider()
     spyOn(mockProvider, 'writeFile').mockResolvedValue()
 
@@ -52,32 +52,6 @@ describe('writeToFile', () => {
     })
 
     expect(result).toMatchSnapshot()
-    expect(mockProvider.writeFile).toHaveBeenCalledWith('cdata.txt', 'Test content')
-  })
-
-  it('should not modify content without CDATA tags', async () => {
-    const mockProvider = new MockProvider()
-    spyOn(mockProvider, 'writeFile').mockResolvedValue()
-
-    const result = await writeToFile.handler(mockProvider, {
-      path: 'nocdata.txt',
-      content: 'Test content',
-    })
-
-    expect(result).toMatchSnapshot()
-    expect(mockProvider.writeFile).toHaveBeenCalledWith('nocdata.txt', 'Test content')
-  })
-
-  it('should not modify partial CDATA tags', async () => {
-    const mockProvider = new MockProvider()
-    spyOn(mockProvider, 'writeFile').mockResolvedValue()
-
-    const result = await writeToFile.handler(mockProvider, {
-      path: 'partial.txt',
-      content: '<![CDATA[Test content',
-    })
-
-    expect(result).toMatchSnapshot()
-    expect(mockProvider.writeFile).toHaveBeenCalledWith('partial.txt', '<![CDATA[Test content')
+    expect(mockProvider.writeFile).toHaveBeenCalledWith('cdata.txt', '<![CDATA[Test content]]>')
   })
 })

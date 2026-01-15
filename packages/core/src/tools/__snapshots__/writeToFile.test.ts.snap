@@ -51,3 +51,13 @@ exports[`writeToFile should not modify partial CDATA tags 1`] = `
   "success": true,
 }
 `;
+
+exports[`writeToFile should write content with CDATA tags as-is 1`] = `
+{
+  "message": {
+    "type": "text",
+    "value": "<write_to_file_path>cdata.txt</write_to_file_path><status>Success</status>",
+  },
+  "success": true,
+}
+`;

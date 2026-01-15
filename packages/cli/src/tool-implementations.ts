@@ -629,7 +629,7 @@ export const localToolNames = Object.keys(localToolHandlers)
 
 export async function toolCall(toolCall: ToolCall<CliToolRegistry>, context: ToolCallContext) {
   // Check localToolHandlers first
-  const handler = localToolHandlers[toolCall.tool]
+  const handler = localToolHandlers[toolCall.tool as keyof typeof localToolHandlers]
   if (handler) {
     // Runtime tool selection means TypeScript can't infer the correct input type
     // We use 'as never' to bypass the type check since the actual type is validated at runtime
