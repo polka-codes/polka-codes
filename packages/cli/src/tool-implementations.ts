@@ -101,7 +101,7 @@ const allTools = [
   listTodoItemsTool,
   updateTodoItemTool,
 ] as const
-const toolHandlers = new Map<string, FullToolInfo>(allTools.map((t) => [t.name, t]))
+export const toolHandlers = new Map<string, FullToolInfo>(allTools.map((t) => [t.name, t]))
 
 type ToolCall<TTools extends ToolRegistry> = {
   [K in keyof TTools]: {

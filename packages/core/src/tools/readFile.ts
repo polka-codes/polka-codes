@@ -29,8 +29,13 @@ Features:
       path: z
         .preprocess((val) => {
           if (!val) return []
-          const values = Array.isArray(val) ? val : [val]
-          return values.flatMap((i) => (typeof i === 'string' ? i.split(',') : [])).filter((s) => s.length > 0)
+          // Only split by comma if the input is a string
+          // If it's already an array, use it as-is to support files with commas in names
+          if (Array.isArray(val)) {
+            return val.filter((s) => typeof s === 'string' && s.length > 0)
+          }
+          // Single string input - split by comma for multiple files
+          return (val as string).split(',').filter((s) => s.length > 0)
         }, z.array(z.string()))
         .describe('The path of the file to read')
         .meta({ usageValue: 'Comma separated paths here' }),

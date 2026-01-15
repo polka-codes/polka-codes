@@ -22,7 +22,7 @@ import { McpError } from './mcp/errors'
 import { McpManager } from './mcp/manager'
 import { type CliOptions, parseOptions } from './options'
 import prices from './prices'
-import { type AgentContextParameters, initializeSkillContext, type ToolCallContext, toolCall } from './tool-implementations'
+import { type AgentContextParameters, initializeSkillContext, type ToolCallContext, toolCall, toolHandlers } from './tool-implementations'
 import type { BaseWorkflowInput } from './workflows'
 
 /**
@@ -153,6 +153,11 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
       // and standard properties like 'then', 'toJSON' to avoid interfering
       // with JavaScript operations like Promise.then or JSON.stringify
       if (typeof prop !== 'string' || prop === 'then' || prop === 'toJSON') {
+        return undefined
+      }
+      // Return undefined for unknown tools to support existence checks
+      // Only return a function for known tools
+      if (!toolHandlers.has(prop)) {
         return undefined
       }
       return (async (input: unknown) => {

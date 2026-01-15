@@ -70,12 +70,7 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
       },
     }
   }
-  let { path, content } = parsed.data
-
-  const trimmedContent = content.trim()
-  if (trimmedContent.startsWith('<![CDATA[') && trimmedContent.endsWith(']]>')) {
-    content = trimmedContent.slice(9, -3)
-  }
+  const { path, content } = parsed.data
 
   await provider.writeFile(path, content)
 
