@@ -22,7 +22,14 @@ import { McpError } from './mcp/errors'
 import { McpManager } from './mcp/manager'
 import { type CliOptions, parseOptions } from './options'
 import prices from './prices'
-import { type AgentContextParameters, initializeSkillContext, type ToolCallContext, toolCall, toolHandlers } from './tool-implementations'
+import {
+  type AgentContextParameters,
+  initializeSkillContext,
+  localToolNames,
+  type ToolCallContext,
+  toolCall,
+  toolHandlers,
+} from './tool-implementations'
 import type { BaseWorkflowInput } from './workflows'
 
 /**
@@ -156,8 +163,8 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
         return undefined
       }
       // Return undefined for unknown tools to support existence checks
-      // Only return a function for known tools
-      if (!toolHandlers.has(prop)) {
+      // Only return a function for known tools (including local tools and MCP tools)
+      if (!toolHandlers.has(prop) && !localToolNames.includes(prop)) {
         return undefined
       }
       return (async (input: unknown) => {

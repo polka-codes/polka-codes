@@ -624,6 +624,9 @@ const localToolHandlers = {
   readSkillFile,
 }
 
+// Export local tool names for Proxy existence checks
+export const localToolNames = Object.keys(localToolHandlers)
+
 export async function toolCall(toolCall: ToolCall<CliToolRegistry>, context: ToolCallContext) {
   // Check localToolHandlers first
   const handler = localToolHandlers[toolCall.tool]
