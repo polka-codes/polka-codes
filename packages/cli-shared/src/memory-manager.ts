@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs'
+import { dirname, join, resolve, sep } from 'node:path'
 import type { DatabaseStats, IMemoryStore, MemoryEntry, MemoryOperation, MemoryQuery, QueryOptions } from '@polka-codes/core'
 
 /**
@@ -100,9 +102,6 @@ export class MemoryManager implements IMemoryStore {
    * Find project root (directory with .polkacodes.yml)
    */
   private findProjectRoot(cwd: string): string | null {
-    const { resolve, dirname, join } = require('node:path')
-    const { existsSync } = require('node:fs')
-
     let currentDir = resolve(cwd)
 
     while (currentDir !== '/') {
@@ -117,7 +116,7 @@ export class MemoryManager implements IMemoryStore {
       currentDir = parentDir
 
       // Safety: don't search too high (count path components)
-      if (currentDir.split(require('node:path').sep).length < 3) break
+      if (currentDir.split(sep).length < 3) break
     }
 
     return null
