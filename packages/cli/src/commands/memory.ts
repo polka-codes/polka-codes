@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import type { MemoryQuery } from '@polka-codes/cli-shared'
 import { type Config, getGlobalConfigPath, loadConfigAtPath, SQLiteMemoryStore } from '@polka-codes/cli-shared'
+import { resolveHomePath } from '@polka-codes/core'
 import type { Command } from 'commander'
 
 /**
@@ -53,7 +54,7 @@ export async function memoryList(options: {
   if (options.sortBy) query.sortBy = options.sortBy as any
   if (options.sortOrder) query.sortOrder = options.sortOrder as any
 
-  const entries = await store.queryMemory(query)
+  const entries = await store.queryMemory(query, { operation: 'select' })
 
   if (options.format === 'json') {
     console.log(JSON.stringify(entries, null, 2))
@@ -167,7 +168,7 @@ export async function memoryExport(options: { output?: string; type?: string; sc
     query.scope = 'auto'
   }
 
-  const entries = await store.queryMemory(query)
+  const entries = await store.queryMemory(query, { operation: 'select' })
 
   const outputPath = options.output ? resolve(process.cwd(), options.output) : resolve(process.cwd(), `memory-export-${Date.now()}.json`)
 

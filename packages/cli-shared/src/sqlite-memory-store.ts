@@ -1,4 +1,6 @@
-import { existsSync, mkdir } from 'node:fs/promises'
+import { crypto } from 'node:crypto'
+import { existsSync } from 'node:fs'
+import { mkdir, rename } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import type { MemoryConfig } from '@polka-codes/core'
 import Database from 'better-sqlite3'
@@ -94,7 +96,7 @@ export class SQLiteMemoryStore {
   /**
    * Initialize database connection and schema
    */
-  private initializeDatabase(): Database.Database {
+  private async initializeDatabase(): Promise<Database.Database> {
     if (this.db) {
       return this.db
     }
@@ -105,7 +107,16 @@ export class SQLiteMemoryStore {
       // Create directory if needed
       const dir = dirname(dbPath)
       if (!existsSync(dir)) {
-        mkdir(dir, { recursive: true, mode: 0o700 })
+        await mkdir(dir, { recursive: true, mode: 0o700 })
+      }
+
+      // Create database with secure permissions if it doesn't exist
+      if (!existsSync(dbPath)) {
+        const { openSync, closeSync } = await import('node:fs')
+        const fd = openSync(dbPath, 'w')
+        closeSync(fd)
+        // Set permissions to owner read/write only
+        await import('node:fs/promises').then((fs) => fs.chmod(dbPath, 0o600))
       }
 
       // Open database
@@ -131,7 +142,11 @@ export class SQLiteMemoryStore {
       if (existsSync(dbPath)) {
         const backupPath = `${dbPath}.corrupted.${Date.now()}`
         console.warn(`[SQLiteMemoryStore] Backing up corrupted database to: ${backupPath}`)
-        // Note: we'll handle this async but continue for now
+        try {
+          await rename(dbPath, backupPath)
+        } catch (backupError) {
+          console.error('[SQLiteMemoryStore] Failed to backup corrupted database:', backupError)
+        }
 
         // Retry initialization
         return this.initializeDatabase()
@@ -212,9 +227,9 @@ export class SQLiteMemoryStore {
   /**
    * Get database instance
    */
-  private getDatabase(): Database.Database {
+  private async getDatabase(): Promise<Database.Database> {
     if (!this.db) {
-      this.db = this.initializeDatabase()
+      this.db = await this.initializeDatabase()
     }
     return this.db
   }
@@ -269,7 +284,8 @@ export class SQLiteMemoryStore {
    */
   private resolvePath(path: string): string {
     if (path.startsWith('~')) {
-      return `${process.env.HOME}${path.slice(1)}`
+      const home = process.env.HOME || process.env.USERPROFILE || '.'
+      return `${home}${path.slice(1)}`
     }
     return resolve(path)
   }
@@ -278,11 +294,7 @@ export class SQLiteMemoryStore {
    * Generate UUID v4
    */
   private generateUUID(): string {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-      const r = (Math.random() * 16) | 0
-      const v = c === 'x' ? r : (r & 0x3) | 0x8
-      return v.toString(16)
-    })
+    return crypto.randomUUID()
   }
 
   /**
@@ -319,7 +331,7 @@ export class SQLiteMemoryStore {
    * Execute transaction with retry logic
    */
   async transaction<T>(callback: () => Promise<T>, options: { timeout?: number; retries?: number } = {}): Promise<T> {
-    const db = this.getDatabase()
+    const db = await this.getDatabase()
     const retries = options.retries ?? this.maxRetries
 
     for (let attempt = 0; attempt < retries; attempt++) {
@@ -357,7 +369,7 @@ export class SQLiteMemoryStore {
    * List all memory topics (backward compatible)
    */
   async listMemoryTopics(): Promise<string[]> {
-    const db = this.getDatabase()
+    const db = await this.getDatabase()
     const scope = this.currentScope
 
     const stmt = db.prepare('SELECT DISTINCT name FROM memory_entries WHERE scope = ?')
@@ -370,20 +382,22 @@ export class SQLiteMemoryStore {
    * Read memory by topic (backward compatible)
    */
   async readMemory(topic?: string): Promise<string | undefined> {
-    const db = this.getDatabase()
-    const name = topic || ':default:'
-    const scope = this.currentScope
+    return this.transaction(async () => {
+      const db = this.getDatabase()
+      const name = topic || ':default:'
+      const scope = this.currentScope
 
-    const stmt = db.prepare('SELECT content FROM memory_entries WHERE name = ? AND scope = ?')
-    const row = stmt.get(name, scope) as { content: string } | undefined
+      const stmt = db.prepare('SELECT content FROM memory_entries WHERE name = ? AND scope = ?')
+      const row = stmt.get(name, scope) as { content: string } | undefined
 
-    if (row) {
-      // Update last_accessed
-      const updateStmt = db.prepare('UPDATE memory_entries SET last_accessed = ? WHERE name = ? AND scope = ?')
-      updateStmt.run(this.now(), name, scope)
-    }
+      if (row) {
+        // Update last_accessed
+        const updateStmt = db.prepare('UPDATE memory_entries SET last_accessed = ? WHERE name = ? AND scope = ?')
+        updateStmt.run(this.now(), name, scope)
+      }
 
-    return row?.content
+      return row?.content
+    })
   }
 
   /**
@@ -483,7 +497,7 @@ export class SQLiteMemoryStore {
    * Query memory with filters
    */
   async queryMemory(query: MemoryQuery = {}, options: QueryOptions = {}): Promise<MemoryEntry[] | number> {
-    const db = this.getDatabase()
+    const db = await this.getDatabase()
     const { sql, params } = this.buildQuery(query, options)
 
     if (options.operation === 'count') {
@@ -661,7 +675,7 @@ export class SQLiteMemoryStore {
     entriesByType: Record<string, number>
     databaseSize: number
   }> {
-    const db = this.getDatabase()
+    const db = await this.getDatabase()
 
     const countStmt = db.prepare('SELECT COUNT(*) as count FROM memory_entries')
     const { count: totalEntries } = countStmt.get() as { count: number }
