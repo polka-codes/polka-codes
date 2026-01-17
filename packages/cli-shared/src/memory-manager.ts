@@ -126,7 +126,6 @@ export class MemoryManager implements IMemoryStore {
    * Normalize path for consistent scope
    */
   private normalizePath(path: string): string {
-    const { resolve } = require('node:path')
     const normalized = resolve(path).replace(/\/$/, '')
 
     // Ensure path is within reasonable bounds
