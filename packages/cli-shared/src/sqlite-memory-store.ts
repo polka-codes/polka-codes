@@ -317,34 +317,20 @@ export class SQLiteMemoryStore implements IMemoryStore {
   }
 
   /**
-   * List all memory topics (backward compatible)
+   * Read memory by topic
    */
-  async listMemoryTopics(): Promise<string[]> {
+  async readMemory(topic: string): Promise<string | undefined> {
     const db = await this.getDatabase()
-    const scope = this.currentScope
-
-    const stmt = db.prepare('SELECT DISTINCT name FROM memory_entries WHERE scope = ?')
-    const rows = stmt.all(scope) as { name: string }[]
-
-    return rows.map((row) => row.name)
-  }
-
-  /**
-   * Read memory by topic (backward compatible)
-   */
-  async readMemory(topic?: string): Promise<string | undefined> {
-    const db = await this.getDatabase()
-    const name = topic || ':default:'
     const scope = this.currentScope
 
     return this.transaction(async () => {
       const stmt = db.prepare('SELECT content FROM memory_entries WHERE name = ? AND scope = ?')
-      const row = stmt.get(name, scope) as { content: string } | undefined
+      const row = stmt.get(topic, scope) as { content: string } | undefined
 
       if (row) {
         // Update last_accessed
         const updateStmt = db.prepare('UPDATE memory_entries SET last_accessed = ? WHERE name = ? AND scope = ?')
-        updateStmt.run(this.now(), name, scope)
+        updateStmt.run(this.now(), topic, scope)
       }
 
       return row?.content
@@ -352,11 +338,11 @@ export class SQLiteMemoryStore implements IMemoryStore {
   }
 
   /**
-   * Update memory (backward compatible)
+   * Update memory
    */
   async updateMemory(
     operation: 'append' | 'replace' | 'remove',
-    topic: string | undefined,
+    topic: string,
     content: string | undefined,
     metadata?: {
       entry_type?: string
@@ -367,18 +353,17 @@ export class SQLiteMemoryStore implements IMemoryStore {
   ): Promise<void> {
     return this.transaction(async () => {
       const db = this.getDatabase()
-      const name = topic || ':default:'
       const scope = this.currentScope
       const now = this.now()
 
       if (operation === 'remove') {
         const stmt = db.prepare('DELETE FROM memory_entries WHERE name = ? AND scope = ?')
-        stmt.run(name, scope)
+        stmt.run(topic, scope)
         return
       }
 
       const existingStmt = db.prepare('SELECT content, entry_type, status, priority, tags FROM memory_entries WHERE name = ? AND scope = ?')
-      const existing = existingStmt.get(name, scope) as
+      const existing = existingStmt.get(topic, scope) as
         | { content: string; entry_type: string; status: string; priority: string; tags: string }
         | undefined
 
@@ -408,7 +393,7 @@ export class SQLiteMemoryStore implements IMemoryStore {
         if (!content) {
           throw new Error('Content is required for new memory entries.')
         }
-        finalContent = operation === 'replace' ? content : content
+        finalContent = content
         entry_type = metadata?.entry_type || 'note'
         status = metadata?.status
         priority = metadata?.priority
@@ -430,7 +415,7 @@ export class SQLiteMemoryStore implements IMemoryStore {
 
       upsertStmt.run(
         this.generateUUID(),
-        name,
+        topic,
         scope,
         finalContent,
         entry_type,

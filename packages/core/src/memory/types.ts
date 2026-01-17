@@ -80,22 +80,22 @@ export interface IMemoryStore {
   /**
    * Read memory by topic name
    *
-   * @param topic - The topic name (uses default if undefined)
+   * @param topic - The topic name
    * @returns The content, or undefined if not found
    */
-  readMemory(topic?: string): Promise<string | undefined>
+  readMemory(topic: string): Promise<string | undefined>
 
   /**
    * Update memory with operation
    *
    * @param operation - The operation to perform ('append', 'replace', 'remove')
-   * @param topic - The topic name (uses default if undefined)
+   * @param topic - The topic name
    * @param content - The content (required for append/replace)
    * @param metadata - Optional metadata (entry_type, status, priority, tags)
    */
   updateMemory(
     operation: 'append' | 'replace' | 'remove',
-    topic: string | undefined,
+    topic: string,
     content: string | undefined,
     metadata?: {
       entry_type?: string
@@ -127,13 +127,6 @@ export interface IMemoryStore {
    * @returns Database statistics
    */
   getStats(): Promise<DatabaseStats>
-
-  /**
-   * List all memory topics
-   *
-   * @returns Array of topic names
-   */
-  listMemoryTopics(): Promise<string[]>
 
   /**
    * Close the memory store and release resources

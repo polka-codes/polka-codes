@@ -22,7 +22,7 @@ export class MemoryManager implements IMemoryStore {
   /**
    * Read memory by topic name
    */
-  async readMemory(topic?: string): Promise<string | undefined> {
+  async readMemory(topic: string): Promise<string | undefined> {
     return this.store.readMemory(topic)
   }
 
@@ -31,7 +31,7 @@ export class MemoryManager implements IMemoryStore {
    */
   async updateMemory(
     operation: 'append' | 'replace' | 'remove',
-    topic: string | undefined,
+    topic: string,
     content: string | undefined,
     metadata?: {
       entry_type?: string
@@ -73,13 +73,6 @@ export class MemoryManager implements IMemoryStore {
    */
   async getStats(): Promise<DatabaseStats> {
     return this.store.getStats()
-  }
-
-  /**
-   * List all memory topics
-   */
-  async listMemoryTopics(): Promise<string[]> {
-    return this.store.listMemoryTopics()
   }
 
   /**
