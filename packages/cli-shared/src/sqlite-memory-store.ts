@@ -207,20 +207,10 @@ export class SQLiteMemoryStore {
       )
     `)
 
-    // Create indexes
+    // Create optimized indexes
     db.exec(`
-      CREATE INDEX IF NOT EXISTS idx_memory_entries_scope ON memory_entries(scope);
-      CREATE INDEX IF NOT EXISTS idx_memory_entries_type ON memory_entries(entry_type);
-      CREATE INDEX IF NOT EXISTS idx_memory_entries_status ON memory_entries(status);
-      CREATE INDEX IF NOT EXISTS idx_memory_entries_priority ON memory_entries(priority);
-      CREATE INDEX IF NOT EXISTS idx_memory_entries_tags ON memory_entries(tags);
-      CREATE INDEX IF NOT EXISTS idx_memory_entries_created ON memory_entries(created_at);
+      CREATE INDEX IF NOT EXISTS idx_memory_entries_scope_type ON memory_entries(scope, entry_type);
       CREATE INDEX IF NOT EXISTS idx_memory_entries_updated ON memory_entries(updated_at);
-      CREATE INDEX IF NOT EXISTS idx_todo_status ON memory_entries(entry_type, status)
-        WHERE entry_type = 'todo';
-      CREATE INDEX IF NOT EXISTS idx_bug_priority ON memory_entries(entry_type, priority)
-        WHERE entry_type = 'bug';
-      CREATE INDEX IF NOT EXISTS idx_type_status_updated ON memory_entries(entry_type, status, updated_at);
     `)
   }
 
@@ -276,7 +266,12 @@ export class SQLiteMemoryStore {
    * Normalize path for consistent scope
    */
   private normalizePath(path: string): string {
-    return resolve(path).replace(/\/$/, '')
+    const normalized = resolve(path).replace(/\/$/, '')
+    // Ensure path is within reasonable bounds
+    if (normalized.includes('..')) {
+      throw new Error(`Path contains parent directory references: ${path}`)
+    }
+    return normalized
   }
 
   /**
@@ -285,7 +280,16 @@ export class SQLiteMemoryStore {
   private resolvePath(path: string): string {
     if (path.startsWith('~')) {
       const home = process.env.HOME || process.env.USERPROFILE || '.'
-      return `${home}${path.slice(1)}`
+      if (home === '.') {
+        throw new Error('Cannot resolve home directory')
+      }
+      const expanded = `${home}${path.slice(1)}`
+      // Validate expanded path doesn't escape home directory
+      const resolved = resolve(expanded)
+      if (!resolved.startsWith(home)) {
+        throw new Error(`Path escapes home directory: ${path}`)
+      }
+      return resolved
     }
     return resolve(path)
   }
@@ -382,11 +386,11 @@ export class SQLiteMemoryStore {
    * Read memory by topic (backward compatible)
    */
   async readMemory(topic?: string): Promise<string | undefined> {
-    return this.transaction(async () => {
-      const db = this.getDatabase()
-      const name = topic || ':default:'
-      const scope = this.currentScope
+    const db = await this.getDatabase()
+    const name = topic || ':default:'
+    const scope = this.currentScope
 
+    return this.transaction(async () => {
       const stmt = db.prepare('SELECT content FROM memory_entries WHERE name = ? AND scope = ?')
       const row = stmt.get(name, scope) as { content: string } | undefined
 
@@ -498,6 +502,12 @@ export class SQLiteMemoryStore {
    */
   async queryMemory(query: MemoryQuery = {}, options: QueryOptions = {}): Promise<MemoryEntry[] | number> {
     const db = await this.getDatabase()
+
+    // Apply default safety limit if not specified
+    if (!options.operation && !query.limit) {
+      query = { ...query, limit: 1000 }
+    }
+
     const { sql, params } = this.buildQuery(query, options)
 
     if (options.operation === 'count') {

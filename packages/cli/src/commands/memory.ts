@@ -40,47 +40,49 @@ export async function memoryList(options: {
 }) {
   const store = await getMemoryStore()
 
-  const query: MemoryQuery = {
-    scope: 'auto',
-  }
-
-  if (options.type) query.type = options.type
-  if (options.status) query.status = options.status
-  if (options.priority) query.priority = options.priority
-  if (options.tags) query.tags = options.tags.split(',')
-  if (options.search) query.search = options.search
-  if (options.limit) query.limit = options.limit
-  if (options.offset) query.offset = options.offset
-  if (options.sortBy) query.sortBy = options.sortBy as any
-  if (options.sortOrder) query.sortOrder = options.sortOrder as any
-
-  const entries = await store.queryMemory(query, { operation: 'select' })
-
-  if (options.format === 'json') {
-    console.log(JSON.stringify(entries, null, 2))
-  } else {
-    // Table format
-    if (entries.length === 0) {
-      console.log('No entries found.')
-      return
+  try {
+    const query: MemoryQuery = {
+      scope: 'auto',
     }
 
-    console.log('\nMemory Entries:')
-    console.log('─'.repeat(80))
-    for (const entry of entries as any[]) {
-      console.log(`\nName: ${entry.name}`)
-      console.log(`Type: ${entry.entry_type}`)
-      console.log(`Status: ${entry.status || 'N/A'}`)
-      console.log(`Priority: ${entry.priority || 'N/A'}`)
-      console.log(`Tags: ${entry.tags || 'N/A'}`)
-      console.log(`Updated: ${new Date(entry.updated_at).toLocaleString()}`)
-      console.log(`Content:\n${entry.content}`)
+    if (options.type) query.type = options.type
+    if (options.status) query.status = options.status
+    if (options.priority) query.priority = options.priority
+    if (options.tags) query.tags = options.tags.split(',')
+    if (options.search) query.search = options.search
+    if (options.limit) query.limit = options.limit
+    if (options.offset) query.offset = options.offset
+    if (options.sortBy) query.sortBy = options.sortBy as any
+    if (options.sortOrder) query.sortOrder = options.sortOrder as any
+
+    const entries = await store.queryMemory(query, { operation: 'select' })
+
+    if (options.format === 'json') {
+      console.log(JSON.stringify(entries, null, 2))
+    } else {
+      // Table format
+      if (entries.length === 0) {
+        console.log('No entries found.')
+        return
+      }
+
+      console.log('\nMemory Entries:')
       console.log('─'.repeat(80))
+      for (const entry of entries as any[]) {
+        console.log(`\nName: ${entry.name}`)
+        console.log(`Type: ${entry.entry_type}`)
+        console.log(`Status: ${entry.status || 'N/A'}`)
+        console.log(`Priority: ${entry.priority || 'N/A'}`)
+        console.log(`Tags: ${entry.tags || 'N/A'}`)
+        console.log(`Updated: ${new Date(entry.updated_at).toLocaleString()}`)
+        console.log(`Content:\n${entry.content}`)
+        console.log('─'.repeat(80))
+      }
+      console.log(`\nTotal: ${entries.length} entries`)
     }
-    console.log(`\nTotal: ${entries.length} entries`)
+  } finally {
+    store.close()
   }
-
-  store.close()
 }
 
 /**
@@ -88,20 +90,23 @@ export async function memoryList(options: {
  */
 export async function memoryRead(name: string, options: { format?: 'json' | 'text' }) {
   const store = await getMemoryStore()
-  const content = await store.readMemory(name)
 
-  if (!content) {
-    console.error(`Memory entry "${name}" not found.`)
-    process.exit(1)
+  try {
+    const content = await store.readMemory(name)
+
+    if (!content) {
+      console.error(`Memory entry "${name}" not found.`)
+      process.exit(1)
+    }
+
+    if (options.format === 'json') {
+      console.log(JSON.stringify({ name, content }, null, 2))
+    } else {
+      console.log(content)
+    }
+  } finally {
+    store.close()
   }
-
-  if (options.format === 'json') {
-    console.log(JSON.stringify({ name, content }, null, 2))
-  } else {
-    console.log(content)
-  }
-
-  store.close()
 }
 
 /**
@@ -116,9 +121,13 @@ export async function memoryDelete(name: string, options: { force?: boolean }) {
   }
 
   const store = await getMemoryStore()
-  await store.updateMemory('remove', name, undefined)
-  console.log(`Memory entry "${name}" deleted.`)
-  store.close()
+
+  try {
+    await store.updateMemory('remove', name, undefined)
+    console.log(`Memory entry "${name}" deleted.`)
+  } finally {
+    store.close()
+  }
 }
 
 /**
@@ -127,28 +136,31 @@ export async function memoryDelete(name: string, options: { force?: boolean }) {
 export async function memoryRename(oldName: string, newName: string) {
   const store = await getMemoryStore()
 
-  // Read old entry
-  const oldContent = await store.readMemory(oldName)
-  if (!oldContent) {
-    console.error(`Memory entry "${oldName}" not found.`)
-    process.exit(1)
+  try {
+    // Read old entry
+    const oldContent = await store.readMemory(oldName)
+    if (!oldContent) {
+      console.error(`Memory entry "${oldName}" not found.`)
+      process.exit(1)
+    }
+
+    // Check if new name already exists
+    const newContent = await store.readMemory(newName)
+    if (newContent) {
+      console.error(`Memory entry "${newName}" already exists.`)
+      process.exit(1)
+    }
+
+    // Create new entry with old content
+    await store.updateMemory('replace', newName, oldContent)
+
+    // Delete old entry
+    await store.updateMemory('remove', oldName, undefined)
+
+    console.log(`Memory entry renamed from "${oldName}" to "${newName}".`)
+  } finally {
+    store.close()
   }
-
-  // Check if new name already exists
-  const newContent = await store.readMemory(newName)
-  if (newContent) {
-    console.error(`Memory entry "${newName}" already exists.`)
-    process.exit(1)
-  }
-
-  // Create new entry with old content
-  await store.updateMemory('replace', newName, oldContent)
-
-  // Delete old entry
-  await store.updateMemory('remove', oldName, undefined)
-
-  console.log(`Memory entry renamed from "${oldName}" to "${newName}".`)
-  store.close()
 }
 
 /**
@@ -157,28 +169,30 @@ export async function memoryRename(oldName: string, newName: string) {
 export async function memoryExport(options: { output?: string; type?: string; scope?: 'global' | 'project'; format?: 'json' }) {
   const store = await getMemoryStore()
 
-  const query: MemoryQuery = {}
+  try {
+    const query: MemoryQuery = {}
 
-  if (options.type) query.type = options.type
-  if (options.scope === 'global') {
-    query.scope = 'global'
-  } else if (options.scope === 'project') {
-    query.scope = 'project'
-  } else {
-    query.scope = 'auto'
+    if (options.type) query.type = options.type
+    if (options.scope === 'global') {
+      query.scope = 'global'
+    } else if (options.scope === 'project') {
+      query.scope = 'project'
+    } else {
+      query.scope = 'auto'
+    }
+
+    const entries = await store.queryMemory(query, { operation: 'select' })
+
+    const outputPath = options.output ? resolve(process.cwd(), options.output) : resolve(process.cwd(), `memory-export-${Date.now()}.json`)
+
+    // Ensure directory exists
+    await mkdir(dirname(outputPath), { recursive: true })
+
+    await writeFile(outputPath, JSON.stringify(entries, null, 2))
+    console.log(`Exported ${entries.length} entries to ${outputPath}`)
+  } finally {
+    store.close()
   }
-
-  const entries = await store.queryMemory(query, { operation: 'select' })
-
-  const outputPath = options.output ? resolve(process.cwd(), options.output) : resolve(process.cwd(), `memory-export-${Date.now()}.json`)
-
-  // Ensure directory exists
-  await mkdir(dirname(outputPath), { recursive: true })
-
-  await writeFile(outputPath, JSON.stringify(entries, null, 2))
-  console.log(`Exported ${entries.length} entries to ${outputPath}`)
-
-  store.close()
 }
 
 /**
@@ -187,43 +201,75 @@ export async function memoryExport(options: { output?: string; type?: string; sc
 export async function memoryImport(inputFile: string, options: { merge?: boolean; format?: 'json' }) {
   const store = await getMemoryStore()
 
-  const inputPath = resolve(process.cwd(), inputFile)
-  const data = await readFile(inputPath, 'utf-8')
-  const entries = JSON.parse(data)
+  try {
+    const inputPath = resolve(process.cwd(), inputFile)
+    const data = await readFile(inputPath, 'utf-8')
 
-  if (!Array.isArray(entries)) {
-    console.error('Invalid import file format. Expected an array of memory entries.')
-    process.exit(1)
-  }
-
-  let imported = 0
-  let skipped = 0
-
-  for (const entry of entries) {
+    let entries: unknown
     try {
-      // Check if entry already exists
-      const existing = await store.readMemory(entry.name)
-
-      if (existing && !options.merge) {
-        skipped++
-        continue
-      }
-
-      await store.updateMemory('replace', entry.name, entry.content, {
-        entry_type: entry.entry_type,
-        status: entry.status,
-        priority: entry.priority,
-        tags: entry.tags,
-      })
-
-      imported++
+      entries = JSON.parse(data)
     } catch (error) {
-      console.error(`Failed to import entry "${entry.name}":`, error)
+      console.error(`Failed to parse JSON from ${inputPath}:`, error)
+      process.exit(1)
     }
-  }
 
-  console.log(`Imported ${imported} entries, skipped ${skipped} entries.`)
-  store.close()
+    if (!Array.isArray(entries)) {
+      console.error('Invalid import file format. Expected an array of memory entries.')
+      process.exit(1)
+    }
+
+    let imported = 0
+    let skipped = 0
+
+    for (const entry of entries) {
+      try {
+        // Validate required fields
+        if (!entry.name || typeof entry.name !== 'string') {
+          console.error('Skipping invalid entry: missing or invalid name')
+          skipped++
+          continue
+        }
+
+        if (!entry.content || typeof entry.content !== 'string') {
+          console.error(`Skipping entry "${entry.name}": missing or invalid content`)
+          skipped++
+          continue
+        }
+
+        // Validate priority if present
+        const validPriorities = ['low', 'medium', 'high', 'critical']
+        let priority = entry.priority
+        if (priority && !validPriorities.includes(priority)) {
+          console.warn(`Entry "${entry.name}" has invalid priority "${priority}", defaulting to null`)
+          priority = null
+        }
+
+        // Check if entry already exists
+        const existing = await store.readMemory(entry.name)
+
+        if (existing && !options.merge) {
+          skipped++
+          continue
+        }
+
+        await store.updateMemory('replace', entry.name, entry.content, {
+          entry_type: entry.entry_type || 'note',
+          status: entry.status,
+          priority: priority,
+          tags: entry.tags,
+        })
+
+        imported++
+      } catch (error) {
+        console.error(`Failed to import entry "${entry.name}":`, error)
+        skipped++
+      }
+    }
+
+    console.log(`Imported ${imported} entries, skipped ${skipped} entries.`)
+  } finally {
+    store.close()
+  }
 }
 
 /**
@@ -231,26 +277,30 @@ export async function memoryImport(inputFile: string, options: { merge?: boolean
  */
 export async function memoryStatus() {
   const store = await getMemoryStore()
-  const stats = await store.getStats()
 
-  const globalConfigPath = getGlobalConfigPath()
-  const config = (await loadConfigAtPath(globalConfigPath)) as Config | null
-  const memoryConfig = config?.memory || { path: '~/.config/polka-codes/memory.sqlite' }
-  const dbPath = resolveHomePath(memoryConfig.path || '~/.config/polka-codes/memory.sqlite')
+  try {
+    const stats = await store.getStats()
 
-  console.log('\nMemory Store Status:')
-  console.log('─'.repeat(80))
-  console.log(`Database: ${dbPath}`)
-  console.log(`Total entries: ${stats.totalEntries}`)
-  console.log(`Database size: ${(stats.databaseSize / 1024).toFixed(2)} KB`)
-  console.log('\nEntries by type:')
+    const globalConfigPath = getGlobalConfigPath()
+    const config = (await loadConfigAtPath(globalConfigPath)) as Config | null
+    const memoryConfig = config?.memory || { path: '~/.config/polka-codes/memory.sqlite' }
+    const dbPath = resolveHomePath(memoryConfig.path || '~/.config/polka-codes/memory.sqlite')
 
-  for (const [type, count] of Object.entries(stats.entriesByType)) {
-    console.log(`  ${type}: ${count}`)
+    console.log('\nMemory Store Status:')
+    console.log('─'.repeat(80))
+    console.log(`Database: ${dbPath}`)
+    console.log(`Total entries: ${stats.totalEntries}`)
+    console.log(`Database size: ${(stats.databaseSize / 1024).toFixed(2)} KB`)
+    console.log('\nEntries by type:')
+
+    for (const [type, count] of Object.entries(stats.entriesByType)) {
+      console.log(`  ${type}: ${count}`)
+    }
+
+    console.log('─'.repeat(80))
+  } finally {
+    store.close()
   }
-
-  console.log('─'.repeat(80))
-  store.close()
 }
 
 /**
