@@ -105,8 +105,8 @@ export async function memoryList(options: {
     if (options.search) query.search = options.search
     if (options.limit) query.limit = options.limit
     if (options.offset) query.offset = options.offset
-    if (options.sortBy) query.sortBy = options.sortBy as any
-    if (options.sortOrder) query.sortOrder = options.sortOrder as any
+    if (options.sortBy) query.sortBy = options.sortBy as 'created' | 'updated' | 'accessed' | 'name'
+    if (options.sortOrder) query.sortOrder = options.sortOrder as 'asc' | 'desc'
 
     const entries = await store.queryMemory(query, { operation: 'select' })
 
@@ -121,7 +121,7 @@ export async function memoryList(options: {
 
       console.log('\nMemory Entries:')
       console.log('─'.repeat(80))
-      for (const entry of entries as any[]) {
+      for (const entry of entries as MemoryEntry[]) {
         console.log(`\nName: ${entry.name}`)
         console.log(`Type: ${entry.entry_type}`)
         console.log(`Status: ${entry.status || 'N/A'}`)
