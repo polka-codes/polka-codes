@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import type { MemoryStoreConfig } from '../memory'
 
 /**
  * Memory configuration schema
@@ -13,7 +14,7 @@ export const memoryConfigSchema = z
   .strict()
   .optional()
 
-export type MemoryConfig = z.infer<typeof memoryConfigSchema>
+export type MemoryConfig = z.infer<typeof memoryConfigSchema> & MemoryStoreConfig
 
 /**
  * Default memory configuration

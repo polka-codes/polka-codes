@@ -2,75 +2,22 @@ import { randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { mkdir, rename } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
-import type { MemoryConfig } from '@polka-codes/core'
+import type { DatabaseStats, IMemoryStore, MemoryConfig, MemoryEntry, MemoryOperation, MemoryQuery, QueryOptions } from '@polka-codes/core'
 import Database from 'better-sqlite3'
 
-/**
- * Memory entry types
- */
-export type MemoryEntry = {
-  id: string
-  name: string
-  scope: string // 'global' or 'project:/absolute/path'
-  content: string
-  entry_type: string
-  status?: string
-  priority?: 'low' | 'medium' | 'high' | 'critical'
-  tags?: string
-  metadata?: string // JSON string
-  created_at: number
-  updated_at: number
-  last_accessed: number
-}
-
-/**
- * Memory query filters
- */
-export type MemoryQuery = {
-  scope?: 'global' | 'project' | 'auto'
-  type?: string
-  status?: string
-  priority?: string
-  tags?: string | string[]
-  search?: string
-  limit?: number
-  offset?: number
-  sortBy?: 'created' | 'updated' | 'accessed' | 'name'
-  sortOrder?: 'asc' | 'desc'
-  createdAfter?: number
-  createdBefore?: number
-  updatedAfter?: number
-  updatedBefore?: number
-}
-
-/**
- * Query options
- */
-export type QueryOptions = {
-  operation?: 'select' | 'delete' | 'count'
-  includeMetadata?: boolean
-}
-
-/**
- * Memory operation for batch updates
- */
-export type MemoryOperation = {
-  operation: 'append' | 'replace' | 'remove'
-  name: string
-  content?: string
-  metadata?: {
-    entry_type?: string
-    status?: string
-    priority?: string
-    tags?: string
-    metadata?: string
-  }
-}
+// Re-export types from core for convenience
+export type { MemoryEntry, MemoryQuery, QueryOptions, MemoryOperation }
 
 /**
  * SQLite Memory Store Implementation
+ *
+ * This is a concrete implementation of IMemoryStore using SQLite as the backend.
+ * It can be used in CLI environments where local file-based storage is appropriate.
+ *
+ * For cloud environments, you would implement IMemoryStore using a cloud database
+ * (PostgreSQL, MongoDB, Redis, etc.) but reuse the same MemoryManager for logic.
  */
-export class SQLiteMemoryStore {
+export class SQLiteMemoryStore implements IMemoryStore {
   private db: Database.Database | null = null
   private config: MemoryConfig
   private currentScope: string
@@ -680,11 +627,7 @@ export class SQLiteMemoryStore {
   /**
    * Get database statistics
    */
-  async getStats(): Promise<{
-    totalEntries: number
-    entriesByType: Record<string, number>
-    databaseSize: number
-  }> {
+  async getStats(): Promise<DatabaseStats> {
     const db = await this.getDatabase()
 
     const countStmt = db.prepare('SELECT COUNT(*) as count FROM memory_entries')
