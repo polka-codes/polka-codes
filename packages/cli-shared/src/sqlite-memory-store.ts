@@ -1,4 +1,4 @@
-import { crypto } from 'node:crypto'
+import { randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { mkdir, rename } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
@@ -298,7 +298,7 @@ export class SQLiteMemoryStore {
    * Generate UUID v4
    */
   private generateUUID(): string {
-    return crypto.randomUUID()
+    return randomUUID()
   }
 
   /**
