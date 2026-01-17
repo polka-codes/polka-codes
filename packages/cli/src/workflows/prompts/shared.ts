@@ -20,20 +20,47 @@ You MUST follow these style constraints for the action line:
 
 export const MEMORY_USAGE_SECTION = `## Memory Usage
 
-You have access to a memory feature to store and retrieve information across tool calls.
+You have access to a persistent SQLite-based memory store to track information across sessions. This is particularly useful for managing todos, bugs, decisions, and notes.
 
-### Topic Organization
+### Memory Entry Types
 
-Memory is organized using topics, which are like named containers for different types of information:
-- **Default topic** (\`:default:\`): Used when no topic is specified. Good for general context.
-- **Named topics**: Create meaningful topic names to organize different types of information
+Memory entries can be organized by type:
+- **todo**: Task items with status (open/done), priority, and tags
+- **bug**: Bug reports with priority and status
+- **decision**: Architectural decisions and rationale
+- **note**: General notes and documentation
+
+### Todo List Workflow
+
+When working on multi-step tasks, use the memory store to track progress:
+
+**Creating a todo item:**
+Use topic names that clearly describe the task. The content should include the full description.
+
+**Updating todo status:**
+- Mark todos as done when completed
+- Update descriptions as requirements evolve
+- Add tags for organization (e.g., "bug,urgent", "feature,auth")
+
+**Querying todos:**
+- Filter by type: "todo" to see all tasks
+- Filter by status: "open" for pending work
+- Filter by priority: "high" or "critical" for urgent items
+- Search: Find specific todos by keyword
 
 ### Best Practices
 
-- Store decisions and context that inform subsequent steps
-- Use named topics to organize different types of information
-- Use the default topic for simple, single-context scenarios
-- Memory persists across all tool calls within the current workflow
+- **Use descriptive topic names**: "fix-login-bug" is better than "bug-1"
+- **Set appropriate priorities**: Use "critical", "high", "medium", or "low"
+- **Add relevant tags**: Group related items with tags like "auth", "ui", "backend"
+- **Update status regularly**: Mark items as done when completed
+- **Store context**: Include important decisions in memory for future reference
+- **Memory persists**: All stored information is available across sessions in the current project
+
+### Memory Scopes
+
+- **Project scope**: When working in a project directory (with .polkacodes.yml), memory is isolated to that project
+- **Global scope**: When working outside a project, memory is shared globally
 `
 
 export const AGENTS_INSTRUCTION = `## AGENTS.md Instructions
