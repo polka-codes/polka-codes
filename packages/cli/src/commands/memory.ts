@@ -21,11 +21,60 @@ async function getMemoryStore() {
 
   const cwd = process.cwd()
 
-  // Create SQLite store implementation
-  const sqliteStore = new SQLiteMemoryStore(memoryConfig, cwd)
+  // Detect scope once and pass to SQLite store
+  const scope = detectProjectScope(cwd)
+
+  // Create SQLite store implementation with scope
+  const sqliteStore = new SQLiteMemoryStore(memoryConfig, scope)
 
   // Wrap with MemoryManager for core logic
   return new MemoryManager(sqliteStore, cwd)
+}
+
+/**
+ * Detect project scope from current working directory
+ */
+function detectProjectScope(cwd: string): string {
+  const { resolve, dirname, join } = require('node:path')
+  const { existsSync } = require('node:fs')
+
+  const projectPath = findProjectRoot(cwd)
+
+  if (!projectPath) {
+    return 'global'
+  }
+
+  const normalizedPath = normalizePath(projectPath)
+  return `project:${normalizedPath}`
+
+  function findProjectRoot(dir: string): string | null {
+    let currentDir = resolve(dir)
+
+    while (currentDir !== '/') {
+      const configPath = join(currentDir, '.polkacodes.yml')
+
+      if (existsSync(configPath)) {
+        return currentDir
+      }
+
+      const parentDir = dirname(currentDir)
+      if (parentDir === currentDir) break
+      currentDir = parentDir
+
+      // Safety: don't search too high
+      if (currentDir.split(require('node:path').sep).length < 3) break
+    }
+
+    return null
+  }
+
+  function normalizePath(path: string): string {
+    const normalized = resolve(path).replace(/\/$/, '')
+    if (normalized.includes('..')) {
+      throw new Error(`Path contains parent directory references: ${path}`)
+    }
+    return normalized
+  }
 }
 
 /**

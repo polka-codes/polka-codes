@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { mkdir, rename } from 'node:fs/promises'
-import { dirname, join, resolve } from 'node:path'
+import { dirname, resolve } from 'node:path'
 import type { DatabaseStats, IMemoryStore, MemoryConfig, MemoryEntry, MemoryOperation, MemoryQuery, QueryOptions } from '@polka-codes/core'
 import Database from 'better-sqlite3'
 
@@ -35,9 +35,9 @@ export class SQLiteMemoryStore implements IMemoryStore {
   private static readonly ALLOWED_SORT_ORDERS = ['asc', 'desc'] as const
   private static readonly ALLOWED_PRIORITIES = ['low', 'medium', 'high', 'critical'] as const
 
-  constructor(config: MemoryConfig, cwd: string) {
+  constructor(config: MemoryConfig, scope: string) {
     this.config = config
-    this.currentScope = this.detectProjectScope(cwd)
+    this.currentScope = scope
   }
 
   /**
@@ -169,56 +169,6 @@ export class SQLiteMemoryStore implements IMemoryStore {
       this.db = await this.initializeDatabase()
     }
     return this.db
-  }
-
-  /**
-   * Detect project scope from current working directory
-   */
-  private detectProjectScope(cwd: string): string {
-    const projectPath = this.findProjectRoot(cwd)
-
-    if (!projectPath) {
-      return 'global'
-    }
-
-    const normalizedPath = this.normalizePath(projectPath)
-    return `project:${normalizedPath}`
-  }
-
-  /**
-   * Find project root (directory with .polkacodes.yml)
-   */
-  private findProjectRoot(cwd: string): string | null {
-    let currentDir = resolve(cwd)
-
-    while (currentDir !== '/') {
-      const configPath = join(currentDir, '.polkacodes.yml')
-
-      if (existsSync(configPath)) {
-        return currentDir
-      }
-
-      const parentDir = dirname(currentDir)
-      if (parentDir === currentDir) break
-      currentDir = parentDir
-
-      // Safety: don't search too high
-      if (currentDir.split('/').length < 3) break
-    }
-
-    return null
-  }
-
-  /**
-   * Normalize path for consistent scope
-   */
-  private normalizePath(path: string): string {
-    const normalized = resolve(path).replace(/\/$/, '')
-    // Ensure path is within reasonable bounds
-    if (normalized.includes('..')) {
-      throw new Error(`Path contains parent directory references: ${path}`)
-    }
-    return normalized
   }
 
   /**
@@ -434,11 +384,6 @@ export class SQLiteMemoryStore implements IMemoryStore {
    */
   async queryMemory(query: MemoryQuery = {}, options: QueryOptions = {}): Promise<MemoryEntry[] | number> {
     const db = await this.getDatabase()
-
-    // Apply default safety limit if not specified
-    if (!options.operation && !query.limit) {
-      query = { ...query, limit: 1000 }
-    }
 
     const { sql, params } = this.buildQuery(query, options)
 

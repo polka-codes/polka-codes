@@ -116,8 +116,8 @@ export class MemoryManager implements IMemoryStore {
       if (parentDir === currentDir) break
       currentDir = parentDir
 
-      // Safety: don't search too high
-      if (currentDir.split('/').length < 3) break
+      // Safety: don't search too high (count path components)
+      if (currentDir.split(require('node:path').sep).length < 3) break
     }
 
     return null
