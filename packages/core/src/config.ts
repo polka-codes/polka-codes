@@ -1,4 +1,7 @@
 import { z } from 'zod'
+import { DEFAULT_MEMORY_CONFIG, type MemoryConfig, memoryConfigSchema, resolveHomePath } from './config/memory.js'
+
+export { memoryConfigSchema, DEFAULT_MEMORY_CONFIG, type MemoryConfig, resolveHomePath }
 
 export const ruleSchema = z.union([
   z.string(),
@@ -208,6 +211,7 @@ export const configSchema = z
     rules: z.array(ruleSchema).optional().or(z.string()).optional(),
     excludeFiles: z.array(z.string()).optional(),
     agent: agentSchema,
+    memory: memoryConfigSchema,
   })
   .strict()
   .nullish()

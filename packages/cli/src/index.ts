@@ -10,6 +10,7 @@ import { commitCommand } from './commands/commit'
 import { fixCommand } from './commands/fix'
 import { initCommand } from './commands/init'
 import { mcpServerCommand } from './commands/mcp-server'
+import { registerMemoryCommands } from './commands/memory'
 import { runMeta } from './commands/meta'
 import { planCommand } from './commands/plan'
 import { prCommand } from './commands/pr'
@@ -62,6 +63,9 @@ program.addCommand(skillsCommand)
 program.addCommand(mcpServerCommand)
 
 program.addCommand(workflowCommand)
+
+// Memory commands
+registerMemoryCommands(program)
 
 addSharedOptions(program)
 
