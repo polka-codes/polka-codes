@@ -444,7 +444,7 @@ export class SQLiteMemoryStore implements IMemoryStore {
 
     // Priority filter
     if (query.priority) {
-      if (!SQLiteMemoryStore.ALLOWED_PRIORITIES.includes(query.priority as any)) {
+      if (!SQLiteMemoryStore.ALLOWED_PRIORITIES.includes(query.priority as 'low' | 'medium' | 'high' | 'critical')) {
         throw new Error(`Invalid priority: ${query.priority}`)
       }
       conditions.push('priority = ?')
