@@ -52,7 +52,7 @@ export class MemoryManager implements IMemoryStore {
     // Auto-detect scope if not specified
     const finalQuery: MemoryQuery = {
       ...query,
-      scope: query.scope === 'auto' ? (this.currentScope as any) : query.scope,
+      scope: query.scope === 'auto' ? (this.currentScope as 'global' | `project:${string}`) : query.scope,
     }
 
     // Apply default safety limit if not specified
