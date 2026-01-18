@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs'
 import { mkdir, rename } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import type { DatabaseStats, IMemoryStore, MemoryConfig, MemoryEntry, MemoryOperation, MemoryQuery, QueryOptions } from '@polka-codes/core'
-import Database from 'better-sqlite3'
+import Database, { type Database as DatabaseType } from 'better-sqlite3'
 
 // Re-export types from core for convenience
 export type { MemoryEntry, MemoryQuery, QueryOptions, MemoryOperation }
@@ -19,6 +19,7 @@ export type { MemoryEntry, MemoryQuery, QueryOptions, MemoryOperation }
  */
 export class SQLiteMemoryStore implements IMemoryStore {
   private db: Database.Database | null = null
+  private dbPromise: Promise<Database.Database> | null = null
   private config: MemoryConfig
   private currentScope: string
   private maxRetries = 3
@@ -44,63 +45,78 @@ export class SQLiteMemoryStore implements IMemoryStore {
    * Initialize database connection and schema
    */
   private async initializeDatabase(): Promise<Database.Database> {
-    if (this.db) {
-      return this.db
+    // Use promise singleton pattern to prevent race conditions
+    if (this.dbPromise) {
+      return this.dbPromise
     }
 
-    const dbPath = this.resolvePath(this.config.path || '~/.config/polka-codes/memory.sqlite')
-
-    try {
-      // Create directory if needed
-      const dir = dirname(dbPath)
-      if (!existsSync(dir)) {
-        await mkdir(dir, { recursive: true, mode: 0o700 })
+    this.dbPromise = (async () => {
+      if (this.db) {
+        return this.db
       }
 
-      // Create database with secure permissions if it doesn't exist
-      if (!existsSync(dbPath)) {
-        const { openSync, closeSync } = await import('node:fs')
-        const fd = openSync(dbPath, 'w')
-        closeSync(fd)
-        // Set permissions to owner read/write only
-        await import('node:fs/promises').then((fs) => fs.chmod(dbPath, 0o600))
-      }
+      const dbPath = this.resolvePath(this.config.path || '~/.config/polka-codes/memory.sqlite')
 
-      // Open database
-      const db = new Database(dbPath, {
-        verbose: process.env.SQLITE_DEBUG ? console.log : undefined,
-      })
-
-      // Configure pragmas
-      this.configurePragmas(db)
-
-      // Check integrity
-      this.checkIntegrity(db)
-
-      // Initialize schema
-      this.initializeSchema(db)
-
-      this.db = db
-      return db
-    } catch (error) {
-      console.error('[SQLiteMemoryStore] Initialization failed:', error)
-
-      // Recovery: backup corrupted database
-      if (existsSync(dbPath)) {
-        const backupPath = `${dbPath}.corrupted.${Date.now()}`
-        console.warn(`[SQLiteMemoryStore] Backing up corrupted database to: ${backupPath}`)
-        try {
-          await rename(dbPath, backupPath)
-        } catch (backupError) {
-          console.error('[SQLiteMemoryStore] Failed to backup corrupted database:', backupError)
+      try {
+        // Create directory if needed
+        const dir = dirname(dbPath)
+        if (!existsSync(dir)) {
+          await mkdir(dir, { recursive: true, mode: 0o700 })
         }
 
-        // Retry initialization
-        return this.initializeDatabase()
-      }
+        // Create database with secure permissions if it doesn't exist
+        if (!existsSync(dbPath)) {
+          const { openSync, closeSync } = await import('node:fs')
+          const fd = openSync(dbPath, 'w')
+          closeSync(fd)
+          // Set permissions to owner read/write only
+          await import('node:fs/promises').then((fs) => fs.chmod(dbPath, 0o600))
+        }
 
-      throw error
-    }
+        // Open database
+        const db = new Database(dbPath, {
+          verbose: process.env.SQLITE_DEBUG ? console.log : undefined,
+        })
+
+        // Configure pragmas
+        this.configurePragmas(db)
+
+        // Check integrity
+        this.checkIntegrity(db)
+
+        // Initialize schema
+        this.initializeSchema(db)
+
+        this.db = db
+        return db
+      } catch (error) {
+        console.error('[SQLiteMemoryStore] Initialization failed:', error)
+
+        // Recovery: backup corrupted database
+        if (existsSync(dbPath)) {
+          const backupPath = `${dbPath}.corrupted.${Date.now()}`
+          console.warn(`[SQLiteMemoryStore] Backing up corrupted database to: ${backupPath}`)
+          try {
+            await rename(dbPath, backupPath)
+          } catch (backupError) {
+            console.error('[SQLiteMemoryStore] Failed to backup corrupted database:', backupError)
+            // Clear promise on error and throw
+            this.dbPromise = null
+            throw backupError
+          }
+
+          // Clear promise and retry once
+          this.dbPromise = null
+          return this.initializeDatabase()
+        }
+
+        // Clear promise on error
+        this.dbPromise = null
+        throw error
+      }
+    })()
+
+    return this.dbPromise
   }
 
   /**
@@ -183,7 +199,8 @@ export class SQLiteMemoryStore implements IMemoryStore {
       const expanded = `${home}${path.slice(1)}`
       // Validate expanded path doesn't escape home directory
       const resolved = resolve(expanded)
-      if (!resolved.startsWith(home)) {
+      const sep = process.platform === 'win32' ? '\\' : '/'
+      if (resolved !== home && !resolved.startsWith(home + sep)) {
         throw new Error(`Path escapes home directory: ${path}`)
       }
       return resolved
@@ -288,6 +305,96 @@ export class SQLiteMemoryStore implements IMemoryStore {
   }
 
   /**
+   * Internal update memory without transaction (used by batchUpdateMemory)
+   */
+  private async updateMemoryInternal(
+    db: DatabaseType,
+    operation: 'append' | 'replace' | 'remove',
+    topic: string,
+    content: string | undefined,
+    metadata?: {
+      entry_type?: string
+      status?: string
+      priority?: string
+      tags?: string
+    },
+  ): Promise<void> {
+    const scope = this.currentScope
+    const now = this.now()
+
+    if (operation === 'remove') {
+      const stmt = db.prepare('DELETE FROM memory_entries WHERE name = ? AND scope = ?')
+      stmt.run(topic, scope)
+      return
+    }
+
+    const existingStmt = db.prepare('SELECT content, entry_type, status, priority, tags FROM memory_entries WHERE name = ? AND scope = ?')
+    const existing = existingStmt.get(topic, scope) as
+      | { content: string; entry_type: string; status: string; priority: string; tags: string }
+      | undefined
+
+    let finalContent: string
+    let entry_type: string
+    let status: string | undefined
+    let priority: string | undefined
+    let tags: string | undefined
+
+    if (existing) {
+      if (operation === 'append') {
+        if (!content) {
+          throw new Error('Content is required for append operation.')
+        }
+        finalContent = `${existing.content}\n${content}`
+      } else {
+        if (!content) {
+          throw new Error('Content is required for replace operation.')
+        }
+        finalContent = content
+      }
+      entry_type = metadata?.entry_type || existing.entry_type
+      status = metadata?.status || existing.status
+      priority = metadata?.priority || existing.priority
+      tags = metadata?.tags || existing.tags
+    } else {
+      if (!content) {
+        throw new Error('Content is required for new memory entries.')
+      }
+      finalContent = content
+      entry_type = metadata?.entry_type || 'note'
+      status = metadata?.status
+      priority = metadata?.priority
+      tags = metadata?.tags
+    }
+
+    const upsertStmt = db.prepare(`
+      INSERT INTO memory_entries (id, name, scope, content, entry_type, status, priority, tags, created_at, updated_at, last_accessed)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(name, scope) DO UPDATE SET
+        content = excluded.content,
+        entry_type = excluded.entry_type,
+        status = excluded.status,
+        priority = excluded.priority,
+        tags = excluded.tags,
+        updated_at = excluded.updated_at,
+        last_accessed = excluded.last_accessed
+    `)
+
+    upsertStmt.run(
+      this.generateUUID(),
+      topic,
+      scope,
+      finalContent,
+      entry_type,
+      status || null,
+      priority || null,
+      tags || null,
+      now,
+      now,
+      now,
+    )
+  }
+
+  /**
    * Update memory
    */
   async updateMemory(
@@ -302,80 +409,8 @@ export class SQLiteMemoryStore implements IMemoryStore {
     },
   ): Promise<void> {
     return this.transaction(async () => {
-      const db = this.getDatabase()
-      const scope = this.currentScope
-      const now = this.now()
-
-      if (operation === 'remove') {
-        const stmt = db.prepare('DELETE FROM memory_entries WHERE name = ? AND scope = ?')
-        stmt.run(topic, scope)
-        return
-      }
-
-      const existingStmt = db.prepare('SELECT content, entry_type, status, priority, tags FROM memory_entries WHERE name = ? AND scope = ?')
-      const existing = existingStmt.get(topic, scope) as
-        | { content: string; entry_type: string; status: string; priority: string; tags: string }
-        | undefined
-
-      let finalContent: string
-      let entry_type: string
-      let status: string | undefined
-      let priority: string | undefined
-      let tags: string | undefined
-
-      if (existing) {
-        if (operation === 'append') {
-          if (!content) {
-            throw new Error('Content is required for append operation.')
-          }
-          finalContent = `${existing.content}\n${content}`
-        } else {
-          if (!content) {
-            throw new Error('Content is required for replace operation.')
-          }
-          finalContent = content
-        }
-        entry_type = metadata?.entry_type || existing.entry_type
-        status = metadata?.status || existing.status
-        priority = metadata?.priority || existing.priority
-        tags = metadata?.tags || existing.tags
-      } else {
-        if (!content) {
-          throw new Error('Content is required for new memory entries.')
-        }
-        finalContent = content
-        entry_type = metadata?.entry_type || 'note'
-        status = metadata?.status
-        priority = metadata?.priority
-        tags = metadata?.tags
-      }
-
-      const upsertStmt = db.prepare(`
-        INSERT INTO memory_entries (id, name, scope, content, entry_type, status, priority, tags, created_at, updated_at, last_accessed)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(name, scope) DO UPDATE SET
-          content = excluded.content,
-          entry_type = excluded.entry_type,
-          status = excluded.status,
-          priority = excluded.priority,
-          tags = excluded.tags,
-          updated_at = excluded.updated_at,
-          last_accessed = excluded.last_accessed
-      `)
-
-      upsertStmt.run(
-        this.generateUUID(),
-        topic,
-        scope,
-        finalContent,
-        entry_type,
-        status || null,
-        priority || null,
-        tags || null,
-        existing ? undefined : now,
-        now,
-        now,
-      )
+      const db = await this.getDatabase()
+      await this.updateMemoryInternal(db, operation, topic, content, metadata)
     })
   }
 
@@ -455,15 +490,14 @@ export class SQLiteMemoryStore implements IMemoryStore {
     if (query.tags) {
       const tags = Array.isArray(query.tags) ? query.tags : [query.tags]
       for (const tag of tags) {
-        if (!tag.trim()) {
+        const trimmed = tag.trim()
+        if (!trimmed) {
           throw new Error('Tags cannot be empty')
         }
-        const sanitized = tag.trim().replace(/[^\w-]/g, '')
-        if (sanitized.length === 0) {
-          throw new Error(`Invalid tag: ${tag}`)
-        }
-        conditions.push('tags LIKE ?')
-        params.push(`%${sanitized}%`)
+        // Use comma-wrapped matching for precise tag filtering
+        // Matches: "tag", "tag,other", "other,tag", "other,tag,other"
+        conditions.push('(tags = ? OR tags LIKE ? OR tags LIKE ? OR tags LIKE ?)')
+        params.push(trimmed, `${trimmed},%`, `%,${trimmed}`, `%,${trimmed},%`)
       }
     }
 
@@ -538,8 +572,9 @@ export class SQLiteMemoryStore implements IMemoryStore {
    */
   async batchUpdateMemory(operations: MemoryOperation[]): Promise<void> {
     return this.transaction(async () => {
+      const db = await this.getDatabase()
       for (const op of operations) {
-        await this.updateMemory(op.operation, op.name, op.content, op.metadata)
+        await this.updateMemoryInternal(db, op.operation, op.name, op.content, op.metadata)
       }
     })
   }

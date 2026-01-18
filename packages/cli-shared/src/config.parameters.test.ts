@@ -44,11 +44,7 @@ defaultParameters:
     )
 
     const config = await loadConfig(configPath, testSubDir, testHomeDir)
-    expect(config?.defaultParameters).toEqual({
-      temperature: 0.7,
-      top_p: 0.9,
-      max_tokens: 4000,
-    })
+    expect(config?.defaultParameters).toMatchSnapshot()
   })
 
   test('loads provider defaultParameters', async () => {
@@ -72,14 +68,8 @@ providers:
     )
 
     const config = await loadConfig(configPath, testSubDir, testHomeDir)
-    expect(config?.providers?.anthropic?.defaultParameters).toEqual({
-      temperature: 0.5,
-      max_tokens: 3000,
-    })
-    expect(config?.providers?.openai?.defaultParameters).toEqual({
-      temperature: 0.8,
-      presence_penalty: 0.2,
-    })
+    expect(config?.providers?.anthropic?.defaultParameters).toMatchSnapshot()
+    expect(config?.providers?.openai?.defaultParameters).toMatchSnapshot()
   })
 
   test('loads command parameters', async () => {
@@ -103,14 +93,8 @@ commands:
     )
 
     const config = await loadConfig(configPath, testSubDir, testHomeDir)
-    expect(config?.commands?.default?.parameters).toEqual({
-      temperature: 0.7,
-      max_tokens: 4000,
-    })
-    expect(config?.commands?.task?.parameters).toEqual({
-      temperature: 0.8,
-      top_p: 0.9,
-    })
+    expect(config?.commands?.default?.parameters).toMatchSnapshot()
+    expect(config?.commands?.task?.parameters).toMatchSnapshot()
   })
 
   test('merges parameters from multiple configs', () => {
@@ -146,17 +130,8 @@ commands:
     ]
 
     const merged = mergeConfigs(configs)
-    expect(merged.defaultParameters).toEqual({
-      temperature: 0.7,
-      top_p: 0.9,
-      max_tokens: 4000,
-      presence_penalty: 0.1,
-    })
-    expect(merged.providers?.anthropic?.defaultParameters).toEqual({
-      temperature: 0.6,
-      max_tokens: 2000,
-      frequency_penalty: 0.2,
-    })
+    expect(merged.defaultParameters).toMatchSnapshot()
+    expect(merged.providers?.anthropic?.defaultParameters).toMatchSnapshot()
   })
 
   test('merges global and local parameters with local precedence', async () => {
@@ -194,5 +169,123 @@ providers:
     const config = await loadConfig(localConfigPath, testSubDir, testHomeDir)
     expect(config?.defaultParameters).toMatchSnapshot()
     expect(config?.providers?.anthropic?.defaultParameters).toMatchSnapshot()
+  })
+
+  describe('mergeConfigs edge cases', () => {
+    test('handles empty array', () => {
+      const merged = mergeConfigs([])
+      expect(merged).toEqual({})
+    })
+
+    test('handles single config', () => {
+      const config = {
+        defaultParameters: { temperature: 0.7 },
+      }
+      const merged = mergeConfigs([config])
+      expect(merged).toEqual(config)
+    })
+
+    test('deep merges nested objects', () => {
+      const configs = [
+        {
+          providers: {
+            anthropic: {
+              apiKey: 'key1',
+              defaultParameters: {
+                temperature: 0.5,
+                max_tokens: 2000,
+              },
+            },
+          },
+        },
+        {
+          providers: {
+            anthropic: {
+              defaultParameters: {
+                temperature: 0.6,
+                top_p: 0.9,
+              },
+            },
+          },
+        },
+      ]
+
+      const merged = mergeConfigs(configs)
+      expect(merged.providers?.anthropic).toMatchSnapshot()
+      expect(merged.providers?.anthropic?.apiKey).toBe('key1')
+      expect(merged.providers?.anthropic?.defaultParameters?.temperature).toBe(0.6)
+      expect(merged.providers?.anthropic?.defaultParameters?.max_tokens).toBe(2000)
+      expect(merged.providers?.anthropic?.defaultParameters?.top_p).toBe(0.9)
+    })
+
+    test('merges arrays with concat', () => {
+      const configs = [
+        {
+          excludeFiles: ['node_modules', '.git'],
+        },
+        {
+          excludeFiles: ['dist', 'build'],
+        },
+      ]
+
+      const merged = mergeConfigs(configs)
+      expect(merged.excludeFiles).toEqual(['node_modules', '.git', 'dist', 'build'])
+    })
+
+    test('handles missing arrays', () => {
+      const configs = [
+        {
+          excludeFiles: ['node_modules'],
+        },
+        {
+          defaultParameters: { temperature: 0.7 },
+        },
+      ]
+
+      const merged = mergeConfigs(configs)
+      expect(merged.excludeFiles).toEqual(['node_modules'])
+      expect(merged.defaultParameters).toEqual({ temperature: 0.7 })
+    })
+  })
+
+  describe('loadConfig edge cases', () => {
+    test('throws on missing config file', async () => {
+      const configPath = join(testSubDir, 'nonexistent.yml')
+      await expect(loadConfig(configPath, testSubDir, testHomeDir)).rejects.toThrow()
+    })
+
+    test('throws on invalid YAML', async () => {
+      const configPath = join(testSubDir, 'invalid.yml')
+      writeFileSync(configPath, '{ invalid yaml content')
+
+      await expect(loadConfig(configPath, testSubDir, testHomeDir)).rejects.toThrow()
+    })
+
+    test('prioritizes local config over global config', async () => {
+      const globalConfigPath = join(testHomeDir, '.config', 'polkacodes', 'config.yml')
+      const localConfigPath = join(testSubDir, '.polkacodes.yml')
+
+      writeFileSync(
+        globalConfigPath,
+        `
+defaultProvider: openai
+defaultParameters:
+  temperature: 0.5
+        `,
+      )
+
+      writeFileSync(
+        localConfigPath,
+        `
+defaultProvider: anthropic
+defaultParameters:
+  temperature: 0.7
+        `,
+      )
+
+      const config = await loadConfig(localConfigPath, testSubDir, testHomeDir)
+      expect(config?.defaultProvider).toBe('anthropic')
+      expect(config?.defaultParameters?.temperature).toBe(0.7)
+    })
   })
 })

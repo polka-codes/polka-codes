@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
 import { existsSync, unlinkSync } from 'node:fs'
-import type { MemoryConfig } from '@polka-codes/core'
+import type { MemoryConfig, MemoryEntry } from '@polka-codes/core'
 import { SQLiteMemoryStore } from './sqlite-memory-store'
 
 const TEST_DB_PATH = '/tmp/test-memory.sqlite'
@@ -94,12 +94,14 @@ describe('SQLiteMemoryStore', () => {
       const content = await store.readMemory('test-entry')
       expect(content).toBe('Content - more info')
 
-      const entries = await store.queryMemory({ name: 'test-entry' }, { operation: 'select' })
+      const entries = await store.queryMemory({ search: 'test-entry' }, { operation: 'select' })
+      expect(Array.isArray(entries)).toBe(true)
       expect(entries).toHaveLength(1)
-      expect(entries[0].entry_type).toBe('todo')
-      expect(entries[0].status).toBe('open')
-      expect(entries[0].priority).toBe('high')
-      expect(entries[0].tags).toBe('bug,urgent')
+      const entryArray = entries as MemoryEntry[]
+      expect(entryArray[0].entry_type).toBe('todo')
+      expect(entryArray[0].status).toBe('open')
+      expect(entryArray[0].priority).toBe('high')
+      expect(entryArray[0].tags).toBe('bug,urgent')
     })
   })
 
@@ -174,24 +176,30 @@ describe('SQLiteMemoryStore', () => {
 
     it('should search in content and name', async () => {
       const results = await store.queryMemory({ search: 'login' }, { operation: 'select' })
+      expect(Array.isArray(results)).toBe(true)
       expect(results).toHaveLength(1)
-      expect(results[0].name).toBe('todo-1')
+      const resultArray = results as MemoryEntry[]
+      expect(resultArray[0].name).toBe('todo-1')
     })
 
     it('should combine multiple filters', async () => {
       const results = await store.queryMemory({ type: 'todo', status: 'open' }, { operation: 'select' })
+      expect(Array.isArray(results)).toBe(true)
       expect(results).toHaveLength(2)
     })
 
     it('should sort results', async () => {
       const results = await store.queryMemory({ sortBy: 'updated', sortOrder: 'desc' }, { operation: 'select' })
+      expect(Array.isArray(results)).toBe(true)
       expect(results).toHaveLength(5)
+      const resultArray = results as MemoryEntry[]
       // Last created should be first
-      expect(results[0].name).toBe('note-1')
+      expect(resultArray[0].name).toBe('note-1')
     })
 
     it('should limit results', async () => {
       const results = await store.queryMemory({ limit: 2 }, { operation: 'select' })
+      expect(Array.isArray(results)).toBe(true)
       expect(results).toHaveLength(2)
     })
 
@@ -199,9 +207,13 @@ describe('SQLiteMemoryStore', () => {
       const page1 = await store.queryMemory({ limit: 2, offset: 0 }, { operation: 'select' })
       const page2 = await store.queryMemory({ limit: 2, offset: 2 }, { operation: 'select' })
 
+      expect(Array.isArray(page1)).toBe(true)
+      expect(Array.isArray(page2)).toBe(true)
       expect(page1).toHaveLength(2)
       expect(page2).toHaveLength(2)
-      expect(page1[0].name).not.toBe(page2[0].name)
+      const page1Array = page1 as MemoryEntry[]
+      const page2Array = page2 as MemoryEntry[]
+      expect(page1Array[0].name).not.toBe(page2Array[0].name)
     })
 
     it('should count results', async () => {
@@ -247,13 +259,13 @@ describe('SQLiteMemoryStore', () => {
 
     it('should reject invalid sortBy', async () => {
       await expect(async () => {
-        await store.queryMemory({ sortBy: 'invalid' }, { operation: 'select' })
+        await store.queryMemory({ sortBy: 'invalid' as any }, { operation: 'select' })
       }).toThrow('Invalid sortBy')
     })
 
     it('should reject invalid sortOrder', async () => {
       await expect(async () => {
-        await store.queryMemory({ sortBy: 'created', sortOrder: 'invalid' }, { operation: 'select' })
+        await store.queryMemory({ sortBy: 'created', sortOrder: 'invalid' as any }, { operation: 'select' })
       }).toThrow('Invalid sortOrder')
     })
 
@@ -344,11 +356,11 @@ describe('SQLiteMemoryStore', () => {
     })
 
     it('should handle default topic name', async () => {
-      await store.updateMemory('replace', undefined, 'Default content', {
+      await store.updateMemory('replace', ':default:', 'Default content', {
         entry_type: 'note',
       })
 
-      const content = await store.readMemory()
+      const content = await store.readMemory(':default:')
       expect(content).toBe('Default content')
     })
   })
@@ -458,11 +470,18 @@ describe('SQLiteMemoryStore', () => {
       }
     })
 
-    it('should use global scope when no project config found', () => {
-      const noConfigStore = new SQLiteMemoryStore(config, '/tmp/no-config')
-      const scope = (noConfigStore as any).currentScope
-      expect(scope).toBe('global')
-      noConfigStore.close()
+    it('should use the scope passed to constructor for queries', async () => {
+      const testStore = new SQLiteMemoryStore(config, '/tmp/test-scope')
+
+      await testStore.updateMemory('replace', 'test', 'content', { entry_type: 'note' })
+
+      const entries = await testStore.queryMemory({ scope: 'project' as const }, { operation: 'select' })
+      expect(Array.isArray(entries)).toBe(true)
+      expect(entries).toHaveLength(1)
+      const entryArray = entries as MemoryEntry[]
+      expect(entryArray[0].scope).toBe('project:/tmp/test-scope')
+
+      testStore.close()
     })
   })
 
@@ -493,6 +512,204 @@ describe('SQLiteMemoryStore', () => {
       } finally {
         newStore.close()
       }
+    })
+  })
+
+  describe('Concurrency - Race Condition Fix', () => {
+    it('should handle concurrent database initialization safely', async () => {
+      // Create multiple stores with the same database path concurrently
+      const stores = await Promise.all([
+        new SQLiteMemoryStore(config, '/tmp/test-project'),
+        new SQLiteMemoryStore(config, '/tmp/test-project'),
+        new SQLiteMemoryStore(config, '/tmp/test-project'),
+        new SQLiteMemoryStore(config, '/tmp/test-project'),
+        new SQLiteMemoryStore(config, '/tmp/test-project'),
+      ])
+
+      try {
+        // All stores should work correctly
+        await Promise.all([
+          stores[0].updateMemory('replace', 'test-0', 'Content 0', { entry_type: 'note' }),
+          stores[1].updateMemory('replace', 'test-1', 'Content 1', { entry_type: 'note' }),
+          stores[2].updateMemory('replace', 'test-2', 'Content 2', { entry_type: 'note' }),
+          stores[3].updateMemory('replace', 'test-3', 'Content 3', { entry_type: 'note' }),
+          stores[4].updateMemory('replace', 'test-4', 'Content 4', { entry_type: 'note' }),
+        ])
+
+        // Verify all data was written correctly
+        const content0 = await stores[0].readMemory('test-0')
+        const content1 = await stores[1].readMemory('test-1')
+        const content2 = await stores[2].readMemory('test-2')
+        const content3 = await stores[3].readMemory('test-3')
+        const content4 = await stores[4].readMemory('test-4')
+
+        expect(content0).toBe('Content 0')
+        expect(content1).toBe('Content 1')
+        expect(content2).toBe('Content 2')
+        expect(content3).toBe('Content 3')
+        expect(content4).toBe('Content 4')
+      } finally {
+        stores.forEach((s) => {
+          s.close()
+        })
+      }
+    })
+  })
+
+  describe('Tag Filtering Improvements', () => {
+    beforeEach(async () => {
+      // Create test entries with various tag formats
+      await store.updateMemory('replace', 'entry1', 'Content 1', {
+        entry_type: 'note',
+        tags: 'fix-bug',
+      })
+      await store.updateMemory('replace', 'entry2', 'Content 2', {
+        entry_type: 'note',
+        tags: 'fix-bug,high-priority',
+      })
+      await store.updateMemory('replace', 'entry3', 'Content 3', {
+        entry_type: 'note',
+        tags: 'high-priority',
+      })
+      await store.updateMemory('replace', 'entry4', 'Content 4', {
+        entry_type: 'note',
+        tags: 'feature',
+      })
+    })
+
+    it('should filter by exact tag match', async () => {
+      const results = await store.queryMemory({ tags: 'fix-bug' }, { operation: 'select' })
+      expect(Array.isArray(results)).toBe(true)
+      expect(results).toHaveLength(2)
+      const resultsArray = results as MemoryEntry[]
+      expect(resultsArray.map((r) => r.name)).toContain('entry1')
+      expect(resultsArray.map((r) => r.name)).toContain('entry2')
+    })
+
+    it('should filter by tag at beginning of comma list', async () => {
+      const results = await store.queryMemory({ tags: 'high-priority' }, { operation: 'select' })
+      expect(Array.isArray(results)).toBe(true)
+      expect(results).toHaveLength(2)
+      const resultsArray = results as MemoryEntry[]
+      expect(resultsArray.map((r) => r.name)).toContain('entry2')
+      expect(resultsArray.map((r) => r.name)).toContain('entry3')
+    })
+
+    it('should not match partial tags', async () => {
+      // Should not match "fix-bug" when searching for "bug"
+      const results = await store.queryMemory({ tags: 'bug' }, { operation: 'select' })
+      expect(Array.isArray(results)).toBe(true)
+      expect(results).toHaveLength(0)
+    })
+
+    it('should handle tags with spaces', async () => {
+      await store.updateMemory('replace', 'entry5', 'Content 5', {
+        entry_type: 'note',
+        tags: 'fix bug',
+      })
+
+      const results = await store.queryMemory({ tags: 'fix bug' }, { operation: 'select' })
+      expect(Array.isArray(results)).toBe(true)
+      expect(results).toHaveLength(1)
+      const resultArray = results as MemoryEntry[]
+      expect(resultArray[0].name).toBe('entry5')
+    })
+  })
+
+  describe('Batch Update Memory', () => {
+    it('should perform multiple operations atomically in a single transaction', async () => {
+      // Create initial entries
+      await store.updateMemory('replace', 'entry1', 'Content 1', {
+        entry_type: 'note',
+        tags: 'tag1',
+      })
+      await store.updateMemory('replace', 'entry2', 'Content 2', {
+        entry_type: 'note',
+        tags: 'tag2',
+      })
+
+      // Perform batch update
+      await store.batchUpdateMemory([
+        {
+          operation: 'replace',
+          name: 'entry1',
+          content: 'Updated Content 1',
+          metadata: { entry_type: 'note', tags: 'updated-tag1' },
+        },
+        {
+          operation: 'replace',
+          name: 'entry2',
+          content: 'Updated Content 2',
+          metadata: { entry_type: 'note', tags: 'updated-tag2' },
+        },
+        {
+          operation: 'replace',
+          name: 'entry3',
+          content: 'New Content 3',
+          metadata: { entry_type: 'note', tags: 'tag3' },
+        },
+      ])
+
+      // Verify all updates were applied
+      const entry1 = await store.queryMemory({ search: 'entry1' }, { operation: 'select' })
+      const entry2 = await store.queryMemory({ search: 'entry2' }, { operation: 'select' })
+      const entry3 = await store.queryMemory({ search: 'entry3' }, { operation: 'select' })
+
+      expect(Array.isArray(entry1)).toBe(true)
+      expect(Array.isArray(entry2)).toBe(true)
+      expect(Array.isArray(entry3)).toBe(true)
+
+      expect(entry1).toHaveLength(1)
+      const entry1Array = entry1 as MemoryEntry[]
+      expect(entry1Array[0].content).toBe('Updated Content 1')
+      expect(entry1Array[0].tags).toBe('updated-tag1')
+
+      expect(entry2).toHaveLength(1)
+      const entry2Array = entry2 as MemoryEntry[]
+      expect(entry2Array[0].content).toBe('Updated Content 2')
+      expect(entry2Array[0].tags).toBe('updated-tag2')
+
+      expect(entry3).toHaveLength(1)
+      const entry3Array = entry3 as MemoryEntry[]
+      expect(entry3Array[0].content).toBe('New Content 3')
+      expect(entry3Array[0].tags).toBe('tag3')
+    })
+
+    it('should support atomic rename using batch operations', async () => {
+      // Create entry with metadata
+      await store.updateMemory('replace', 'old-name', 'Content', {
+        entry_type: 'note',
+        status: 'active',
+        priority: 'high',
+        tags: 'important',
+      })
+
+      // Perform atomic rename using batch operations
+      await store.batchUpdateMemory([
+        {
+          operation: 'replace',
+          name: 'new-name',
+          content: 'Content',
+          metadata: { entry_type: 'note', status: 'active', priority: 'high', tags: 'important' },
+        },
+        { operation: 'remove', name: 'old-name' },
+      ])
+
+      // Verify rename worked and metadata was preserved
+      const oldEntry = await store.queryMemory({ search: 'old-name' }, { operation: 'select' })
+      const newEntry = await store.queryMemory({ search: 'new-name' }, { operation: 'select' })
+
+      expect(Array.isArray(oldEntry)).toBe(true)
+      expect(Array.isArray(newEntry)).toBe(true)
+
+      expect(oldEntry).toHaveLength(0)
+      expect(newEntry).toHaveLength(1)
+      const newEntryArray = newEntry as MemoryEntry[]
+      expect(newEntryArray[0].content).toBe('Content')
+      expect(newEntryArray[0].entry_type).toBe('note')
+      expect(newEntryArray[0].status).toBe('active')
+      expect(newEntryArray[0].priority).toBe('high')
+      expect(newEntryArray[0].tags).toBe('important')
     })
   })
 })

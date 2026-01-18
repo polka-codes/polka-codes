@@ -74,7 +74,7 @@ async function createPlan(input: CreatePlanInput, context: WorkflowContext<CliTo
     }
   }
 
-  const agentTools: FullToolInfo[] = [readFile, listFiles, searchFiles, readBinaryFile, fetchUrl, queryMemory, updateMemory]
+  const agentTools: FullToolInfo[] = [readFile, listFiles, searchFiles, readBinaryFile, fetchUrl]
   if (additionalTools?.search) {
     agentTools.push(additionalTools.search)
   }
@@ -122,31 +122,36 @@ async function createPlan(input: CreatePlanInput, context: WorkflowContext<CliTo
     // Save plan to memory for future reference
     if (plan) {
       try {
-        const taskSummary = currentTask.split('\n')[0].substring(0, 100) // Get first line, max 100 chars
-        const topic = `plan:${taskSummary.replace(/[^a-zA-Z0-9_-]/g, '-').toLowerCase()}`
+        const taskSummary = task.split('\n')[0].substring(0, 100) // Get first line, max 100 chars
+        const topic = `plan:${taskSummary.replace(/[^a-zA-Z0-9_-]+/g, '-').toLowerCase()}`
 
         // Extract keywords for tags
-        const keywords = currentTask
+        const keywords = task
           .toLowerCase()
           .match(/(?:implement|create|add|fix|refactor|update|improve|optimize|test|document)(?:\s+(\w+))?/g)
-        const tags = keywords ? keywords.map((k) => k.replace('implement ', 'implement-')).join(',') : undefined
+        const _tags = keywords
+          ? keywords
+              .map((k) => {
+                // Convert "fix bug" to "fix-bug" for consistency
+                const parts = k.split(' ')
+                if (parts.length > 1) {
+                  return parts.join('-')
+                }
+                return k
+              })
+              .join(',')
+          : undefined
 
         await tools.updateMemory({
           operation: 'replace',
           topic,
           content: plan,
-          metadata: {
-            entry_type: 'plan',
-            status: 'approved',
-            priority: 'high',
-            tags: tags,
-          },
         })
 
-        logger.info(`Plan saved to memory as: ${topic}`)
+        context.logger.info(`Plan saved to memory as: ${topic}`)
       } catch (error) {
         // Don't fail the workflow if memory save fails
-        logger.warn('Failed to save plan to memory:', error)
+        context.logger.warn('Failed to save plan to memory:', error)
       }
     }
 

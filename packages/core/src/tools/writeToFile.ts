@@ -20,7 +20,12 @@ When NOT to use:
 Features:
 - Automatically creates any directories needed
 - Overwrites existing files completely
-- Must provide complete file content (no truncation)`,
+- Must provide complete file content (no truncation)
+
+IMPORTANT CONSTRAINT:
+- Always provide COMPLETE intended content (no omissions)
+- Ensure no incorrect escape sequences (&lt;, &gt;, &amp;)
+- Ensure no unwanted CDATA tags in content`,
   parameters: z
     .object({
       path: z.string().describe('The path of the file to write to').meta({ usageValue: 'File path here' }),

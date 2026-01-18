@@ -30,3 +30,88 @@ local-rule"
   },
 }
 `;
+
+exports[`config loads config from specified path 1`] = `
+{
+  "defaultModel": "claude-3-opus",
+  "defaultProvider": "anthropic",
+  "rules": undefined,
+}
+`;
+
+exports[`config loads multiple config files 1`] = `
+{
+  "defaultModel": "claude-3-sonnet",
+  "defaultProvider": "anthropic",
+  "excludeFiles": undefined,
+  "rules": 
+"rule1
+
+rule2
+
+rule3"
+,
+}
+`;
+
+exports[`config loads config from default paths 1`] = `
+{
+  "defaultModel": "deepseek-chat",
+  "defaultProvider": "deepseek",
+  "rules": undefined,
+}
+`;
+
+exports[`config handles commands configuration 1`] = `
+{
+  "complex": {
+    "command": "echo "complex"",
+    "description": "A complex command",
+  },
+  "test": "echo "test"",
+}
+`;
+
+exports[`config handles rules configuration 1`] = `
+"rule1
+
+rule2"
+`;
+
+exports[`config handles command defaults 1`] = `
+{
+  "default": {
+    "model": "deepseek-chat",
+    "provider": "deepseek",
+  },
+  "task": {
+    "model": "deepseek-coder",
+  },
+}
+`;
+
+exports[`config merges multiple configs correctly 1`] = `
+{
+  "defaultModel": "claude-3-sonnet",
+  "defaultProvider": "anthropic",
+  "excludeFiles": [
+    "exclude1",
+    "exclude2",
+    "exclude3",
+  ],
+  "rules": [
+    "rule1",
+    "rule2",
+    "rule3",
+    "rule4",
+  ],
+}
+`;
+
+exports[`config concatenates arrays 1`] = `
+"global-rule-1
+
+global-rule-2
+
+local-rule"
+`;

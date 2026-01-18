@@ -15,3 +15,67 @@ exports[`config parameters merges global and local parameters with local precede
   "top_k": 50,
 }
 `;
+
+exports[`config parameters loads root level defaultParameters 1`] = `
+{
+  "max_tokens": 4000,
+  "temperature": 0.7,
+  "top_p": 0.9,
+}
+`;
+
+exports[`config parameters loads provider defaultParameters 1`] = `
+{
+  "max_tokens": 3000,
+  "temperature": 0.5,
+}
+`;
+
+exports[`config parameters loads provider defaultParameters 2`] = `
+{
+  "presence_penalty": 0.2,
+  "temperature": 0.8,
+}
+`;
+
+exports[`config parameters loads command parameters 1`] = `
+{
+  "max_tokens": 4000,
+  "temperature": 0.7,
+}
+`;
+
+exports[`config parameters loads command parameters 2`] = `
+{
+  "temperature": 0.8,
+  "top_p": 0.9,
+}
+`;
+
+exports[`config parameters merges parameters from multiple configs 1`] = `
+{
+  "max_tokens": 4000,
+  "presence_penalty": 0.1,
+  "temperature": 0.7,
+  "top_p": 0.9,
+}
+`;
+
+exports[`config parameters merges parameters from multiple configs 2`] = `
+{
+  "frequency_penalty": 0.2,
+  "max_tokens": 2000,
+  "temperature": 0.6,
+}
+`;
+
+exports[`config parameters mergeConfigs edge cases deep merges nested objects 1`] = `
+{
+  "apiKey": "key1",
+  "defaultParameters": {
+    "max_tokens": 2000,
+    "temperature": 0.6,
+    "top_p": 0.9,
+  },
+}
+`;

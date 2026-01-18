@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from 'bun:test'
 import { existsSync, mkdirSync, unlinkSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import * as memory from './memory'
@@ -6,7 +6,20 @@ import * as memory from './memory'
 const TEST_DIR = '/tmp/polka-test-memory'
 const TEST_DB = join(TEST_DIR, 'memory.sqlite')
 
-describe('Memory Commands', () => {
+// Mock the store
+const createMockStore = () => ({
+  queryMemory: mock(() => Promise.resolve([])),
+  readMemory: mock(() => Promise.resolve(undefined)),
+  updateMemory: mock(() => Promise.resolve(undefined)),
+  batchUpdateMemory: mock(() => Promise.resolve(undefined)),
+  getStats: mock(() => Promise.resolve({ totalEntries: 0, databaseSize: 0, entriesByType: {} })),
+  close: mock(() => {}),
+})
+
+describe('Memory Commands - Real Behavior Tests', () => {
+  let mockStore: ReturnType<typeof createMockStore>
+  let originalGetMemoryStore: any
+
   beforeEach(() => {
     // Create test directory
     mkdirSync(TEST_DIR, { recursive: true })
@@ -20,9 +33,21 @@ describe('Memory Commands', () => {
       },
     }
     writeFileSync(join(TEST_DIR, '.polkacodes.yml'), JSON.stringify(config, null, 2))
+
+    // Create mock store
+    mockStore = createMockStore()
+
+    // Mock getMemoryStore
+    const mod = require('./memory')
+    originalGetMemoryStore = mod.getMemoryStore
+    mod.getMemoryStore = mock(() => Promise.resolve(mockStore))
   })
 
   afterEach(() => {
+    // Restore original function
+    const mod = require('./memory')
+    mod.getMemoryStore = originalGetMemoryStore
+
     // Clean up test database
     if (existsSync(TEST_DB)) {
       unlinkSync(TEST_DB)
@@ -30,265 +55,371 @@ describe('Memory Commands', () => {
   })
 
   describe('memoryList', () => {
-    it('should list all entries in table format', async () => {
-      // Setup: Create some test entries
-      // Note: This would require mocking the SQLiteMemoryStore
-      // For now, we'll test the command structure
+    it('should split tags by comma', async () => {
+      mockStore.queryMemory.mockResolvedValue([])
 
-      const options = {
-        format: 'table' as const,
-      }
+      await memory.memoryList({ tags: 'bug,urgent,high', format: 'table' })
 
-      // This would normally call memoryList(options)
-      // We're just verifying the function exists and handles options
-      expect(typeof memory.memoryList).toBe('function')
+      expect(mockStore.queryMemory).toHaveBeenCalledWith({ tags: ['bug', 'urgent', 'high'], scope: 'auto' }, { operation: 'select' })
+      expect(mockStore.close).toHaveBeenCalled()
     })
 
-    it('should list entries in JSON format', async () => {
-      const options = {
-        format: 'json' as const,
-      }
+    it('should output JSON format', async () => {
+      const entries = [
+        { name: 'test1', content: 'content1', entry_type: 'note' },
+        { name: 'test2', content: 'content2', entry_type: 'todo' },
+      ]
+      mockStore.queryMemory.mockResolvedValue(entries as any)
 
-      expect(typeof memory.memoryList).toBe('function')
+      const consoleLogSpy = spyOn(console, 'log')
+
+      await memory.memoryList({ format: 'json' })
+
+      expect(consoleLogSpy).toHaveBeenCalledWith(JSON.stringify(entries, null, 2))
+      expect(mockStore.close).toHaveBeenCalled()
     })
 
-    it('should filter by type', async () => {
-      const options = {
-        type: 'todo',
-        format: 'table' as const,
-      }
+    it('should show "No entries found" when empty', async () => {
+      mockStore.queryMemory.mockResolvedValue([])
 
-      expect(typeof memory.memoryList).toBe('function')
+      const consoleLogSpy = spyOn(console, 'log')
+
+      await memory.memoryList({ format: 'table' })
+
+      expect(consoleLogSpy).toHaveBeenCalledWith('No entries found.')
+      expect(mockStore.close).toHaveBeenCalled()
     })
 
-    it('should filter by status', async () => {
-      const options = {
-        status: 'open',
-        format: 'table' as const,
+    it('should close store even on error', async () => {
+      mockStore.queryMemory.mockRejectedValue(new Error('DB error'))
+
+      try {
+        await memory.memoryList({ format: 'table' })
+      } catch (_e) {
+        // Expected error
       }
 
-      expect(typeof memory.memoryList).toBe('function')
-    })
-
-    it('should filter by priority', async () => {
-      const options = {
-        priority: 'high',
-        format: 'table' as const,
-      }
-
-      expect(typeof memory.memoryList).toBe('function')
-    })
-
-    it('should search entries', async () => {
-      const options = {
-        search: 'login',
-        format: 'table' as const,
-      }
-
-      expect(typeof memory.memoryList).toBe('function')
-    })
-
-    it('should sort results', async () => {
-      const options = {
-        sortBy: 'updated',
-        sortOrder: 'desc',
-        format: 'table' as const,
-      }
-
-      expect(typeof memory.memoryList).toBe('function')
-    })
-
-    it('should limit results', async () => {
-      const options = {
-        limit: 10,
-        format: 'table' as const,
-      }
-
-      expect(typeof memory.memoryList).toBe('function')
-    })
-
-    it('should paginate results', async () => {
-      const options = {
-        limit: 10,
-        offset: 20,
-        format: 'table' as const,
-      }
-
-      expect(typeof memory.memoryList).toBe('function')
+      expect(mockStore.close).toHaveBeenCalled()
     })
   })
 
   describe('memoryRead', () => {
-    it('should read a specific entry in text format', async () => {
-      const options = {
-        format: 'text' as const,
+    it('should exit when entry not found', async () => {
+      mockStore.readMemory.mockResolvedValue(undefined)
+      const processExitSpy = spyOn(process, 'exit').mockImplementation(() => {
+        throw new Error('process.exit called')
+      })
+
+      try {
+        await memory.memoryRead('nonexistent', {})
+        expect(true).toBe(false) // Should not reach here
+      } catch (e: any) {
+        expect(e.message).toBe('process.exit called')
       }
 
-      expect(typeof memory.memoryRead).toBe('function')
+      expect(processExitSpy).toHaveBeenCalledWith(1)
+      expect(mockStore.close).toHaveBeenCalled()
     })
 
-    it('should read a specific entry in JSON format', async () => {
-      const options = {
-        format: 'json' as const,
-      }
+    it('should output content in text format', async () => {
+      mockStore.readMemory.mockResolvedValue('Test content here' as any)
+      const consoleLogSpy = spyOn(console, 'log')
 
-      expect(typeof memory.memoryRead).toBe('function')
+      await memory.memoryRead('test-entry', {})
+
+      expect(consoleLogSpy).toHaveBeenCalledWith('Test content here')
+      expect(mockStore.close).toHaveBeenCalled()
+    })
+
+    it('should output entry in JSON format', async () => {
+      const entry = { name: 'test', content: 'content', entry_type: 'note', tags: 'important' }
+      mockStore.readMemory.mockResolvedValue(entry.content as any)
+      mockStore.queryMemory.mockResolvedValue([entry] as any)
+
+      const consoleLogSpy = spyOn(console, 'log')
+
+      await memory.memoryRead('test', { format: 'json' })
+
+      const loggedArgs = consoleLogSpy.mock.calls.map((call) => call[0])
+      const output = loggedArgs.join('\n')
+      expect(output).toContain('content')
+      expect(mockStore.close).toHaveBeenCalled()
     })
   })
 
   describe('memoryDelete', () => {
-    it('should require force flag', async () => {
-      const options = {
-        force: false,
+    it('should exit without force flag', async () => {
+      const processExitSpy = spyOn(process, 'exit').mockImplementation(() => {
+        throw new Error('process.exit called')
+      })
+
+      try {
+        await memory.memoryDelete('test-entry', { force: false })
+        expect(true).toBe(false)
+      } catch (e: any) {
+        expect(e.message).toBe('process.exit called')
       }
 
-      expect(typeof memory.memoryDelete).toBe('function')
+      expect(processExitSpy).toHaveBeenCalledWith(0)
+      expect(mockStore.updateMemory).not.toHaveBeenCalled()
     })
 
     it('should delete with force flag', async () => {
-      const options = {
-        force: true,
-      }
+      const consoleLogSpy = spyOn(console, 'log')
 
-      expect(typeof memory.memoryDelete).toBe('function')
+      await memory.memoryDelete('test-entry', { force: true })
+
+      expect(mockStore.updateMemory).toHaveBeenCalledWith('remove', 'test-entry', undefined)
+      expect(consoleLogSpy).toHaveBeenCalledWith('Memory entry "test-entry" has been deleted.')
+      expect(mockStore.close).toHaveBeenCalled()
     })
   })
 
-  describe('memoryRename', () => {
-    it('should rename an entry', async () => {
-      expect(typeof memory.memoryRename).toBe('function')
-    })
-  })
-
-  describe('memoryExport', () => {
-    it('should export all entries to default file', async () => {
-      const options = {}
-
-      expect(typeof memory.memoryExport).toBe('function')
-    })
-
-    it('should export to specific file', async () => {
-      const options = {
-        output: '/tmp/custom-export.json',
+  describe('memoryRename - Metadata Preservation', () => {
+    it('should preserve all metadata when renaming', async () => {
+      const oldEntry = {
+        name: 'old-name',
+        content: 'Content',
+        entry_type: 'note',
+        status: 'active',
+        priority: 'high',
+        tags: 'important',
       }
+      mockStore.queryMemory.mockResolvedValue([oldEntry] as any)
+      mockStore.queryMemory.mockResolvedValueOnce([oldEntry] as any).mockResolvedValueOnce([])
+      const consoleLogSpy = spyOn(console, 'log')
 
-      expect(typeof memory.memoryExport).toBe('function')
-    })
+      await memory.memoryRename('old-name', 'new-name')
 
-    it('should export only global scope', async () => {
-      const options = {
-        scope: 'global' as const,
-      }
-
-      expect(typeof memory.memoryExport).toBe('function')
-    })
-
-    it('should export only project scope', async () => {
-      const options = {
-        scope: 'project' as const,
-      }
-
-      expect(typeof memory.memoryExport).toBe('function')
-    })
-
-    it('should export filtered by type', async () => {
-      const options = {
-        type: 'todo',
-      }
-
-      expect(typeof memory.memoryExport).toBe('function')
-    })
-  })
-
-  describe('memoryImport', () => {
-    it('should import from JSON file', async () => {
-      const options = {}
-
-      expect(typeof memory.memoryImport).toBe('function')
-    })
-
-    it('should merge with existing data', async () => {
-      const options = {
-        merge: true,
-      }
-
-      expect(typeof memory.memoryImport).toBe('function')
-    })
-
-    it('should reject invalid JSON', async () => {
-      // Create invalid JSON file
-      const invalidFile = join(TEST_DIR, 'invalid.json')
-      writeFileSync(invalidFile, '{ invalid json }')
-
-      const options = {}
-
-      expect(typeof memory.memoryImport).toBe('function')
-    })
-
-    it('should reject non-array JSON', async () => {
-      // Create non-array JSON file
-      const invalidFile = join(TEST_DIR, 'not-array.json')
-      writeFileSync(invalidFile, '{"key": "value"}')
-
-      const options = {}
-
-      expect(typeof memory.memoryImport).toBe('function')
-    })
-
-    it('should validate entry structure', async () => {
-      // Create array with invalid entry
-      const invalidFile = join(TEST_DIR, 'invalid-entry.json')
-      writeFileSync(
-        invalidFile,
-        JSON.stringify([
-          { name: 'valid', content: 'content', entry_type: 'note' },
-          { name: '', content: 'content', entry_type: 'note' }, // invalid: empty name
-          { name: 'no-content', entry_type: 'note' }, // invalid: missing content
-        ]),
-      )
-
-      const options = {}
-
-      expect(typeof memory.memoryImport).toBe('function')
-    })
-
-    it('should validate priority values', async () => {
-      // Create array with invalid priority
-      const invalidFile = join(TEST_DIR, 'invalid-priority.json')
-      writeFileSync(
-        invalidFile,
-        JSON.stringify([
-          {
-            name: 'test',
-            content: 'content',
+      expect(mockStore.batchUpdateMemory).toHaveBeenCalledWith([
+        {
+          operation: 'replace',
+          name: 'new-name',
+          content: 'Content',
+          metadata: {
             entry_type: 'note',
-            priority: 'invalid-priority',
+            status: 'active',
+            priority: 'high',
+            tags: 'important',
           },
+        },
+        { operation: 'remove', name: 'old-name' },
+      ])
+      expect(consoleLogSpy).toHaveBeenCalledWith('Memory entry renamed from "old-name" to "new-name".')
+      expect(mockStore.close).toHaveBeenCalled()
+    })
+
+    it('should exit when old entry not found', async () => {
+      mockStore.queryMemory.mockResolvedValue([])
+      const processExitSpy = spyOn(process, 'exit').mockImplementation(() => {
+        throw new Error('process.exit called')
+      })
+      const consoleErrorSpy = spyOn(console, 'error')
+
+      try {
+        await memory.memoryRename('nonexistent', 'new-name')
+        expect(true).toBe(false)
+      } catch (e: any) {
+        expect(e.message).toBe('process.exit called')
+      }
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Memory entry "nonexistent" not found.')
+      expect(processExitSpy).toHaveBeenCalledWith(1)
+      expect(mockStore.close).toHaveBeenCalled()
+    })
+
+    it('should exit when new name already exists', async () => {
+      const entry = { name: 'test', content: 'content' }
+      mockStore.queryMemory.mockResolvedValue([entry] as any)
+      const processExitSpy = spyOn(process, 'exit').mockImplementation(() => {
+        throw new Error('process.exit called')
+      })
+      const consoleErrorSpy = spyOn(console, 'error')
+
+      try {
+        await memory.memoryRename('old-name', 'test')
+        expect(true).toBe(false)
+      } catch (e: any) {
+        expect(e.message).toBe('process.exit called')
+      }
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Memory entry "test" already exists.')
+      expect(processExitSpy).toHaveBeenCalledWith(1)
+      expect(mockStore.close).toHaveBeenCalled()
+    })
+  })
+
+  describe('memoryImport - Type Validation', () => {
+    it('should skip non-object entries', async () => {
+      const importFile = join(TEST_DIR, 'non-objects.json')
+      writeFileSync(importFile, JSON.stringify(['string', 123, null]))
+      mockStore.readMemory.mockResolvedValue(undefined)
+      const consoleErrorSpy = spyOn(console, 'error')
+
+      await memory.memoryImport(importFile, {})
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Skipping invalid entry: not an object')
+      expect(mockStore.updateMemory).not.toHaveBeenCalled()
+      expect(mockStore.close).toHaveBeenCalled()
+    })
+
+    it('should skip entries with null name', async () => {
+      const importFile = join(TEST_DIR, 'null-name.json')
+      writeFileSync(importFile, JSON.stringify([{ name: null, content: 'content' }]))
+      mockStore.readMemory.mockResolvedValue(undefined)
+      const consoleErrorSpy = spyOn(console, 'error')
+
+      await memory.memoryImport(importFile, {})
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Skipping invalid entry: missing or invalid name')
+      expect(mockStore.updateMemory).not.toHaveBeenCalled()
+      expect(mockStore.close).toHaveBeenCalled()
+    })
+
+    it('should skip entries with non-string content', async () => {
+      const importFile = join(TEST_DIR, 'non-string-content.json')
+      writeFileSync(importFile, JSON.stringify([{ name: 'test', content: 12345 }]))
+      mockStore.readMemory.mockResolvedValue(undefined)
+      const consoleErrorSpy = spyOn(console, 'error')
+
+      await memory.memoryImport(importFile, {})
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Skipping entry "test": missing or invalid content')
+      expect(mockStore.updateMemory).not.toHaveBeenCalled()
+      expect(mockStore.close).toHaveBeenCalled()
+    })
+
+    it('should validate and coerce non-string metadata types', async () => {
+      const importFile = join(TEST_DIR, 'type-coercion.json')
+      writeFileSync(
+        importFile,
+        JSON.stringify([
+          { name: 'entry1', content: 'Content', entry_type: 123 }, // number -> defaults to 'note'
+          { name: 'entry2', content: 'Content', status: null }, // null -> undefined
+          { name: 'entry3', content: 'Content', tags: true }, // boolean -> undefined
         ]),
       )
+      mockStore.readMemory.mockResolvedValue(undefined)
+      const consoleLogSpy = spyOn(console, 'log')
 
-      const options = {}
+      await memory.memoryImport(importFile, {})
 
-      expect(typeof memory.memoryImport).toBe('function')
+      expect(mockStore.updateMemory).toHaveBeenCalledTimes(3)
+      expect(mockStore.updateMemory).toHaveBeenCalledWith('replace', 'entry1', 'Content', {
+        entry_type: 'note', // defaulted
+        status: undefined,
+        priority: undefined,
+        tags: undefined,
+      })
+      expect(mockStore.updateMemory).toHaveBeenCalledWith('replace', 'entry2', 'Content', {
+        entry_type: 'note',
+        status: undefined, // null coerced to undefined
+        priority: undefined,
+        tags: undefined,
+      })
+      expect(consoleLogSpy).toHaveBeenCalledWith('Imported 3 entries, skipped 0 entries.')
+      expect(mockStore.close).toHaveBeenCalled()
+    })
+
+    it('should validate priority values and warn on invalid', async () => {
+      const importFile = join(TEST_DIR, 'invalid-priority.json')
+      writeFileSync(importFile, JSON.stringify([{ name: 'test', content: 'content', priority: 'invalid-priority' }]))
+      mockStore.readMemory.mockResolvedValue(undefined)
+      const consoleWarnSpy = spyOn(console, 'warn')
+
+      await memory.memoryImport(importFile, {})
+
+      expect(consoleWarnSpy).toHaveBeenCalledWith('Entry "test" has invalid priority "invalid-priority", defaulting to null')
+      expect(mockStore.updateMemory).toHaveBeenCalledWith('replace', 'test', 'content', {
+        entry_type: 'note',
+        status: undefined,
+        priority: undefined, // Invalid priority -> undefined
+        tags: undefined,
+      })
+      expect(mockStore.close).toHaveBeenCalled()
+    })
+
+    it('should skip existing entries without merge flag', async () => {
+      const importFile = join(TEST_DIR, 'existing.json')
+      writeFileSync(importFile, JSON.stringify([{ name: 'test', content: 'new content' }]))
+      mockStore.readMemory.mockResolvedValue('old content' as any) // Entry exists
+      const consoleLogSpy = spyOn(console, 'log')
+
+      await memory.memoryImport(importFile, { merge: false })
+
+      expect(mockStore.updateMemory).not.toHaveBeenCalledWith('replace', 'test', 'new content')
+      expect(consoleLogSpy).toHaveBeenCalledWith('Imported 0 entries, skipped 1 entries.')
+      expect(mockStore.close).toHaveBeenCalled()
+    })
+
+    it('should merge with existing entries when merge flag is set', async () => {
+      const importFile = join(TEST_DIR, 'existing.json')
+      writeFileSync(importFile, JSON.stringify([{ name: 'test', content: 'new content' }]))
+      mockStore.readMemory.mockResolvedValue('old content' as any) // Entry exists
+      const consoleLogSpy = spyOn(console, 'log')
+
+      await memory.memoryImport(importFile, { merge: true })
+
+      expect(mockStore.updateMemory).toHaveBeenCalledWith('replace', 'test', 'new content', expect.any(Object))
+      expect(consoleLogSpy).toHaveBeenCalledWith('Imported 1 entries, skipped 0 entries.')
+      expect(mockStore.close).toHaveBeenCalled()
+    })
+
+    it('should exit on invalid JSON', async () => {
+      const importFile = join(TEST_DIR, 'invalid.json')
+      writeFileSync(importFile, '{ invalid json }')
+      const processExitSpy = spyOn(process, 'exit').mockImplementation(() => {
+        throw new Error('process.exit called')
+      })
+      const consoleErrorSpy = spyOn(console, 'error')
+
+      try {
+        await memory.memoryImport(importFile, {})
+        expect(true).toBe(false)
+      } catch (e: any) {
+        expect(e.message).toBe('process.exit called')
+      }
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('Failed to parse JSON'))
+      expect(processExitSpy).toHaveBeenCalledWith(1)
+    })
+
+    it('should exit on non-array JSON', async () => {
+      const importFile = join(TEST_DIR, 'not-array.json')
+      writeFileSync(importFile, JSON.stringify({ key: 'value' }))
+      const processExitSpy = spyOn(process, 'exit').mockImplementation(() => {
+        throw new Error('process.exit called')
+      })
+      const consoleErrorSpy = spyOn(console, 'error')
+
+      try {
+        await memory.memoryImport(importFile, {})
+        expect(true).toBe(false)
+      } catch (e: any) {
+        expect(e.message).toBe('process.exit called')
+      }
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Invalid import file format. Expected an array of memory entries.')
+      expect(processExitSpy).toHaveBeenCalledWith(1)
     })
   })
 
   describe('memoryStatus', () => {
     it('should display database statistics', async () => {
-      expect(typeof memory.memoryStatus).toBe('function')
-    })
-  })
+      mockStore.getStats.mockResolvedValue({
+        totalEntries: 42,
+        databaseSize: 12345,
+        entriesByType: { note: 20, todo: 15, plan: 7 },
+      })
+      const consoleLogSpy = spyOn(console, 'log')
 
-  describe('Resource Management', () => {
-    it('should close database connection on success', async () => {
-      // This test verifies that store.close() is called in finally block
-      // In a real test, we would mock the store and verify close() was called
-      expect(typeof memory.memoryList).toBe('function')
-    })
+      await memory.memoryStatus()
 
-    it('should close database connection on error', async () => {
-      // This test verifies that store.close() is called even when error occurs
-      expect(typeof memory.memoryRead).toBe('function')
+      const loggedArgs = consoleLogSpy.mock.calls.map((call) => call[0])
+      const output = loggedArgs.join('\n')
+
+      expect(output).toContain('42')
+      expect(mockStore.close).toHaveBeenCalled()
     })
   })
 })

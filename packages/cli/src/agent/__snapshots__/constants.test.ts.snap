@@ -1,0 +1,280 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`constants WORKFLOW_MAPPING should have correct mapping structure 1`] = `
+{
+  "analysis": "plan",
+  "bugfix": "fix",
+  "commit": "commit",
+  "delete": "code",
+  "docs": "code",
+  "documentation": "code",
+  "feature": "plan",
+  "force-push": "code",
+  "optimization": "code",
+  "other": "plan",
+  "plan": "plan",
+  "refactor": "code",
+  "refactoring": "code",
+  "reset": "code",
+  "review": "review",
+  "security": "fix",
+  "task": "code",
+  "test": "code",
+  "testing": "code",
+}
+`;
+
+exports[`constants DEFAULT_DISCOVERY_STRATEGIES should have correct strategies 1`] = `
+[
+  "build-errors",
+  "failing-tests",
+  "type-errors",
+  "lint-issues",
+]
+`;
+
+exports[`constants ADVANCED_DISCOVERY_STRATEGIES should have correct strategies 1`] = `
+[
+  "test-coverage",
+  "code-quality",
+  "refactoring",
+  "documentation",
+  "security",
+]
+`;
+
+exports[`constants STATE_TRANSITIONS should have correct transition structure 1`] = `
+[
+  {
+    "from": [
+      "idle",
+    ],
+    "label": "setGoal",
+    "to": "planning",
+  },
+  {
+    "from": [
+      "planning",
+    ],
+    "label": "planReady",
+    "to": "executing",
+  },
+  {
+    "from": [
+      "executing",
+    ],
+    "label": "taskComplete",
+    "to": "reviewing",
+  },
+  {
+    "from": [
+      "executing",
+    ],
+    "label": "taskFailed",
+    "to": "error-recovery",
+  },
+  {
+    "from": [
+      "reviewing",
+    ],
+    "label": "reviewPassed",
+    "to": "committing",
+  },
+  {
+    "from": [
+      "reviewing",
+    ],
+    "label": "reviewFailed",
+    "to": "executing",
+  },
+  {
+    "from": [
+      "committing",
+    ],
+    "label": "committed",
+    "to": "idle",
+  },
+  {
+    "from": [
+      "error-recovery",
+    ],
+    "label": "recovered",
+    "to": "executing",
+  },
+  {
+    "from": [
+      "error-recovery",
+    ],
+    "label": "unrecoverable",
+    "to": "stopped",
+  },
+  {
+    "from": [
+      "*",
+    ],
+    "label": "interrupt",
+    "to": "stopped",
+  },
+]
+`;
+
+exports[`constants DEFAULT_AGENT_CONFIG should have correct default configuration 1`] = `
+{
+  "approval": {
+    "autoApproveSafeTasks": true,
+    "level": "destructive",
+    "maxAutoApprovalCost": 5,
+  },
+  "autoApproveSafeTasks": true,
+  "autoSaveInterval": 30000,
+  "continueOnCompletion": false,
+  "continuousImprovement": {
+    "maxCycles": 0,
+    "sleepTimeBetweenTasks": 5000,
+    "sleepTimeOnNoTasks": 60000,
+  },
+  "destructiveOperations": [
+    "delete",
+    "force-push",
+    "reset",
+  ],
+  "discovery": {
+    "cacheTime": 300000,
+    "checkChanges": true,
+    "enabledStrategies": [
+      "build-errors",
+      "failing-tests",
+      "type-errors",
+      "lint-issues",
+    ],
+  },
+  "enableProgress": true,
+  "maxAutoApprovalCost": 5,
+  "maxConcurrency": 1,
+  "maxIterations": 0,
+  "pauseOnError": true,
+  "requireApprovalFor": "destructive",
+  "safety": {
+    "blockDestructive": true,
+    "enabledChecks": [],
+    "maxFileSize": 10485760,
+  },
+  "strategy": "goal-directed",
+  "timeout": 0,
+  "workingBranch": "main",
+}
+`;
+
+exports[`constants CONFIG_PRESETS should have correct conservative preset 1`] = `
+{
+  "autoApproveSafeTasks": false,
+  "discovery": {
+    "cacheTime": 300000,
+    "checkChanges": true,
+    "enabledStrategies": [
+      "build-errors",
+      "failing-tests",
+      "type-errors",
+      "lint-issues",
+    ],
+  },
+  "maxAutoApprovalCost": 0,
+  "maxConcurrency": 1,
+  "pauseOnError": true,
+  "requireApprovalFor": "all",
+  "strategy": "goal-directed",
+}
+`;
+
+exports[`constants CONFIG_PRESETS should have correct balanced preset 1`] = `
+{
+  "autoApproveSafeTasks": true,
+  "discovery": {
+    "cacheTime": 300000,
+    "checkChanges": true,
+    "enabledStrategies": [
+      "build-errors",
+      "failing-tests",
+      "type-errors",
+      "lint-issues",
+    ],
+  },
+  "maxAutoApprovalCost": 10,
+  "maxConcurrency": 1,
+  "pauseOnError": true,
+  "requireApprovalFor": "destructive",
+  "strategy": "goal-directed",
+}
+`;
+
+exports[`constants CONFIG_PRESETS should have correct aggressive preset 1`] = `
+{
+  "autoApproveSafeTasks": true,
+  "discovery": {
+    "cacheTime": 600000,
+    "checkChanges": false,
+    "enabledStrategies": [
+      "build-errors",
+      "failing-tests",
+      "type-errors",
+      "lint-issues",
+      "test-coverage",
+      "code-quality",
+      "refactoring",
+      "documentation",
+      "security",
+      "working-dir",
+    ],
+  },
+  "maxAutoApprovalCost": 30,
+  "maxConcurrency": 2,
+  "pauseOnError": false,
+  "requireApprovalFor": "none",
+  "strategy": "goal-directed",
+}
+`;
+
+exports[`constants CONFIG_PRESETS should have correct continuous-improvement preset 1`] = `
+{
+  "autoApproveSafeTasks": true,
+  "continueOnCompletion": true,
+  "discovery": {
+    "cacheTime": 300000,
+    "checkChanges": true,
+    "enabledStrategies": [
+      "build-errors",
+      "failing-tests",
+      "type-errors",
+      "lint-issues",
+      "test-coverage",
+    ],
+  },
+  "maxAutoApprovalCost": 15,
+  "maxConcurrency": 2,
+  "maxIterations": 0,
+  "pauseOnError": false,
+  "requireApprovalFor": "commits",
+  "strategy": "continuous-improvement",
+}
+`;
+
+exports[`constants CONFIG_PRESETS should have correct working-dir preset 1`] = `
+{
+  "autoApproveSafeTasks": true,
+  "continueOnCompletion": true,
+  "discovery": {
+    "cacheTime": 60000,
+    "checkChanges": false,
+    "enabledStrategies": [
+      "working-dir",
+    ],
+  },
+  "maxAutoApprovalCost": 30,
+  "maxConcurrency": 1,
+  "maxIterations": 0,
+  "pauseOnError": false,
+  "requireApprovalFor": "commits",
+  "strategy": "continuous-improvement",
+  "workingDir": "./plans",
+}
+`;

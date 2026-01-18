@@ -11,70 +11,21 @@ import {
 
 describe('constants', () => {
   describe('WORKFLOW_MAPPING', () => {
-    it('should map feature to plan', () => {
-      expect(WORKFLOW_MAPPING.feature).toBe('plan')
+    it('should have correct mapping structure', () => {
+      expect(WORKFLOW_MAPPING).toMatchSnapshot()
     })
 
-    it('should map bugfix to fix', () => {
-      expect(WORKFLOW_MAPPING.bugfix).toBe('fix')
-    })
-
-    it('should map refactor to code', () => {
-      expect(WORKFLOW_MAPPING.refactor).toBe('code')
-    })
-
-    it('should map refactoring to code', () => {
-      expect(WORKFLOW_MAPPING.refactoring).toBe('code')
-    })
-
-    it('should map test to code', () => {
-      expect(WORKFLOW_MAPPING.test).toBe('code')
-    })
-
-    it('should map review to review', () => {
-      expect(WORKFLOW_MAPPING.review).toBe('review')
-    })
-
-    it('should map commit to commit', () => {
-      expect(WORKFLOW_MAPPING.commit).toBe('commit')
-    })
-
-    it('should map security to fix', () => {
-      expect(WORKFLOW_MAPPING.security).toBe('fix')
-    })
-
-    it('should map optimization to code', () => {
-      expect(WORKFLOW_MAPPING.optimization).toBe('code')
-    })
-
-    it('should map delete to code', () => {
-      expect(WORKFLOW_MAPPING.delete).toBe('code')
-    })
-
-    it('should map force-push to code', () => {
-      expect(WORKFLOW_MAPPING['force-push']).toBe('code')
-    })
-
-    it('should map reset to code', () => {
-      expect(WORKFLOW_MAPPING.reset).toBe('code')
+    it('should include all required task types', () => {
+      const requiredTypes = ['feature', 'bugfix', 'refactor', 'review', 'commit', 'security'] as const
+      requiredTypes.forEach((type) => {
+        expect(WORKFLOW_MAPPING[type]).toBeDefined()
+      })
     })
   })
 
   describe('DEFAULT_DISCOVERY_STRATEGIES', () => {
-    it('should include build-errors', () => {
-      expect(DEFAULT_DISCOVERY_STRATEGIES).toContain('build-errors')
-    })
-
-    it('should include failing-tests', () => {
-      expect(DEFAULT_DISCOVERY_STRATEGIES).toContain('failing-tests')
-    })
-
-    it('should include type-errors', () => {
-      expect(DEFAULT_DISCOVERY_STRATEGIES).toContain('type-errors')
-    })
-
-    it('should include lint-issues', () => {
-      expect(DEFAULT_DISCOVERY_STRATEGIES).toContain('lint-issues')
+    it('should have correct strategies', () => {
+      expect(DEFAULT_DISCOVERY_STRATEGIES).toMatchSnapshot()
     })
 
     it('should have 4 strategies', () => {
@@ -83,24 +34,8 @@ describe('constants', () => {
   })
 
   describe('ADVANCED_DISCOVERY_STRATEGIES', () => {
-    it('should include test-coverage', () => {
-      expect(ADVANCED_DISCOVERY_STRATEGIES).toContain('test-coverage')
-    })
-
-    it('should include code-quality', () => {
-      expect(ADVANCED_DISCOVERY_STRATEGIES).toContain('code-quality')
-    })
-
-    it('should include refactoring', () => {
-      expect(ADVANCED_DISCOVERY_STRATEGIES).toContain('refactoring')
-    })
-
-    it('should include documentation', () => {
-      expect(ADVANCED_DISCOVERY_STRATEGIES).toContain('documentation')
-    })
-
-    it('should include security', () => {
-      expect(ADVANCED_DISCOVERY_STRATEGIES).toContain('security')
+    it('should have correct strategies', () => {
+      expect(ADVANCED_DISCOVERY_STRATEGIES).toMatchSnapshot()
     })
 
     it('should have 5 strategies', () => {
@@ -121,160 +56,80 @@ describe('constants', () => {
       })
     })
 
-    it('should have 10 strategies total', () => {
+    it('should have 10 strategies total (including working-dir)', () => {
       expect(ALL_DISCOVERY_STRATEGIES).toHaveLength(10)
     })
   })
 
   describe('STATE_TRANSITIONS', () => {
-    it('should have idle to planning transition', () => {
-      const transition = STATE_TRANSITIONS.find((t) => t.from.includes('idle') && t.to === 'planning')
-      expect(transition).toBeDefined()
-      expect(transition?.label).toBe('setGoal')
+    it('should have correct transition structure', () => {
+      expect(STATE_TRANSITIONS).toMatchSnapshot()
     })
 
-    it('should have planning to executing transition', () => {
-      const transition = STATE_TRANSITIONS.find((t) => t.from.includes('planning') && t.to === 'executing')
-      expect(transition).toBeDefined()
-      expect(transition?.label).toBe('planReady')
+    it('should have valid transition structure', () => {
+      STATE_TRANSITIONS.forEach((transition) => {
+        expect(transition.from).toBeDefined()
+        expect(transition.to).toBeDefined()
+        expect(transition.label).toBeDefined()
+        expect(transition.from).toBeInstanceOf(Array)
+        expect(typeof transition.to).toBe('string')
+        expect(typeof transition.label).toBe('string')
+      })
     })
 
-    it('should have executing to reviewing transition', () => {
-      const transition = STATE_TRANSITIONS.find((t) => t.from.includes('executing') && t.to === 'reviewing')
-      expect(transition?.label).toBe('taskComplete')
-    })
-
-    it('should have executing to error-recovery transition', () => {
-      const transition = STATE_TRANSITIONS.find((t) => t.from.includes('executing') && t.to === 'error-recovery')
-      expect(transition?.label).toBe('taskFailed')
-    })
-
-    it('should have wildcard interrupt transition', () => {
-      const transition = STATE_TRANSITIONS.find((t) => t.from.includes('*') && t.to === 'stopped')
-      expect(transition).toBeDefined()
-      expect(transition?.label).toBe('interrupt')
-    })
-
-    it('should have error-recovery to stopped transition', () => {
-      const transition = STATE_TRANSITIONS.find((t) => t.from.includes('error-recovery') && t.to === 'stopped')
-      expect(transition).toBeDefined()
-      expect(transition?.label).toBe('unrecoverable')
+    it('should have critical transitions', () => {
+      const transitionLabels = STATE_TRANSITIONS.map((t) => t.label)
+      expect(transitionLabels).toContain('setGoal')
+      expect(transitionLabels).toContain('planReady')
+      expect(transitionLabels).toContain('taskComplete')
+      expect(transitionLabels).toContain('taskFailed')
+      expect(transitionLabels).toContain('interrupt')
     })
   })
 
   describe('DEFAULT_AGENT_CONFIG', () => {
-    it('should have goal-directed strategy', () => {
-      expect(DEFAULT_AGENT_CONFIG.strategy).toBe('goal-directed')
+    it('should have correct default configuration', () => {
+      expect(DEFAULT_AGENT_CONFIG).toMatchSnapshot()
     })
 
-    it('should not continue on completion', () => {
-      expect(DEFAULT_AGENT_CONFIG.continueOnCompletion).toBe(false)
-    })
-
-    it('should have zero max iterations', () => {
-      expect(DEFAULT_AGENT_CONFIG.maxIterations).toBe(0)
-    })
-
-    it('should have zero timeout', () => {
-      expect(DEFAULT_AGENT_CONFIG.timeout).toBe(0)
-    })
-
-    it('should require approval for destructive operations', () => {
-      expect(DEFAULT_AGENT_CONFIG.requireApprovalFor).toBe('destructive')
-    })
-
-    it('should pause on error', () => {
-      expect(DEFAULT_AGENT_CONFIG.pauseOnError).toBe(true)
-    })
-
-    it('should work on main branch', () => {
-      expect(DEFAULT_AGENT_CONFIG.workingBranch).toBe('main')
-    })
-
-    it('should have max concurrency of 1', () => {
-      expect(DEFAULT_AGENT_CONFIG.maxConcurrency).toBe(1)
-    })
-
-    it('should have auto-save interval of 30 seconds', () => {
-      expect(DEFAULT_AGENT_CONFIG.autoSaveInterval).toBe(30000)
-    })
-
-    it('should have progress enabled', () => {
-      expect(DEFAULT_AGENT_CONFIG.enableProgress).toBe(true)
-    })
-
-    it('should have destructive operations defined', () => {
-      expect(DEFAULT_AGENT_CONFIG.destructiveOperations).toContain('delete')
-      expect(DEFAULT_AGENT_CONFIG.destructiveOperations).toContain('force-push')
-      expect(DEFAULT_AGENT_CONFIG.destructiveOperations).toContain('reset')
-    })
-
-    it('should have max auto approval cost', () => {
-      expect(DEFAULT_AGENT_CONFIG.maxAutoApprovalCost).toBe(5)
-    })
-
-    it('should auto approve safe tasks', () => {
-      expect(DEFAULT_AGENT_CONFIG.autoApproveSafeTasks).toBe(true)
-    })
-
-    it('should have continuous improvement config', () => {
+    it('should have all required config sections', () => {
       expect(DEFAULT_AGENT_CONFIG.continuousImprovement).toBeDefined()
-      expect(DEFAULT_AGENT_CONFIG.continuousImprovement.sleepTimeOnNoTasks).toBe(60000)
-      expect(DEFAULT_AGENT_CONFIG.continuousImprovement.sleepTimeBetweenTasks).toBe(5000)
-      expect(DEFAULT_AGENT_CONFIG.continuousImprovement.maxCycles).toBe(0)
-    })
-
-    it('should have discovery config', () => {
       expect(DEFAULT_AGENT_CONFIG.discovery).toBeDefined()
-      expect(DEFAULT_AGENT_CONFIG.discovery.enabledStrategies).toEqual([...DEFAULT_DISCOVERY_STRATEGIES])
-      expect(DEFAULT_AGENT_CONFIG.discovery.cacheTime).toBe(300000)
-      expect(DEFAULT_AGENT_CONFIG.discovery.checkChanges).toBe(true)
-    })
-
-    it('should have approval config', () => {
       expect(DEFAULT_AGENT_CONFIG.approval).toBeDefined()
-      expect(DEFAULT_AGENT_CONFIG.approval.level).toBe('destructive')
-      expect(DEFAULT_AGENT_CONFIG.approval.autoApproveSafeTasks).toBe(true)
-      expect(DEFAULT_AGENT_CONFIG.approval.maxAutoApprovalCost).toBe(5)
+      expect(DEFAULT_AGENT_CONFIG.safety).toBeDefined()
     })
 
-    it('should have safety config', () => {
-      expect(DEFAULT_AGENT_CONFIG.safety).toBeDefined()
-      expect(DEFAULT_AGENT_CONFIG.safety.enabledChecks).toEqual([])
-      expect(DEFAULT_AGENT_CONFIG.safety.blockDestructive).toBe(true)
-      expect(DEFAULT_AGENT_CONFIG.safety.maxFileSize).toBe(10485760)
+    it('should have discovery config with default strategies', () => {
+      expect(DEFAULT_AGENT_CONFIG.discovery.enabledStrategies).toEqual([...DEFAULT_DISCOVERY_STRATEGIES])
     })
   })
 
   describe('CONFIG_PRESETS', () => {
-    it('should have conservative preset', () => {
-      expect(CONFIG_PRESETS.conservative).toBeDefined()
-      expect(CONFIG_PRESETS.conservative.requireApprovalFor).toBe('all')
-      expect(CONFIG_PRESETS.conservative.autoApproveSafeTasks).toBe(false)
-      expect(CONFIG_PRESETS.conservative.maxAutoApprovalCost).toBe(0)
+    it('should have all required presets', () => {
+      const presetNames = ['conservative', 'balanced', 'aggressive', 'continuous-improvement', 'working-dir']
+      presetNames.forEach((name) => {
+        expect(CONFIG_PRESETS[name]).toBeDefined()
+      })
     })
 
-    it('should have balanced preset', () => {
-      expect(CONFIG_PRESETS.balanced).toBeDefined()
-      expect(CONFIG_PRESETS.balanced.requireApprovalFor).toBe('destructive')
-      expect(CONFIG_PRESETS.balanced.autoApproveSafeTasks).toBe(true)
-      expect(CONFIG_PRESETS.balanced.maxAutoApprovalCost).toBe(10)
+    it('should have correct conservative preset', () => {
+      expect(CONFIG_PRESETS.conservative).toMatchSnapshot()
     })
 
-    it('should have aggressive preset', () => {
-      expect(CONFIG_PRESETS.aggressive).toBeDefined()
-      expect(CONFIG_PRESETS.aggressive.requireApprovalFor).toBe('none')
-      expect(CONFIG_PRESETS.aggressive.autoApproveSafeTasks).toBe(true)
-      expect(CONFIG_PRESETS.aggressive.maxAutoApprovalCost).toBe(30)
-      expect(CONFIG_PRESETS.aggressive.pauseOnError).toBe(false)
-      expect(CONFIG_PRESETS.aggressive.maxConcurrency).toBe(2)
+    it('should have correct balanced preset', () => {
+      expect(CONFIG_PRESETS.balanced).toMatchSnapshot()
     })
 
-    it('should have continuous-improvement preset', () => {
-      expect(CONFIG_PRESETS['continuous-improvement']).toBeDefined()
-      expect(CONFIG_PRESETS['continuous-improvement'].strategy).toBe('continuous-improvement')
-      expect(CONFIG_PRESETS['continuous-improvement'].continueOnCompletion).toBe(true)
-      expect(CONFIG_PRESETS['continuous-improvement'].requireApprovalFor).toBe('commits')
+    it('should have correct aggressive preset', () => {
+      expect(CONFIG_PRESETS.aggressive).toMatchSnapshot()
+    })
+
+    it('should have correct continuous-improvement preset', () => {
+      expect(CONFIG_PRESETS['continuous-improvement']).toMatchSnapshot()
+    })
+
+    it('should have correct working-dir preset', () => {
+      expect(CONFIG_PRESETS['working-dir']).toMatchSnapshot()
     })
 
     it('should have aggressive preset with all discovery strategies', () => {
@@ -288,6 +143,11 @@ describe('constants', () => {
     it('should have continuous-improvement preset with test-coverage', () => {
       const ciStrategies = CONFIG_PRESETS['continuous-improvement'].discovery?.enabledStrategies
       expect(ciStrategies).toContain('test-coverage')
+    })
+
+    it('should have working-dir preset with working-dir strategy', () => {
+      const wdStrategies = CONFIG_PRESETS['working-dir'].discovery?.enabledStrategies
+      expect(wdStrategies).toContain('working-dir')
     })
   })
 })

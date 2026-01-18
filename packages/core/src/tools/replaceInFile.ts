@@ -37,7 +37,12 @@ Critical rules:
 
 Special operations:
 - Move code: Two blocks (delete from original + insert at new location)
-- Delete code: Empty REPLACE section`,
+- Delete code: Empty REPLACE section
+
+IMPORTANT CONSTRAINTS:
+- SEARCH text must match file content exactly
+- Each block is independent (doesn't affect other blocks)
+- Cannot use for appending or inserting without SEARCH context`,
   parameters: z
     .object({
       path: z.string().describe('The path of the file to modify').meta({ usageValue: 'File path here' }),

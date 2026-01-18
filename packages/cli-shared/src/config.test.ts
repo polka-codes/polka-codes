@@ -41,11 +41,7 @@ defaultModel: claude-3-opus
     )
 
     const config = await loadConfig(configPath, testSubDir, testHomeDir)
-    expect(config).toEqual({
-      defaultProvider: 'anthropic',
-      defaultModel: 'claude-3-opus',
-      rules: undefined,
-    })
+    expect(config).toMatchSnapshot()
   })
 
   test('loads multiple config files', async () => {
@@ -73,11 +69,7 @@ rules:
     )
 
     const config = await loadConfig([configPath1, configPath2], testSubDir, testHomeDir)
-    expect(config).toEqual({
-      defaultProvider: 'anthropic',
-      defaultModel: 'claude-3-sonnet',
-      rules: 'rule1\n\nrule2\n\nrule3',
-    })
+    expect(config).toMatchSnapshot()
   })
 
   test('loads config from default paths', async () => {
@@ -91,11 +83,7 @@ defaultModel: deepseek-chat
     )
 
     const config = await loadConfig(undefined, testSubDir, testHomeDir)
-    expect(config).toEqual({
-      defaultProvider: 'deepseek',
-      defaultModel: 'deepseek-chat',
-      rules: undefined,
-    })
+    expect(config).toMatchSnapshot()
 
     // Clean up
     writeFileSync(configPath, '')
@@ -129,13 +117,7 @@ scripts:
     )
 
     const config = await loadConfig(configPath, testSubDir, testHomeDir)
-    expect(config?.scripts).toEqual({
-      test: 'echo "test"',
-      complex: {
-        command: 'echo "complex"',
-        description: 'A complex command',
-      },
-    })
+    expect(config?.scripts).toMatchSnapshot()
   })
 
   test('handles rules configuration', async () => {
@@ -150,7 +132,7 @@ rules:
     )
 
     const config = await loadConfig(configPath, testSubDir, testHomeDir)
-    expect(config?.rules).toEqual('rule1\n\nrule2')
+    expect(config?.rules).toMatchSnapshot()
   })
 
   test('handles command defaults', async () => {
@@ -168,15 +150,7 @@ commands:
     )
 
     const config = await loadConfig(configPath, testSubDir, testHomeDir)
-    expect(config?.commands).toEqual({
-      default: {
-        provider: 'deepseek',
-        model: 'deepseek-chat',
-      },
-      task: {
-        model: 'deepseek-coder',
-      },
-    })
+    expect(config?.commands).toMatchSnapshot()
   })
 
   test('merges multiple configs correctly', () => {
@@ -199,12 +173,7 @@ commands:
     ]
 
     const merged = mergeConfigs(configs)
-    expect(merged).toEqual({
-      defaultProvider: 'anthropic',
-      defaultModel: 'claude-3-sonnet',
-      rules: ['rule1', 'rule2', 'rule3', 'rule4'],
-      excludeFiles: ['exclude1', 'exclude2', 'exclude3'],
-    })
+    expect(merged).toMatchSnapshot()
   })
 
   test('merges global and local config with local precedence', async () => {
@@ -271,7 +240,7 @@ rules: local-rule
     )
 
     const config = await loadConfig(localConfigPath, testSubDir, testHomeDir)
-    expect(config?.rules).toEqual('global-rule-1\n\nglobal-rule-2\n\nlocal-rule')
+    expect(config?.rules).toMatchSnapshot()
   })
 
   test('parses project .polkacodes.yml successfully', async () => {

@@ -114,14 +114,14 @@ export async function memoryList(options: {
       console.log(JSON.stringify(entries, null, 2))
     } else {
       // Table format
-      if (entries.length === 0) {
+      if (!Array.isArray(entries) || entries.length === 0) {
         console.log('No entries found.')
         return
       }
 
       console.log('\nMemory Entries:')
       console.log('─'.repeat(80))
-      for (const entry of entries as MemoryEntry[]) {
+      for (const entry of entries) {
         console.log(`\nName: ${entry.name}`)
         console.log(`Type: ${entry.entry_type}`)
         console.log(`Status: ${entry.status || 'N/A'}`)
@@ -190,25 +190,37 @@ export async function memoryRename(oldName: string, newName: string) {
   const store = await getMemoryStore()
 
   try {
-    // Read old entry
-    const oldContent = await store.readMemory(oldName)
-    if (!oldContent) {
+    // Query old entry with full metadata
+    const oldEntries = await store.queryMemory({ search: oldName }, { operation: 'select' })
+    if (!Array.isArray(oldEntries) || oldEntries.length === 0) {
       console.error(`Memory entry "${oldName}" not found.`)
       process.exit(1)
     }
 
+    const oldEntry = oldEntries[0]
+
     // Check if new name already exists
-    const newContent = await store.readMemory(newName)
-    if (newContent) {
+    const newEntries = await store.queryMemory({ search: newName }, { operation: 'select' })
+    if (Array.isArray(newEntries) && newEntries.length > 0) {
       console.error(`Memory entry "${newName}" already exists.`)
       process.exit(1)
     }
 
-    // Create new entry with old content
-    await store.updateMemory('replace', newName, oldContent)
-
-    // Delete old entry
-    await store.updateMemory('remove', oldName, undefined)
+    // Use batchUpdateMemory for atomic rename with metadata preservation
+    await store.batchUpdateMemory([
+      {
+        operation: 'replace',
+        name: newName,
+        content: oldEntry.content,
+        metadata: {
+          entry_type: oldEntry.entry_type,
+          status: oldEntry.status,
+          priority: oldEntry.priority,
+          tags: oldEntry.tags,
+        },
+      },
+      { operation: 'remove', name: oldName },
+    ])
 
     console.log(`Memory entry renamed from "${oldName}" to "${newName}".`)
   } finally {
@@ -235,6 +247,11 @@ export async function memoryExport(options: { output?: string; type?: string; sc
     }
 
     const entries = await store.queryMemory(query, { operation: 'select' })
+
+    if (!Array.isArray(entries)) {
+      console.error('Failed to export: query did not return entries')
+      return
+    }
 
     const outputPath = options.output ? resolve(process.cwd(), options.output) : resolve(process.cwd(), `memory-export-${Date.now()}.json`)
 
@@ -274,47 +291,69 @@ export async function memoryImport(inputFile: string, options: { merge?: boolean
     let imported = 0
     let skipped = 0
 
-    for (const entry of entries) {
+    for (const entry of entries as unknown[]) {
+      let entryName: string | undefined
       try {
+        // Validate that entry is an object
+        if (typeof entry !== 'object' || entry === null) {
+          console.error('Skipping invalid entry: not an object')
+          skipped++
+          continue
+        }
+
+        const entryObj = entry as Record<string, unknown>
+
         // Validate required fields
-        if (!entry.name || typeof entry.name !== 'string') {
+        if (!entryObj.name || typeof entryObj.name !== 'string') {
           console.error('Skipping invalid entry: missing or invalid name')
           skipped++
           continue
         }
 
-        if (!entry.content || typeof entry.content !== 'string') {
-          console.error(`Skipping entry "${entry.name}": missing or invalid content`)
+        entryName = entryObj.name
+
+        if (!entryObj.content || typeof entryObj.content !== 'string') {
+          console.error(`Skipping entry "${entryName}": missing or invalid content`)
           skipped++
           continue
         }
 
         // Validate priority if present
         const validPriorities = ['low', 'medium', 'high', 'critical']
-        let priority = entry.priority
+        let priority = entryObj.priority as string | undefined
         if (priority && !validPriorities.includes(priority)) {
-          console.warn(`Entry "${entry.name}" has invalid priority "${priority}", defaulting to null`)
-          priority = null
+          console.warn(`Entry "${entryName}" has invalid priority "${priority}", defaulting to null`)
+          priority = undefined
         }
 
         // Check if entry already exists
-        const existing = await store.readMemory(entry.name)
+        const existing = await store.readMemory(entryName)
 
         if (existing && !options.merge) {
           skipped++
           continue
         }
 
-        await store.updateMemory('replace', entry.name, entry.content, {
-          entry_type: entry.entry_type || 'note',
-          status: entry.status,
+        // Validate and cast metadata fields
+        const entryType = entryObj.entry_type
+        const validatedEntryType = typeof entryType === 'string' ? entryType : 'note'
+
+        const status = entryObj.status
+        const validatedStatus = typeof status === 'string' ? status : undefined
+
+        const tags = entryObj.tags
+        const validatedTags = typeof tags === 'string' ? tags : undefined
+
+        await store.updateMemory('replace', entryName, entryObj.content as string, {
+          entry_type: validatedEntryType,
+          status: validatedStatus,
           priority: priority,
-          tags: entry.tags,
+          tags: validatedTags,
         })
 
         imported++
       } catch (error) {
-        console.error(`Failed to import entry "${entry.name}":`, error)
+        console.error(`Failed to import entry "${entryName || 'unknown'}":`, error)
         skipped++
       }
     }

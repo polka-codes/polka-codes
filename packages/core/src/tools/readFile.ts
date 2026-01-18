@@ -23,7 +23,11 @@ Features:
 - Supports comma-separated paths for multiple files
 - Line numbers included for easy reference
 - Optional offset/limit for partial file reading
-- Automatically handles different file types`,
+- Automatically handles different file types
+
+IMPORTANT:
+- Line numbers are included for easy reference
+- Use offset/limit for large files to read specific sections`,
   parameters: z
     .object({
       path: z
