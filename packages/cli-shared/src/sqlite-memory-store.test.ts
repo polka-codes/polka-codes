@@ -413,41 +413,6 @@ describe('SQLiteMemoryStore', () => {
       const content = await store.readMemory('test-2')
       expect(content).toBeUndefined()
     })
-
-    it.skip('should retry on lock (not compatible with sql.js in-memory model)', async () => {
-      // Create a second store instance
-      const store2 = new SQLiteMemoryStore(config, 'project:/tmp/test-project')
-
-      try {
-        // Start transaction in first store
-        const promise1 = store.transaction(async () => {
-          await store.updateMemory('replace', 'test-1', 'Content 1', {
-            entry_type: 'note',
-          })
-          // Hold the lock briefly
-          await new Promise((resolve) => setTimeout(resolve, 10))
-          return 'done'
-        })
-
-        // This should wait and retry
-        const promise2 = store2.transaction(async () => {
-          await store2.updateMemory('replace', 'test-2', 'Content 2', {
-            entry_type: 'note',
-          })
-          return 'done'
-        })
-
-        await Promise.all([promise1, promise2])
-
-        const content1 = await store.readMemory('test-1')
-        const content2 = await store2.readMemory('test-2')
-
-        expect(content1).toBe('Content 1')
-        expect(content2).toBe('Content 2')
-      } finally {
-        store2.close()
-      }
-    })
   })
 
   describe('Scope Management', () => {
