@@ -741,9 +741,11 @@ export class SQLiteMemoryStore implements IMemoryStore {
         }
       } finally {
         // Always close and nullify, even if save fails
-        // Use captured db reference to avoid race condition
-        db.close()
-        this.db = null
+        // Only close if this.db is still the same instance (prevent double-close)
+        if (this.db === db) {
+          db.close()
+          this.db = null
+        }
       }
     }
     this.dbPromise = null
