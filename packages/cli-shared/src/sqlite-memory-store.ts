@@ -5,6 +5,55 @@ import { dirname, resolve } from 'node:path'
 import type { DatabaseStats, IMemoryStore, MemoryConfig, MemoryEntry, MemoryOperation, MemoryQuery, QueryOptions } from '@polka-codes/core'
 import initSqlJs, { type Database, type SqlJsStatic } from 'sql.js'
 
+/**
+ * Reentrant Mutex for serializing async operations
+ * Allows the same owner to acquire the lock multiple times (reentrant)
+ */
+class ReentrantMutex {
+  private queue: Array<() => void> = []
+  private locked = false
+  private lockCount = 0
+  private owner: symbol | null = null
+
+  async acquire(owner: symbol): Promise<() => void> {
+    // If already locked by this owner, increment count and return immediately
+    if (this.locked && this.owner === owner) {
+      this.lockCount++
+      return () => this.release(owner)
+    }
+
+    // Wait for lock to be released
+    while (this.locked) {
+      await new Promise<void>((resolve) => this.queue.push(resolve))
+    }
+
+    // Acquire the lock
+    this.locked = true
+    this.owner = owner
+    this.lockCount = 1
+    return () => this.release(owner)
+  }
+
+  private release(owner: symbol): void {
+    // Only the owner can release
+    if (this.owner !== owner) {
+      return
+    }
+
+    this.lockCount--
+    if (this.lockCount === 0) {
+      // Release the lock
+      this.locked = false
+      this.owner = null
+      // Notify next waiter
+      const next = this.queue.shift()
+      if (next) {
+        next()
+      }
+    }
+  }
+}
+
 // Re-export types from core for convenience
 export type { MemoryEntry, MemoryQuery, QueryOptions, MemoryOperation }
 
@@ -42,6 +91,8 @@ export class SQLiteMemoryStore implements IMemoryStore {
   private config: MemoryConfig
   private currentScope: string
   private inTransaction = false // Track if we're in a transaction
+  private transactionMutex = new ReentrantMutex() // Serialize transactions
+  private currentTransactionOwner: symbol | null = null // Track current transaction for reentrancy
 
   // Whitelists for validation
   private static readonly SORT_COLUMNS = {
@@ -144,7 +195,7 @@ export class SQLiteMemoryStore implements IMemoryStore {
   }
 
   /**
-   * Persist database to disk
+   * Persist database to disk using atomic write
    */
   private async saveDatabase(): Promise<void> {
     if (!this.db) {
@@ -152,8 +203,12 @@ export class SQLiteMemoryStore implements IMemoryStore {
     }
 
     const dbPath = this.resolvePath(this.config.path || '~/.config/polka-codes/memory.sqlite')
+    const tempPath = `${dbPath}.tmp`
     const data = this.db.export()
-    await writeFile(dbPath, data)
+
+    // Write to temporary file first, then atomically rename
+    await writeFile(tempPath, data)
+    await rename(tempPath, dbPath)
   }
 
   /**
@@ -257,31 +312,49 @@ export class SQLiteMemoryStore implements IMemoryStore {
 
   /**
    * Execute transaction with retry logic
+   * Uses Mutex to serialize concurrent transaction calls for safety
    */
   async transaction<T>(callback: () => Promise<T>, _options: { timeout?: number; retries?: number } = {}): Promise<T> {
-    const db = await this.getDatabase()
+    // Create a unique owner for this transaction attempt
+    const owner = Symbol('transaction')
 
-    // sql.js is synchronous, so we use explicit transaction control
-    const shouldBegin = !this.inTransaction
+    // Check if we should acquire the mutex (only if not already in transaction)
+    const shouldAcquireMutex = !this.inTransaction
+    const release = shouldAcquireMutex ? await this.transactionMutex.acquire(owner) : () => {}
+
     try {
-      if (shouldBegin) {
-        this.inTransaction = true
-        db.run('BEGIN TRANSACTION')
+      const db = await this.getDatabase()
+
+      // sql.js is synchronous, so we use explicit transaction control
+      const shouldBegin = !this.inTransaction
+      try {
+        if (shouldBegin) {
+          this.inTransaction = true
+          this.currentTransactionOwner = owner
+          db.run('BEGIN TRANSACTION')
+        }
+        const result = await callback()
+        if (shouldBegin) {
+          db.run('COMMIT')
+          this.inTransaction = false
+          this.currentTransactionOwner = null
+          // Save after successful transaction
+          await this.saveDatabase()
+        }
+        return result
+      } catch (error) {
+        if (shouldBegin) {
+          db.run('ROLLBACK')
+          this.inTransaction = false
+          this.currentTransactionOwner = null
+        }
+        throw error
       }
-      const result = await callback()
-      if (shouldBegin) {
-        db.run('COMMIT')
-        this.inTransaction = false
-        // Save after successful transaction
-        await this.saveDatabase()
+    } finally {
+      // Always release the mutex lock if we acquired it
+      if (shouldAcquireMutex && release) {
+        release()
       }
-      return result
-    } catch (error) {
-      if (shouldBegin) {
-        db.run('ROLLBACK')
-        this.inTransaction = false
-      }
-      throw error
     }
   }
 
