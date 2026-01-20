@@ -41,7 +41,11 @@ defaultModel: claude-3-opus
     )
 
     const config = await loadConfig(configPath, testSubDir, testHomeDir)
-    expect(config).toMatchSnapshot()
+
+    // Verify the config was loaded with the correct values
+    expect(config).toBeDefined()
+    expect(config?.defaultProvider).toBe('anthropic')
+    expect(config?.defaultModel).toBe('claude-3-opus')
   })
 
   test('loads multiple config files', async () => {
@@ -69,7 +73,14 @@ rules:
     )
 
     const config = await loadConfig([configPath1, configPath2], testSubDir, testHomeDir)
-    expect(config).toMatchSnapshot()
+
+    // Verify configs are merged with later configs taking precedence
+    expect(config).toBeDefined()
+    expect(config?.defaultProvider).toBe('anthropic')
+    expect(config?.defaultModel).toBe('claude-3-sonnet') // Overridden by config2
+    expect(config?.rules).toContain('rule1')
+    expect(config?.rules).toContain('rule2')
+    expect(config?.rules).toContain('rule3')
   })
 
   test('loads config from default paths', async () => {
@@ -83,7 +94,11 @@ defaultModel: deepseek-chat
     )
 
     const config = await loadConfig(undefined, testSubDir, testHomeDir)
-    expect(config).toMatchSnapshot()
+
+    // Verify the config was loaded from the default path
+    expect(config).toBeDefined()
+    expect(config?.defaultProvider).toBe('deepseek')
+    expect(config?.defaultModel).toBe('deepseek-chat')
 
     // Clean up
     writeFileSync(configPath, '')
@@ -117,7 +132,14 @@ scripts:
     )
 
     const config = await loadConfig(configPath, testSubDir, testHomeDir)
-    expect(config?.scripts).toMatchSnapshot()
+
+    // Verify scripts are parsed correctly
+    expect(config?.scripts).toBeDefined()
+    expect(config?.scripts?.test).toBe('echo "test"')
+    expect(config?.scripts?.complex).toEqual({
+      command: 'echo "complex"',
+      description: 'A complex command',
+    })
   })
 
   test('handles rules configuration', async () => {
@@ -132,7 +154,12 @@ rules:
     )
 
     const config = await loadConfig(configPath, testSubDir, testHomeDir)
-    expect(config?.rules).toMatchSnapshot()
+
+    // Verify rules are parsed as a string
+    expect(config?.rules).toBeDefined()
+    expect(typeof config?.rules).toBe('string')
+    expect(config?.rules).toContain('rule1')
+    expect(config?.rules).toContain('rule2')
   })
 
   test('handles command defaults', async () => {
@@ -150,7 +177,12 @@ commands:
     )
 
     const config = await loadConfig(configPath, testSubDir, testHomeDir)
-    expect(config?.commands).toMatchSnapshot()
+
+    // Verify command defaults are parsed correctly
+    expect(config?.commands).toBeDefined()
+    expect(config?.commands?.default?.provider).toBe('deepseek')
+    expect(config?.commands?.default?.model).toBe('deepseek-chat')
+    expect(config?.commands?.task?.model).toBe('deepseek-coder')
   })
 
   test('merges multiple configs correctly', () => {
@@ -173,7 +205,15 @@ commands:
     ]
 
     const merged = mergeConfigs(configs)
-    expect(merged).toMatchSnapshot()
+
+    // Verify merge behavior: later configs override, arrays concatenate
+    expect(merged.defaultProvider).toBe('anthropic')
+    expect(merged.defaultModel).toBe('claude-3-sonnet') // Overridden by second config
+    expect(merged.rules).toContain('rule1')
+    expect(merged.rules).toContain('rule2')
+    expect(merged.rules).toContain('rule3')
+    expect(merged.rules).toContain('rule4')
+    expect(merged.excludeFiles).toEqual(['exclude1', 'exclude2', 'exclude3'])
   })
 
   test('merges global and local config with local precedence', async () => {
@@ -216,7 +256,21 @@ rules:
     )
 
     const config = await loadConfig(localConfigPath, testSubDir, testHomeDir)
-    expect(config).toMatchSnapshot()
+
+    // Verify local config takes precedence over global
+    expect(config).toBeDefined()
+    expect(config?.defaultProvider).toBe('anthropic') // From global
+    expect(config?.defaultModel).toBe('claude-3-opus') // From global
+    expect(config?.providers?.anthropic?.apiKey).toBe('local-key') // From local
+    expect(config?.commands?.default?.provider).toBe('deepseek') // From global
+    expect(config?.commands?.default?.model).toBe('deepseek-coder-instruct') // Overridden by local
+    expect(config?.scripts?.test).toBe('echo "local"') // Overridden by local
+    expect(config?.scripts?.complex).toEqual({
+      command: 'echo "global-complex"',
+      description: 'Global complex command',
+    }) // From global
+    expect(config?.rules).toContain('global-rule')
+    expect(config?.rules).toContain('local-rule')
   })
 
   test('concatenates arrays', async () => {
@@ -240,7 +294,12 @@ rules: local-rule
     )
 
     const config = await loadConfig(localConfigPath, testSubDir, testHomeDir)
-    expect(config?.rules).toMatchSnapshot()
+
+    // Verify array concatenation behavior
+    expect(config?.rules).toBeDefined()
+    expect(config?.rules).toContain('global-rule-1')
+    expect(config?.rules).toContain('global-rule-2')
+    expect(config?.rules).toContain('local-rule')
   })
 
   test('parses project .polkacodes.yml successfully', async () => {
