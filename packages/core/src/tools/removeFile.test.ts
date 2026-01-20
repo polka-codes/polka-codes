@@ -11,7 +11,14 @@ describe('removeFile', () => {
       path: 'test.txt',
     })
 
-    expect(result).toMatchSnapshot()
+    // Verify successful removal
+    expect(result).toEqual({
+      success: true,
+      message: {
+        type: 'text',
+        value: '<remove_file_path>test.txt</remove_file_path><status>Success</status>',
+      },
+    })
     expect(mockProvider.removeFile).toHaveBeenCalledWith('test.txt')
   })
 
@@ -23,7 +30,8 @@ describe('removeFile', () => {
       path: 'error.txt',
     })
 
-    expect(result).rejects.toMatchSnapshot()
+    // Verify error is propagated
+    await expect(result).rejects.toThrow('Remove error')
     expect(mockProvider.removeFile).toHaveBeenCalledWith('error.txt')
   })
 })

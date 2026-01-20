@@ -15,7 +15,14 @@ describe('renameFile', () => {
       target_path: 'new.txt',
     })
 
-    expect(result).toMatchSnapshot()
+    // Verify successful rename
+    expect(result).toEqual({
+      success: true,
+      message: {
+        type: 'text',
+        value: '<rename_file_path>new.txt</rename_file_path><status>Success</status>',
+      },
+    })
     expect(mockProvider.renameFile).toHaveBeenCalledWith('old.txt', 'new.txt')
   })
 
@@ -28,7 +35,8 @@ describe('renameFile', () => {
       target_path: 'new.txt',
     })
 
-    expect(result).rejects.toMatchSnapshot()
+    // Verify error is propagated
+    await expect(result).rejects.toThrow('Rename error')
     expect(mockProvider.renameFile).toHaveBeenCalledWith('error.txt', 'new.txt')
   })
 
@@ -42,6 +50,13 @@ describe('renameFile', () => {
       target_path: 'new.txt',
     })
 
-    expect(result).toMatchSnapshot()
+    // Verify unavailable provider returns error message
+    expect(result).toEqual({
+      success: false,
+      message: {
+        type: 'error-text',
+        value: 'Not possible to rename file.',
+      },
+    })
   })
 })

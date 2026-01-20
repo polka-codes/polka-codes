@@ -11,7 +11,14 @@ describe('search', () => {
       query: 'test query',
     })
 
-    expect(result).toMatchSnapshot()
+    // Verify search result is returned
+    expect(result).toEqual({
+      success: true,
+      message: {
+        type: 'text',
+        value: 'search result',
+      },
+    })
     expect(mockProvider.search).toHaveBeenCalledWith('test query')
   })
 })
