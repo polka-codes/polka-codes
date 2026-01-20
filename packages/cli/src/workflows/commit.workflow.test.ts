@@ -2,45 +2,9 @@
 
 import { afterEach, describe, expect, mock, test } from 'bun:test'
 import { execSync } from 'node:child_process'
-import type { WorkflowContext } from '@polka-codes/core'
 import { UserCancelledError } from '../errors'
-import type { CliToolRegistry } from '../workflow-tools'
+import { createWorkflowTestContext } from '../test/workflow-fixtures'
 import { commitWorkflow } from './commit.workflow'
-
-const createMockContext = () => {
-  const tools = {
-    printChangeFile: mock<any>(),
-    executeCommand: mock<any>(),
-    confirm: mock<any>(),
-    createCommit: mock<any>(),
-    createPullRequest: mock<any>(),
-    generateText: mock<any>(),
-    taskEvent: mock<any>(),
-    invokeTool: mock<any>(),
-    readFile: mock<any>(),
-    writeToFile: mock<any>(),
-    select: mock<any>(),
-    input: mock<any>(),
-  }
-  const step = mock(async (_name: string, arg2: any, arg3: any) => {
-    const fn = typeof arg2 === 'function' ? arg2 : arg3
-    return fn()
-  })
-  const logger = {
-    info: mock(() => {}),
-    error: mock(() => {}),
-    warn: mock(() => {}),
-    debug: mock(() => {}),
-  }
-
-  const context = {
-    tools,
-    step,
-    logger,
-  } as unknown as WorkflowContext<CliToolRegistry>
-
-  return { context, tools, step, logger }
-}
 
 // Check if git is available synchronously
 let gitAvailable = false
@@ -62,7 +26,11 @@ describe.skipIf(!gitAvailable)('commitWorkflow', () => {
   })
 
   test('should generate commit message with staged files', async () => {
-    const { context, tools, logger } = createMockContext()
+    const { context, tools, logger } = createWorkflowTestContext()
+
+    // Add commit-specific tools
+    tools.printChangeFile = mock<any>()
+    tools.createCommit = mock<any>()
 
     tools.printChangeFile.mockResolvedValue({
       stagedFiles: [{ path: 'src/file.ts', status: 'M' }],
@@ -100,7 +68,11 @@ describe.skipIf(!gitAvailable)('commitWorkflow', () => {
   })
 
   test('should auto-stage all files when all=true', async () => {
-    const { context, tools } = createMockContext()
+    const { context, tools } = createWorkflowTestContext()
+
+    // Add commit-specific tools
+    tools.printChangeFile = mock<any>()
+    tools.createCommit = mock<any>()
 
     tools.printChangeFile.mockResolvedValue({
       stagedFiles: [],
@@ -128,7 +100,12 @@ describe.skipIf(!gitAvailable)('commitWorkflow', () => {
   })
 
   test('should prompt user and stage when confirmed', async () => {
-    const { context, tools } = createMockContext()
+    const { context, tools } = createWorkflowTestContext()
+
+    // Add commit-specific tools
+    tools.printChangeFile = mock<any>()
+    tools.confirm = mock<any>()
+    tools.createCommit = mock<any>()
 
     tools.printChangeFile.mockResolvedValue({
       stagedFiles: [],
@@ -161,7 +138,11 @@ describe.skipIf(!gitAvailable)('commitWorkflow', () => {
   })
 
   test('should throw UserCancelledError when user declines staging', async () => {
-    const { context, tools } = createMockContext()
+    const { context, tools } = createWorkflowTestContext()
+
+    // Add commit-specific tools
+    tools.printChangeFile = mock<any>()
+    tools.confirm = mock<any>()
 
     tools.printChangeFile.mockResolvedValue({
       stagedFiles: [],
@@ -173,7 +154,10 @@ describe.skipIf(!gitAvailable)('commitWorkflow', () => {
   })
 
   test('should throw error when no files to commit', async () => {
-    const { context, tools } = createMockContext()
+    const { context, tools } = createWorkflowTestContext()
+
+    // Add commit-specific tools
+    tools.printChangeFile = mock<any>()
 
     tools.printChangeFile.mockResolvedValue({ stagedFiles: [], unstagedFiles: [] })
 
