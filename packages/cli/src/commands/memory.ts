@@ -165,39 +165,14 @@ export async function memoryRename(oldName: string, newName: string) {
     // Use transaction to atomically check for newName and perform rename
     // This prevents race condition where another process could create newName
     // between our check and the rename operation
-    const storeImpl = store as any // Access transaction method
-    if (typeof storeImpl.transaction === 'function') {
-      await storeImpl.transaction(async () => {
-        // Check if new name already exists (within transaction for consistency)
-        const newEntries = await store.queryMemory({ name: newName }, { operation: 'select' })
-        if (Array.isArray(newEntries) && newEntries.length > 0) {
-          throw new Error(`Memory entry "${newName}" already exists.`)
-        }
-
-        // Perform the rename
-        await store.batchUpdateMemory([
-          {
-            operation: 'replace',
-            name: newName,
-            content: oldEntry.content,
-            metadata: {
-              entry_type: oldEntry.entry_type,
-              status: oldEntry.status,
-              priority: oldEntry.priority,
-              tags: oldEntry.tags,
-            },
-          },
-          { operation: 'remove', name: oldName },
-        ])
-      })
-    } else {
-      // Fallback for stores without transaction support
+    await store.transaction(async () => {
+      // Check if new name already exists (within transaction for consistency)
       const newEntries = await store.queryMemory({ name: newName }, { operation: 'select' })
       if (Array.isArray(newEntries) && newEntries.length > 0) {
-        console.error(`Memory entry "${newName}" already exists.`)
-        process.exit(1)
+        throw new Error(`Memory entry "${newName}" already exists.`)
       }
 
+      // Perform the rename
       await store.batchUpdateMemory([
         {
           operation: 'replace',
@@ -212,7 +187,7 @@ export async function memoryRename(oldName: string, newName: string) {
         },
         { operation: 'remove', name: oldName },
       ])
-    }
+    })
 
     console.log(`Memory entry renamed from "${oldName}" to "${newName}".`)
   } catch (error) {

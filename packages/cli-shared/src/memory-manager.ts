@@ -79,4 +79,18 @@ export class MemoryManager implements IMemoryStore {
   async close(): Promise<void> {
     await this.store.close()
   }
+
+  /**
+   * Execute a transaction
+   * Exposes the underlying store's transaction method if available
+   */
+  async transaction<T>(callback: () => Promise<T>): Promise<T> {
+    // Check if the underlying store supports transactions
+    const storeWithTransaction = this.store as { transaction?: (callback: () => Promise<T>) => Promise<T> }
+    if (typeof storeWithTransaction.transaction === 'function') {
+      return storeWithTransaction.transaction(callback)
+    }
+    // If no transaction support, run the callback directly
+    return callback()
+  }
 }
