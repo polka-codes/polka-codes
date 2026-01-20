@@ -314,10 +314,11 @@ export class SQLiteMemoryStore implements IMemoryStore {
   }
 
   /**
-   * Execute transaction with retry logic
+   * Execute transaction
    * Uses Mutex to serialize concurrent transaction calls for safety
+   * Supports reentrancy (nested transactions from the same call chain)
    */
-  async transaction<T>(callback: () => Promise<T>, _options: { timeout?: number; retries?: number } = {}): Promise<T> {
+  async transaction<T>(callback: () => Promise<T>): Promise<T> {
     // Get or create owner symbol for this transaction context
     let owner = transactionOwnerStorage.getStore()
     if (!owner) {
@@ -350,7 +351,12 @@ export class SQLiteMemoryStore implements IMemoryStore {
         } catch (error) {
           // Only rollback if we're still in a transaction (saveDatabase could have failed after COMMIT)
           if (this.inTransaction) {
-            db.run('ROLLBACK')
+            try {
+              db.run('ROLLBACK')
+            } catch (rollbackError) {
+              // Log but don't mask the original error
+              console.error('[SQLiteMemoryStore] ROLLBACK failed:', rollbackError)
+            }
             this.inTransaction = false
           }
           throw error
