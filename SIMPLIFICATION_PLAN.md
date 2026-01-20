@@ -13,7 +13,10 @@ Based on review feedback, this plan has been updated to address:
 1. **Debugging**: Error factory preserves proper stack traces with named classes
 2. **Merge Clarity**: Deep merge uses explicit path specification, not heuristics
 3. **Discoverability**: Tool registry maintains central index alongside modules
-4. **Breaking Changes**: Phase 3 API changes made optional with migration support
+4. **Breaking Changes Policy**:
+   - ✅ **API-level breaking changes**: Acceptable (internal packages, programmatic usage)
+   - ❌ **CLI-level breaking changes**: Avoid (user-facing commands, CLI interfaces)
+   - All breaking changes in this plan are at the API level only
 
 ---
 
@@ -466,7 +469,7 @@ strategy(logger, fullContext + contextString, error instanceof Error ? error : u
 
 ---
 
-### 7. Composable API Options (Optional Migration)
+### 7. Composable API Options
 
 **Problem**: Multiple option interfaces with overlapping fields create confusion.
 
@@ -495,16 +498,9 @@ interface CodeOptions extends BaseOptions {
 }
 ```
 
-**Proposed Solution (Optional - Gradual Migration)**:
+**Proposed Solution**:
 ```typescript
-// PHASE 1: Keep existing interfaces working (backwards compatible)
-interface LegacyCommitOptions extends BaseOptions {
-  all?: boolean
-  files?: string[]
-  context?: string
-}
-
-// PHASE 2: Introduce new pattern alongside old
+// Extract common patterns
 interface CommonOptions {
   interactive?: boolean
   verbose?: number
@@ -512,15 +508,15 @@ interface CommonOptions {
   onUsage?: (meter: UsageMeter) => void
 }
 
-// Discriminated union for better type safety
-interface CommitOptionsV2 {
+// Use discriminated union for command-specific options
+interface CommitOptions {
   command: 'commit'
   all?: boolean
   files?: string[]
   context?: string
 }
 
-interface CodeOptionsV2 {
+interface CodeOptions {
   command: 'code'
   task: string
   files?: Array<JsonFilePart | JsonImagePart>
@@ -528,43 +524,25 @@ interface CodeOptionsV2 {
   additionalInstructions?: string
 }
 
-// Union type that supports both during transition
-type CommandOptions = (CommitOptionsV2 | CodeOptionsV2 | PrOptions) & CommonOptions
-type LegacyCommitOptionsCompat = LegacyCommitOptions // Keep working
-
-// Migration adapter function
-function adaptLegacyOptions(opts: LegacyCommitOptions): CommitOptionsV2 & CommonOptions {
-  return {
-    command: 'commit',
-    all: opts.all,
-    files: opts.files,
-    context: opts.context,
-    interactive: opts.interactive,
-    onUsage: opts.onUsage,
-  }
-}
+type CommandOptions = (CommitOptions | CodeOptions | PrOptions) & CommonOptions
 ```
-
-**Migration Strategy**:
-1. **Start**: New code uses discriminated unions
-2. **Middle**: Both patterns supported via adapter
-3. **End**: Deprecate legacy pattern (6+ months later)
 
 **Benefits**:
 - 40% reduction in interface definitions
 - Better type safety with discriminated unions
-- **Optional migration** - no forced breakage
-- **Gradual transition** - adapt at your own pace
 - Clearer API surface
+- Type-safe command routing
 
-**Breaking Change**: Moderate - but **optional gradual migration** supported
+**Breaking Change**: **API-level breaking change** ✅
+- This affects the programmatic API (`packages/cli/src/api.ts`)
+- **NOT a CLI-level breaking change** - CLI commands remain unchanged
+- Acceptable since this is internal API used programmatically
 
 **Migration Steps**:
-1. Introduce new discriminated union types alongside existing
-2. Create adapter functions for legacy compatibility
-3. New code uses new pattern
-4. Gradually migrate existing call sites over time
-5. Deprecate legacy pattern after 6+ months
+1. Update `api.ts` with discriminated union types
+2. Update internal API call sites (within the codebase)
+3. Run test suite to verify
+4. Update API documentation
 
 ---
 
@@ -587,10 +565,10 @@ Based on feedback challenges, this plan adheres to:
    - ✅ Central index file for overview
    - ✅ Module organization for maintainability
 
-4. **Gradual Migration**
-   - ✅ API changes support legacy during transition
-   - ✅ Adapter functions bridge old and new
-   - ✅ No forced breakage - adopt at your pace
+4. **Breaking Changes Policy**
+   - ✅ **API-level breaking changes OK**: Internal packages, programmatic interfaces
+   - ❌ **CLI-level breaking changes AVOID**: User-facing commands remain stable
+   - All changes in this plan respect user-facing CLI stability
 
 ---
 
@@ -615,16 +593,17 @@ Based on feedback challenges, this plan adheres to:
   - Create domain-based tool modules
   - **Maintain central index** for discoverability
 
-**Impact**: Better type safety, minor breaking changes
+**Impact**: Better type safety, API-level breaking changes (acceptable)
 
-### Phase 3: Code Quality (Optional) ⚠️
+### Phase 3: Code Quality (Week 3)
 - [ ] Logging Strategy Pattern
   - Internal refactor, no API changes
-- [ ] Composable API Options (Optional)
-  - **Opt-in**: New pattern alongside legacy
-  - Adapter functions support gradual migration
+- [ ] Composable API Options
+  - Discriminated unions for type safety
+  - **API-level breaking change** (internal use only)
+  - CLI commands unchanged
 
-**Impact**: Improved maintainability, **optional migration path**
+**Impact**: Improved maintainability, acceptable breaking changes
 
 ---
 
