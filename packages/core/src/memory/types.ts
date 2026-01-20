@@ -58,6 +58,9 @@ export type MemoryOperation = {
     priority?: string
     tags?: string
     metadata?: string
+    created_at?: number
+    updated_at?: number
+    last_accessed?: number
   }
 }
 
@@ -92,7 +95,7 @@ export interface IMemoryStore {
    * @param operation - The operation to perform ('append', 'replace', 'remove')
    * @param topic - The topic name
    * @param content - The content (required for append/replace)
-   * @param metadata - Optional metadata (entry_type, status, priority, tags)
+   * @param metadata - Optional metadata (entry_type, status, priority, tags, timestamps)
    */
   updateMemory(
     operation: 'append' | 'replace' | 'remove',
@@ -103,6 +106,9 @@ export interface IMemoryStore {
       status?: string
       priority?: string
       tags?: string
+      created_at?: number
+      updated_at?: number
+      last_accessed?: number
     },
   ): Promise<void>
 
