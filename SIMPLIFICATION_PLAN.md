@@ -570,6 +570,17 @@ Based on feedback challenges, this plan adheres to:
    - ❌ **CLI-level breaking changes AVOID**: User-facing commands remain stable
    - All changes in this plan respect user-facing CLI stability
 
+5. **Maximal Type Safety** 🛡️
+   - ✅ Strict TypeScript mode throughout (`strict: true`, `noImplicitAny`, `strictNullChecks`)
+   - ✅ Discriminated unions for exhaustive matching
+   - ✅ Type guards and assertion functions for runtime validation
+   - ✅ Branded types for primitive values preventing misuse
+   - ✅ Template literal types for compile-time validation
+   - ✅ Generic type parameters with proper constraints
+   - ✅ `satisfies` vs explicit typing for documentation
+   - ✅ Readonly interfaces preventing mutation
+   - ✅ `as const` for inferred literal types
+
 ---
 
 ## Implementation Roadmap
@@ -612,7 +623,228 @@ Based on feedback challenges, this plan adheres to:
 - **Lines of Code**: Target 20% reduction in targeted files
 - **Cyclomatic Complexity**: Target 40% reduction in conditional complexity
 - **Code Duplication**: Target 60% reduction in error handling patterns
-- **Type Safety**: Maintain 100% type coverage
+- **Type Safety**: 100% type coverage, zero `any` types, strict mode compliance
+- **Test Coverage**: Maintain existing coverage levels
+- **TypeScript Strictness**: Enable all strict flags, eliminate implicit any
+
+---
+
+## Type Safety Enhancements 🛡️
+
+Each proposal includes specific type safety improvements:
+
+### Error Class Factory
+```typescript
+// ✨ Strongly typed error factory
+export function createErrorClass<TArgs extends any[]>(
+  name: string,
+  template: (args: TArgs) => string
+): new (...args: TArgs) => BaseError {
+  return class NamedError extends BaseError {
+    constructor(...args: TArgs) {
+      super(name, template(args))
+    }
+  }
+}
+
+// ✨ Type-safe error creation with parameter validation
+export const FileSystemAccessError = createErrorClass(
+  'FileSystemAccessError',
+  ([path, operation]: [string, string]) => {
+    // Runtime validation with type guards
+    if (typeof path !== 'string' || typeof operation !== 'string') {
+      throw new TypeError('Invalid arguments to FileSystemAccessError')
+    }
+    return `Failed to ${operation} ${path}`
+  }
+)
+```
+
+### Deep Merge Utility
+```typescript
+// ✨ Type-safe deep merge with key validation
+function deepMerge<
+  T extends object,
+  K extends keyof T
+>(
+  base: T,
+  override: Partial<T>,
+  deepPaths: readonly K[]  // ✨ Must be valid keys of T
+): T {
+  const result = { ...base, ...override }
+
+  for (const path of deepPaths) {
+    const baseValue = base[path]
+    const overrideValue = override[path]
+
+    // ✨ Type guard ensures we only merge plain objects
+    const isPlainObject = (val: unknown): val is Record<string, unknown> =>
+      typeof val === 'object' &&
+      val !== null &&
+      !Array.isArray(val) &&
+      Object.prototype.toString.call(val) === '[object Object]'
+
+    if (isPlainObject(baseValue) && isPlainObject(overrideValue)) {
+      result[path] = { ...baseValue, ...overrideValue } as T[K]
+    }
+  }
+
+  return result
+}
+
+// ✨ Usage - TypeScript enforces valid keys
+const merged = deepMerge(config, override, [
+  'continuousImprovement',  // ✅ Valid key
+  // 'invalidKey',           // ❌ Compile error!
+] as const)
+```
+
+### Parameter Simplifier
+```typescript
+// ✨ Type-safe field extraction
+type FieldKeys<T> = Array<Extract<keyof T, string>>
+
+function createSimplifier<T extends Record<string, unknown>>(
+  keepFields: FieldKeys<T>
+): ParameterSimplifier {
+  return (params: Record<string, unknown>) => {
+    const result: Partial<T> = {}
+
+    for (const field of keepFields) {
+      if (field in params) {
+        result[field as keyof T] = params[field] as T[Extract<keyof T, string>]
+      }
+    }
+
+    return result as T
+  }
+}
+
+// ✨ Usage with field validation
+const readFileSimplifier = createSimplifier<{
+  path: string
+  includeIgnored: boolean
+}>(['path', 'includeIgnored'])
+```
+
+### Tool Registry
+```typescript
+// ✨ Branded types for tool names (prevent typos)
+type ToolName<T extends string> = T & { readonly __brand: unique symbol }
+
+type ToolDefinition<TInput, TOutput> = {
+  name: ToolName<string>
+  handler: (input: TInput) => Promise<TOutput>
+  inputSchema: z.ZodType<TInput>
+  outputSchema: z.ZodType<TOutput>
+}
+
+// ✨ Discriminated union for tool types
+type Tool = ToolDefinition<any, any> & {
+  category: 'cli' | 'agent' | 'mcp'
+}
+
+// ✨ Exhaustive matching on tool category
+function getToolCategory(tool: Tool): 'cli' | 'agent' | 'mcp' {
+  switch (tool.category) {
+    case 'cli':
+      return 'cli'
+    case 'agent':
+      return 'agent'
+    case 'mcp':
+      return 'mcp'
+    default:
+      // ✨ TypeScript ensures all cases handled
+      const exhaustive: never = tool
+      return exhaustive
+  }
+}
+```
+
+### Config Interfaces
+```typescript
+// ✨ Branded types for validation
+type LogLevel = 'debug' | 'info' | 'warn' | 'error'
+type PositiveInteger = number & { readonly __positiveInt: unique symbol }
+
+function createPositiveInteger(n: number): PositiveInteger {
+  if (!Number.isInteger(n) || n <= 0) {
+    throw new TypeError('Must be a positive integer')
+  }
+  return n as PositiveInteger
+}
+
+// ✨ Readonly interfaces prevent mutation
+interface ReadonlyAgentConfig {
+  readonly approval?: {
+    readonly level?: 'none' | 'destructive' | 'commits' | 'all'
+    readonly autoApprove?: boolean
+    readonly maxCost?: PositiveInteger
+  }
+}
+
+// ✨ Template literal types for validation
+type ToolName = `readFile` | `writeToFile` | `searchFiles` | `${string}Tool`
+
+// ✨ Discriminated union for command options
+type CommandOptions =
+  | { command: 'commit'; all?: boolean; files?: string[] }
+  | { command: 'code'; task: string; mode?: 'interactive' | 'noninteractive' }
+
+// ✨ Type-safe command routing
+function executeCommand(options: CommandOptions): void {
+  switch (options.command) {
+    case 'commit':
+      // ✅ TypeScript knows options.files exists here
+      options.files?.map(f => f.toUpperCase())
+      break
+    case 'code':
+      // ✅ TypeScript knows options.task exists here
+      console.log(options.task)
+      break
+    default:
+      // ✨ Compile-time exhaustiveness check
+      const exhaustive: never = options
+      return exhaustive
+  }
+}
+```
+
+### Type Guards and Assertions
+```typescript
+// ✨ Type guard for error types
+function isError(error: unknown): error is Error {
+  return error instanceof Error
+}
+
+// ✨ Assertion function with type narrowing
+function assertIsDefined<T>(value: T | null | undefined): asserts value is T {
+  if (value === undefined || value === null) {
+    throw new Error('Value must be defined')
+  }
+}
+
+// ✨ Branded type for validated data
+type Validated<T> = T & { readonly __validated: unique symbol }
+
+function validateConfig(config: unknown): Validated<Config> {
+  const result = configSchema.parse(config)
+  return result as Validated<Config>
+}
+```
+
+### Enhanced Success Metrics
+- **Lines of Code**: Target 20% reduction in targeted files
+- **Cyclomatic Complexity**: Target 40% reduction in conditional complexity
+- **Code Duplication**: Target 60% reduction in error handling patterns
+- **Type Safety**: 100% type coverage, **zero implicit `any`**
+- **TypeScript Strictness**:
+  - ✅ `strict: true` enabled
+  - ✅ `noImplicitAny: true` (no implicit any)
+  - ✅ `strictNullChecks: true` (no null/undefined unless explicitly allowed)
+  - ✅ `noUnusedLocals: true` (catch unused variables)
+  - ✅ `noUnusedParameters: true`
+  - ✅ `exactOptionalPropertyTypes: true` (prevent undefined in optional props)
 - **Test Coverage**: Maintain existing coverage levels
 
 ---
