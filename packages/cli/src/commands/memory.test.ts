@@ -15,6 +15,7 @@ const createMockStore = () => ({
   batchUpdateMemory: mock(() => Promise.resolve(undefined)),
   getStats: mock(() => Promise.resolve({ totalEntries: 0, databaseSize: 0, entriesByType: {} })),
   close: mock(() => {}),
+  transaction: mock(<T>(callback: () => Promise<T>) => callback()),
 })
 
 describe('Memory Commands - Real Behavior Tests', () => {
@@ -245,6 +246,45 @@ describe('Memory Commands - Real Behavior Tests', () => {
 
       expect(consoleErrorSpy).toHaveBeenCalledWith('Memory entry "test" already exists.')
       expect(processExitSpy).toHaveBeenCalledWith(1)
+      expect(mockStore.close).toHaveBeenCalled()
+    })
+
+    it('should preserve timestamps when renaming', async () => {
+      const oldEntry = {
+        name: 'old-name',
+        content: 'Content',
+        entry_type: 'note',
+        status: 'active',
+        priority: 'high',
+        tags: 'important',
+        created_at: 1234567890,
+        updated_at: 1234567900,
+        last_accessed: 1234568000,
+      }
+      mockStore.queryMemory.mockResolvedValue([oldEntry] as any)
+      mockStore.queryMemory.mockResolvedValueOnce([oldEntry] as any).mockResolvedValueOnce([])
+      const consoleLogSpy = spyOn(console, 'log')
+
+      await memory.memoryRename('old-name', 'new-name')
+
+      expect(mockStore.batchUpdateMemory).toHaveBeenCalledWith([
+        {
+          operation: 'replace',
+          name: 'new-name',
+          content: 'Content',
+          metadata: {
+            entry_type: 'note',
+            status: 'active',
+            priority: 'high',
+            tags: 'important',
+            created_at: 1234567890,
+            updated_at: 1234567900,
+            last_accessed: 1234568000,
+          },
+        },
+        { operation: 'remove', name: 'old-name' },
+      ])
+      expect(consoleLogSpy).toHaveBeenCalledWith('Memory entry renamed from "old-name" to "new-name".')
       expect(mockStore.close).toHaveBeenCalled()
     })
   })
