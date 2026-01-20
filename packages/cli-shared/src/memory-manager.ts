@@ -73,7 +73,7 @@ export class MemoryManager implements IMemoryStore {
   /**
    * Close the memory store
    */
-  close(): void {
-    this.store.close()
+  async close(): Promise<void> {
+    await this.store.close()
   }
 }

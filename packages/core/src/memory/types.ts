@@ -132,7 +132,7 @@ export interface IMemoryStore {
   /**
    * Close the memory store and release resources
    */
-  close(): void
+  close(): Promise<void>
 }
 
 /**
