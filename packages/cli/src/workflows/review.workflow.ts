@@ -101,7 +101,11 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput,
         command: 'gh',
         args: ['pr', 'view', pr.toString(), '--json', 'title,body,commits,baseRefName,baseRefOid'],
       })
-      return JSON.parse(result.stdout)
+      try {
+        return JSON.parse(result.stdout)
+      } catch (error) {
+        throw new Error(`Failed to parse PR details from GitHub CLI: ${error instanceof Error ? error.message : String(error)}`)
+      }
     })
     const prCommitRange = `${prDetails.baseRefOid}...HEAD`
     logger.info(`Reviewing PR #${pr} (commit range: ${prCommitRange})`)

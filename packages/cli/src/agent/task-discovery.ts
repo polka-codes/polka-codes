@@ -355,7 +355,13 @@ async function loadFromCache(context: WorkflowContext, cacheDir: string): Promis
       return null
     }
 
-    const cached: DiscoveryCache = JSON.parse(await fs.readFile(cacheFile, 'utf-8'))
+    let cached: DiscoveryCache
+    try {
+      cached = JSON.parse(await fs.readFile(cacheFile, 'utf-8'))
+    } catch (error) {
+      context.logger.warn(`[Discovery] Failed to parse cache file: ${error instanceof Error ? error.message : String(error)}`)
+      return null
+    }
 
     // Check if git state changed
     const currentHead = await getGitHead(context.logger)

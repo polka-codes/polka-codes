@@ -27,6 +27,10 @@ export class StdioTransport extends EventEmitter {
   private messageId = 0
   private pendingRequests = new Map<number | string, { resolve: (value: unknown) => void; reject: (error: Error) => void }>()
   private buffer = ''
+  // Store event handler references for cleanup
+  private stdoutDataHandler: ((data: Buffer) => void) | null = null
+  private exitHandler: ((code: number | null, signal: NodeJS.Signals | null) => void) | null = null
+  private errorHandler: ((error: Error) => void) | null = null
 
   constructor(private readonly config: { command: string; args?: string[]; env?: Record<string, string> }) {
     super()
@@ -55,26 +59,33 @@ export class StdioTransport extends EventEmitter {
           return
         }
 
-        // Handle stdout from MCP server
-        proc.stdout.on('data', (data: Buffer) => {
+        // Store handler references for cleanup
+        this.stdoutDataHandler = (data: Buffer) => {
           this.handleData(data.toString())
-        })
+        }
 
-        // Handle process exit
-        proc.on('exit', (code, signal) => {
+        this.exitHandler = (code, signal) => {
           this.emit('close', { code, signal })
           // Reject all pending requests
           for (const [id, { reject }] of this.pendingRequests) {
             reject(new Error(`MCP process exited with code ${code} and signal ${signal}`))
             this.pendingRequests.delete(id)
           }
-        })
+        }
 
-        // Handle process errors
-        proc.on('error', (error: Error) => {
+        this.errorHandler = (error: Error) => {
           this.emit('error', error)
           reject(error)
-        })
+        }
+
+        // Handle stdout from MCP server
+        proc.stdout.on('data', this.stdoutDataHandler)
+
+        // Handle process exit
+        proc.on('exit', this.exitHandler)
+
+        // Handle process errors
+        proc.on('error', this.errorHandler)
 
         // Wait a bit for the process to start
         setTimeout(() => resolve(), 100)
@@ -85,12 +96,35 @@ export class StdioTransport extends EventEmitter {
   }
 
   /**
-   * Stop the MCP server process
+   * Stop the MCP server process and clean up event listeners
    */
   async stop(): Promise<void> {
     if (this.process) {
+      // Remove event listeners to prevent memory leaks
+      if (this.stdoutDataHandler && this.process.stdout) {
+        this.process.stdout.off('data', this.stdoutDataHandler)
+      }
+      if (this.exitHandler) {
+        this.process.off('exit', this.exitHandler)
+      }
+      if (this.errorHandler) {
+        this.process.off('error', this.errorHandler)
+      }
+
+      // Clear handler references
+      this.stdoutDataHandler = null
+      this.exitHandler = null
+      this.errorHandler = null
+
+      // Kill the process
       this.process.kill('SIGTERM')
       this.process = null
+    }
+
+    // Clear all pending requests
+    for (const [id, { reject }] of this.pendingRequests) {
+      reject(new Error('MCP transport stopped'))
+      this.pendingRequests.delete(id)
     }
   }
 
@@ -114,13 +148,29 @@ export class StdioTransport extends EventEmitter {
 
       this.sendMessage(message)
 
-      // Set timeout (default 30 seconds)
-      setTimeout(() => {
+      // Set timeout (default 30 seconds) - store timeout ID for cleanup
+      const timeoutId = setTimeout(() => {
         if (this.pendingRequests.has(id)) {
           this.pendingRequests.delete(id)
           reject(new Error(`Request timeout: ${method}`))
         }
       }, 30000)
+
+      // Clear timeout when request completes (store timeout with pending request)
+      const pending = this.pendingRequests.get(id)
+      if (pending) {
+        // Augment the pending request with timeout cleanup
+        this.pendingRequests.set(id, {
+          resolve: (value: unknown) => {
+            clearTimeout(timeoutId)
+            resolve(value)
+          },
+          reject: (error: Error) => {
+            clearTimeout(timeoutId)
+            reject(error)
+          },
+        })
+      }
     })
   }
 

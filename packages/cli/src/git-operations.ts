@@ -104,7 +104,12 @@ export class GitOperations {
       throw new Error(`Failed to get PR details: ${prDetails.stderr}`)
     }
 
-    const details = JSON.parse(prDetails.stdout)
+    let details: { baseRefOid: string }
+    try {
+      details = JSON.parse(prDetails.stdout)
+    } catch (error) {
+      throw new Error(`Failed to parse PR details from GitHub CLI: ${error instanceof Error ? error.message : String(error)}`)
+    }
     const files = await this.getFileChanges(`${details.baseRefOid}...HEAD`)
 
     return { files, baseRefOid: details.baseRefOid }

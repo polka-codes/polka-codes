@@ -2,9 +2,88 @@ import { AsyncLocalStorage } from 'node:async_hooks'
 import { randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
+import { dirname, resolve } from 'node:path'
 import type { DatabaseStats, IMemoryStore, MemoryConfig, MemoryEntry, MemoryOperation, MemoryQuery, QueryOptions } from '@polka-codes/core'
 import { DEFAULT_MEMORY_CONFIG, resolveHomePath } from '@polka-codes/core'
 import initSqlJs, { type Database, type SqlJsStatic } from 'sql.js'
+
+/**
+ * Simple file lock for cross-process synchronization
+ * Uses a lockfile with PID and timestamp to prevent concurrent writes
+ */
+class FileLock {
+  private lockfilePath: string
+  private static readonly LOCK_TIMEOUT = 30000 // 30 seconds max lock time
+
+  constructor(dbPath: string) {
+    this.lockfilePath = `${dbPath}.lock`
+  }
+
+  /**
+   * Try to acquire lock with retries
+   * @throws Error if lock cannot be acquired after retries
+   */
+  async acquire(retries = 10, delay = 100): Promise<void> {
+    for (let i = 0; i < retries; i++) {
+      try {
+        // Try to create lockfile exclusively (fails if exists)
+        const lockData = JSON.stringify({
+          pid: process.pid,
+          acquiredAt: Date.now(),
+        })
+        await writeFile(this.lockfilePath, lockData, {
+          flag: 'wx', // Exclusive create - fails if file exists
+          mode: 0o600,
+        })
+        return // Lock acquired successfully
+      } catch (error: unknown) {
+        const errorCode = (error as NodeJS.ErrnoException).code
+        if (errorCode === 'EEXIST') {
+          // Lock file exists, check if it's stale
+          try {
+            const lockContent = await readFile(this.lockfilePath, 'utf-8')
+            const lockData = JSON.parse(lockContent)
+            const lockAge = Date.now() - lockData.acquiredAt
+
+            // If lock is older than timeout, assume stale and break it
+            if (lockAge > FileLock.LOCK_TIMEOUT) {
+              console.warn(`[FileLock] Breaking stale lock (age: ${lockAge}ms)`)
+              await rename(this.lockfilePath, `${this.lockfilePath}.stale.${Date.now()}`)
+              continue // Retry acquisition
+            }
+          } catch (_readError) {
+            // Can't read lock file, assume it's valid
+          }
+
+          // Lock is held by another process, wait and retry
+          if (i < retries - 1) {
+            await new Promise((resolve) => setTimeout(resolve, delay))
+          } else {
+            throw new Error(`Cannot acquire lock after ${retries} retries (file: ${this.lockfilePath})`)
+          }
+        } else {
+          // Other error (permissions, etc.)
+          throw error
+        }
+      }
+    }
+  }
+
+  /**
+   * Release the lock by removing the lockfile
+   */
+  async release(): Promise<void> {
+    try {
+      await rename(this.lockfilePath, `${this.lockfilePath}.released.${Date.now()}`)
+    } catch (error: unknown) {
+      const errorCode = (error as NodeJS.ErrnoException).code
+      if (errorCode !== 'ENOENT') {
+        // Log but don't throw - lock might have been cleaned up by another process
+        console.warn(`[FileLock] Error releasing lock: ${error instanceof Error ? error.message : String(error)}`)
+      }
+    }
+  }
+}
 
 /**
  * Reentrant Mutex for serializing async operations
@@ -96,12 +175,24 @@ export class SQLiteMemoryStore implements IMemoryStore {
   private currentScope: string
   private inTransaction = false // Track if we're in a transaction
   private transactionMutex = new ReentrantMutex() // Serialize transactions
+  private fileLock: FileLock // Cross-process file lock
 
   /**
    * Get the configured database path, or default if not set
    */
   private getDbPath(): string {
     return this.config.path || DEFAULT_MEMORY_CONFIG.path
+  }
+
+  /**
+   * Get lockfile instance for database path
+   */
+  private getFileLock(): FileLock {
+    if (!this.fileLock) {
+      const dbPath = this.resolvePath(this.getDbPath())
+      this.fileLock = new FileLock(dbPath)
+    }
+    return this.fileLock
   }
 
   // Whitelists for validation
@@ -146,27 +237,35 @@ export class SQLiteMemoryStore implements IMemoryStore {
         // Load existing database data or create new one
         let dbData: Uint8Array | undefined
         if (existsSync(dbPath)) {
-          try {
-            dbData = await readFile(dbPath)
+          // Acquire lock before reading to prevent concurrent read/write issues
+          const lock = this.getFileLock()
+          await lock.acquire()
 
-            // Validate SQLite header (first 16 bytes should be "SQLite format 3\0")
-            if (dbData.length >= 16) {
-              const header = String.fromCharCode(...dbData.subarray(0, 15))
-              if (header !== 'SQLite format 3') {
-                console.warn('[SQLiteMemoryStore] Invalid SQLite database header, will recreate')
+          try {
+            try {
+              dbData = await readFile(dbPath)
+
+              // Validate SQLite header (first 16 bytes should be "SQLite format 3\0")
+              if (dbData.length >= 16) {
+                const header = String.fromCharCode(...dbData.subarray(0, 15))
+                if (header !== 'SQLite format 3') {
+                  console.warn('[SQLiteMemoryStore] Invalid SQLite database header, will recreate')
+                  dbData = undefined
+                }
+              }
+            } catch (error) {
+              // Only ignore ENOENT (file not found) errors - for all other errors, rethrow
+              // to prevent data loss from overwriting an existing unreadable database
+              const errorCode = (error as NodeJS.ErrnoException)?.code
+              if (errorCode === 'ENOENT') {
+                // File was deleted between existsSync and readFile - treat as new database
                 dbData = undefined
+              } else {
+                throw new Error(`Failed to read database file at ${dbPath}: ${error instanceof Error ? error.message : String(error)}`)
               }
             }
-          } catch (error) {
-            // Only ignore ENOENT (file not found) errors - for all other errors, rethrow
-            // to prevent data loss from overwriting an existing unreadable database
-            const errorCode = (error as NodeJS.ErrnoException)?.code
-            if (errorCode === 'ENOENT') {
-              // File was deleted between existsSync and readFile - treat as new database
-              dbData = undefined
-            } else {
-              throw new Error(`Failed to read database file at ${dbPath}: ${error instanceof Error ? error.message : String(error)}`)
-            }
+          } finally {
+            await lock.release()
           }
         }
 
@@ -212,21 +311,28 @@ export class SQLiteMemoryStore implements IMemoryStore {
   }
 
   /**
-   * Persist database to disk using atomic write
+   * Persist database to disk using atomic write with file locking
    */
   private async saveDatabase(): Promise<void> {
     if (!this.db) {
       return
     }
 
-    const dbPath = this.resolvePath(this.getDbPath())
-    const tempPath = `${dbPath}.tmp`
-    const data = this.db.export()
+    const lock = this.getFileLock()
+    await lock.acquire()
 
-    // Write to temporary file first, then atomically rename
-    // Use mode 0o600 to restrict file access to owner only (contains potentially sensitive data)
-    await writeFile(tempPath, data, { mode: 0o600 })
-    await rename(tempPath, dbPath)
+    try {
+      const dbPath = this.resolvePath(this.getDbPath())
+      const tempPath = `${dbPath}.tmp`
+      const data = this.db.export()
+
+      // Write to temporary file first, then atomically rename
+      // Use mode 0o600 to restrict file access to owner only (contains potentially sensitive data)
+      await writeFile(tempPath, data, { mode: 0o600 })
+      await rename(tempPath, dbPath)
+    } finally {
+      await lock.release()
+    }
   }
 
   /**

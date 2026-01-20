@@ -18,7 +18,15 @@ export function getGlobalConfigPath(home = homedir()): string {
 export function loadConfigAtPath(path: string): Config | undefined {
   try {
     return readConfig(path)
-  } catch (_error) {
+  } catch (error) {
+    // Log debug message - this function is used to check if config exists, so undefined is acceptable
+    if (error instanceof ZodError) {
+      // Validation errors should be logged as warnings
+      console.warn(`Config validation failed for ${path}: ${error.message}`)
+    } else {
+      // Other errors (file not found, parse errors) are expected and logged at debug level
+      console.debug(`Could not load config from ${path}: ${error instanceof Error ? error.message : String(error)}`)
+    }
     return undefined
   }
 }
@@ -55,7 +63,7 @@ export function mergeConfigs(configs: Config[]): Config {
     merged.excludeFiles = mergeArray(acc.excludeFiles, config.excludeFiles)
 
     return merged
-  })
+  }, {} as Config) // Add initial value to prevent potential errors with empty arrays
 
   return mergedConfig
 }
@@ -194,7 +202,17 @@ export const readConfig = (path: string): Config => {
 export const readLocalConfig = (path?: string): Config | undefined => {
   try {
     return readConfig(path ?? localConfigFileName)
-  } catch (_error) {
+  } catch (error) {
+    // Log debug message - this function is used to check if local config exists
+    if (error instanceof ZodError) {
+      // Validation errors should be logged as warnings
+      console.warn(`Local config validation failed for ${path ?? localConfigFileName}: ${error.message}`)
+    } else {
+      // Other errors (file not found, parse errors) are expected
+      console.debug(
+        `Could not load local config from ${path ?? localConfigFileName}: ${error instanceof Error ? error.message : String(error)}`,
+      )
+    }
     return undefined
   }
 }
