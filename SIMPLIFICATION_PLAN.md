@@ -574,12 +574,12 @@ Based on feedback challenges, this plan adheres to:
    - ✅ Strict TypeScript mode throughout (`strict: true`, `noImplicitAny`, `strictNullChecks`)
    - ✅ Discriminated unions for exhaustive matching
    - ✅ Type guards and assertion functions for runtime validation
-   - ✅ Branded types for primitive values preventing misuse
    - ✅ Template literal types for compile-time validation
    - ✅ Generic type parameters with proper constraints
    - ✅ `satisfies` vs explicit typing for documentation
    - ✅ Readonly interfaces preventing mutation
    - ✅ `as const` for inferred literal types
+   - ❌ No branded types (too confusing - use validation functions instead)
 
 ---
 
@@ -729,11 +729,11 @@ const readFileSimplifier = createSimplifier<{
 
 ### Tool Registry
 ```typescript
-// ✨ Branded types for tool names (prevent typos)
-type ToolName<T extends string> = T & { readonly __brand: unique symbol }
+// ✨ Template literal types for tool names
+type ToolName = 'readFile' | 'writeToFile' | 'searchFiles' | 'createCommit'
 
 type ToolDefinition<TInput, TOutput> = {
-  name: ToolName<string>
+  name: ToolName
   handler: (input: TInput) => Promise<TOutput>
   inputSchema: z.ZodType<TInput>
   outputSchema: z.ZodType<TOutput>
@@ -763,15 +763,15 @@ function getToolCategory(tool: Tool): 'cli' | 'agent' | 'mcp' {
 
 ### Config Interfaces
 ```typescript
-// ✨ Branded types for validation
+// ✨ Union types for validation
 type LogLevel = 'debug' | 'info' | 'warn' | 'error'
-type PositiveInteger = number & { readonly __positiveInt: unique symbol }
 
-function createPositiveInteger(n: number): PositiveInteger {
+// ✨ Validation function (instead of branded type)
+function createPositiveInteger(n: number): number {
   if (!Number.isInteger(n) || n <= 0) {
     throw new TypeError('Must be a positive integer')
   }
-  return n as PositiveInteger
+  return n
 }
 
 // ✨ Readonly interfaces prevent mutation
@@ -779,7 +779,7 @@ interface ReadonlyAgentConfig {
   readonly approval?: {
     readonly level?: 'none' | 'destructive' | 'commits' | 'all'
     readonly autoApprove?: boolean
-    readonly maxCost?: PositiveInteger
+    readonly maxCost?: number  // Use validation function at input
   }
 }
 
@@ -824,12 +824,10 @@ function assertIsDefined<T>(value: T | null | undefined): asserts value is T {
   }
 }
 
-// ✨ Branded type for validated data
-type Validated<T> = T & { readonly __validated: unique symbol }
-
-function validateConfig(config: unknown): Validated<Config> {
-  const result = configSchema.parse(config)
-  return result as Validated<Config>
+// ✨ Validation function (instead of branded type)
+function validateConfig(config: unknown): Config {
+  // Zod schema provides runtime validation
+  return configSchema.parse(config)
 }
 ```
 
