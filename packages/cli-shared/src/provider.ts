@@ -4,7 +4,7 @@ import { dirname, normalize, resolve } from 'node:path'
 import { vertex } from '@ai-sdk/google-vertex'
 import type { LanguageModelV2 } from '@ai-sdk/provider'
 import { input, select } from '@inquirer/prompts'
-import type { TodoItem, ToolProvider } from '@polka-codes/core'
+import type { IMemoryStore, TodoItem, ToolProvider } from '@polka-codes/core'
 import { generateText, stepCountIs } from 'ai'
 import ignore from 'ignore'
 import { lookup } from 'mime-types'
@@ -44,10 +44,17 @@ export type ProviderOptions = {
   excludeFiles?: string[]
   summarizeOutput?: (stdout: string, stderr: string) => Promise<string | undefined>
   summaryThreshold?: number
-  memoryStore?: ProviderDataStore<Record<string, string>>
+  memoryStore?: ProviderDataStore<Record<string, string>> | IMemoryStore
   todoItemStore?: ProviderDataStore<TodoItem[]>
   getModel?: (command: string) => LanguageModelV2 | undefined
   yes?: boolean
+}
+
+/**
+ * Helper function to detect if memoryStore is an IMemoryStore
+ */
+function isIMemoryStore(store: ProviderDataStore<Record<string, string>> | IMemoryStore): store is IMemoryStore {
+  return 'readMemory' in store && 'updateMemory' in store
 }
 
 export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
@@ -58,6 +65,56 @@ export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
   const defaultMemoryTopic = ':default:'
 
   const searchModel = options.getModel?.('search')
+
+  // Helper functions for memory operations that work with both store types
+  const readMemoryKV = async (topic: string): Promise<string | undefined> => {
+    if (!isIMemoryStore(memoryStore)) {
+      const data = (await memoryStore.read()) ?? {}
+      return data[topic]
+    }
+    // For IMemoryStore, topic is the "name" parameter
+    return memoryStore.readMemory(topic)
+  }
+
+  const updateMemoryKV = async (operation: 'append' | 'replace' | 'remove', topic: string, content: string | undefined): Promise<void> => {
+    if (!isIMemoryStore(memoryStore)) {
+      const data = (await memoryStore.read()) ?? {}
+      switch (operation) {
+        case 'append':
+          if (content === undefined) {
+            throw new Error('Content is required for append operation.')
+          }
+          data[topic] = `${data[topic] || ''}\n${content}`
+          break
+        case 'replace':
+          if (content === undefined) {
+            throw new Error('Content is required for replace operation.')
+          }
+          data[topic] = content
+          break
+        case 'remove':
+          delete data[topic]
+          break
+      }
+      await memoryStore.write(data)
+      return
+    }
+    // Use IMemoryStore API
+    await memoryStore.updateMemory(operation, topic, content)
+  }
+
+  const listMemoryTopicsKV = async (): Promise<string[]> => {
+    if (!isIMemoryStore(memoryStore)) {
+      const data = (await memoryStore.read()) ?? {}
+      return Object.keys(data)
+    }
+    // For IMemoryStore, we need to query for all names in the current scope
+    const entries = await memoryStore.queryMemory({})
+    if (Array.isArray(entries)) {
+      return entries.map((e) => e.name)
+    }
+    return []
+  }
 
   const provider: ToolProvider = {
     listTodoItems: async (id?: string | null, status?: string | null) => {
@@ -166,12 +223,10 @@ export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
       }
     },
     listMemoryTopics: async (): Promise<string[]> => {
-      const memory = (await memoryStore.read()) ?? {}
-      return Object.keys(memory)
+      return listMemoryTopicsKV()
     },
     readMemory: async (topic: string = defaultMemoryTopic): Promise<string | undefined> => {
-      const memory = (await memoryStore.read()) ?? {}
-      return memory[topic]
+      return readMemoryKV(topic)
     },
     updateMemory: async (
       operation: 'append' | 'replace' | 'remove',
@@ -179,25 +234,7 @@ export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
       content: string | undefined,
     ): Promise<void> => {
       const memoryTopic = topic ?? defaultMemoryTopic
-      const memory = (await memoryStore.read()) ?? {}
-      switch (operation) {
-        case 'append':
-          if (content === undefined) {
-            throw new Error('Content is required for append operation.')
-          }
-          memory[memoryTopic] = `${memory[memoryTopic] || ''}\n${content}`
-          break
-        case 'replace':
-          if (content === undefined) {
-            throw new Error('Content is required for replace operation.')
-          }
-          memory[memoryTopic] = content
-          break
-        case 'remove':
-          delete memory[memoryTopic]
-          break
-      }
-      await memoryStore.write(memory)
+      await updateMemoryKV(operation, memoryTopic, content)
     },
     readFile: async (path: string, includeIgnored: boolean): Promise<string | undefined> => {
       if (!includeIgnored && ig.ignores(path)) {
