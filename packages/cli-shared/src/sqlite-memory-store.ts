@@ -337,8 +337,8 @@ export class SQLiteMemoryStore implements IMemoryStore {
         const shouldBegin = !this.inTransaction
         try {
           if (shouldBegin) {
-            this.inTransaction = true
             db.run('BEGIN TRANSACTION')
+            this.inTransaction = true
           }
           const result = await callback()
           if (shouldBegin) {
@@ -530,7 +530,7 @@ export class SQLiteMemoryStore implements IMemoryStore {
   async queryMemory(query: MemoryQuery = {}, options: QueryOptions = {}): Promise<MemoryEntry[] | number> {
     const db = await this.getDatabase()
 
-    const { sql, params } = this.buildQuery(query, options)
+    const { sql, params } = this.buildQuery(query)
 
     if (options.operation === 'count') {
       const countSql = `SELECT COUNT(*) as count FROM (${sql})`
@@ -569,10 +569,7 @@ export class SQLiteMemoryStore implements IMemoryStore {
   /**
    * Build SQL query safely with parameterized statements
    */
-  private buildQuery(
-    query: MemoryQuery,
-    _options: QueryOptions,
-  ): {
+  private buildQuery(query: MemoryQuery): {
     sql: string
     params: Array<string | number>
   } {
