@@ -21,7 +21,7 @@ export class AgentLogger {
   /**
    * Log task-related message
    */
-  task(task: Task, message: string, meta?: any): void {
+  task(task: Task, message: string, meta?: Record<string, unknown>): void {
     const logEntry = {
       timestamp: new Date().toISOString(),
       sessionId: this.sessionId,
@@ -42,7 +42,7 @@ export class AgentLogger {
   /**
    * Log workflow-related message
    */
-  workflow(workflow: string, message: string, meta?: any): void {
+  workflow(workflow: string, message: string, meta?: Record<string, unknown>): void {
     const logEntry = {
       timestamp: new Date().toISOString(),
       sessionId: this.sessionId,
@@ -60,7 +60,7 @@ export class AgentLogger {
   /**
    * Log milestone/phase change
    */
-  milestone(message: string, meta?: any): void {
+  milestone(message: string, meta?: Record<string, unknown>): void {
     const logEntry = {
       timestamp: new Date().toISOString(),
       sessionId: this.sessionId,
@@ -77,7 +77,7 @@ export class AgentLogger {
   /**
    * Log discovery result
    */
-  discovery(strategy: string, tasksFound: number, meta?: any): void {
+  discovery(strategy: string, tasksFound: number, meta?: Record<string, unknown>): void {
     const logEntry = {
       timestamp: new Date().toISOString(),
       sessionId: this.sessionId,
@@ -95,7 +95,7 @@ export class AgentLogger {
   /**
    * Log state transition
    */
-  stateTransition(from: string, to: string, reason?: string): void {
+  stateTransition(from: string, to: string, reason?: string, meta?: Record<string, unknown>): void {
     const logEntry = {
       timestamp: new Date().toISOString(),
       sessionId: this.sessionId,
@@ -149,7 +149,7 @@ export class AgentLogger {
   /**
    * Log error with context
    */
-  error(context: string, error: Error, meta?: any): void {
+  error(context: string, error: Error, meta?: Record<string, unknown>): void {
     const logEntry = {
       timestamp: new Date().toISOString(),
       sessionId: this.sessionId,
@@ -189,7 +189,7 @@ export class AgentLogger {
   /**
    * Write log entry to file
    */
-  private async writeToFile(entry: any): Promise<void> {
+  private async writeToFile(entry: Record<string, unknown>): Promise<void> {
     try {
       await fs.appendFile(this.logFile, `${JSON.stringify(entry)}\n`)
     } catch (error) {
