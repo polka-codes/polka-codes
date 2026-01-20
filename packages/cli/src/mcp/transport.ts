@@ -2,6 +2,7 @@
 
 import { type ChildProcess, spawn } from 'node:child_process'
 import { EventEmitter } from 'node:events'
+import { StringDecoder } from 'node:string_decoder'
 
 /**
  * JSON-RPC message format used by MCP
@@ -27,6 +28,7 @@ export class StdioTransport extends EventEmitter {
   private messageId = 0
   private pendingRequests = new Map<number | string, { resolve: (value: unknown) => void; reject: (error: Error) => void }>()
   private buffer = ''
+  private decoder = new StringDecoder('utf8') // Properly handle multi-byte characters across chunk boundaries
   // Store event handler references for cleanup
   private stdoutDataHandler: ((data: Buffer) => void) | null = null
   private exitHandler: ((code: number | null, signal: NodeJS.Signals | null) => void) | null = null
@@ -61,7 +63,7 @@ export class StdioTransport extends EventEmitter {
 
         // Store handler references for cleanup
         this.stdoutDataHandler = (data: Buffer) => {
-          this.handleData(data.toString())
+          this.handleData(this.decoder.write(data))
         }
 
         this.exitHandler = (code, signal) => {

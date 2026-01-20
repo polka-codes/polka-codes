@@ -83,7 +83,16 @@ export function logAndSuppress(logger: Logger, error: unknown, contextMessage: s
 
   // Build log message
   const fullContext = `[${contextMessage}] ${message}`
-  const contextString = Object.keys(context).length > 0 ? ` ${JSON.stringify(context)}` : ''
+  let contextString = ''
+  if (Object.keys(context).length > 0) {
+    try {
+      contextString = ` ${JSON.stringify(context)}`
+    } catch {
+      // If context contains circular references or can't be stringified,
+      // fall back to a simple object representation
+      contextString = ` [context data omitted - circular or non-serializable]`
+    }
+  }
   const logMessage = `${fullContext}${contextString}`
 
   // Use strategy pattern - select appropriate logging strategy

@@ -153,7 +153,7 @@ export async function memoryRename(oldName: string, newName: string) {
   const store = await getMemoryStore()
 
   try {
-    // Query for old entry by exact name
+    // Check for old entry first (can't proceed without it)
     const oldEntries = await store.queryMemory({ name: oldName }, { operation: 'select' })
     if (!Array.isArray(oldEntries) || oldEntries.length === 0) {
       console.error(`Memory entry "${oldName}" not found.`)
@@ -162,30 +162,65 @@ export async function memoryRename(oldName: string, newName: string) {
 
     const oldEntry = oldEntries[0]
 
-    // Check if new name already exists by exact name match
-    const newEntries = await store.queryMemory({ name: newName }, { operation: 'select' })
-    if (Array.isArray(newEntries) && newEntries.length > 0) {
-      console.error(`Memory entry "${newName}" already exists.`)
-      process.exit(1)
+    // Use transaction to atomically check for newName and perform rename
+    // This prevents race condition where another process could create newName
+    // between our check and the rename operation
+    const storeImpl = store as any // Access transaction method
+    if (typeof storeImpl.transaction === 'function') {
+      await storeImpl.transaction(async () => {
+        // Check if new name already exists (within transaction for consistency)
+        const newEntries = await store.queryMemory({ name: newName }, { operation: 'select' })
+        if (Array.isArray(newEntries) && newEntries.length > 0) {
+          throw new Error(`Memory entry "${newName}" already exists.`)
+        }
+
+        // Perform the rename
+        await store.batchUpdateMemory([
+          {
+            operation: 'replace',
+            name: newName,
+            content: oldEntry.content,
+            metadata: {
+              entry_type: oldEntry.entry_type,
+              status: oldEntry.status,
+              priority: oldEntry.priority,
+              tags: oldEntry.tags,
+            },
+          },
+          { operation: 'remove', name: oldName },
+        ])
+      })
+    } else {
+      // Fallback for stores without transaction support
+      const newEntries = await store.queryMemory({ name: newName }, { operation: 'select' })
+      if (Array.isArray(newEntries) && newEntries.length > 0) {
+        console.error(`Memory entry "${newName}" already exists.`)
+        process.exit(1)
+      }
+
+      await store.batchUpdateMemory([
+        {
+          operation: 'replace',
+          name: newName,
+          content: oldEntry.content,
+          metadata: {
+            entry_type: oldEntry.entry_type,
+            status: oldEntry.status,
+            priority: oldEntry.priority,
+            tags: oldEntry.tags,
+          },
+        },
+        { operation: 'remove', name: oldName },
+      ])
     }
 
-    // Use batchUpdateMemory for atomic rename with metadata preservation
-    await store.batchUpdateMemory([
-      {
-        operation: 'replace',
-        name: newName,
-        content: oldEntry.content,
-        metadata: {
-          entry_type: oldEntry.entry_type,
-          status: oldEntry.status,
-          priority: oldEntry.priority,
-          tags: oldEntry.tags,
-        },
-      },
-      { operation: 'remove', name: oldName },
-    ])
-
     console.log(`Memory entry renamed from "${oldName}" to "${newName}".`)
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('already exists')) {
+      console.error(error.message)
+      process.exit(1)
+    }
+    throw error
   } finally {
     store.close()
   }

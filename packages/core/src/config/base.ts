@@ -39,7 +39,7 @@ export type BaseApprovalConfig = z.infer<typeof baseApprovalConfigSchema>
 export const providerConfigSchema = z.object({
   apiKey: z.string().optional(),
   defaultModel: z.string().optional(),
-  defaultParameters: z.record(z.string(), z.any()).optional(),
+  defaultParameters: z.record(z.string(), z.unknown()).optional(),
   location: z.string().optional(),
   project: z.string().optional(),
   keyFile: z.string().optional(),
