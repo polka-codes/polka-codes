@@ -967,7 +967,8 @@ async function executeStep<TTools extends ToolRegistry>(
       context.logger.debug(`[Step] Validating output for step '${stepDef.id}' against schema`)
 
       // Convert JSON Schema to Zod schema
-      const zodSchema = convertJsonSchemaToZod(stepDef.outputSchema)
+      // Type assertion is safe here as JsonSchema structure is validated by convertJsonSchemaToZod
+      const zodSchema = convertJsonSchemaToZod(stepDef.outputSchema as JsonSchema)
 
       // Validate the result
       const validationResult = zodSchema.safeParse(result)

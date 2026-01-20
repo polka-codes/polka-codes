@@ -37,7 +37,7 @@ export const ruleSchema = z.union([
 export const providerModelSchema = z.object({
   provider: z.string().optional(),
   model: z.string().optional(),
-  parameters: z.record(z.string(), z.any()).optional(),
+  parameters: z.record(z.string(), z.unknown()).optional(),
   budget: z.number().positive().optional(),
   rules: z.array(ruleSchema).optional().or(z.string()).optional(),
 })
@@ -61,7 +61,7 @@ export const scriptSchema = z.union([
     .object({
       workflow: z.string(), // Path to .yml workflow file
       description: z.string().optional(),
-      input: z.record(z.string(), z.any()).optional(), // Default workflow input
+      input: z.record(z.string(), z.unknown()).optional(), // Default workflow input
     })
     .strict(),
   // Type 4: TypeScript script file (NEW)
@@ -198,7 +198,7 @@ export const configSchema = z
     providers: z.record(z.string(), baseProviderConfigSchema).optional(),
     defaultProvider: z.string().optional(),
     defaultModel: z.string().optional(),
-    defaultParameters: z.record(z.string(), z.any()).optional(),
+    defaultParameters: z.record(z.string(), z.unknown()).optional(),
     maxMessageCount: z.number().int().positive().optional(),
     budget: z.number().positive().optional(),
     retryCount: z.number().int().min(0).optional(),

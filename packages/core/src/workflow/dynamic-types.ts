@@ -51,7 +51,7 @@ export type WorkflowControlFlowStep =
 export const WorkflowInputDefinitionSchema = z.object({
   id: z.string(),
   description: z.string().nullish(),
-  default: z.any().nullish(),
+  default: z.unknown().nullish(),
 })
 
 /**
@@ -67,7 +67,7 @@ export const WorkflowStepDefinitionSchema = z.object({
    * Optional JSON schema or other metadata for future structured outputs.
    * Not interpreted by core today.
    */
-  outputSchema: z.any().nullish(),
+  outputSchema: z.unknown().nullish(),
   /**
    * Optional timeout in milliseconds. Step execution will be aborted if it exceeds this duration.
    */
