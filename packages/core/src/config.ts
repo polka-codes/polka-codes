@@ -1,5 +1,20 @@
 import { z } from 'zod'
+import { providerConfigSchema as baseProviderConfigSchema } from './config/base.js'
 import { DEFAULT_MEMORY_CONFIG, type MemoryConfig, memoryConfigSchema, resolveHomePath } from './config/memory.js'
+
+// Re-export base configuration patterns
+export {
+  type BaseApprovalConfig,
+  type BaseModelConfig,
+  baseApprovalConfigSchema,
+  baseModelConfigSchema,
+  type ModelConfig,
+  modelConfigSchema,
+  type ProviderConfig,
+  providerConfigSchema,
+  type ToolConfig,
+  toolConfigSchema,
+} from './config/base.js'
 
 export { memoryConfigSchema, DEFAULT_MEMORY_CONFIG, type MemoryConfig, resolveHomePath }
 
@@ -18,17 +33,7 @@ export const ruleSchema = z.union([
     .strict(),
 ])
 
-export const providerConfigSchema = z.object({
-  apiKey: z.string().optional(),
-  defaultModel: z.string().optional(),
-  defaultParameters: z.record(z.string(), z.any()).optional(),
-  location: z.string().optional(),
-  project: z.string().optional(),
-  keyFile: z.string().optional(),
-  baseUrl: z.string().optional(),
-  name: z.string().optional(), // For OpenAI-compatible providers
-})
-
+// Legacy alias for backward compatibility
 export const providerModelSchema = z.object({
   provider: z.string().optional(),
   model: z.string().optional(),
@@ -38,7 +43,6 @@ export const providerModelSchema = z.object({
 })
 
 export type ConfigRule = z.infer<typeof ruleSchema>
-export type ProviderConfig = z.infer<typeof providerConfigSchema>
 
 // Script configuration schema
 // Supports multiple formats for backward compatibility and new features
@@ -191,7 +195,7 @@ export const configSchema = z
         ),
       )
       .optional(),
-    providers: z.record(z.string(), providerConfigSchema).optional(),
+    providers: z.record(z.string(), baseProviderConfigSchema).optional(),
     defaultProvider: z.string().optional(),
     defaultModel: z.string().optional(),
     defaultParameters: z.record(z.string(), z.any()).optional(),

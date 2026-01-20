@@ -6,6 +6,7 @@
  */
 
 import type { Logger } from '@polka-codes/core'
+import { createErrorClass } from '@polka-codes/core'
 
 /**
  * Options for logAndSuppress
@@ -72,62 +73,50 @@ export function logAndSuppress(logger: Logger, error: unknown, contextMessage: s
 
 /**
  * Standard error types for better error categorization
+ *
+ * Using createErrorClass factory for consistent error handling
+ * and proper stack trace preservation.
  */
 
 /**
  * Error thrown when a file system operation fails
+ *
+ * @param path - File or directory path
+ * @param operation - Operation being performed (read, write, delete, etc.)
+ * @param cause - Optional underlying error
  */
-export class FileSystemAccessError extends Error {
-  name = 'FileSystemAccessError'
-
-  constructor(
-    public path: string,
-    public operation: string,
-    cause?: Error,
-  ) {
-    super(`Failed to ${operation} ${path}`)
-    if (cause) {
-      this.cause = cause
-    }
-  }
-}
+export const FileSystemAccessError = createErrorClass('FileSystemAccessError', (args: [string, string] | [string, string, Error?]) => {
+  const [path, operation] = args
+  return `Failed to ${operation} ${path}`
+})
 
 /**
  * Error thrown when a command execution fails
+ *
+ * @param command - Command that was executed
+ * @param exitCode - Exit code from the command
+ * @param _stderr - Standard error output (not shown in message)
+ * @param cause - Optional underlying error
  */
-export class CommandExecutionError extends Error {
-  name = 'CommandExecutionError'
-
-  constructor(
-    public command: string,
-    public exitCode: number,
-    public stderr: string,
-    cause?: Error,
-  ) {
-    super(`Command failed with code ${exitCode}: ${command}`)
-    if (cause) {
-      this.cause = cause
-    }
-  }
-}
+export const CommandExecutionError = createErrorClass(
+  'CommandExecutionError',
+  (args: [string, number] | [string, number, string?, Error?]) => {
+    const [command, exitCode] = args
+    return `Command failed with code ${exitCode}: ${command}`
+  },
+)
 
 /**
  * Error thrown when JSON parsing fails
+ *
+ * @param filePath - Path to file being parsed
+ * @param _rawContent - Raw content that failed to parse (not shown in message)
+ * @param cause - Optional underlying error
  */
-export class JSONParseError extends Error {
-  name = 'JSONParseError'
-
-  constructor(
-    public filePath: string,
-    public rawContent: string,
-    cause?: Error,
-  ) {
-    super(`Failed to parse JSON from ${filePath}`)
-    if (cause) {
-      this.cause = cause
-    }
-  }
-}
+export const JSONParseError = createErrorClass('JSONParseError', (args: [string] | [string, string?, Error?]) => {
+  const [filePath] = args
+  return `Failed to parse JSON from ${filePath}`
+})
 
 /**
  * Safely parse JSON with error handling
@@ -143,6 +132,7 @@ export function safeJSONParse<T = unknown>(content: string, filePath: string): T
   try {
     return JSON.parse(content) as T
   } catch (error) {
-    throw new JSONParseError(filePath, content, error as Error)
+    // createErrorClass automatically extracts Error from last argument
+    throw new JSONParseError(filePath, error as Error)
   }
 }

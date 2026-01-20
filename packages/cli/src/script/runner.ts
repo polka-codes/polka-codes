@@ -24,41 +24,32 @@ import { existsSync } from 'node:fs'
 import { relative, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import type { Logger, ScriptConfig } from '@polka-codes/core'
+import { createErrorClass } from '@polka-codes/core'
 import type { ExecutionContext } from '../runWorkflow'
 
 /**
  * Error thrown when script validation fails
  */
-export class ScriptValidationError extends Error {
-  constructor(message: string) {
-    super(`Script validation failed: ${message}`)
-    this.name = 'ScriptValidationError'
-  }
-}
+export const ScriptValidationError = createErrorClass(
+  'ScriptValidationError',
+  ([message]: [string]) => `Script validation failed: ${message}`,
+)
 
 /**
  * Error thrown when script execution times out
  */
-export class ScriptTimeoutError extends Error {
-  constructor(scriptPath: string, timeout: number) {
-    super(`Script execution timeout: ${scriptPath} exceeded ${timeout}ms`)
-    this.name = 'ScriptTimeoutError'
-  }
-}
+export const ScriptTimeoutError = createErrorClass(
+  'ScriptTimeoutError',
+  ([scriptPath, timeout]: [string, number]) => `Script execution timeout: ${scriptPath} exceeded ${timeout}ms`,
+)
 
 /**
  * Error thrown when script execution fails
  */
-export class ScriptExecutionError extends Error {
-  constructor(
-    scriptPath: string,
-    public cause: Error,
-  ) {
-    super(`Script execution failed: ${scriptPath}`)
-    this.name = 'ScriptExecutionError'
-    this.cause = cause
-  }
-}
+export const ScriptExecutionError = createErrorClass(
+  'ScriptExecutionError',
+  ([scriptPath]: [string]) => `Script execution failed: ${scriptPath}`,
+)
 
 /**
  * Options for script execution

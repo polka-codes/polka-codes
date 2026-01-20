@@ -79,6 +79,9 @@ export interface SkillContext {
 
 /**
  * Error thrown when skill discovery fails
+ *
+ * Note: This error has a custom `path` property that is accessed by callers.
+ * Keeping as a class since the error factory doesn't support custom properties.
  */
 export class SkillDiscoveryError extends Error {
   constructor(
@@ -92,6 +95,9 @@ export class SkillDiscoveryError extends Error {
 
 /**
  * Error thrown when skill validation fails
+ *
+ * Note: This error has a custom `path` property that is accessed by callers.
+ * Keeping as a class since the error factory doesn't support custom properties.
  */
 export class SkillValidationError extends Error {
   constructor(

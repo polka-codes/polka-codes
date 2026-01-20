@@ -1,3 +1,4 @@
+import { deepMerge } from '@polka-codes/core'
 import { z } from 'zod'
 import { CONFIG_PRESETS, DEFAULT_AGENT_CONFIG } from './constants'
 import { ConfigValidationError } from './errors'
@@ -116,28 +117,18 @@ export async function loadConfig(cliOptions: Partial<AgentConfig>, configPath?: 
 
 /**
  * Merge two configurations (second overrides first)
+ *
+ * Uses deepMerge utility with explicit path specification for nested objects.
+ * This makes it clear which fields get deep merged vs shallow merge.
  */
 export function mergeConfig(base: AgentConfig, override: Partial<AgentConfig>): AgentConfig {
-  return {
-    ...base,
-    ...override,
-    continuousImprovement: {
-      ...base.continuousImprovement,
-      ...(override.continuousImprovement || {}),
-    },
-    discovery: {
-      ...base.discovery,
-      ...(override.discovery || {}),
-    },
-    approval: {
-      ...base.approval,
-      ...(override.approval || {}),
-    },
-    safety: {
-      ...base.safety,
-      ...(override.safety || {}),
-    },
-  }
+  return deepMerge(base, override, [
+    'continuousImprovement', // Explicit: these get deep merged
+    'discovery',
+    'approval',
+    'safety',
+  ])
+  // Other fields use shallow merge (spread) - explicit and clear!
 }
 
 /**
