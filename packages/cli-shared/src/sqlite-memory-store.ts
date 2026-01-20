@@ -733,14 +733,16 @@ export class SQLiteMemoryStore implements IMemoryStore {
    * @param skipSave - If true, skip saving before close (useful when save already failed)
    */
   async close(skipSave = false): Promise<void> {
-    if (this.db) {
+    const db = this.db
+    if (db) {
       try {
         if (!skipSave) {
           await this.saveDatabase()
         }
       } finally {
         // Always close and nullify, even if save fails
-        this.db.close()
+        // Use captured db reference to avoid race condition
+        db.close()
         this.db = null
       }
     }
