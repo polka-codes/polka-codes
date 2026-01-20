@@ -153,19 +153,17 @@ export async function memoryRename(oldName: string, newName: string) {
   const store = await getMemoryStore()
 
   try {
-    // Check for old entry first (can't proceed without it)
-    const oldEntries = await store.queryMemory({ name: oldName }, { operation: 'select' })
-    if (!Array.isArray(oldEntries) || oldEntries.length === 0) {
-      console.error(`Memory entry "${oldName}" not found.`)
-      process.exit(1)
-    }
-
-    const oldEntry = oldEntries[0]
-
-    // Use transaction to atomically check for newName and perform rename
-    // This prevents race condition where another process could create newName
-    // between our check and the rename operation
+    // Use transaction to atomically check for newName, fetch oldEntry, and perform rename
+    // This prevents race conditions where concurrent processes could modify data
     await store.transaction(async () => {
+      // Check if old entry exists (within transaction for consistency)
+      const oldEntries = await store.queryMemory({ name: oldName }, { operation: 'select' })
+      if (!Array.isArray(oldEntries) || oldEntries.length === 0) {
+        throw new Error(`Memory entry "${oldName}" not found.`)
+      }
+
+      const oldEntry = oldEntries[0]
+
       // Check if new name already exists (within transaction for consistency)
       const newEntries = await store.queryMemory({ name: newName }, { operation: 'select' })
       if (Array.isArray(newEntries) && newEntries.length > 0) {
@@ -191,9 +189,11 @@ export async function memoryRename(oldName: string, newName: string) {
 
     console.log(`Memory entry renamed from "${oldName}" to "${newName}".`)
   } catch (error) {
-    if (error instanceof Error && error.message.includes('already exists')) {
-      console.error(error.message)
-      process.exit(1)
+    if (error instanceof Error) {
+      if (error.message.includes('already exists') || error.message.includes('not found')) {
+        console.error(error.message)
+        process.exit(1)
+      }
     }
     throw error
   } finally {
