@@ -252,11 +252,36 @@ export async function memoryImport(inputFile: string, options: { merge?: boolean
       process.exit(1)
     }
 
-    let imported = 0
+    // Collect all valid entries first, then batch import for better performance
+    const validEntries: Array<{
+      operation: 'replace'
+      name: string
+      content: string
+      metadata?: {
+        entry_type?: string
+        status?: string
+        priority?: string
+        tags?: string
+        created_at?: number
+        updated_at?: number
+        last_accessed?: number
+      }
+    }> = []
+    const validPriorities = ['low', 'medium', 'high', 'critical'] as const
     let skipped = 0
 
+    // If not merging, we need to check for existing entries upfront
+    const existingNames = new Set<string>()
+    if (!options.merge) {
+      const allEntries = await store.queryMemory({}, { operation: 'select' })
+      if (Array.isArray(allEntries)) {
+        for (const entry of allEntries) {
+          existingNames.add(entry.name)
+        }
+      }
+    }
+
     for (const entry of entries as unknown[]) {
-      let entryName: string | undefined
       try {
         // Validate that entry is an object
         if (typeof entry !== 'object' || entry === null) {
@@ -274,7 +299,7 @@ export async function memoryImport(inputFile: string, options: { merge?: boolean
           continue
         }
 
-        entryName = entryObj.name
+        const entryName = entryObj.name
 
         if (!entryObj.content || typeof entryObj.content !== 'string') {
           console.error(`Skipping entry "${entryName}": missing or invalid content`)
@@ -282,20 +307,17 @@ export async function memoryImport(inputFile: string, options: { merge?: boolean
           continue
         }
 
-        // Validate priority if present
-        const validPriorities = ['low', 'medium', 'high', 'critical']
-        let priority = entryObj.priority as string | undefined
-        if (priority && !validPriorities.includes(priority)) {
-          console.warn(`Entry "${entryName}" has invalid priority "${priority}", defaulting to null`)
-          priority = undefined
-        }
-
-        // Check if entry already exists
-        const existing = await store.readMemory(entryName)
-
-        if (existing && !options.merge) {
+        // Check if entry already exists (when not merging)
+        if (existingNames.has(entryName)) {
           skipped++
           continue
+        }
+
+        // Validate priority if present
+        let priority = entryObj.priority as string | undefined
+        if (priority && !validPriorities.includes(priority as 'low' | 'medium' | 'high' | 'critical')) {
+          console.warn(`Entry "${entryName}" has invalid priority "${priority}", defaulting to null`)
+          priority = undefined
         }
 
         // Validate and cast metadata fields
@@ -318,24 +340,32 @@ export async function memoryImport(inputFile: string, options: { merge?: boolean
         const lastAccessed = entryObj.last_accessed
         const validatedLastAccessed = typeof lastAccessed === 'number' ? lastAccessed : undefined
 
-        await store.updateMemory('replace', entryName, entryObj.content as string, {
-          entry_type: validatedEntryType,
-          status: validatedStatus,
-          priority: priority,
-          tags: validatedTags,
-          created_at: validatedCreatedAt,
-          updated_at: validatedUpdatedAt,
-          last_accessed: validatedLastAccessed,
+        validEntries.push({
+          operation: 'replace',
+          name: entryName,
+          content: entryObj.content as string,
+          metadata: {
+            entry_type: validatedEntryType,
+            status: validatedStatus,
+            priority: priority,
+            tags: validatedTags,
+            created_at: validatedCreatedAt,
+            updated_at: validatedUpdatedAt,
+            last_accessed: validatedLastAccessed,
+          },
         })
-
-        imported++
       } catch (error) {
-        console.error(`Failed to import entry "${entryName || 'unknown'}":`, error)
+        console.error(`Failed to process entry:`, error)
         skipped++
       }
     }
 
-    console.log(`Imported ${imported} entries, skipped ${skipped} entries.`)
+    // Batch import all valid entries in a single transaction
+    if (validEntries.length > 0) {
+      await store.batchUpdateMemory(validEntries)
+    }
+
+    console.log(`Imported ${validEntries.length} entries, skipped ${skipped} entries.`)
   } finally {
     store.close()
   }
