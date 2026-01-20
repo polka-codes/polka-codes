@@ -1,12 +1,32 @@
 import { randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
-import { mkdir, rename } from 'node:fs/promises'
+import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import type { DatabaseStats, IMemoryStore, MemoryConfig, MemoryEntry, MemoryOperation, MemoryQuery, QueryOptions } from '@polka-codes/core'
-import Database, { type Database as DatabaseType } from 'better-sqlite3'
+import initSqlJs, { type Database, type SqlJsStatic } from 'sql.js'
 
 // Re-export types from core for convenience
 export type { MemoryEntry, MemoryQuery, QueryOptions, MemoryOperation }
+
+let SqlJs: SqlJsStatic | null = null
+let SqlJsInitPromise: Promise<SqlJsStatic> | null = null
+
+/**
+ * Initialize sql.js WASM module (singleton)
+ */
+async function getSqlJs(): Promise<SqlJsStatic> {
+  if (SqlJs) {
+    return SqlJs
+  }
+  if (SqlJsInitPromise) {
+    return SqlJsInitPromise
+  }
+  SqlJsInitPromise = initSqlJs({
+    // Locate WASM file - it will be loaded from node_modules
+  })
+  SqlJs = await SqlJsInitPromise
+  return SqlJs
+}
 
 /**
  * SQLite Memory Store Implementation
@@ -14,16 +34,14 @@ export type { MemoryEntry, MemoryQuery, QueryOptions, MemoryOperation }
  * This is a concrete implementation of IMemoryStore using SQLite as the backend.
  * It can be used in CLI environments where local file-based storage is appropriate.
  *
- * For cloud environments, you would implement IMemoryStore using a cloud database
- * (PostgreSQL, MongoDB, Redis, etc.) but reuse the same MemoryManager for logic.
+ * Uses sql.js (WebAssembly port of SQLite) for consistent behavior across all runtimes.
  */
 export class SQLiteMemoryStore implements IMemoryStore {
-  private db: Database.Database | null = null
-  private dbPromise: Promise<Database.Database> | null = null
+  private db: Database | null = null
+  private dbPromise: Promise<Database> | null = null
   private config: MemoryConfig
   private currentScope: string
-  private maxRetries = 3
-  private retryDelay = 100 // ms
+  private inTransaction = false // Track if we're in a transaction
 
   // Whitelists for validation
   private static readonly SORT_COLUMNS = {
@@ -44,7 +62,7 @@ export class SQLiteMemoryStore implements IMemoryStore {
   /**
    * Initialize database connection and schema
    */
-  private async initializeDatabase(): Promise<Database.Database> {
+  private async initializeDatabase(): Promise<Database> {
     // Use promise singleton pattern to prevent race conditions
     if (this.dbPromise) {
       return this.dbPromise
@@ -64,27 +82,35 @@ export class SQLiteMemoryStore implements IMemoryStore {
           await mkdir(dir, { recursive: true, mode: 0o700 })
         }
 
-        // Create database with secure permissions if it doesn't exist
-        if (!existsSync(dbPath)) {
-          const { openSync, closeSync } = await import('node:fs')
-          const fd = openSync(dbPath, 'w')
-          closeSync(fd)
-          // Set permissions to owner read/write only
-          await import('node:fs/promises').then((fs) => fs.chmod(dbPath, 0o600))
+        // Load existing database data or create new one
+        let dbData: Uint8Array | undefined
+        if (existsSync(dbPath)) {
+          try {
+            dbData = await readFile(dbPath)
+
+            // Validate SQLite header (first 16 bytes should be "SQLite format 3\0")
+            if (dbData.length >= 16) {
+              const header = String.fromCharCode(...dbData.subarray(0, 15))
+              if (header !== 'SQLite format 3') {
+                console.warn('[SQLiteMemoryStore] Invalid SQLite database header, will recreate')
+                dbData = undefined
+              }
+            }
+          } catch (error) {
+            console.error('[SQLiteMemoryStore] Failed to read database file:', error)
+            dbData = undefined
+          }
         }
 
-        // Open database
-        const db = new Database(dbPath, {
-          verbose: process.env.SQLITE_DEBUG ? console.log : undefined,
-        })
+        // Initialize sql.js and create database
+        const SqlJs = await getSqlJs()
+        const db = new SqlJs.Database(dbData)
 
         // Configure pragmas
         this.configurePragmas(db)
 
-        // Check integrity
+        // Check integrity and initialize schema
         this.checkIntegrity(db)
-
-        // Initialize schema
         this.initializeSchema(db)
 
         this.db = db
@@ -100,7 +126,6 @@ export class SQLiteMemoryStore implements IMemoryStore {
             await rename(dbPath, backupPath)
           } catch (backupError) {
             console.error('[SQLiteMemoryStore] Failed to backup corrupted database:', backupError)
-            // Clear promise on error and throw
             this.dbPromise = null
             throw backupError
           }
@@ -110,7 +135,6 @@ export class SQLiteMemoryStore implements IMemoryStore {
           return this.initializeDatabase()
         }
 
-        // Clear promise on error
         this.dbPromise = null
         throw error
       }
@@ -120,26 +144,37 @@ export class SQLiteMemoryStore implements IMemoryStore {
   }
 
   /**
+   * Persist database to disk
+   */
+  private async saveDatabase(): Promise<void> {
+    if (!this.db) {
+      return
+    }
+
+    const dbPath = this.resolvePath(this.config.path || '~/.config/polka-codes/memory.sqlite')
+    const data = this.db.export()
+    await writeFile(dbPath, data)
+  }
+
+  /**
    * Configure database pragmas
    */
-  private configurePragmas(db: Database.Database): void {
-    db.pragma('journal_mode = WAL')
-    db.pragma('synchronous = NORMAL')
-    db.pragma('busy_timeout = 5000')
-    db.pragma('foreign_keys = ON')
-    db.pragma('temp_store = MEMORY')
-    db.pragma('mmap_size = 30000000000')
-    db.pragma('page_size = 4096')
+  private configurePragmas(db: Database): void {
+    db.run('PRAGMA synchronous = NORMAL')
+    db.run('PRAGMA busy_timeout = 5000')
+    db.run('PRAGMA foreign_keys = ON')
+    db.run('PRAGMA temp_store = MEMORY')
   }
 
   /**
    * Check database integrity
    */
-  private checkIntegrity(db: Database.Database): void {
+  private checkIntegrity(db: Database): void {
     try {
-      const result = db.pragma('integrity_check', { simple: true }) as string
-      if (result !== 'ok') {
-        throw new Error(`Database integrity check failed: ${result}`)
+      // Ensure the database is accessible
+      const results = db.exec('SELECT 1')
+      if (results.length === 0) {
+        throw new Error('Database query returned no results')
       }
     } catch (error) {
       console.error('[SQLiteMemoryStore] Integrity check failed:', error)
@@ -150,9 +185,9 @@ export class SQLiteMemoryStore implements IMemoryStore {
   /**
    * Initialize database schema
    */
-  private initializeSchema(db: Database.Database): void {
+  private initializeSchema(db: Database): void {
     // Create memory entries table
-    db.exec(`
+    db.run(`
       CREATE TABLE IF NOT EXISTS memory_entries (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL CHECK(length(name) > 0),
@@ -171,16 +206,14 @@ export class SQLiteMemoryStore implements IMemoryStore {
     `)
 
     // Create optimized indexes
-    db.exec(`
-      CREATE INDEX IF NOT EXISTS idx_memory_entries_scope_type ON memory_entries(scope, entry_type);
-      CREATE INDEX IF NOT EXISTS idx_memory_entries_updated ON memory_entries(updated_at);
-    `)
+    db.run('CREATE INDEX IF NOT EXISTS idx_memory_entries_scope_type ON memory_entries(scope, entry_type)')
+    db.run('CREATE INDEX IF NOT EXISTS idx_memory_entries_updated ON memory_entries(updated_at)')
   }
 
   /**
    * Get database instance
    */
-  private async getDatabase(): Promise<Database.Database> {
+  private async getDatabase(): Promise<Database> {
     if (!this.db) {
       this.db = await this.initializeDatabase()
     }
@@ -223,64 +256,33 @@ export class SQLiteMemoryStore implements IMemoryStore {
   }
 
   /**
-   * Sleep utility
-   */
-  private sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms))
-  }
-
-  /**
-   * Check if error is retryable
-   */
-  private isRetryableError(error: unknown): boolean {
-    if (error instanceof Error) {
-      const message = error.message.toLowerCase()
-      return (
-        message.includes('database is locked') ||
-        message.includes('database is busy') ||
-        message.includes('sqlite_busy') ||
-        message.includes('sqlite_locked')
-      )
-    }
-    return false
-  }
-
-  /**
    * Execute transaction with retry logic
    */
-  async transaction<T>(callback: () => Promise<T>, options: { timeout?: number; retries?: number } = {}): Promise<T> {
+  async transaction<T>(callback: () => Promise<T>, _options: { timeout?: number; retries?: number } = {}): Promise<T> {
     const db = await this.getDatabase()
-    const retries = options.retries ?? this.maxRetries
 
-    for (let attempt = 0; attempt < retries; attempt++) {
-      try {
-        db.exec('BEGIN IMMEDIATE')
-
-        const result = await callback()
-
-        db.exec('COMMIT')
-        return result
-      } catch (error) {
-        try {
-          db.exec('ROLLBACK')
-        } catch (rollbackError) {
-          console.error('[SQLiteMemoryStore] Rollback failed:', rollbackError)
-        }
-
-        const isRetryable = this.isRetryableError(error)
-
-        if (isRetryable && attempt < retries - 1) {
-          const delay = this.retryDelay * 2 ** attempt
-          console.warn(`[SQLiteMemoryStore] Retryable error, retrying in ${delay}ms...`)
-          await this.sleep(delay)
-          continue
-        }
-
-        throw error
+    // sql.js is synchronous, so we use explicit transaction control
+    const shouldBegin = !this.inTransaction
+    try {
+      if (shouldBegin) {
+        this.inTransaction = true
+        db.run('BEGIN TRANSACTION')
       }
+      const result = await callback()
+      if (shouldBegin) {
+        db.run('COMMIT')
+        this.inTransaction = false
+        // Save after successful transaction
+        await this.saveDatabase()
+      }
+      return result
+    } catch (error) {
+      if (shouldBegin) {
+        db.run('ROLLBACK')
+        this.inTransaction = false
+      }
+      throw error
     }
-
-    throw new Error('Maximum retries exceeded')
   }
 
   /**
@@ -292,15 +294,24 @@ export class SQLiteMemoryStore implements IMemoryStore {
 
     return this.transaction(async () => {
       const stmt = db.prepare('SELECT content FROM memory_entries WHERE name = ? AND scope = ?')
-      const row = stmt.get(topic, scope) as { content: string } | undefined
+      stmt.bind([topic, scope])
 
-      if (row) {
+      // Need to call step() to execute the query
+      if (stmt.step()) {
+        const row = stmt.getAsObject()
+        const content = row.content as string | undefined
+        stmt.free()
+
         // Update last_accessed
         const updateStmt = db.prepare('UPDATE memory_entries SET last_accessed = ? WHERE name = ? AND scope = ?')
-        updateStmt.run(this.now(), topic, scope)
+        updateStmt.run([this.now(), topic, scope])
+        updateStmt.free()
+
+        return content
       }
 
-      return row?.content
+      stmt.free()
+      return undefined
     })
   }
 
@@ -308,7 +319,7 @@ export class SQLiteMemoryStore implements IMemoryStore {
    * Internal update memory without transaction (used by batchUpdateMemory)
    */
   private async updateMemoryInternal(
-    db: DatabaseType,
+    db: Database,
     operation: 'append' | 'replace' | 'remove',
     topic: string,
     content: string | undefined,
@@ -324,14 +335,29 @@ export class SQLiteMemoryStore implements IMemoryStore {
 
     if (operation === 'remove') {
       const stmt = db.prepare('DELETE FROM memory_entries WHERE name = ? AND scope = ?')
-      stmt.run(topic, scope)
+      stmt.run([topic, scope])
+      stmt.free()
       return
     }
 
-    const existingStmt = db.prepare('SELECT content, entry_type, status, priority, tags FROM memory_entries WHERE name = ? AND scope = ?')
-    const existing = existingStmt.get(topic, scope) as
-      | { content: string; entry_type: string; status: string; priority: string; tags: string }
-      | undefined
+    const stmt = db.prepare('SELECT content, entry_type, status, priority, tags FROM memory_entries WHERE name = ? AND scope = ?')
+    stmt.bind([topic, scope])
+
+    let existing: { content: string; entry_type: string; status: string | null; priority: string | null; tags: string | null } | undefined
+    if (stmt.step()) {
+      const row = stmt.getAsObject()
+      existing = {
+        content: row.content as string,
+        entry_type: row.entry_type as string,
+        status: row.status as string | null,
+        priority: row.priority as string | null,
+        tags: row.tags as string | null,
+      }
+      stmt.free()
+    } else {
+      existing = undefined
+      stmt.free()
+    }
 
     let finalContent: string
     let entry_type: string
@@ -352,9 +378,9 @@ export class SQLiteMemoryStore implements IMemoryStore {
         finalContent = content
       }
       entry_type = metadata?.entry_type || existing.entry_type
-      status = metadata?.status || existing.status
-      priority = metadata?.priority || existing.priority
-      tags = metadata?.tags || existing.tags
+      status = (metadata?.status || existing.status) ?? undefined
+      priority = (metadata?.priority || existing.priority) ?? undefined
+      tags = (metadata?.tags || existing.tags) ?? undefined
     } else {
       if (!content) {
         throw new Error('Content is required for new memory entries.')
@@ -379,19 +405,20 @@ export class SQLiteMemoryStore implements IMemoryStore {
         last_accessed = excluded.last_accessed
     `)
 
-    upsertStmt.run(
+    upsertStmt.run([
       this.generateUUID(),
       topic,
       scope,
       finalContent,
       entry_type,
-      status || null,
-      priority || null,
-      tags || null,
+      status ?? null,
+      priority ?? null,
+      tags ?? null,
       now,
       now,
       now,
-    )
+    ])
+    upsertStmt.free()
   }
 
   /**
@@ -423,19 +450,37 @@ export class SQLiteMemoryStore implements IMemoryStore {
     const { sql, params } = this.buildQuery(query, options)
 
     if (options.operation === 'count') {
-      const countStmt = db.prepare(`SELECT COUNT(*) as count FROM (${sql})`)
-      const result = countStmt.get(...params) as { count: number }
-      return result.count
+      const countSql = `SELECT COUNT(*) as count FROM (${sql})`
+      const stmt = db.prepare(countSql)
+      stmt.bind(params)
+      let count = 0
+      if (stmt.step()) {
+        const row = stmt.getAsObject()
+        count = row.count as number
+      }
+      stmt.free()
+      return count
     }
 
     if (options.operation === 'delete') {
-      const deleteStmt = db.prepare(`DELETE FROM memory_entries WHERE id IN (SELECT id FROM (${sql}))`)
-      const info = deleteStmt.run(...params)
-      return info.changes
+      const deleteSql = `DELETE FROM memory_entries WHERE id IN (SELECT id FROM (${sql}))`
+      const stmt = db.prepare(deleteSql)
+      stmt.bind(params)
+      stmt.step()
+      stmt.free()
+      return db.getRowsModified()
     }
 
     const stmt = db.prepare(sql)
-    return stmt.all(...params) as MemoryEntry[]
+    stmt.bind(params)
+
+    const entries: MemoryEntry[] = []
+    while (stmt.step()) {
+      entries.push(stmt.getAsObject() as MemoryEntry)
+    }
+    stmt.free()
+
+    return entries
   }
 
   /**
@@ -446,19 +491,19 @@ export class SQLiteMemoryStore implements IMemoryStore {
     _options: QueryOptions,
   ): {
     sql: string
-    params: (string | number)[]
+    params: Array<string | number>
   } {
     const conditions: string[] = []
-    const params: (string | number)[] = []
+    const params: Array<string | number> = []
     let sql = 'SELECT * FROM memory_entries WHERE 1=1'
 
     // Scope handling
     const scope = query.scope === 'auto' ? this.currentScope : query.scope
     if (scope === 'global') {
-      conditions.push('scope = ?')
+      conditions.push(`scope = ?`)
       params.push('global')
     } else if (scope === 'project' || (!scope && this.currentScope !== 'global')) {
-      conditions.push('scope = ?')
+      conditions.push(`scope = ?`)
       params.push(this.currentScope)
     }
 
@@ -467,13 +512,13 @@ export class SQLiteMemoryStore implements IMemoryStore {
       if (!query.type.trim()) {
         throw new Error('Type cannot be empty')
       }
-      conditions.push('entry_type = ?')
+      conditions.push(`entry_type = ?`)
       params.push(query.type.trim())
     }
 
     // Status filter
     if (query.status) {
-      conditions.push('status = ?')
+      conditions.push(`status = ?`)
       params.push(query.status)
     }
 
@@ -482,7 +527,7 @@ export class SQLiteMemoryStore implements IMemoryStore {
       if (!SQLiteMemoryStore.ALLOWED_PRIORITIES.includes(query.priority as 'low' | 'medium' | 'high' | 'critical')) {
         throw new Error(`Invalid priority: ${query.priority}`)
       }
-      conditions.push('priority = ?')
+      conditions.push(`priority = ?`)
       params.push(query.priority)
     }
 
@@ -496,7 +541,7 @@ export class SQLiteMemoryStore implements IMemoryStore {
         }
         // Use comma-wrapped matching for precise tag filtering
         // Matches: "tag", "tag,other", "other,tag", "other,tag,other"
-        conditions.push('(tags = ? OR tags LIKE ? OR tags LIKE ? OR tags LIKE ?)')
+        conditions.push(`(tags = ? OR tags LIKE ? OR tags LIKE ? OR tags LIKE ?)`)
         params.push(trimmed, `${trimmed},%`, `%,${trimmed}`, `%,${trimmed},%`)
       }
     }
@@ -504,26 +549,27 @@ export class SQLiteMemoryStore implements IMemoryStore {
     // Search filter
     if (query.search) {
       const searchTerm = query.search.trim()
-      const sanitized = searchTerm.replace(/[\\_%]/g, '\\$&')
-      conditions.push('(content LIKE ? OR name LIKE ?)')
-      params.push(`%${sanitized}%`, `%${sanitized}%`)
+      // For LIKE queries, we need to include the wildcards in the parameter value
+      conditions.push(`(content LIKE ? OR name LIKE ?)`)
+      const searchPattern = `%${searchTerm.replace(/[\\_%]/g, '\\$&')}%`
+      params.push(searchPattern, searchPattern)
     }
 
     // Date range filters
     if (query.createdAfter) {
-      conditions.push('created_at >= ?')
+      conditions.push(`created_at >= ?`)
       params.push(query.createdAfter)
     }
     if (query.createdBefore) {
-      conditions.push('created_at <= ?')
+      conditions.push(`created_at <= ?`)
       params.push(query.createdBefore)
     }
     if (query.updatedAfter) {
-      conditions.push('updated_at >= ?')
+      conditions.push(`updated_at >= ?`)
       params.push(query.updatedAfter)
     }
     if (query.updatedBefore) {
-      conditions.push('updated_at <= ?')
+      conditions.push(`updated_at <= ?`)
       params.push(query.updatedBefore)
     }
 
@@ -551,17 +597,17 @@ export class SQLiteMemoryStore implements IMemoryStore {
       if (Number.isNaN(limit) || limit < 1 || limit > 10000) {
         throw new Error('Limit must be between 1 and 10000')
       }
-      sql += ' LIMIT ?'
+      sql += ` LIMIT ?`
       params.push(limit)
+    }
 
-      if (query.offset) {
-        const offset = Number(query.offset)
-        if (Number.isNaN(offset) || offset < 0) {
-          throw new Error('Offset must be >= 0')
-        }
-        sql += ' OFFSET ?'
-        params.push(offset)
+    if (query.offset) {
+      const offset = Number(query.offset)
+      if (Number.isNaN(offset) || offset < 0) {
+        throw new Error('Offset must be >= 0')
       }
+      sql += ` OFFSET ?`
+      params.push(offset)
     }
 
     return { sql, params }
@@ -582,11 +628,13 @@ export class SQLiteMemoryStore implements IMemoryStore {
   /**
    * Close database connection
    */
-  close(): void {
+  async close(): Promise<void> {
     if (this.db) {
+      await this.saveDatabase()
       this.db.close()
       this.db = null
     }
+    this.dbPromise = null
   }
 
   /**
@@ -595,12 +643,16 @@ export class SQLiteMemoryStore implements IMemoryStore {
   async getStats(): Promise<DatabaseStats> {
     const db = await this.getDatabase()
 
-    const countStmt = db.prepare('SELECT COUNT(*) as count FROM memory_entries')
-    const { count: totalEntries } = countStmt.get() as { count: number }
+    const results = db.exec('SELECT COUNT(*) as count FROM memory_entries')
+    const totalEntries = (results[0]?.values[0]?.[0] as number) || 0
 
-    const typeStmt = db.prepare('SELECT entry_type, COUNT(*) as count FROM memory_entries GROUP BY entry_type')
-    const typeRows = typeStmt.all() as { entry_type: string; count: number }[]
-    const entriesByType = Object.fromEntries(typeRows.map((r) => [r.entry_type, r.count]))
+    const typeResults = db.exec('SELECT entry_type, COUNT(*) as count FROM memory_entries GROUP BY entry_type')
+    const entriesByType: Record<string, number> = {}
+    if (typeResults.length > 0) {
+      for (const row of typeResults[0].values) {
+        entriesByType[row[0] as string] = row[1] as number
+      }
+    }
 
     // Get database file size
     const dbPath = this.resolvePath(this.config.path || '~/.config/polka-codes/memory.sqlite')

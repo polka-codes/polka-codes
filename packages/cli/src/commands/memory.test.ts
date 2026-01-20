@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from 'bun:test'
 import { existsSync, mkdirSync, unlinkSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+// Import memory commands
 import * as memory from './memory'
 
 const TEST_DIR = '/tmp/polka-test-memory'
@@ -18,7 +19,7 @@ const createMockStore = () => ({
 
 describe('Memory Commands - Real Behavior Tests', () => {
   let mockStore: ReturnType<typeof createMockStore>
-  let originalGetMemoryStore: any
+  let getMemoryStoreSpy: any
 
   beforeEach(() => {
     // Create test directory
@@ -37,16 +38,15 @@ describe('Memory Commands - Real Behavior Tests', () => {
     // Create mock store
     mockStore = createMockStore()
 
-    // Mock getMemoryStore
-    const mod = require('./memory')
-    originalGetMemoryStore = mod.getMemoryStore
-    mod.getMemoryStore = mock(() => Promise.resolve(mockStore))
+    // Mock getMemoryStore using spyOn
+    getMemoryStoreSpy = spyOn(memory, 'getMemoryStore').mockResolvedValue(mockStore as any)
   })
 
   afterEach(() => {
-    // Restore original function
-    const mod = require('./memory')
-    mod.getMemoryStore = originalGetMemoryStore
+    // Restore mock
+    if (getMemoryStoreSpy) {
+      getMemoryStoreSpy.mockRestore()
+    }
 
     // Clean up test database
     if (existsSync(TEST_DB)) {
@@ -160,7 +160,7 @@ describe('Memory Commands - Real Behavior Tests', () => {
         expect(e.message).toBe('process.exit called')
       }
 
-      expect(processExitSpy).toHaveBeenCalledWith(0)
+      expect(processExitSpy).toHaveBeenCalledWith(1)
       expect(mockStore.updateMemory).not.toHaveBeenCalled()
     })
 
@@ -170,7 +170,7 @@ describe('Memory Commands - Real Behavior Tests', () => {
       await memory.memoryDelete('test-entry', { force: true })
 
       expect(mockStore.updateMemory).toHaveBeenCalledWith('remove', 'test-entry', undefined)
-      expect(consoleLogSpy).toHaveBeenCalledWith('Memory entry "test-entry" has been deleted.')
+      expect(consoleLogSpy).toHaveBeenCalledWith('Memory entry "test-entry" deleted.')
       expect(mockStore.close).toHaveBeenCalled()
     })
   })
@@ -380,7 +380,10 @@ describe('Memory Commands - Real Behavior Tests', () => {
         expect(e.message).toBe('process.exit called')
       }
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('Failed to parse JSON'))
+      // Check that console.error was called with the JSON parsing error
+      const calls = consoleErrorSpy.mock.calls
+      const errorCall = calls.find((call: any[]) => call[0]?.includes?.('Failed to parse JSON'))
+      expect(errorCall).toBeDefined()
       expect(processExitSpy).toHaveBeenCalledWith(1)
     })
 

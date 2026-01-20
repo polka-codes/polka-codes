@@ -33,6 +33,11 @@ describe('planWorkflow', () => {
         ],
       },
       {
+        toolName: 'updateMemory',
+        args: expect.anything(),
+        returnValue: undefined,
+      },
+      {
         toolName: 'select',
         args: {
           message: 'What do you want to do?',
@@ -68,7 +73,11 @@ describe('planWorkflow', () => {
     const feedback = 'Add a test file.'
     const regeneratedPlan = '1. Create the component file.\n2. Create a test file.'
 
-    const { context, assert: proxyAssert } = createTestProxy([
+    const {
+      context,
+      assert: proxyAssert,
+      logger,
+    } = createTestProxy([
       {
         toolName: 'generateText',
         args: expect.anything(),
@@ -80,6 +89,11 @@ ${JSON.stringify({ plan: initialPlan })}
 \`\`\``,
           },
         ],
+      },
+      {
+        toolName: 'updateMemory',
+        args: expect.anything(),
+        returnValue: undefined,
       },
       {
         toolName: 'select',
@@ -109,12 +123,27 @@ ${JSON.stringify({ plan: regeneratedPlan })}
         ],
       },
       {
+        toolName: 'updateMemory',
+        args: expect.anything(),
+        returnValue: undefined,
+      },
+      {
         toolName: 'select',
         args: {
           message: 'What do you want to do?',
           choices: expect.anything(),
         },
-        returnValue: 'exit',
+        returnValue: 'save',
+      },
+      {
+        toolName: 'input',
+        args: expect.anything(),
+        returnValue: '.plans/test.md',
+      },
+      {
+        toolName: 'writeToFile',
+        args: expect.anything(),
+        returnValue: undefined,
       },
     ])
     assert = proxyAssert
@@ -122,6 +151,7 @@ ${JSON.stringify({ plan: regeneratedPlan })}
     const result = await planWorkflow({ task, mode: 'interactive', interactive: true, additionalTools: {} }, context)
 
     expect(result.plan).toBe(regeneratedPlan)
+    expect(logger.info).toHaveBeenCalledWith('Plan saved to .plans/test.md')
   })
 
   test('should exit the workflow', async () => {
@@ -140,6 +170,11 @@ ${JSON.stringify({ plan: generatedPlan })}
 \`\`\``,
           },
         ],
+      },
+      {
+        toolName: 'updateMemory',
+        args: expect.anything(),
+        returnValue: undefined,
       },
       {
         toolName: 'select',
@@ -173,6 +208,11 @@ ${JSON.stringify({ plan: generatedPlan })}
           },
         ],
       },
+      {
+        toolName: 'updateMemory',
+        args: expect.anything(),
+        returnValue: undefined,
+      },
     ])
     assert = proxyAssert
 
@@ -197,6 +237,11 @@ ${JSON.stringify({ plan: generatedPlan })}
 \`\`\``,
           },
         ],
+      },
+      {
+        toolName: 'updateMemory',
+        args: expect.anything(),
+        returnValue: undefined,
       },
       {
         toolName: 'input',
@@ -229,6 +274,11 @@ ${JSON.stringify({ plan: generatedPlan })}
 \`\`\``,
           },
         ],
+      },
+      {
+        toolName: 'updateMemory',
+        args: expect.anything(),
+        returnValue: undefined,
       },
       {
         toolName: 'input',
@@ -281,6 +331,11 @@ ${JSON.stringify({ plan: generatedPlan })}
         ],
       },
       {
+        toolName: 'updateMemory',
+        args: expect.anything(),
+        returnValue: undefined,
+      },
+      {
         toolName: 'select',
         args: {
           message: 'What do you want to do?',
@@ -315,6 +370,11 @@ ${JSON.stringify({ plan: initialPlan })}
         ],
       },
       {
+        toolName: 'updateMemory',
+        args: expect.anything(),
+        returnValue: undefined,
+      },
+      {
         toolName: 'select',
         args: {
           message: 'What do you want to do?',
@@ -333,6 +393,11 @@ ${JSON.stringify({ plan: regeneratedPlan })}
 \`\`\``,
           },
         ],
+      },
+      {
+        toolName: 'updateMemory',
+        args: expect.anything(),
+        returnValue: undefined,
       },
       {
         toolName: 'select',
@@ -375,6 +440,11 @@ ${JSON.stringify(generatedPlan)}
         toolName: 'readFile',
         args: { path: 'src/index.ts' },
         returnValue: fileContent,
+      },
+      {
+        toolName: 'updateMemory',
+        args: expect.anything(),
+        returnValue: undefined,
       },
     ]
 

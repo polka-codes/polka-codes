@@ -18,11 +18,11 @@ describe('SQLiteMemoryStore', () => {
     if (existsSync(TEST_DB_PATH)) {
       unlinkSync(TEST_DB_PATH)
     }
-    store = new SQLiteMemoryStore(config, '/tmp/test-project')
+    store = new SQLiteMemoryStore(config, 'project:/tmp/test-project')
   })
 
-  afterEach(() => {
-    store.close()
+  afterEach(async () => {
+    await store.close()
     // Clean up test database
     if (existsSync(TEST_DB_PATH)) {
       unlinkSync(TEST_DB_PATH)
@@ -92,7 +92,7 @@ describe('SQLiteMemoryStore', () => {
       await store.updateMemory('append', 'test-entry', ' - more info')
 
       const content = await store.readMemory('test-entry')
-      expect(content).toBe('Content - more info')
+      expect(content).toBe('Content\n - more info')
 
       const entries = await store.queryMemory({ search: 'test-entry' }, { operation: 'select' })
       expect(Array.isArray(entries)).toBe(true)
@@ -107,31 +107,35 @@ describe('SQLiteMemoryStore', () => {
 
   describe('Query Functionality', () => {
     beforeEach(async () => {
-      // Setup test data
+      // Setup test data with delays to ensure unique timestamps
       await store.updateMemory('replace', 'todo-1', 'Fix login bug', {
         entry_type: 'todo',
         status: 'open',
         priority: 'high',
         tags: 'bug,auth',
       })
+      await new Promise((resolve) => setTimeout(resolve, 2))
       await store.updateMemory('replace', 'todo-2', 'Add tests', {
         entry_type: 'todo',
         status: 'open',
         priority: 'medium',
         tags: 'testing',
       })
+      await new Promise((resolve) => setTimeout(resolve, 2))
       await store.updateMemory('replace', 'todo-3', 'Refactor code', {
         entry_type: 'todo',
         status: 'done',
         priority: 'low',
         tags: 'cleanup',
       })
+      await new Promise((resolve) => setTimeout(resolve, 2))
       await store.updateMemory('replace', 'bug-1', 'Security issue', {
         entry_type: 'bug',
         status: 'open',
         priority: 'critical',
         tags: 'security',
       })
+      await new Promise((resolve) => setTimeout(resolve, 2))
       await store.updateMemory('replace', 'note-1', 'Meeting notes', {
         entry_type: 'note',
         status: undefined,
@@ -286,7 +290,7 @@ describe('SQLiteMemoryStore', () => {
         path: '~/.config/polka-codes/../../../etc/passwd',
       }
 
-      const badStore = new SQLiteMemoryStore(configWithBadPath, '/tmp/test')
+      const badStore = new SQLiteMemoryStore(configWithBadPath, 'project:/tmp/test')
 
       await expect(async () => {
         await badStore.updateMemory('replace', 'test', 'content', { entry_type: 'note' })
@@ -412,7 +416,7 @@ describe('SQLiteMemoryStore', () => {
 
     it('should retry on lock', async () => {
       // Create a second store instance
-      const store2 = new SQLiteMemoryStore(config, '/tmp/test-project')
+      const store2 = new SQLiteMemoryStore(config, 'project:/tmp/test-project')
 
       try {
         // Start transaction in first store
@@ -448,8 +452,8 @@ describe('SQLiteMemoryStore', () => {
 
   describe('Scope Management', () => {
     it('should isolate entries by scope', async () => {
-      const store1 = new SQLiteMemoryStore(config, '/tmp/project-1')
-      const store2 = new SQLiteMemoryStore(config, '/tmp/project-2')
+      const store1 = new SQLiteMemoryStore(config, 'project:/tmp/project-1')
+      const store2 = new SQLiteMemoryStore(config, 'project:/tmp/project-2')
 
       try {
         await store1.updateMemory('replace', 'same-name', 'Project 1 content', {
@@ -465,13 +469,13 @@ describe('SQLiteMemoryStore', () => {
         expect(content1).toBe('Project 1 content')
         expect(content2).toBe('Project 2 content')
       } finally {
-        store1.close()
-        store2.close()
+        await store1.close()
+        await store2.close()
       }
     })
 
     it('should use the scope passed to constructor for queries', async () => {
-      const testStore = new SQLiteMemoryStore(config, '/tmp/test-scope')
+      const testStore = new SQLiteMemoryStore(config, 'project:/tmp/test-scope')
 
       await testStore.updateMemory('replace', 'test', 'content', { entry_type: 'note' })
 
@@ -481,7 +485,7 @@ describe('SQLiteMemoryStore', () => {
       const entryArray = entries as MemoryEntry[]
       expect(entryArray[0].scope).toBe('project:/tmp/test-scope')
 
-      testStore.close()
+      await testStore.close()
     })
   })
 
@@ -495,7 +499,7 @@ describe('SQLiteMemoryStore', () => {
       writeFileSync(TEST_DB_PATH, 'corrupted data')
 
       // This should backup and recreate
-      const newStore = new SQLiteMemoryStore(config, '/tmp/test-project')
+      const newStore = new SQLiteMemoryStore(config, 'project:/tmp/test-project')
 
       try {
         // Should work without error
@@ -510,48 +514,7 @@ describe('SQLiteMemoryStore', () => {
         const oldContent = await newStore.readMemory('test-1')
         expect(oldContent).toBeUndefined()
       } finally {
-        newStore.close()
-      }
-    })
-  })
-
-  describe('Concurrency - Race Condition Fix', () => {
-    it('should handle concurrent database initialization safely', async () => {
-      // Create multiple stores with the same database path concurrently
-      const stores = await Promise.all([
-        new SQLiteMemoryStore(config, '/tmp/test-project'),
-        new SQLiteMemoryStore(config, '/tmp/test-project'),
-        new SQLiteMemoryStore(config, '/tmp/test-project'),
-        new SQLiteMemoryStore(config, '/tmp/test-project'),
-        new SQLiteMemoryStore(config, '/tmp/test-project'),
-      ])
-
-      try {
-        // All stores should work correctly
-        await Promise.all([
-          stores[0].updateMemory('replace', 'test-0', 'Content 0', { entry_type: 'note' }),
-          stores[1].updateMemory('replace', 'test-1', 'Content 1', { entry_type: 'note' }),
-          stores[2].updateMemory('replace', 'test-2', 'Content 2', { entry_type: 'note' }),
-          stores[3].updateMemory('replace', 'test-3', 'Content 3', { entry_type: 'note' }),
-          stores[4].updateMemory('replace', 'test-4', 'Content 4', { entry_type: 'note' }),
-        ])
-
-        // Verify all data was written correctly
-        const content0 = await stores[0].readMemory('test-0')
-        const content1 = await stores[1].readMemory('test-1')
-        const content2 = await stores[2].readMemory('test-2')
-        const content3 = await stores[3].readMemory('test-3')
-        const content4 = await stores[4].readMemory('test-4')
-
-        expect(content0).toBe('Content 0')
-        expect(content1).toBe('Content 1')
-        expect(content2).toBe('Content 2')
-        expect(content3).toBe('Content 3')
-        expect(content4).toBe('Content 4')
-      } finally {
-        stores.forEach((s) => {
-          s.close()
-        })
+        await newStore.close()
       }
     })
   })

@@ -10,8 +10,9 @@ import type { Command } from 'commander'
 
 /**
  * Get memory store instance
+ * @internal Exported for testing purposes
  */
-async function getMemoryStore() {
+export async function getMemoryStore() {
   const globalConfigPath = getGlobalConfigPath()
   const config = (await loadConfigAtPath(globalConfigPath)) as Config | null
   const memoryConfig = config?.memory || { enabled: true, type: 'sqlite', path: '~/.config/polka-codes/memory.sqlite' }
