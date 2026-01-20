@@ -226,7 +226,8 @@ export class SQLiteMemoryStore implements IMemoryStore {
     const data = this.db.export()
 
     // Write to temporary file first, then atomically rename
-    await writeFile(tempPath, data)
+    // Use mode 0o600 to restrict file access to owner only (contains potentially sensitive data)
+    await writeFile(tempPath, data, { mode: 0o600 })
     await rename(tempPath, dbPath)
   }
 
@@ -658,10 +659,12 @@ export class SQLiteMemoryStore implements IMemoryStore {
         if (!trimmed) {
           throw new Error('Tags cannot be empty')
         }
-        // Use comma-wrapped matching for precise tag filtering
+        // Escape special LIKE characters (\, _, %) for exact matching
+        const escaped = trimmed.replace(/[\\_%]/g, '\\$&')
+        // Use comma-wrapped matching for precise tag filtering with ESCAPE clause
         // Matches: "tag", "tag,other", "other,tag", "other,tag,other"
-        conditions.push(`(tags = ? OR tags LIKE ? OR tags LIKE ? OR tags LIKE ?)`)
-        params.push(trimmed, `${trimmed},%`, `%,${trimmed}`, `%,${trimmed},%`)
+        conditions.push(`(tags = ? OR tags LIKE ? ESCAPE '\\' OR tags LIKE ? ESCAPE '\\' OR tags LIKE ? ESCAPE '\\')`)
+        params.push(trimmed, `${escaped},%`, `%,${escaped}`, `%,${escaped},%`)
       }
     }
 
@@ -669,7 +672,8 @@ export class SQLiteMemoryStore implements IMemoryStore {
     if (query.search) {
       const searchTerm = query.search.trim()
       // For LIKE queries, we need to include the wildcards in the parameter value
-      conditions.push(`(content LIKE ? OR name LIKE ?)`)
+      // Also escape special LIKE characters for literal matching
+      conditions.push(`(content LIKE ? ESCAPE '\\' OR name LIKE ? ESCAPE '\\')`)
       const searchPattern = `%${searchTerm.replace(/[\\_%]/g, '\\$&')}%`
       params.push(searchPattern, searchPattern)
     }

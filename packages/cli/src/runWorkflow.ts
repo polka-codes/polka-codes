@@ -122,9 +122,10 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
   try {
     const globalConfigPath = getGlobalConfigPath()
     const globalConfig = (await loadConfigAtPath(globalConfigPath)) as { memory?: { enabled: boolean; type: string; path?: string } } | null
-    const memoryConfig = globalConfig?.memory
+    // Use same default configuration as commands/memory.ts for consistency
+    const memoryConfig = globalConfig?.memory || { enabled: true, type: 'sqlite', path: '~/.config/polka-codes/memory.sqlite' }
 
-    if (memoryConfig?.enabled && memoryConfig.type === 'sqlite') {
+    if (memoryConfig.enabled && memoryConfig.type === 'sqlite') {
       // Determine project scope using shared utility
       const cwd = process.cwd()
       const scope = detectProjectScope(cwd)
