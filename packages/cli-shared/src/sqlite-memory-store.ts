@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks'
 import { randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
@@ -85,6 +86,9 @@ async function getSqlJs(): Promise<SqlJsStatic> {
  *
  * Uses sql.js (WebAssembly port of SQLite) for consistent behavior across all runtimes.
  */
+// AsyncLocalStorage for tracking transaction owner across reentrant calls
+const transactionOwnerStorage = new AsyncLocalStorage<symbol>()
+
 export class SQLiteMemoryStore implements IMemoryStore {
   private db: Database | null = null
   private dbPromise: Promise<Database> | null = null
@@ -92,7 +96,6 @@ export class SQLiteMemoryStore implements IMemoryStore {
   private currentScope: string
   private inTransaction = false // Track if we're in a transaction
   private transactionMutex = new ReentrantMutex() // Serialize transactions
-  private currentTransactionOwner: symbol | null = null // Track current transaction for reentrancy
 
   // Whitelists for validation
   private static readonly SORT_COLUMNS = {
@@ -315,47 +318,48 @@ export class SQLiteMemoryStore implements IMemoryStore {
    * Uses Mutex to serialize concurrent transaction calls for safety
    */
   async transaction<T>(callback: () => Promise<T>, _options: { timeout?: number; retries?: number } = {}): Promise<T> {
-    // Create a unique owner for this transaction attempt
-    const owner = Symbol('transaction')
+    // Get or create owner symbol for this transaction context
+    let owner = transactionOwnerStorage.getStore()
+    if (!owner) {
+      owner = Symbol('transaction')
+    }
 
-    // Check if we should acquire the mutex (only if not already in transaction)
-    const shouldAcquireMutex = !this.inTransaction
-    const release = shouldAcquireMutex ? await this.transactionMutex.acquire(owner) : () => {}
+    // Always acquire the mutex to serialize concurrent calls
+    const release = await this.transactionMutex.acquire(owner)
 
-    try {
-      const db = await this.getDatabase()
-
-      // sql.js is synchronous, so we use explicit transaction control
-      const shouldBegin = !this.inTransaction
+    // Run callback in AsyncLocalStorage context to enable reentrancy
+    return transactionOwnerStorage.run(owner, async () => {
       try {
-        if (shouldBegin) {
-          this.inTransaction = true
-          this.currentTransactionOwner = owner
-          db.run('BEGIN TRANSACTION')
+        const db = await this.getDatabase()
+
+        // sql.js is synchronous, so we use explicit transaction control
+        const shouldBegin = !this.inTransaction
+        try {
+          if (shouldBegin) {
+            this.inTransaction = true
+            db.run('BEGIN TRANSACTION')
+          }
+          const result = await callback()
+          if (shouldBegin) {
+            db.run('COMMIT')
+            this.inTransaction = false
+            // Save after successful transaction
+            await this.saveDatabase()
+          }
+          return result
+        } catch (error) {
+          // Only rollback if we're still in a transaction (saveDatabase could have failed after COMMIT)
+          if (this.inTransaction) {
+            db.run('ROLLBACK')
+            this.inTransaction = false
+          }
+          throw error
         }
-        const result = await callback()
-        if (shouldBegin) {
-          db.run('COMMIT')
-          this.inTransaction = false
-          this.currentTransactionOwner = null
-          // Save after successful transaction
-          await this.saveDatabase()
-        }
-        return result
-      } catch (error) {
-        if (shouldBegin) {
-          db.run('ROLLBACK')
-          this.inTransaction = false
-          this.currentTransactionOwner = null
-        }
-        throw error
-      }
-    } finally {
-      // Always release the mutex lock if we acquired it
-      if (shouldAcquireMutex && release) {
+      } finally {
+        // Always release the mutex lock
         release()
       }
-    }
+    })
   }
 
   /**
