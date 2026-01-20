@@ -154,24 +154,18 @@ export async function memoryRename(oldName: string, newName: string) {
   const store = await getMemoryStore()
 
   try {
-    // Query all entries and filter for exact name match
-    // Note: queryMemory doesn't support exact name matching, so we need to filter results
-    const allEntries = await store.queryMemory({}, { operation: 'select' })
-    if (!Array.isArray(allEntries)) {
-      console.error('Failed to query memory entries.')
-      process.exit(1)
-    }
-
-    // Find the exact match for oldName
-    const oldEntry = allEntries.find((entry) => entry.name === oldName)
-    if (!oldEntry) {
+    // Query for old entry by exact name
+    const oldEntries = await store.queryMemory({ name: oldName }, { operation: 'select' })
+    if (!Array.isArray(oldEntries) || oldEntries.length === 0) {
       console.error(`Memory entry "${oldName}" not found.`)
       process.exit(1)
     }
 
-    // Check if new name already exists (exact match)
-    const newEntryExists = allEntries.some((entry) => entry.name === newName)
-    if (newEntryExists) {
+    const oldEntry = oldEntries[0]
+
+    // Check if new name already exists by exact name match
+    const newEntries = await store.queryMemory({ name: newName }, { operation: 'select' })
+    if (Array.isArray(newEntries) && newEntries.length > 0) {
       console.error(`Memory entry "${newName}" already exists.`)
       process.exit(1)
     }

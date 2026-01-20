@@ -21,6 +21,7 @@ export type MemoryEntry = {
  */
 export type MemoryQuery = {
   scope?: 'global' | 'project' | 'auto'
+  name?: string // Exact name match
   type?: string
   status?: string
   priority?: string

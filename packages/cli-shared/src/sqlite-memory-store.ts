@@ -160,8 +160,15 @@ export class SQLiteMemoryStore implements IMemoryStore {
               }
             }
           } catch (error) {
-            console.error('[SQLiteMemoryStore] Failed to read database file:', error)
-            dbData = undefined
+            // Only ignore ENOENT (file not found) errors - for all other errors, rethrow
+            // to prevent data loss from overwriting an existing unreadable database
+            const errorCode = (error as NodeJS.ErrnoException)?.code
+            if (errorCode === 'ENOENT') {
+              // File was deleted between existsSync and readFile - treat as new database
+              dbData = undefined
+            } else {
+              throw new Error(`Failed to read database file at ${dbPath}: ${error instanceof Error ? error.message : String(error)}`)
+            }
           }
         }
 
@@ -608,6 +615,15 @@ export class SQLiteMemoryStore implements IMemoryStore {
     } else if (scope === 'project' || (!scope && this.currentScope !== 'global')) {
       conditions.push(`scope = ?`)
       params.push(this.currentScope)
+    }
+
+    // Name filter (exact match)
+    if (query.name) {
+      if (!query.name.trim()) {
+        throw new Error('Name cannot be empty')
+      }
+      conditions.push(`name = ?`)
+      params.push(query.name.trim())
     }
 
     // Type filter
