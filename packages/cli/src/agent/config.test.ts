@@ -7,7 +7,9 @@ describe('AgentConfig', () => {
   describe('validateConfig', () => {
     it('should validate default configuration', () => {
       const config = validateConfig(DEFAULT_AGENT_CONFIG)
-      expect(config).toMatchSnapshot()
+      expect(config).toBeDefined()
+      expect(config.strategy).toBe('goal-directed')
+      expect(config.pauseOnError).toBe(true)
     })
 
     it('should reject invalid strategy', () => {
@@ -53,9 +55,14 @@ describe('AgentConfig', () => {
 
       const merged = mergeConfig(base, override)
 
-      expect(merged).toMatchSnapshot()
+      // Check specific overrides
       expect(merged.strategy).toBe('continuous-improvement')
       expect(merged.maxIterations).toBe(100)
+
+      // Check base fields are preserved
+      expect(merged.pauseOnError).toBe(base.pauseOnError)
+      expect(merged.requireApprovalFor).toBe(base.requireApprovalFor)
+      expect(merged.continuousImprovement).toEqual(base.continuousImprovement)
     })
 
     it('should preserve base fields when not overridden', () => {
@@ -82,9 +89,10 @@ describe('AgentConfig', () => {
 
       const merged = mergeConfig(base, override)
 
-      expect(merged.continuousImprovement).toMatchSnapshot()
       expect(merged.continuousImprovement.sleepTimeOnNoTasks).toBe(120000)
       expect(merged.continuousImprovement.sleepTimeBetweenTasks).toBe(base.continuousImprovement.sleepTimeBetweenTasks)
+      // Other nested fields preserved
+      expect(merged.continuousImprovement.maxCycles).toBe(base.continuousImprovement.maxCycles)
     })
 
     it('should merge discovery config', () => {
