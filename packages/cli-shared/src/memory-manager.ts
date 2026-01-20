@@ -13,7 +13,7 @@ import type { DatabaseStats, IMemoryStore, MemoryEntry, MemoryOperation, MemoryQ
 export class MemoryManager implements IMemoryStore {
   private store: IMemoryStore
 
-  constructor(store: IMemoryStore, _cwd: string) {
+  constructor(store: IMemoryStore) {
     this.store = store
   }
 

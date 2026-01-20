@@ -143,7 +143,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
       const sqliteStore = new SQLiteMemoryStore({ enabled: true, type: 'sqlite', path: dbPath }, scope)
 
       // Wrap with MemoryManager for safety limits and consistent behavior
-      const memoryManager = new MemoryManager(sqliteStore, cwd)
+      const memoryManager = new MemoryManager(sqliteStore)
       memoryStore = memoryManager
 
       // Update options to pass the memory store to getProvider

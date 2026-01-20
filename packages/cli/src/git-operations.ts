@@ -69,7 +69,7 @@ export class GitOperations {
    */
   async getFileChanges(range?: string): Promise<FileChange[]> {
     if (range) {
-      validateGitRange(range, 'range')
+      validateGitRange(range)
     }
 
     const command = range ? `git --no-pager diff --name-status --no-color ${range}` : 'git --no-pager diff --name-status --no-color HEAD'
@@ -206,7 +206,7 @@ export class GitOperations {
    * Checkout a branch
    */
   async checkoutBranch(branchName: string): Promise<void> {
-    validateBranchName(branchName, 'branchName')
+    validateBranchName(branchName)
 
     const result = await this.tools.executeCommand({
       command: `git checkout ${branchName}`,
@@ -222,7 +222,7 @@ export class GitOperations {
    * Create and checkout a new branch
    */
   async createAndCheckoutBranch(branchName: string): Promise<void> {
-    validateBranchName(branchName, 'branchName')
+    validateBranchName(branchName)
 
     const result = await this.tools.executeCommand({
       command: `git checkout -b ${branchName}`,
@@ -291,7 +291,7 @@ export class GitOperations {
    */
   private async enrichWithNumStats(files: FileChange[], range?: string): Promise<void> {
     if (range) {
-      validateGitRange(range, 'range')
+      validateGitRange(range)
     }
 
     const command = range ? `git --no-pager diff --numstat --no-color ${range}` : 'git --no-pager diff --numstat --no-color HEAD'
@@ -319,7 +319,7 @@ export class GitOperations {
     try {
       // Validate each arg to prevent command injection
       for (const arg of args) {
-        validateFilePath(arg, 'git argument')
+        validateFilePath(arg)
       }
 
       // Quote each argument to handle spaces safely

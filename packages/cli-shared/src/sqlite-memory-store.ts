@@ -175,7 +175,7 @@ export class SQLiteMemoryStore implements IMemoryStore {
   private currentScope: string
   private inTransaction = false // Track if we're in a transaction
   private transactionMutex = new ReentrantMutex() // Serialize transactions
-  private fileLock: FileLock // Cross-process file lock
+  private fileLock!: FileLock // Cross-process file lock (initialized in getFileLock())
 
   /**
    * Get the configured database path, or default if not set

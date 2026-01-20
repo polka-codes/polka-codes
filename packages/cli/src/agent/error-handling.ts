@@ -48,22 +48,26 @@ export interface LogAndSuppressOptions {
 type LogStrategy = (logger: Logger, message: string, error?: Error, contextMessage?: string) => void
 
 /**
+ * Helper function to log message with optional stack trace
+ */
+function logWithStack(logger: Logger, level: 'error' | 'debug', message: string, error?: Error, contextMessage?: string): void {
+  logger[level](message)
+  if (error?.stack) {
+    logger.debug(`[${contextMessage}] Stack:`, error.stack)
+  }
+}
+
+/**
  * Log strategies for different log levels
  * Each strategy handles logging at its specific level with appropriate stack trace handling
  */
 const logStrategies: Record<string, LogStrategy> = {
   error: (logger, message, error, contextMessage) => {
-    logger.error(message)
-    if (error?.stack) {
-      logger.debug(`[${contextMessage}] Stack:`, error.stack)
-    }
+    logWithStack(logger, 'error', message, error, contextMessage)
   },
   warn: (logger, message) => logger.warn(message),
   debug: (logger, message, error, contextMessage) => {
-    logger.debug(message)
-    if (error?.stack) {
-      logger.debug(`[${contextMessage}] Stack:`, error.stack)
-    }
+    logWithStack(logger, 'debug', message, error, contextMessage)
   },
 }
 

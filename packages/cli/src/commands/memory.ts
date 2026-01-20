@@ -36,7 +36,7 @@ export async function getMemoryStore() {
   const sqliteStore = new SQLiteMemoryStore(memoryConfig, scope)
 
   // Wrap with MemoryManager for core logic
-  return new MemoryManager(sqliteStore, cwd)
+  return new MemoryManager(sqliteStore)
 }
 
 /**

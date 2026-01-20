@@ -51,11 +51,12 @@ const SIMPLIFIERS: SimplifierMap = {
 
   // listFiles has custom logic for maxCount default value
   listFiles: createCustomSimplifier((params) => {
+    const DEFAULT_MAX_COUNT = 2000
     const maxCount = params.maxCount
     return {
       path: params.path,
       recursive: params.recursive,
-      ...(maxCount !== 2000 && { maxCount }),
+      ...(maxCount !== DEFAULT_MAX_COUNT && { maxCount }),
     }
   }),
 }
