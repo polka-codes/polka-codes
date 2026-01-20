@@ -30,18 +30,9 @@ function findProjectRoot(dir: string): string | null {
     return null
   }
 
-  // Check for .git directory (most common project marker)
-  if (existsSync(resolve(dir, '.git'))) {
-    return dir
-  }
-
-  // Check for package.json
-  if (existsSync(resolve(dir, 'package.json'))) {
-    return dir
-  }
-
-  // Check for other project markers
-  const projectMarkers = [
+  // Common project markers in priority order
+  const primaryMarkers = ['.git', 'package.json']
+  const secondaryMarkers = [
     'Cargo.toml', // Rust
     'go.mod', // Go
     'pyproject.toml', // Python
@@ -50,19 +41,18 @@ function findProjectRoot(dir: string): string | null {
     'Gemfile', // Ruby
     'pom.xml', // Java Maven
     'build.gradle', // Java Gradle
-    'pom.xml', // Java
-    '*.csproj', // C#
   ]
 
-  for (const marker of projectMarkers) {
-    const markerPath = resolve(dir, marker)
-    // For glob patterns like *.csproj, we need to check if any matching file exists
-    if (marker.includes('*')) {
-      // For simplicity, skip glob patterns in this implementation
-      // In a more robust version, you could use glob to check
-      continue
+  // Check primary markers first
+  for (const marker of primaryMarkers) {
+    if (existsSync(resolve(dir, marker))) {
+      return dir
     }
-    if (existsSync(markerPath)) {
+  }
+
+  // Check secondary markers
+  for (const marker of secondaryMarkers) {
+    if (existsSync(resolve(dir, marker))) {
       return dir
     }
   }

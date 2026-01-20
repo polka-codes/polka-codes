@@ -2,56 +2,53 @@ import type { Logger, WorkflowTools } from '@polka-codes/core'
 import { quoteForShell } from './utils/shell'
 
 /**
- * Validate git branch/ref parameters to prevent command injection
- * Branch names cannot contain spaces or special shell characters
- */
-function validateBranchName(param: string, paramName: string): void {
-  // Git branch names: alphanumeric, dots, hyphens, underscores, forward slashes
-  // No spaces allowed in branch names
-  const safePattern = /^[a-zA-Z0-9._\-/]+$/
-
-  if (!safePattern.test(param)) {
-    throw new Error(`Invalid ${paramName}: contains unsafe characters. Branch names can only contain alphanumeric, ., -, _, and /.`)
-  }
-}
-
-/**
- * Validate git file path parameters to prevent command injection
- * File paths can contain spaces, so we'll quote them in commands
- */
-function validateFilePath(param: string, paramName: string): void {
-  // Allow: alphanumeric, dots, hyphens, underscores, forward slashes, spaces, and common symbols
-  // File paths can have spaces, but we'll need to quote them in shell commands
-  const safePattern = /^[a-zA-Z0-9._\-/@:~^ \s]+$/
-
-  if (!safePattern.test(param)) {
-    throw new Error(`Invalid ${paramName}: contains potentially unsafe characters.`)
-  }
-}
-
-/**
- * Validate git range parameters (commit hashes, refs, ranges)
+ * Create a validator function for git parameters
  *
- * SECURITY: Spaces are allowed to support range syntax like "HEAD~3..HEAD" or "origin/main..HEAD".
- * This could theoretically allow passing multiple arguments to git diff (e.g., "--option value").
- * However, we block `=` characters to prevent the most dangerous flags like `--output=<file>`.
- * The remaining git diff flags that accept space-separated values are low-risk.
+ * @param paramName - The name of the parameter for error messages
+ * @param pattern - Regex pattern to validate against
+ * @param errorMessage - Custom error message template
+ * @param additionalChecks - Optional additional validation checks
+ * @returns A validation function that throws if validation fails
+ *
+ * @example
+ * ```typescript
+ * const validateBranch = createValidator('branch', /^[a-zA-Z0-9._\-/]+$/, 'Branch names can only contain alphanumeric, ., -, _, and /.')
+ * validateBranch('main') // OK
+ * validateBranch('main feature') // Throws
+ * ```
  */
-function validateGitRange(param: string, paramName: string): void {
-  // Allow: alphanumeric, dots, hyphens, underscores, forward slashes, @, :, ~, ^, and spaces
-  // Ranges can include spaces (e.g., "HEAD..main")
-  // Block: `=` to prevent --option=value style flags
-  const safePattern = /^[a-zA-Z0-9._\-/@:~^ \s]+$/
-
-  if (!safePattern.test(param)) {
-    throw new Error(`Invalid ${paramName}: contains potentially unsafe characters.`)
-  }
-
-  // Double-check that = is not present (defensive in case regex changes)
-  if (param.includes('=')) {
-    throw new Error(`Invalid ${paramName}: '=' characters are not allowed for security reasons.`)
+function createValidator(
+  paramName: string,
+  pattern: RegExp,
+  errorMessage: string,
+  additionalChecks?: (value: string) => void,
+): (param: string) => void {
+  return (param: string) => {
+    if (!pattern.test(param)) {
+      throw new Error(`Invalid ${paramName}: ${errorMessage}`)
+    }
+    additionalChecks?.(param)
   }
 }
+
+/**
+ * Validators for git parameters
+ * Each validator checks for safe characters to prevent command injection
+ */
+const validateBranchName = createValidator(
+  'branch',
+  /^[a-zA-Z0-9._\-/]+$/,
+  'contains unsafe characters. Branch names can only contain alphanumeric, ., -, _, and /.',
+)
+
+const validateFilePath = createValidator('file path', /^[a-zA-Z0-9._\-/@:~^ \s]+$/, 'contains potentially unsafe characters.')
+
+const validateGitRange = createValidator('range', /^[a-zA-Z0-9._\-/@:~^ \s]+$/, 'contains potentially unsafe characters.', (param) => {
+  // Block `=` to prevent --option=value style flags
+  if (param.includes('=')) {
+    throw new Error("Invalid range: '=' characters are not allowed for security reasons.")
+  }
+})
 
 export interface FileChange {
   path: string
