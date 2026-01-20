@@ -14,6 +14,7 @@ import {
   SQLiteMemoryStore,
 } from '@polka-codes/cli-shared'
 import {
+  DEFAULT_MEMORY_CONFIG,
   type Logger,
   makeStepFn,
   resolveHomePath,
@@ -122,8 +123,8 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
   try {
     const globalConfigPath = getGlobalConfigPath()
     const globalConfig = (await loadConfigAtPath(globalConfigPath)) as { memory?: { enabled: boolean; type: string; path?: string } } | null
-    // Use same default configuration as commands/memory.ts for consistency
-    const memoryConfig = globalConfig?.memory || { enabled: true, type: 'sqlite', path: '~/.config/polka-codes/memory.sqlite' }
+    // Use same default configuration from core for consistency
+    const memoryConfig = globalConfig?.memory || DEFAULT_MEMORY_CONFIG
 
     if (memoryConfig.enabled && memoryConfig.type === 'sqlite') {
       // Determine project scope using shared utility
@@ -131,7 +132,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
       const scope = detectProjectScope(cwd)
 
       // Resolve db path
-      const dbPath = memoryConfig.path || '~/.config/polka-codes/memory.sqlite'
+      const dbPath = memoryConfig.path || DEFAULT_MEMORY_CONFIG.path
       const resolvedDbPath = resolveHomePath(dbPath)
 
       // Ensure database directory exists

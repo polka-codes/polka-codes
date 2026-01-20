@@ -2,8 +2,8 @@ import { AsyncLocalStorage } from 'node:async_hooks'
 import { randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
-import { dirname, resolve } from 'node:path'
 import type { DatabaseStats, IMemoryStore, MemoryConfig, MemoryEntry, MemoryOperation, MemoryQuery, QueryOptions } from '@polka-codes/core'
+import { DEFAULT_MEMORY_CONFIG, resolveHomePath } from '@polka-codes/core'
 import initSqlJs, { type Database, type SqlJsStatic } from 'sql.js'
 
 /**
@@ -97,13 +97,11 @@ export class SQLiteMemoryStore implements IMemoryStore {
   private inTransaction = false // Track if we're in a transaction
   private transactionMutex = new ReentrantMutex() // Serialize transactions
 
-  private static readonly DEFAULT_DB_PATH = '~/.config/polka-codes/memory.sqlite'
-
   /**
    * Get the configured database path, or default if not set
    */
   private getDbPath(): string {
-    return this.config.path || SQLiteMemoryStore.DEFAULT_DB_PATH
+    return this.config.path || DEFAULT_MEMORY_CONFIG.path
   }
 
   // Whitelists for validation
@@ -296,18 +294,11 @@ export class SQLiteMemoryStore implements IMemoryStore {
   }
 
   /**
-   * Resolve home directory in path
+   * Resolve home directory in path using shared utility
    */
   private resolvePath(path: string): string {
-    if (path.startsWith('~')) {
-      const home = process.env.HOME || process.env.USERPROFILE || '.'
-      if (home === '.') {
-        throw new Error('Cannot resolve home directory')
-      }
-      const expanded = `${home}${path.slice(1)}`
-      return resolve(expanded)
-    }
-    return resolve(path)
+    const resolved = resolveHomePath(path)
+    return resolve(resolved)
   }
 
   /**

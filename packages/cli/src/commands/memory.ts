@@ -10,8 +10,7 @@ import {
   MemoryManager,
   SQLiteMemoryStore,
 } from '@polka-codes/cli-shared'
-import type { MemoryQuery } from '@polka-codes/core'
-import { resolveHomePath } from '@polka-codes/core'
+import { DEFAULT_MEMORY_CONFIG, type MemoryQuery, resolveHomePath } from '@polka-codes/core'
 import type { Command } from 'commander'
 
 /**
@@ -21,7 +20,7 @@ import type { Command } from 'commander'
 export async function getMemoryStore() {
   const globalConfigPath = getGlobalConfigPath()
   const config = (await loadConfigAtPath(globalConfigPath)) as Config | null
-  const memoryConfig = config?.memory || { enabled: true, type: 'sqlite', path: '~/.config/polka-codes/memory.sqlite' }
+  const memoryConfig = config?.memory || DEFAULT_MEMORY_CONFIG
 
   if (!memoryConfig.enabled || memoryConfig.type === 'memory') {
     console.error('Memory store is not enabled. Enable it in config with memory.enabled: true')
