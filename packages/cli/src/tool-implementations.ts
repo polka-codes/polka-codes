@@ -334,6 +334,11 @@ async function generateText(input: { messages: JsonModelMessage[]; tools: ToolSe
   // Convert messages and apply cache control
   const messages = applyCacheControl(input.messages.map(fromJsonModelMessage), model.provider, model.modelId)
 
+  // Repetition detection constants
+  const REPETITION_DETECTION_WINDOW = 20
+  const REPETITION_CHECK_HALF = 10
+  const REPETITION_MIN_LENGTH = 20
+
   let lastError: Error | undefined
 
   for (let i = 0; i < retryCount; i++) {
@@ -357,14 +362,14 @@ async function generateText(input: { messages: JsonModelMessage[]; tools: ToolSe
           switch (chunk.type) {
             case 'text-delta':
               lastOutputs.push(chunk.text)
-              if (lastOutputs.length > 20) {
+              if (lastOutputs.length > REPETITION_DETECTION_WINDOW) {
                 lastOutputs.shift()
               }
-              if (lastOutputs.length === 20) {
-                const firstHalf = lastOutputs.slice(0, 10).join('')
-                const secondHalf = lastOutputs.slice(10).join('')
+              if (lastOutputs.length === REPETITION_DETECTION_WINDOW) {
+                const firstHalf = lastOutputs.slice(0, REPETITION_CHECK_HALF).join('')
+                const secondHalf = lastOutputs.slice(REPETITION_CHECK_HALF).join('')
                 if (firstHalf === secondHalf) {
-                  if (firstHalf.length > 20) {
+                  if (firstHalf.length > REPETITION_MIN_LENGTH) {
                     repetitionDetected = true
                     abortController.abort()
                   }
