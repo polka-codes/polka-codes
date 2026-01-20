@@ -461,7 +461,7 @@ export function registerMemoryCommands(program: Command) {
   memoryCmd
     .command('import <file>')
     .description('Import memory from JSON')
-    .option('--merge', 'Merge with existing data (skip conflicts)')
+    .option('--merge', 'Overwrite existing entries during import (default: skip existing entries)')
     .action(async (file, options) => {
       await memoryImport(file, options)
     })
