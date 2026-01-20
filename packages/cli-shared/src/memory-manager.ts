@@ -36,6 +36,9 @@ export class MemoryManager implements IMemoryStore {
       status?: string
       priority?: string
       tags?: string
+      created_at?: number
+      updated_at?: number
+      last_accessed?: number
     },
   ): Promise<void> {
     return this.store.updateMemory(operation, topic, content, metadata)
