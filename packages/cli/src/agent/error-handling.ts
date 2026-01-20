@@ -41,6 +41,32 @@ export interface LogAndSuppressOptions {
  * }
  * ```
  */
+
+/**
+ * Log strategy type
+ */
+type LogStrategy = (logger: Logger, message: string, error?: Error, contextMessage?: string) => void
+
+/**
+ * Log strategies for different log levels
+ * Each strategy handles logging at its specific level with appropriate stack trace handling
+ */
+const logStrategies: Record<string, LogStrategy> = {
+  error: (logger, message, error, contextMessage) => {
+    logger.error(message)
+    if (error?.stack) {
+      logger.debug(`[${contextMessage}] Stack:`, error.stack)
+    }
+  },
+  warn: (logger, message) => logger.warn(message),
+  debug: (logger, message, error, contextMessage) => {
+    logger.debug(message)
+    if (error?.stack) {
+      logger.debug(`[${contextMessage}] Stack:`, error.stack)
+    }
+  },
+}
+
 export function logAndSuppress(logger: Logger, error: unknown, contextMessage: string, options: LogAndSuppressOptions = {}): void {
   const { silent = false, level = 'debug', context = {} } = options
 
@@ -54,21 +80,11 @@ export function logAndSuppress(logger: Logger, error: unknown, contextMessage: s
   // Build log message
   const fullContext = `[${contextMessage}] ${message}`
   const contextString = Object.keys(context).length > 0 ? ` ${JSON.stringify(context)}` : ''
+  const logMessage = `${fullContext}${contextString}`
 
-  // Log at appropriate level
-  if (level === 'error') {
-    logger.error(`${fullContext}${contextString}`)
-    if (error instanceof Error && error.stack) {
-      logger.debug(`[${contextMessage}] Stack:`, error.stack)
-    }
-  } else if (level === 'warn') {
-    logger.warn(`${fullContext}${contextString}`)
-  } else {
-    logger.debug(`${fullContext}${contextString}`)
-    if (error instanceof Error && error.stack) {
-      logger.debug(`[${contextMessage}] Stack:`, error.stack)
-    }
-  }
+  // Use strategy pattern - select appropriate logging strategy
+  const strategy = logStrategies[level] ?? logStrategies.debug
+  strategy(logger, logMessage, error instanceof Error ? error : undefined, contextMessage)
 }
 
 /**
