@@ -288,13 +288,7 @@ export class SQLiteMemoryStore implements IMemoryStore {
         throw new Error('Cannot resolve home directory')
       }
       const expanded = `${home}${path.slice(1)}`
-      // Validate expanded path doesn't escape home directory
-      const resolved = resolve(expanded)
-      const sep = process.platform === 'win32' ? '\\' : '/'
-      if (resolved !== home && !resolved.startsWith(home + sep)) {
-        throw new Error(`Path escapes home directory: ${path}`)
-      }
-      return resolved
+      return resolve(expanded)
     }
     return resolve(path)
   }
@@ -345,7 +339,16 @@ export class SQLiteMemoryStore implements IMemoryStore {
             db.run('COMMIT')
             this.inTransaction = false
             // Save after successful transaction
-            await this.saveDatabase()
+            try {
+              await this.saveDatabase()
+            } catch (saveError) {
+              // If save fails after commit, close the database to prevent state divergence
+              // The in-memory db has committed data but disk is stale
+              // Close forces re-initialization which will load from disk on next operation
+              console.error('[SQLiteMemoryStore] Failed to save database after commit, closing:', saveError)
+              this.close()
+              throw saveError
+            }
           }
           return result
         } catch (error) {
@@ -411,10 +414,18 @@ export class SQLiteMemoryStore implements IMemoryStore {
       status?: string
       priority?: string
       tags?: string
+      created_at?: number
+      updated_at?: number
+      last_accessed?: number
     },
   ): Promise<void> {
     const scope = this.currentScope
     const now = this.now()
+
+    // Use provided timestamps or default to now
+    const createdAt = metadata?.created_at ?? now
+    const updatedAt = metadata?.updated_at ?? now
+    const lastAccessed = metadata?.last_accessed ?? now
 
     if (operation === 'remove') {
       const stmt = db.prepare('DELETE FROM memory_entries WHERE name = ? AND scope = ?')
@@ -423,7 +434,9 @@ export class SQLiteMemoryStore implements IMemoryStore {
       return
     }
 
-    const stmt = db.prepare('SELECT content, entry_type, status, priority, tags FROM memory_entries WHERE name = ? AND scope = ?')
+    const stmt = db.prepare(
+      'SELECT content, entry_type, status, priority, tags, created_at, updated_at, last_accessed FROM memory_entries WHERE name = ? AND scope = ?',
+    )
     stmt.bind([topic, scope])
 
     let existing: { content: string; entry_type: string; status: string | null; priority: string | null; tags: string | null } | undefined
@@ -497,9 +510,9 @@ export class SQLiteMemoryStore implements IMemoryStore {
       status ?? null,
       priority ?? null,
       tags ?? null,
-      now,
-      now,
-      now,
+      createdAt,
+      updatedAt,
+      lastAccessed,
     ])
     upsertStmt.free()
   }
@@ -516,6 +529,9 @@ export class SQLiteMemoryStore implements IMemoryStore {
       status?: string
       priority?: string
       tags?: string
+      created_at?: number
+      updated_at?: number
+      last_accessed?: number
     },
   ): Promise<void> {
     return this.transaction(async () => {

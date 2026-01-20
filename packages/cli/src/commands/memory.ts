@@ -345,11 +345,24 @@ export async function memoryImport(inputFile: string, options: { merge?: boolean
         const tags = entryObj.tags
         const validatedTags = typeof tags === 'string' ? tags : undefined
 
+        // Preserve timestamps if available
+        const createdAt = entryObj.created_at
+        const validatedCreatedAt = typeof createdAt === 'number' ? createdAt : undefined
+
+        const updatedAt = entryObj.updated_at
+        const validatedUpdatedAt = typeof updatedAt === 'number' ? updatedAt : undefined
+
+        const lastAccessed = entryObj.last_accessed
+        const validatedLastAccessed = typeof lastAccessed === 'number' ? lastAccessed : undefined
+
         await store.updateMemory('replace', entryName, entryObj.content as string, {
           entry_type: validatedEntryType,
           status: validatedStatus,
           priority: priority,
           tags: validatedTags,
+          created_at: validatedCreatedAt,
+          updated_at: validatedUpdatedAt,
+          last_accessed: validatedLastAccessed,
         })
 
         imported++

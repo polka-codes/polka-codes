@@ -286,6 +286,11 @@ export async function main(args: string[]) {
     await createPlan(userTask)
   }
 
+  // Maximum iterations before exiting (prevents infinite loops)
+  // Can be overridden via MAX_ITERATIONS environment variable
+  const maxIterations = parseInt(process.env.MAX_ITERATIONS || '100', 10)
+  console.log(`[Main] Maximum iterations set to: ${maxIterations}`)
+
   let i = 0
   while (true) {
     console.log(`\n[Loop] Iteration ${i}`)
@@ -316,6 +321,12 @@ export async function main(args: string[]) {
     }
 
     i++
+
+    // Check if we've reached max iterations
+    if (i >= maxIterations) {
+      console.log(`[Loop] Reached maximum iterations (${maxIterations}). Exiting gracefully.`)
+      break
+    }
   }
 
   console.log('Script completed successfully')
