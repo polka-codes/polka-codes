@@ -49,7 +49,10 @@ export class MemoryManager implements IMemoryStore {
     const finalQuery: MemoryQuery = {
       ...query,
     }
-    if (!options?.operation && !finalQuery.limit) {
+    // Only apply default limit for select operations, and if no explicit limit is set
+    // Skip for count, delete operations or when limit is explicitly set
+    const operation = options?.operation
+    if ((operation === 'select' || !operation) && !finalQuery.limit) {
       finalQuery.limit = 1000
     }
 

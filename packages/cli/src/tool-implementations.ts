@@ -473,28 +473,6 @@ async function getMemoryContext(_input: unknown, context: ToolCallContext) {
   return contextParts.join('\n')
 }
 
-async function readMemory(input: { topic?: string }, context: ToolCallContext): Promise<string> {
-  const provider: MemoryProvider = context.toolProvider
-  return (await provider.readMemory(input.topic)) ?? ''
-}
-
-async function listMemoryTopics(_input: unknown, context: ToolCallContext): Promise<string[]> {
-  const provider: MemoryProvider = context.toolProvider
-  return provider.listMemoryTopics()
-}
-
-async function updateMemory(
-  input:
-    | { operation: 'append'; topic?: string; content: string }
-    | { operation: 'replace'; topic?: string; content: string }
-    | { operation: 'remove'; topic?: string },
-  context: ToolCallContext,
-) {
-  const provider: MemoryProvider = context.toolProvider
-  const content = 'content' in input ? input.content : undefined
-  return provider.updateMemory(input.operation, input.topic, content)
-}
-
 async function listTodoItems(
   input: { id?: string | null; status?: 'open' | 'completed' | 'closed' | null },
   context: ToolCallContext,
@@ -613,9 +591,8 @@ const localToolHandlers = {
   invokeTool,
   taskEvent,
   getMemoryContext,
-  readMemory,
-  listMemoryTopics,
-  updateMemory,
+  // Note: readMemory, listMemoryTopics, updateMemory removed to use proper tool implementations
+  // from tools/ directory that return proper XML formatted responses
   listTodoItems,
   getTodoItem,
   updateTodoItem,
