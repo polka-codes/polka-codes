@@ -559,8 +559,21 @@ export class SQLiteMemoryStore implements IMemoryStore {
    * Query memory with filters
    */
   async queryMemory(query: MemoryQuery = {}, options: QueryOptions = {}): Promise<MemoryEntry[] | number> {
-    const db = await this.getDatabase()
+    // For delete operations, wrap in transaction to ensure persistence
+    if (options.operation === 'delete') {
+      return this.transaction(async () => {
+        const db = await this.getDatabase()
+        const { sql, params } = this.buildQuery(query)
+        const deleteSql = `DELETE FROM memory_entries WHERE id IN (SELECT id FROM (${sql}))`
+        const stmt = db.prepare(deleteSql)
+        stmt.bind(params)
+        stmt.step()
+        stmt.free()
+        return db.getRowsModified()
+      })
+    }
 
+    const db = await this.getDatabase()
     const { sql, params } = this.buildQuery(query)
 
     if (options.operation === 'count') {
@@ -574,15 +587,6 @@ export class SQLiteMemoryStore implements IMemoryStore {
       }
       stmt.free()
       return count
-    }
-
-    if (options.operation === 'delete') {
-      const deleteSql = `DELETE FROM memory_entries WHERE id IN (SELECT id FROM (${sql}))`
-      const stmt = db.prepare(deleteSql)
-      stmt.bind(params)
-      stmt.step()
-      stmt.free()
-      return db.getRowsModified()
     }
 
     const stmt = db.prepare(sql)

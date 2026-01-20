@@ -27,10 +27,15 @@ export const DEFAULT_MEMORY_CONFIG: MemoryConfig = {
 
 /**
  * Resolve home directory in path
+ * Supports both Unix (HOME) and Windows (USERPROFILE) environments
  */
 export function resolveHomePath(path: string): string {
   if (path.startsWith('~')) {
-    return `${process.env.HOME}${path.slice(1)}`
+    const home = process.env.HOME || process.env.USERPROFILE || '.'
+    if (home === '.') {
+      throw new Error('Cannot resolve home directory: HOME and USERPROFILE environment variables are not set')
+    }
+    return `${home}${path.slice(1)}`
   }
   return path
 }
