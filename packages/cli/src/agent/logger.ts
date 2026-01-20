@@ -36,7 +36,7 @@ export class AgentLogger {
 
     this.logger.info(`[${task.id}] ${message}`)
     // Fire and forget - don't await to avoid blocking
-    this.writeToFile(logEntry).catch(() => {})
+    void this.writeToFile(logEntry)
   }
 
   /**
@@ -54,7 +54,7 @@ export class AgentLogger {
     }
 
     this.logger.info(`[${workflow}] ${message}`)
-    this.writeToFile(logEntry).catch(() => {})
+    void this.writeToFile(logEntry)
   }
 
   /**
@@ -71,7 +71,7 @@ export class AgentLogger {
     }
 
     this.logger.info(`[MILESTONE] ${message}`)
-    this.writeToFile(logEntry).catch(() => {})
+    void this.writeToFile(logEntry)
   }
 
   /**
@@ -89,7 +89,7 @@ export class AgentLogger {
     }
 
     this.logger.info(`[Discovery] ${strategy}: found ${tasksFound} tasks`)
-    this.writeToFile(logEntry).catch(() => {})
+    void this.writeToFile(logEntry)
   }
 
   /**
@@ -107,7 +107,7 @@ export class AgentLogger {
     }
 
     this.logger.info(`[State] ${from} → ${to}${reason ? ` (${reason})` : ''}`)
-    this.writeToFile(logEntry).catch(() => {})
+    void this.writeToFile(logEntry)
   }
 
   /**
@@ -123,7 +123,7 @@ export class AgentLogger {
     }
 
     this.logger.debug(`[Metrics] Tasks: ${metrics.tasksCompleted}/${metrics.totalTasks}`)
-    this.writeToFile(logEntry).catch(() => {})
+    void this.writeToFile(logEntry)
   }
 
   /**
@@ -143,7 +143,7 @@ export class AgentLogger {
     }
 
     this.logger.info(`[Approval] ${approved ? '✓' : '✗'} ${task.title}`)
-    this.writeToFile(logEntry).catch(() => {})
+    void this.writeToFile(logEntry)
   }
 
   /**
@@ -162,7 +162,7 @@ export class AgentLogger {
     }
 
     this.logger.error(`[${context}] ${error.message}`)
-    this.writeToFile(logEntry).catch(() => {})
+    void this.writeToFile(logEntry)
   }
 
   /**
