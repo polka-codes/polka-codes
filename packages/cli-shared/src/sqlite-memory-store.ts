@@ -97,6 +97,15 @@ export class SQLiteMemoryStore implements IMemoryStore {
   private inTransaction = false // Track if we're in a transaction
   private transactionMutex = new ReentrantMutex() // Serialize transactions
 
+  private static readonly DEFAULT_DB_PATH = '~/.config/polka-codes/memory.sqlite'
+
+  /**
+   * Get the configured database path, or default if not set
+   */
+  private getDbPath(): string {
+    return this.config.path || SQLiteMemoryStore.DEFAULT_DB_PATH
+  }
+
   // Whitelists for validation
   private static readonly SORT_COLUMNS = {
     created: 'created_at',
@@ -127,7 +136,7 @@ export class SQLiteMemoryStore implements IMemoryStore {
         return this.db
       }
 
-      const dbPath = this.resolvePath(this.config.path || '~/.config/polka-codes/memory.sqlite')
+      const dbPath = this.resolvePath(this.getDbPath())
 
       try {
         // Create directory if needed
@@ -205,7 +214,7 @@ export class SQLiteMemoryStore implements IMemoryStore {
       return
     }
 
-    const dbPath = this.resolvePath(this.config.path || '~/.config/polka-codes/memory.sqlite')
+    const dbPath = this.resolvePath(this.getDbPath())
     const tempPath = `${dbPath}.tmp`
     const data = this.db.export()
 
@@ -346,7 +355,7 @@ export class SQLiteMemoryStore implements IMemoryStore {
               // The in-memory db has committed data but disk is stale
               // Close forces re-initialization which will load from disk on next operation
               console.error('[SQLiteMemoryStore] Failed to save database after commit, closing:', saveError)
-              this.close()
+              await this.close(true) // Skip save since it just failed
               throw saveError
             }
           }
@@ -434,9 +443,7 @@ export class SQLiteMemoryStore implements IMemoryStore {
       return
     }
 
-    const stmt = db.prepare(
-      'SELECT content, entry_type, status, priority, tags, created_at, updated_at, last_accessed FROM memory_entries WHERE name = ? AND scope = ?',
-    )
+    const stmt = db.prepare('SELECT content, entry_type, status, priority, tags FROM memory_entries WHERE name = ? AND scope = ?')
     stmt.bind([topic, scope])
 
     let existing: { content: string; entry_type: string; status: string | null; priority: string | null; tags: string | null } | undefined
@@ -723,12 +730,19 @@ export class SQLiteMemoryStore implements IMemoryStore {
 
   /**
    * Close database connection
+   * @param skipSave - If true, skip saving before close (useful when save already failed)
    */
-  async close(): Promise<void> {
+  async close(skipSave = false): Promise<void> {
     if (this.db) {
-      await this.saveDatabase()
-      this.db.close()
-      this.db = null
+      try {
+        if (!skipSave) {
+          await this.saveDatabase()
+        }
+      } finally {
+        // Always close and nullify, even if save fails
+        this.db.close()
+        this.db = null
+      }
     }
     this.dbPromise = null
   }
@@ -751,7 +765,7 @@ export class SQLiteMemoryStore implements IMemoryStore {
     }
 
     // Get database file size
-    const dbPath = this.resolvePath(this.config.path || '~/.config/polka-codes/memory.sqlite')
+    const dbPath = this.resolvePath(this.getDbPath())
     let databaseSize = 0
     try {
       const stats = await import('node:fs/promises').then((fs) => fs.stat(dbPath))
