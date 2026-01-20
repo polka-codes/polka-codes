@@ -381,32 +381,26 @@ export class SQLiteMemoryStore implements IMemoryStore {
 
   /**
    * Read memory by topic
+   * Note: Does NOT update last_accessed timestamp to avoid expensive disk writes on every read.
+   * The timestamp is updated when memory is modified through updateMemory operations.
    */
   async readMemory(topic: string): Promise<string | undefined> {
     const db = await this.getDatabase()
     const scope = this.currentScope
 
-    return this.transaction(async () => {
-      const stmt = db.prepare('SELECT content FROM memory_entries WHERE name = ? AND scope = ?')
-      stmt.bind([topic, scope])
+    const stmt = db.prepare('SELECT content FROM memory_entries WHERE name = ? AND scope = ?')
+    stmt.bind([topic, scope])
 
-      // Need to call step() to execute the query
-      if (stmt.step()) {
-        const row = stmt.getAsObject()
-        const content = row.content as string | undefined
-        stmt.free()
-
-        // Update last_accessed
-        const updateStmt = db.prepare('UPDATE memory_entries SET last_accessed = ? WHERE name = ? AND scope = ?')
-        updateStmt.run([this.now(), topic, scope])
-        updateStmt.free()
-
-        return content
-      }
-
+    // Need to call step() to execute the query
+    if (stmt.step()) {
+      const row = stmt.getAsObject()
+      const content = row.content as string | undefined
       stmt.free()
-      return undefined
-    })
+      return content
+    }
+
+    stmt.free()
+    return undefined
   }
 
   /**
