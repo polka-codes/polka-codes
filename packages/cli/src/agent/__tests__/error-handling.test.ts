@@ -2,93 +2,74 @@
 
 /**
  * Test to verify error classes preserve stack traces correctly
- *
- * Run with: npm test -- error-handling.test.ts
  */
 
-import { CommandExecutionError, FileSystemAccessError, JSONParseError } from '../error-handling.js'
+import { describe, expect, test } from 'bun:test'
+import { CommandExecutionError, FileSystemAccessError, JSONParseError, safeJSONParse } from '../error-handling.js'
 
-function testFileSystemError() {
-  console.log('\n=== Testing FileSystemAccessError ===')
+describe('Error Handling', () => {
+  describe('FileSystemAccessError', () => {
+    test('should create error with path and operation', () => {
+      const error = new FileSystemAccessError('/test/path.txt', 'read')
 
-  try {
-    throw new FileSystemAccessError('/test/path.txt', 'read')
-  } catch (error) {
-    if (error instanceof Error) {
-      console.log('Error name:', error.name)
-      console.log('Error message:', error.message)
-      console.log('\nStack trace:')
-      console.log(error.stack)
+      expect(error.name).toBe('FileSystemAccessError')
+      expect(error.message).toContain('/test/path.txt')
+      expect(error.message).toContain('read')
+      expect(error.stack).toContain('FileSystemAccessError')
+      expect(error instanceof FileSystemAccessError).toBe(true)
+    })
+  })
 
-      // Verify the stack trace contains the actual error class name
-      if (error.stack?.includes('FileSystemAccessError')) {
-        console.log('✅ Stack trace contains error class name')
-      } else {
-        console.log('❌ Stack trace does NOT contain error class name')
+  describe('CommandExecutionError', () => {
+    test('should create error with command, exit code, and stderr', () => {
+      const error = new CommandExecutionError('npm install', 1, 'Error: package not found')
+
+      expect(error.name).toBe('CommandExecutionError')
+      expect(error.message).toContain('npm install')
+      expect(error.message).toContain('exit code 1')
+      expect(error.stack).toContain('CommandExecutionError')
+      expect(error instanceof CommandExecutionError).toBe(true)
+    })
+  })
+
+  describe('JSONParseError', () => {
+    test('should create error with file path and content', () => {
+      const content = '{invalid json'
+      const originalError = new Error('Unexpected token')
+      const error = new JSONParseError('/test/config.json', originalError)
+
+      expect(error.name).toBe('JSONParseError')
+      expect(error.message).toContain('/test/config.json')
+      expect(error.cause).toBe(originalError)
+      expect(error.stack).toContain('JSONParseError')
+      expect(error instanceof JSONParseError).toBe(true)
+    })
+  })
+
+  describe('safeJSONParse', () => {
+    test('should include file path in error', () => {
+      const content = '{invalid json'
+
+      try {
+        safeJSONParse(content, '/config/test.json')
+        expect(true).toBe(false) // Should not reach here
+      } catch (error) {
+        expect(error).toBeInstanceOf(JSONParseError)
+        expect(error.message).toContain('/config/test.json')
+        expect(error.cause).toBeDefined()
       }
+    })
 
-      // Verify instanceof works
-      if (error instanceof FileSystemAccessError) {
-        console.log('✅ instanceof check works')
-      } else {
-        console.log('❌ instanceof check FAILED')
+    test('should include raw content in error', () => {
+      const content = '{invalid json'
+
+      try {
+        safeJSONParse(content, '/test.json')
+        expect(true).toBe(false) // Should not reach here
+      } catch (error) {
+        expect(error).toBeInstanceOf(JSONParseError)
+        expect(error.cause).toBeDefined()
       }
-    }
-  }
-}
-
-function testCommandExecutionError() {
-  console.log('\n=== Testing CommandExecutionError ===')
-
-  try {
-    throw new CommandExecutionError('npm install', 1, 'Error: package not found')
-  } catch (error) {
-    if (error instanceof Error) {
-      console.log('Error name:', error.name)
-      console.log('Error message:', error.message)
-      console.log('\nStack trace:')
-      console.log(error.stack)
-
-      if (error.stack?.includes('CommandExecutionError')) {
-        console.log('✅ Stack trace contains error class name')
-      } else {
-        console.log('❌ Stack trace does NOT contain error class name')
-      }
-    }
-  }
-}
-
-function testJSONParseError() {
-  console.log('\n=== Testing JSONParseError ===')
-
-  try {
-    throw new JSONParseError('/test/config.json', new Error('Unexpected token'))
-  } catch (error) {
-    if (error instanceof Error) {
-      console.log('Error name:', error.name)
-      console.log('Error message:', error.message)
-      console.log('Cause:', error.cause)
-      console.log('\nStack trace:')
-      console.log(error.stack)
-
-      if (error.stack?.includes('JSONParseError')) {
-        console.log('✅ Stack trace contains error class name')
-      } else {
-        console.log('❌ Stack trace does NOT contain error class name')
-      }
-
-      if (error.cause) {
-        console.log('✅ Cause chain preserved')
-      } else {
-        console.log('❌ Cause chain NOT preserved')
-      }
-    }
-  }
-}
-
-// Run all tests
-testFileSystemError()
-testCommandExecutionError()
-testJSONParseError()
-
-console.log('\n=== All tests complete ===\n')
+    })
+  })
+})

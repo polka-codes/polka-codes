@@ -340,23 +340,55 @@ describe('Memory Commands - Real Behavior Tests', () => {
         ]),
       )
       mockStore.readMemory.mockResolvedValue(undefined)
+      mockStore.batchUpdateMemory.mockResolvedValue(undefined)
       const consoleLogSpy = spyOn(console, 'log')
 
       await memory.memoryImport(importFile, {})
 
-      expect(mockStore.updateMemory).toHaveBeenCalledTimes(3)
-      expect(mockStore.updateMemory).toHaveBeenCalledWith('replace', 'entry1', 'Content', {
-        entry_type: 'note', // defaulted
-        status: undefined,
-        priority: undefined,
-        tags: undefined,
+      // Verify batchUpdateMemory is called with the validated entries
+      expect(mockStore.batchUpdateMemory).toHaveBeenCalledTimes(1)
+      const batchCallArg = mockStore.batchUpdateMemory.mock.calls[0][0]
+      expect(batchCallArg).toHaveLength(3)
+
+      // Check entry1 (entry_type defaulted to 'note')
+      expect(batchCallArg[0]).toEqual({
+        operation: 'replace',
+        name: 'entry1',
+        content: 'Content',
+        metadata: {
+          entry_type: 'note',
+          status: undefined,
+          priority: undefined,
+          tags: undefined,
+        },
       })
-      expect(mockStore.updateMemory).toHaveBeenCalledWith('replace', 'entry2', 'Content', {
-        entry_type: 'note',
-        status: undefined, // null coerced to undefined
-        priority: undefined,
-        tags: undefined,
+
+      // Check entry2 (status null -> undefined)
+      expect(batchCallArg[1]).toEqual({
+        operation: 'replace',
+        name: 'entry2',
+        content: 'Content',
+        metadata: {
+          entry_type: 'note',
+          status: undefined,
+          priority: undefined,
+          tags: undefined,
+        },
       })
+
+      // Check entry3 (tags boolean -> undefined)
+      expect(batchCallArg[2]).toEqual({
+        operation: 'replace',
+        name: 'entry3',
+        content: 'Content',
+        metadata: {
+          entry_type: 'note',
+          status: undefined,
+          priority: undefined,
+          tags: undefined,
+        },
+      })
+
       expect(consoleLogSpy).toHaveBeenCalledWith('Imported 3 entries, skipped 0 entries.')
       expect(mockStore.close).toHaveBeenCalled()
     })
@@ -365,17 +397,30 @@ describe('Memory Commands - Real Behavior Tests', () => {
       const importFile = join(TEST_DIR, 'invalid-priority.json')
       writeFileSync(importFile, JSON.stringify([{ name: 'test', content: 'content', priority: 'invalid-priority' }]))
       mockStore.readMemory.mockResolvedValue(undefined)
+      mockStore.batchUpdateMemory.mockResolvedValue(undefined)
       const consoleWarnSpy = spyOn(console, 'warn')
+      const consoleLogSpy = spyOn(console, 'log')
 
       await memory.memoryImport(importFile, {})
 
       expect(consoleWarnSpy).toHaveBeenCalledWith('Entry "test" has invalid priority "invalid-priority", defaulting to null')
-      expect(mockStore.updateMemory).toHaveBeenCalledWith('replace', 'test', 'content', {
-        entry_type: 'note',
-        status: undefined,
-        priority: undefined, // Invalid priority -> undefined
-        tags: undefined,
+
+      // Verify batchUpdateMemory is called with priority as undefined
+      const batchCallArg = mockStore.batchUpdateMemory.mock.calls[0][0]
+      expect(batchCallArg).toHaveLength(1)
+      expect(batchCallArg[0]).toEqual({
+        operation: 'replace',
+        name: 'test',
+        content: 'content',
+        metadata: {
+          entry_type: 'note',
+          status: undefined,
+          priority: undefined,
+          tags: undefined,
+        },
       })
+
+      expect(consoleLogSpy).toHaveBeenCalledWith('Imported 1 entries, skipped 0 entries.')
       expect(mockStore.close).toHaveBeenCalled()
     })
 
@@ -396,11 +441,24 @@ describe('Memory Commands - Real Behavior Tests', () => {
       const importFile = join(TEST_DIR, 'existing.json')
       writeFileSync(importFile, JSON.stringify([{ name: 'test', content: 'new content' }]))
       mockStore.readMemory.mockResolvedValue('old content' as any) // Entry exists
+      mockStore.batchUpdateMemory.mockResolvedValue(undefined)
       const consoleLogSpy = spyOn(console, 'log')
 
       await memory.memoryImport(importFile, { merge: true })
 
-      expect(mockStore.updateMemory).toHaveBeenCalledWith('replace', 'test', 'new content', expect.any(Object))
+      expect(mockStore.batchUpdateMemory).toHaveBeenCalledWith([
+        {
+          operation: 'replace',
+          name: 'test',
+          content: 'new content',
+          metadata: {
+            entry_type: 'note',
+            status: undefined,
+            priority: undefined,
+            tags: undefined,
+          },
+        },
+      ])
       expect(consoleLogSpy).toHaveBeenCalledWith('Imported 1 entries, skipped 0 entries.')
       expect(mockStore.close).toHaveBeenCalled()
     })

@@ -107,15 +107,6 @@ exports[`simplifyToolParameters edge cases should handle undefined params 1`] = 
 
 exports[`simplifyToolParameters edge cases should handle null params 1`] = `{}`;
 
-exports[`simplifyToolParameters edge cases should handle empty params object 1`] = `
-{
-  "includeIgnored": undefined,
-  "path": undefined,
-}
-`;
+exports[`simplifyToolParameters edge cases should handle empty params object 1`] = `{}`;
 
-exports[`simplifyToolParameters edge cases should handle params with missing expected fields 1`] = `
-{
-  "path": undefined,
-}
-`;
+exports[`simplifyToolParameters edge cases should handle params with missing expected fields 1`] = `{}`;
