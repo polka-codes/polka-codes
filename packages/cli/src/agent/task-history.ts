@@ -64,7 +64,16 @@ export class TaskHistory {
     const errors = this.#history.map((r) => Math.abs(r.estimatedTime - r.actualTime))
     const avgError = errors.reduce((sum, e) => sum + e, 0) / errors.length
 
-    const errorPercentages = this.#history.map((r) => Math.abs((r.estimatedTime - r.actualTime) / r.estimatedTime) * 100)
+    const errorPercentages = this.#history
+      .map((r) => {
+        // Handle division by zero for estimatedTime
+        if (r.estimatedTime === 0) {
+          // If both are 0, error is 0%. If estimated is 0 but actual > 0, treat as 100% error.
+          return r.actualTime === 0 ? 0 : 100
+        }
+        return Math.abs((r.estimatedTime - r.actualTime) / r.estimatedTime) * 100
+      })
+      .filter((e) => !isNaN(e))
     const avgErrorPercentage = errorPercentages.reduce((sum, e) => sum + e, 0) / errorPercentages.length
 
     return {

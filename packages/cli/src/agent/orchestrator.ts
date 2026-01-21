@@ -457,7 +457,9 @@ export class AutonomousAgent {
       }
 
       // Execute task
+      const taskStartTime = Date.now()
       const result = await this.#taskExecutor.execute(task, state)
+      const actualTime = (Date.now() - taskStartTime) / 60000 // Convert to minutes
 
       if (result.success) {
         this.#logger.info(`[Run] ✅ Task completed`)
@@ -490,9 +492,9 @@ export class AutonomousAgent {
           taskId: task.id,
           taskType: task.type,
           success: true,
-          duration: 0,
+          duration: Date.now() - taskStartTime,
           estimatedTime: task.estimatedTime,
-          actualTime: 0,
+          actualTime,
           timestamp: Date.now(),
         })
 

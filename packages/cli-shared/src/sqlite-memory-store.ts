@@ -43,6 +43,14 @@ class FileLock {
           try {
             const lockContent = await readFile(this.lockfilePath, 'utf-8')
             const lockData = JSON.parse(lockContent)
+
+            // Validate lock data structure
+            if (!lockData || typeof lockData.acquiredAt !== 'number' || lockData.acquiredAt <= 0) {
+              console.warn(`[FileLock] Lock file has invalid acquiredAt, treating as stale`)
+              await rename(this.lockfilePath, `${this.lockfilePath}.invalid.${Date.now()}`)
+              continue // Retry acquisition
+            }
+
             const lockAge = Date.now() - lockData.acquiredAt
 
             // If lock is older than timeout, assume stale and break it
