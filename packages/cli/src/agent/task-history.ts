@@ -6,18 +6,18 @@ import type { ExecutionRecord, TaskType } from './types'
  * Tracks task execution history
  */
 export class TaskHistory {
-  private history: ExecutionRecord[] = []
-  private historyFilePath: string
+  #history: ExecutionRecord[] = []
+  #historyFilePath: string
 
   constructor(stateDir: string) {
-    this.historyFilePath = path.join(stateDir, 'task-history.json')
+    this.#historyFilePath = path.join(stateDir, 'task-history.json')
   }
 
   /**
    * Add execution record
    */
   async add(record: ExecutionRecord): Promise<void> {
-    this.history.push(record)
+    this.#history.push(record)
     await this.save()
   }
 
@@ -25,14 +25,14 @@ export class TaskHistory {
    * Find records by task type
    */
   findByType(type: TaskType): ExecutionRecord[] {
-    return this.history.filter((r) => r.taskType === type)
+    return this.#history.filter((r) => r.taskType === type)
   }
 
   /**
    * Find recent failures
    */
   findFailed(limit: number = 10): ExecutionRecord[] {
-    return this.history
+    return this.#history
       .filter((r) => !r.success)
       .sort((a, b) => b.timestamp - a.timestamp)
       .slice(0, limit)
@@ -42,7 +42,7 @@ export class TaskHistory {
    * Find slow tasks
    */
   findSlow(limit: number = 10): ExecutionRecord[] {
-    return this.history.sort((a, b) => b.actualTime - a.actualTime).slice(0, limit)
+    return this.#history.sort((a, b) => b.actualTime - a.actualTime).slice(0, limit)
   }
 
   /**
@@ -53,7 +53,7 @@ export class TaskHistory {
     averageErrorPercentage: number
     totalTasks: number
   } {
-    if (this.history.length === 0) {
+    if (this.#history.length === 0) {
       return {
         averageError: 0,
         averageErrorPercentage: 0,
@@ -61,16 +61,16 @@ export class TaskHistory {
       }
     }
 
-    const errors = this.history.map((r) => Math.abs(r.estimatedTime - r.actualTime))
+    const errors = this.#history.map((r) => Math.abs(r.estimatedTime - r.actualTime))
     const avgError = errors.reduce((sum, e) => sum + e, 0) / errors.length
 
-    const errorPercentages = this.history.map((r) => Math.abs((r.estimatedTime - r.actualTime) / r.estimatedTime) * 100)
+    const errorPercentages = this.#history.map((r) => Math.abs((r.estimatedTime - r.actualTime) / r.estimatedTime) * 100)
     const _avgErrorPercentage = errorPercentages.reduce((sum, e) => sum + e, 0) / errorPercentages.length
 
     return {
       averageError: avgError,
       averageErrorPercentage: _avgErrorPercentage,
-      totalTasks: this.history.length,
+      totalTasks: this.#history.length,
     }
   }
 
@@ -78,11 +78,11 @@ export class TaskHistory {
    * Generate report
    */
   generateReport(): string {
-    const total = this.history.length
-    const successful = this.history.filter((r) => r.success).length
+    const total = this.#history.length
+    const successful = this.#history.filter((r) => r.success).length
     const failed = total - successful
 
-    const avgTime = total > 0 ? this.history.reduce((sum, r) => sum + r.actualTime, 0) / total : 0
+    const avgTime = total > 0 ? this.#history.reduce((sum, r) => sum + r.actualTime, 0) / total : 0
 
     const accuracy = this.getEstimationAccuracy()
 
@@ -101,9 +101,9 @@ Task History Report:
    */
   private async save(): Promise<void> {
     try {
-      const dir = path.dirname(this.historyFilePath)
+      const dir = path.dirname(this.#historyFilePath)
       await fs.mkdir(dir, { recursive: true })
-      await fs.writeFile(this.historyFilePath, JSON.stringify(this.history, null, 2))
+      await fs.writeFile(this.#historyFilePath, JSON.stringify(this.#history, null, 2))
     } catch (_error) {
       // Fail silently - history is not critical
     }
@@ -114,11 +114,11 @@ Task History Report:
    */
   async load(): Promise<void> {
     try {
-      const content = await fs.readFile(this.historyFilePath, 'utf-8')
-      this.history = JSON.parse(content)
+      const content = await fs.readFile(this.#historyFilePath, 'utf-8')
+      this.#history = JSON.parse(content)
     } catch {
       // No existing history
-      this.history = []
+      this.#history = []
     }
   }
 
@@ -126,9 +126,9 @@ Task History Report:
    * Clear history
    */
   async clear(): Promise<void> {
-    this.history = []
+    this.#history = []
     try {
-      await fs.unlink(this.historyFilePath)
+      await fs.unlink(this.#historyFilePath)
     } catch {
       // Ignore if file doesn't exist
     }

@@ -27,19 +27,42 @@ export interface ProgressOptions {
  * Progress tracker
  */
 export class Progress {
-  private startTime: number
-  private current: number
+  #startTime: number
+  #current: number
+  #options: ProgressOptions
 
-  constructor(private options: ProgressOptions) {
-    this.current = options.current || 0
-    this.startTime = Date.now()
+  constructor(options: ProgressOptions) {
+    this.#options = options
+    this.#current = options.current || 0
+    this.#startTime = Date.now()
+  }
+
+  /**
+   * Get current progress
+   */
+  get current(): number {
+    return this.#current
+  }
+
+  /**
+   * Get start time
+   */
+  get startTime(): number {
+    return this.#startTime
+  }
+
+  /**
+   * Get estimated time to completion
+   */
+  get eta(): string | null {
+    return this.calculateETA()
   }
 
   /**
    * Update progress
    */
   update(increment: number = 1): void {
-    this.current += increment
+    this.#current += increment
 
     if (process.stdout.isTTY) {
       this.render()
@@ -50,7 +73,7 @@ export class Progress {
    * Set current progress
    */
   set(value: number): void {
-    this.current = value
+    this.#current = value
 
     if (process.stdout.isTTY) {
       this.render()
@@ -68,9 +91,9 @@ export class Progress {
    * Render progress bar
    */
   private render(): void {
-    const { total, width = 40, label, showPercentage = true, showETA = false } = this.options
+    const { total, width = 40, label, showPercentage = true, showETA = false } = this.#options
 
-    const progressRatio = total > 0 ? this.current / total : 0
+    const progressRatio = total > 0 ? this.#current / total : 0
     const clampedRatio = Math.min(Math.max(progressRatio, 0), 1)
 
     // Calculate percentage
@@ -98,9 +121,9 @@ export class Progress {
       output += ` ${percentage.toFixed(1)}%`
     }
 
-    output += ` (${this.current}/${total})`
+    output += ` (${this.#current}/${total})`
 
-    if (showETA && this.current > 0) {
+    if (showETA && this.#current > 0) {
       const eta = this.calculateETA()
       if (eta) {
         output += ` ETA: ${eta}`
@@ -111,7 +134,7 @@ export class Progress {
     process.stdout.write(`\r${output}`)
 
     // Clear line if complete
-    if (this.current >= total) {
+    if (this.#current >= total) {
       process.stdout.write('\n')
     }
   }
@@ -120,11 +143,11 @@ export class Progress {
    * Calculate estimated time to completion
    */
   private calculateETA(): string | null {
-    if (this.current === 0) return null
+    if (this.#current === 0) return null
 
-    const elapsed = Date.now() - this.startTime
-    const rate = this.current / elapsed
-    const remaining = this.options.total - this.current
+    const elapsed = Date.now() - this.#startTime
+    const rate = this.#current / elapsed
+    const remaining = this.#options.total - this.#current
     const eta = remaining / rate
 
     return formatDuration(eta)
@@ -134,7 +157,7 @@ export class Progress {
    * Complete the progress bar
    */
   complete(): void {
-    this.current = this.options.total
+    this.#current = this.#options.total
     this.render()
   }
 }
@@ -143,24 +166,62 @@ export class Progress {
  * Simple spinner for operations without known progress
  */
 export class Spinner {
-  private frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
-  private frameIndex = 0
-  private intervalId?: NodeJS.Timeout
-  private isActive = false
+  #frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
+  #frameIndex = 0
+  #intervalId?: NodeJS.Timeout
+  #isActive = false
+  #message: string
 
-  constructor(private message: string) {}
+  constructor(message: string) {
+    this.#message = message
+  }
+
+  /**
+   * Get spinner message
+   */
+  get message(): string {
+    return this.#message
+  }
+
+  /**
+   * Check if spinner is active
+   */
+  get isActive(): boolean {
+    return this.#isActive
+  }
+
+  /**
+   * Get frames
+   */
+  get frames(): string[] {
+    return [...this.#frames]
+  }
+
+  /**
+   * Get current frame index
+   */
+  get frameIndex(): number {
+    return this.#frameIndex
+  }
+
+  /**
+   * Get interval ID
+   */
+  get intervalId(): NodeJS.Timeout | undefined {
+    return this.#intervalId
+  }
 
   /**
    * Start the spinner
    */
   start(): void {
-    if (!process.stdout.isTTY || this.isActive) return
+    if (!process.stdout.isTTY || this.#isActive) return
 
-    this.isActive = true
-    this.intervalId = setInterval(() => {
-      const frame = this.frames[this.frameIndex]
-      process.stdout.write(`\r${frame} ${this.message}`)
-      this.frameIndex = (this.frameIndex + 1) % this.frames.length
+    this.#isActive = true
+    this.#intervalId = setInterval(() => {
+      const frame = this.#frames[this.#frameIndex]
+      process.stdout.write(`\r${frame} ${this.#message}`)
+      this.#frameIndex = (this.#frameIndex + 1) % this.#frames.length
     }, 80)
   }
 
@@ -168,35 +229,35 @@ export class Spinner {
    * Update the spinner message
    */
   update(message: string): void {
-    this.message = message
+    this.#message = message
   }
 
   /**
    * Stop the spinner with success message
    */
   succeed(message?: string): void {
-    this.stop(message || `✓ ${this.message}`)
+    this.stop(message || `✓ ${this.#message}`)
   }
 
   /**
    * Stop the spinner with error message
    */
   fail(message?: string): void {
-    this.stop(message || `✗ ${this.message}`)
+    this.stop(message || `✗ ${this.#message}`)
   }
 
   /**
    * Stop the spinner
    */
   private stop(finalMessage: string): void {
-    if (!this.isActive) return
+    if (!this.#isActive) return
 
-    if (this.intervalId) {
-      clearInterval(this.intervalId)
-      this.intervalId = undefined
+    if (this.#intervalId) {
+      clearInterval(this.#intervalId)
+      this.#intervalId = undefined
     }
 
-    this.isActive = false
+    this.#isActive = false
     process.stdout.write(`\r${finalMessage}\n`)
   }
 }
@@ -225,14 +286,14 @@ export class Spinner {
  * like 'cli-progress' or 'multi-progress' which handles line coordination.
  */
 export class MultiProgress {
-  private progressBars: Map<string, Progress> = new Map()
+  #progressBars: Map<string, Progress> = new Map()
 
   /**
    * Create or get a progress bar
    */
   create(id: string, options: ProgressOptions): Progress {
     const progress = new Progress(options)
-    this.progressBars.set(id, progress)
+    this.#progressBars.set(id, progress)
     return progress
   }
 
@@ -240,7 +301,7 @@ export class MultiProgress {
    * Update a progress bar
    */
   update(id: string, increment: number = 1): void {
-    const progress = this.progressBars.get(id)
+    const progress = this.#progressBars.get(id)
     if (progress) {
       progress.update(increment)
     }
@@ -250,7 +311,7 @@ export class MultiProgress {
    * Complete a progress bar
    */
   complete(id: string): void {
-    const progress = this.progressBars.get(id)
+    const progress = this.#progressBars.get(id)
     if (progress) {
       progress.complete()
     }
@@ -260,7 +321,7 @@ export class MultiProgress {
    * Remove a progress bar
    */
   remove(id: string): void {
-    this.progressBars.delete(id)
+    this.#progressBars.delete(id)
   }
 }
 

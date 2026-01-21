@@ -13,17 +13,17 @@ describe('Progress', () => {
       const p = new Progress({ total: 100, current: 50 })
 
       // Access private current through update
-      const initialCurrent = (p as any).current
+      const initialCurrent = p.current
       expect(initialCurrent).toBe(50)
     })
 
     it('should start at 0 when current not specified', () => {
-      const initialCurrent = (progress as any).current
+      const initialCurrent = progress.current
       expect(initialCurrent).toBe(0)
     })
 
     it('should record start time', () => {
-      const startTime = (progress as any).startTime
+      const startTime = progress.startTime
 
       expect(startTime).toBeDefined()
       expect(startTime).toBeLessThanOrEqual(Date.now())
@@ -34,13 +34,13 @@ describe('Progress', () => {
     it('should increment progress by default', () => {
       progress.update()
 
-      expect((progress as any).current).toBe(1)
+      expect(progress.current).toBe(1)
     })
 
     it('should increment by custom amount', () => {
       progress.update(5)
 
-      expect((progress as any).current).toBe(5)
+      expect(progress.current).toBe(5)
     })
 
     it('should accumulate increments', () => {
@@ -48,13 +48,13 @@ describe('Progress', () => {
       progress.update(20)
       progress.update(5)
 
-      expect((progress as any).current).toBe(35)
+      expect(progress.current).toBe(35)
     })
 
     it('should not exceed total', () => {
       progress.update(150)
 
-      expect((progress as any).current).toBe(150) // Allows overshoot
+      expect(progress.current).toBe(150) // Allows overshoot
     })
   })
 
@@ -62,21 +62,21 @@ describe('Progress', () => {
     it('should set current value', () => {
       progress.set(42)
 
-      expect((progress as any).current).toBe(42)
+      expect(progress.current).toBe(42)
     })
 
     it('should overwrite current value', () => {
       progress.set(10)
       progress.set(50)
 
-      expect((progress as any).current).toBe(50)
+      expect(progress.current).toBe(50)
     })
 
     it('should allow setting to zero', () => {
       progress.set(25)
       progress.set(0)
 
-      expect((progress as any).current).toBe(0)
+      expect(progress.current).toBe(0)
     })
   })
 
@@ -86,7 +86,7 @@ describe('Progress', () => {
       progress.tick()
       progress.tick()
 
-      expect((progress as any).current).toBe(3)
+      expect(progress.current).toBe(3)
     })
   })
 
@@ -94,14 +94,14 @@ describe('Progress', () => {
     it('should set current to total', () => {
       progress.complete()
 
-      expect((progress as any).current).toBe(100)
+      expect(progress.current).toBe(100)
     })
 
     it('should work when partially complete', () => {
       progress.set(50)
       progress.complete()
 
-      expect((progress as any).current).toBe(100)
+      expect(progress.current).toBe(100)
     })
   })
 
@@ -131,20 +131,32 @@ describe('Progress', () => {
     })
   })
 
-  describe('calculateETA (private)', () => {
+  describe('calculateETA (via eta getter)', () => {
     it('should return null when current is 0', () => {
-      const eta = (progress as any).calculateETA()
+      const eta = progress.eta
 
       expect(eta).toBeNull()
     })
 
     it('should calculate ETA when progress exists', () => {
       progress.set(50)
-      // Give some time to pass
-      const _startTime = (progress as any).startTime
-      ;(progress as any).startTime = Date.now() - 1000 // 1 second ago
+      // Give some time to pass (mocking startTime is hard with private field, so we rely on real time or just check it returns string)
+      // We can't easily mock startTime anymore as it's private #startTime.
+      // But we can check if it returns a string or null.
+      // Since we just set 50, and startTime is now, elapsed is ~0.
+      // If elapsed is 0, rate is Infinity, eta is 0.
 
-      const eta = (progress as any).calculateETA()
+      const eta = progress.eta
+
+      // It might be null if elapsed is 0? No, code says:
+      // if (this.current === 0) return null
+      // const elapsed = Date.now() - this.startTime
+      // const rate = this.current / elapsed
+
+      // If elapsed is 0, rate is Infinity.
+      // remaining = 50.
+      // eta = 50 / Infinity = 0.
+      // formatDuration(0) -> "0s"
 
       expect(eta).toBeDefined()
       expect(typeof eta).toBe('string')
@@ -161,20 +173,20 @@ describe('Spinner', () => {
 
   describe('constructor', () => {
     it('should store message', () => {
-      expect((spinner as any).message).toBe('Loading...')
+      expect(spinner.message).toBe('Loading...')
     })
 
     it('should initialize frames array', () => {
-      expect((spinner as any).frames).toBeDefined()
-      expect((spinner as any).frames.length).toBeGreaterThan(0)
+      expect(spinner.frames).toBeDefined()
+      expect(spinner.frames.length).toBeGreaterThan(0)
     })
 
     it('should start at frame 0', () => {
-      expect((spinner as any).frameIndex).toBe(0)
+      expect(spinner.frameIndex).toBe(0)
     })
 
     it('should not be active initially', () => {
-      expect((spinner as any).isActive).toBe(false)
+      expect(spinner.isActive).toBe(false)
     })
   })
 
@@ -182,7 +194,7 @@ describe('Spinner', () => {
     it('should update message', () => {
       spinner.update('New message')
 
-      expect((spinner as any).message).toBe('New message')
+      expect(spinner.message).toBe('New message')
     })
 
     it('should allow multiple updates', () => {
@@ -190,7 +202,7 @@ describe('Spinner', () => {
       spinner.update('Step 2')
       spinner.update('Step 3')
 
-      expect((spinner as any).message).toBe('Step 3')
+      expect(spinner.message).toBe('Step 3')
     })
   })
 
@@ -202,11 +214,11 @@ describe('Spinner', () => {
 
       spinner.start()
 
-      expect((spinner as any).isActive).toBe(true)
+      expect(spinner.isActive).toBe(true)
 
       // Cleanup
-      if ((spinner as any).intervalId) {
-        clearInterval((spinner as any).intervalId)
+      if (spinner.intervalId) {
+        clearInterval(spinner.intervalId)
       }
       ;(process.stdout as any).isTTY = originalIsTTY
     })
@@ -217,7 +229,7 @@ describe('Spinner', () => {
 
       spinner.start()
 
-      expect((spinner as any).isActive).toBe(false)
+      expect(spinner.isActive).toBe(false)
 
       ;(process.stdout as any).isTTY = originalIsTTY
     })
@@ -227,10 +239,10 @@ describe('Spinner', () => {
       ;(process.stdout as any).isTTY = true
 
       spinner.start()
-      const firstIntervalId = (spinner as any).intervalId
+      const firstIntervalId = spinner.intervalId
       spinner.start()
 
-      expect((spinner as any).intervalId).toBe(firstIntervalId)
+      expect(spinner.intervalId).toBe(firstIntervalId)
 
       // Cleanup
       if (firstIntervalId) {
@@ -248,7 +260,7 @@ describe('Spinner', () => {
       spinner.start()
       spinner.succeed('Done!')
 
-      expect((spinner as any).isActive).toBe(false)
+      expect(spinner.isActive).toBe(false)
 
       ;(process.stdout as any).isTTY = originalIsTTY
     })
@@ -260,7 +272,7 @@ describe('Spinner', () => {
       spinner.start()
       spinner.succeed()
 
-      expect((spinner as any).isActive).toBe(false)
+      expect(spinner.isActive).toBe(false)
 
       ;(process.stdout as any).isTTY = originalIsTTY
     })
@@ -274,7 +286,7 @@ describe('Spinner', () => {
       spinner.start()
       spinner.fail('Error!')
 
-      expect((spinner as any).isActive).toBe(false)
+      expect(spinner.isActive).toBe(false)
 
       ;(process.stdout as any).isTTY = originalIsTTY
     })
@@ -286,40 +298,40 @@ describe('Spinner', () => {
       spinner.start()
       spinner.fail()
 
-      expect((spinner as any).isActive).toBe(false)
+      expect(spinner.isActive).toBe(false)
 
       ;(process.stdout as any).isTTY = originalIsTTY
     })
   })
 
-  describe('stop (private)', () => {
+  describe('stop (via succeed/fail)', () => {
     it('should clear interval when stopping', () => {
       const originalIsTTY = process.stdout.isTTY
       ;(process.stdout as any).isTTY = true
 
       spinner.start()
-      const _intervalId = (spinner as any).intervalId
+      const _intervalId = spinner.intervalId
 
       spinner.start() // Try to start again (will be ignored)
-      ;(spinner as any).stop('Stopped')
+      spinner.succeed('Stopped')
 
-      expect((spinner as any).intervalId).toBeUndefined()
-      expect((spinner as any).isActive).toBe(false)
+      expect(spinner.intervalId).toBeUndefined()
+      expect(spinner.isActive).toBe(false)
 
       ;(process.stdout as any).isTTY = originalIsTTY
     })
 
     it('should do nothing when not active', () => {
       // Should not throw
-      ;(spinner as any).stop('Test')
+      spinner.succeed('Test')
 
-      expect((spinner as any).isActive).toBe(false)
+      expect(spinner.isActive).toBe(false)
     })
   })
 
   describe('frames', () => {
     it('should have 10 different frames', () => {
-      const frames = (spinner as any).frames
+      const frames = spinner.frames
 
       expect(frames).toHaveLength(10)
       expect(frames[0]).toBe('⠋')

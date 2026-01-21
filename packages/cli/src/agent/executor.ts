@@ -12,14 +12,21 @@ import { invokeWorkflow } from './workflow-adapter'
  * - Manual task cancellation support
  */
 export class TaskExecutor {
-  private abortControllers: Map<string, AbortController> = new Map()
-  private taskTimeouts: Map<string, NodeJS.Timeout> = new Map()
+  #abortControllers: Map<string, AbortController> = new Map()
+  #taskTimeouts: Map<string, NodeJS.Timeout> = new Map()
+  #context: WorkflowContext
+  #logger: Logger
+  #defaultTimeoutMs: number
 
   constructor(
-    private context: WorkflowContext,
-    private logger: Logger,
-    private defaultTimeoutMs: number = 60 * 60 * 1000, // 60 minutes default
-  ) {}
+    context: WorkflowContext,
+    logger: Logger,
+    defaultTimeoutMs: number = 60 * 60 * 1000, // 60 minutes default
+  ) {
+    this.#context = context
+    this.#logger = logger
+    this.#defaultTimeoutMs = defaultTimeoutMs
+  }
 
   /**
    * Execute a task with timeout protection
@@ -27,23 +34,23 @@ export class TaskExecutor {
    * Uses AbortController to properly cancel the workflow if timeout occurs
    */
   async execute(task: Task, _state: AgentState, timeoutMs?: number): Promise<WorkflowExecutionResult> {
-    this.logger.info(`[Executor] Executing task ${task.id}: ${task.title}`)
+    this.#logger.info(`[Executor] Executing task ${task.id}: ${task.title}`)
 
     // Use provided timeout or default
-    const effectiveTimeout = timeoutMs ?? this.defaultTimeoutMs
+    const effectiveTimeout = timeoutMs ?? this.#defaultTimeoutMs
 
     try {
       // Execute with timeout and cancellation support
       const result = await this.executeTaskInternal(task, effectiveTimeout)
 
-      this.logger.info(`[Executor] Task ${task.id} completed`)
+      this.#logger.info(`[Executor] Task ${task.id} completed`)
       return result
     } catch (error) {
       // Enhanced error logging with context
       if (error instanceof TaskExecutionError) {
-        this.logger.error(`\n${error.getFormattedMessage()}`)
+        this.#logger.error(`\n${error.getFormattedMessage()}`)
       } else {
-        this.logger.error(`[Executor] Task ${task.id} failed`, error as Error)
+        this.#logger.error(`[Executor] Task ${task.id} failed`, error as Error)
       }
 
       return {
@@ -62,7 +69,7 @@ export class TaskExecutor {
   private async executeTaskInternal(task: Task, timeoutMs: number): Promise<WorkflowExecutionResult> {
     // Create AbortController for this task
     const abortController = new AbortController()
-    this.abortControllers.set(task.id, abortController)
+    this.#abortControllers.set(task.id, abortController)
 
     // Set up timeout
     const timeoutPromise = new Promise<never>((_, reject) => {
@@ -73,7 +80,7 @@ export class TaskExecutor {
         reject(new TaskExecutionError(task.id, reason))
       }, timeoutMs)
 
-      this.taskTimeouts.set(task.id, timeoutId)
+      this.#taskTimeouts.set(task.id, timeoutId)
     })
 
     try {
@@ -109,10 +116,10 @@ export class TaskExecutor {
       throw error
     } finally {
       // Cleanup timeout
-      const timeoutId = this.taskTimeouts.get(task.id)
+      const timeoutId = this.#taskTimeouts.get(task.id)
       if (timeoutId) {
         clearTimeout(timeoutId)
-        this.taskTimeouts.delete(task.id)
+        this.#taskTimeouts.delete(task.id)
       }
 
       // Remove from active controllers
@@ -121,7 +128,7 @@ export class TaskExecutor {
       // 2. If task timed out, timeout handler already aborted it
       // 3. If task was cancelled manually, cancel() method already aborted it
       // 4. The AbortController will be garbage collected when removed from map
-      this.abortControllers.delete(task.id)
+      this.#abortControllers.delete(task.id)
     }
   }
 
@@ -140,7 +147,7 @@ export class TaskExecutor {
       }
 
       // Use workflow adapter to invoke appropriate workflow with abort signal
-      const result = await invokeWorkflow(task.workflow, task.workflowInput, this.context, signal)
+      const result = await invokeWorkflow(task.workflow, task.workflowInput, this.#context, signal)
 
       return result
     } catch (error) {
@@ -176,21 +183,21 @@ export class TaskExecutor {
    * Aborts the task's workflow and clears its timeout
    */
   cancel(taskId: string): boolean {
-    const abortController = this.abortControllers.get(taskId)
-    const timeoutId = this.taskTimeouts.get(taskId)
+    const abortController = this.#abortControllers.get(taskId)
+    const timeoutId = this.#taskTimeouts.get(taskId)
 
     if (abortController) {
       // Abort the workflow with a reason for better debugging
       abortController.abort('Task cancelled manually')
-      this.abortControllers.delete(taskId)
+      this.#abortControllers.delete(taskId)
 
       // Clear the timeout
       if (timeoutId) {
         clearTimeout(timeoutId)
-        this.taskTimeouts.delete(taskId)
+        this.#taskTimeouts.delete(taskId)
       }
 
-      this.logger.info(`[Executor] Task ${taskId} cancelled`)
+      this.#logger.info(`[Executor] Task ${taskId} cancelled`)
       return true
     }
 
@@ -203,32 +210,32 @@ export class TaskExecutor {
    * Aborts all running workflows and clears all timeouts
    */
   cancelAll(): void {
-    this.logger.info(`[Executor] Cancelling all tasks (${this.abortControllers.size} running)`)
+    this.#logger.info(`[Executor] Cancelling all tasks (${this.#abortControllers.size} running)`)
 
     // Abort all controllers
-    for (const [, controller] of this.abortControllers) {
+    for (const [, controller] of this.#abortControllers) {
       controller.abort()
     }
-    this.abortControllers.clear()
+    this.#abortControllers.clear()
 
     // Clear all timeouts
-    for (const timeoutId of this.taskTimeouts.values()) {
+    for (const timeoutId of this.#taskTimeouts.values()) {
       clearTimeout(timeoutId)
     }
-    this.taskTimeouts.clear()
+    this.#taskTimeouts.clear()
   }
 
   /**
    * Check if a task is currently running
    */
   isRunning(taskId: string): boolean {
-    return this.abortControllers.has(taskId)
+    return this.#abortControllers.has(taskId)
   }
 
   /**
    * Get number of currently running tasks
    */
   getRunningCount(): number {
-    return this.abortControllers.size
+    return this.#abortControllers.size
   }
 }

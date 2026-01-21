@@ -68,38 +68,37 @@ export const DEFAULT_DEBUG_CONFIG: DebugLoggerConfig = {
  * Debug logger for structured debugging
  */
 export class DebugLogger {
-  private config: DebugLoggerConfig
-  private enabledCategories: Set<DebugCategory>
-  private debugBuffer: string[] = []
+  #config: DebugLoggerConfig
+  #enabledCategories: Set<DebugCategory>
+  #debugBuffer: string[] = []
+  #baseLogger: Logger
 
-  constructor(
-    private baseLogger: Logger,
-    config: Partial<DebugLoggerConfig> = {},
-  ) {
-    this.config = { ...DEFAULT_DEBUG_CONFIG, ...config }
-    this.enabledCategories = new Set(this.config.categories)
+  constructor(baseLogger: Logger, config: Partial<DebugLoggerConfig> = {}) {
+    this.#baseLogger = baseLogger
+    this.#config = { ...DEFAULT_DEBUG_CONFIG, ...config }
+    this.#enabledCategories = new Set(this.#config.categories)
   }
 
   /**
    * Update debug configuration
    */
   updateConfig(config: Partial<DebugLoggerConfig>): void {
-    this.config = { ...this.config, ...config }
-    this.enabledCategories = new Set(this.config.categories)
+    this.#config = { ...this.#config, ...config }
+    this.#enabledCategories = new Set(this.#config.categories)
   }
 
   /**
    * Check if a category is enabled for debugging
    */
   isCategoryEnabled(category: DebugCategory): boolean {
-    return this.config.level > DebugLevel.NONE && (this.enabledCategories.has(DebugCategory.ALL) || this.enabledCategories.has(category))
+    return this.#config.level > DebugLevel.NONE && (this.#enabledCategories.has(DebugCategory.ALL) || this.#enabledCategories.has(category))
   }
 
   /**
    * Log at basic level
    */
   basic(category: DebugCategory, message: string, data?: any): void {
-    if (this.config.level < DebugLevel.BASIC) return
+    if (this.#config.level < DebugLevel.BASIC) return
     if (!this.isCategoryEnabled(category)) return
 
     this.log('DEBUG', category, message, data)
@@ -109,7 +108,7 @@ export class DebugLogger {
    * Log at verbose level
    */
   verbose(category: DebugCategory, message: string, data?: any): void {
-    if (this.config.level < DebugLevel.VERBOSE) return
+    if (this.#config.level < DebugLevel.VERBOSE) return
     if (!this.isCategoryEnabled(category)) return
 
     this.log('VERBOSE', category, message, data)
@@ -119,7 +118,7 @@ export class DebugLogger {
    * Log at trace level (most detailed)
    */
   trace(category: DebugCategory, message: string, data?: any): void {
-    if (this.config.level < DebugLevel.TRACE) return
+    if (this.#config.level < DebugLevel.TRACE) return
     if (!this.isCategoryEnabled(category)) return
 
     this.log('TRACE', category, message, data)
@@ -178,7 +177,7 @@ export class DebugLogger {
    * Internal log method
    */
   private log(level: string, category: DebugCategory, message: string, data?: any): void {
-    const timestamp = this.config.timestamps ? new Date().toISOString() : ''
+    const timestamp = this.#config.timestamps ? new Date().toISOString() : ''
     const categoryPrefix = `[${category}]`
     const levelPrefix = `[${level}]`
 
@@ -190,13 +189,13 @@ export class DebugLogger {
     }
 
     // Log to console
-    this.baseLogger.debug(logMessage)
+    this.#baseLogger.debug(logMessage)
 
     // Buffer for file output
-    this.debugBuffer.push(logMessage)
+    this.#debugBuffer.push(logMessage)
 
     // Flush if buffer gets too large
-    if (this.debugBuffer.length > 100) {
+    if (this.#debugBuffer.length > 100) {
       this.flush()
     }
   }
@@ -205,25 +204,25 @@ export class DebugLogger {
    * Flush debug buffer to file
    */
   async flush(): Promise<void> {
-    if (!this.config.outputFile || this.debugBuffer.length === 0) {
+    if (!this.#config.outputFile || this.#debugBuffer.length === 0) {
       return
     }
 
     try {
-      const content = `${this.debugBuffer.join('\n\n')}\n`
+      const content = `${this.#debugBuffer.join('\n\n')}\n`
 
       // Ensure directory exists
-      const dir = this.config.outputFile.split('/').slice(0, -1).join('/')
+      const dir = this.#config.outputFile.split('/').slice(0, -1).join('/')
       if (dir) {
         await mkdir(dir, { recursive: true })
       }
 
       // Append to file
-      await writeFile(this.config.outputFile, content, { flag: 'a' })
+      await writeFile(this.#config.outputFile, content, { flag: 'a' })
 
-      this.debugBuffer = []
+      this.#debugBuffer = []
     } catch (error) {
-      this.baseLogger.error(`[DebugLogger] Failed to write debug log: ${error}`)
+      this.#baseLogger.error(`[DebugLogger] Failed to write debug log: ${error}`)
     }
   }
 
@@ -239,33 +238,36 @@ export class DebugLogger {
  * Child debug logger for a specific category
  */
 export class DebugLoggerChild {
-  constructor(
-    private debugLogger: DebugLogger,
-    private category: DebugCategory,
-  ) {}
+  #debugLogger: DebugLogger
+  #category: DebugCategory
+
+  constructor(debugLogger: DebugLogger, category: DebugCategory) {
+    this.#debugLogger = debugLogger
+    this.#category = category
+  }
 
   basic(message: string, data?: any): void {
-    this.debugLogger.basic(this.category, message, data)
+    this.#debugLogger.basic(this.#category, message, data)
   }
 
   verbose(message: string, data?: any): void {
-    this.debugLogger.verbose(this.category, message, data)
+    this.#debugLogger.verbose(this.#category, message, data)
   }
 
   trace(message: string, data?: any): void {
-    this.debugLogger.trace(this.category, message, data)
+    this.#debugLogger.trace(this.#category, message, data)
   }
 
   error(message: string, error: unknown): void {
-    this.debugLogger.error(this.category, message, error)
+    this.#debugLogger.error(this.#category, message, error)
   }
 
   enter(fnName: string, args?: any): void {
-    this.debugLogger.enter(this.category, fnName, args)
+    this.#debugLogger.enter(this.#category, fnName, args)
   }
 
   exit(fnName: string, result?: any): void {
-    this.debugLogger.exit(this.category, fnName, result)
+    this.#debugLogger.exit(this.#category, fnName, result)
   }
 }
 

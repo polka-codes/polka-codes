@@ -55,11 +55,11 @@ interface PrioritizationResult {
  * - Cluster of similar failures
  */
 export class TaskPrioritizer {
-  private executionHistory: Map<string, Array<{ success: boolean; timestamp: number }>> = new Map()
-  private fileChangeFrequency: Map<string, number> = new Map()
-  private readonly MAX_HISTORY_SIZE = 100
-  private readonly HIGH_PRIORITY_THRESHOLD = 850
-  private readonly LOW_PRIORITY_THRESHOLD = 350
+  #executionHistory: Map<string, Array<{ success: boolean; timestamp: number }>> = new Map()
+  #fileChangeFrequency: Map<string, number> = new Map()
+  #MAX_HISTORY_SIZE = 100
+  #HIGH_PRIORITY_THRESHOLD = 850
+  #LOW_PRIORITY_THRESHOLD = 350
 
   /**
    * Prioritize a list of tasks
@@ -115,7 +115,7 @@ export class TaskPrioritizer {
    */
   private gatherFactors(task: Task, allTasks: Task[]): PriorityFactors {
     // Check if task failed before
-    const history = this.executionHistory.get(task.id) || []
+    const history = this.#executionHistory.get(task.id) || []
     const failedBefore = history.some((h) => !h.success)
 
     // Check if task is blocked
@@ -132,7 +132,7 @@ export class TaskPrioritizer {
     // Check file change frequency
     let hotFile = false
     for (const file of task.files) {
-      const freq = this.fileChangeFrequency.get(file) || 0
+      const freq = this.#fileChangeFrequency.get(file) || 0
       if (freq > 5) {
         // Changed more than 5 times recently
         hotFile = true
@@ -274,7 +274,7 @@ export class TaskPrioritizer {
   private isProblematicArea(task: Task): boolean {
     // Check if similar tasks (same files) failed recently
     for (const file of task.files) {
-      const history = this.executionHistory.get(file) || []
+      const history = this.#executionHistory.get(file) || []
       const recentFailures = history.filter(
         (h) => !h.success && Date.now() - h.timestamp < 3600000, // Last hour
       )
@@ -291,7 +291,7 @@ export class TaskPrioritizer {
    * Record task execution result
    */
   recordExecution(taskId: string, success: boolean): void {
-    const history = this.executionHistory.get(taskId) || []
+    const history = this.#executionHistory.get(taskId) || []
 
     history.push({
       success,
@@ -299,19 +299,19 @@ export class TaskPrioritizer {
     })
 
     // Trim history if too large
-    if (history.length > this.MAX_HISTORY_SIZE) {
+    if (history.length > this.#MAX_HISTORY_SIZE) {
       history.shift()
     }
 
-    this.executionHistory.set(taskId, history)
+    this.#executionHistory.set(taskId, history)
   }
 
   /**
    * Record file change
    */
   recordFileChange(file: string): void {
-    const current = this.fileChangeFrequency.get(file) || 0
-    this.fileChangeFrequency.set(file, current + 1)
+    const current = this.#fileChangeFrequency.get(file) || 0
+    this.#fileChangeFrequency.set(file, current + 1)
 
     // Decay old frequencies periodically (not implemented here)
   }
@@ -320,22 +320,22 @@ export class TaskPrioritizer {
    * Reset all history
    */
   resetHistory(): void {
-    this.executionHistory.clear()
-    this.fileChangeFrequency.clear()
+    this.#executionHistory.clear()
+    this.#fileChangeFrequency.clear()
   }
 
   /**
    * Get high priority tasks
    */
   getHighPriorityTasks(tasks: Task[]): Task[] {
-    return tasks.filter((t) => t.priority >= this.HIGH_PRIORITY_THRESHOLD)
+    return tasks.filter((t) => t.priority >= this.#HIGH_PRIORITY_THRESHOLD)
   }
 
   /**
    * Get low priority tasks
    */
   getLowPriorityTasks(tasks: Task[]): Task[] {
-    return tasks.filter((t) => t.priority <= this.LOW_PRIORITY_THRESHOLD)
+    return tasks.filter((t) => t.priority <= this.#LOW_PRIORITY_THRESHOLD)
   }
 
   /**
@@ -357,7 +357,7 @@ export class TaskPrioritizer {
     let totalSuccesses = 0
     const fileFailures: Map<string, number> = new Map()
 
-    for (const [taskId, history] of this.executionHistory.entries()) {
+    for (const [taskId, history] of this.#executionHistory.entries()) {
       totalExecutions += history.length
       totalSuccesses += history.filter((h) => h.success).length
 
@@ -374,7 +374,7 @@ export class TaskPrioritizer {
       .slice(0, 10)
 
     return {
-      totalTasksTracked: this.executionHistory.size,
+      totalTasksTracked: this.#executionHistory.size,
       averageSuccessRate: totalExecutions > 0 ? totalSuccesses / totalExecutions : 1,
       mostProblematicFiles,
     }

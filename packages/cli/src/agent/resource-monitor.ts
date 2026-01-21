@@ -34,55 +34,57 @@ export interface ResourceUsage {
  * Monitors and enforces resource limits
  */
 export class ResourceMonitor {
-  private startTime: number
-  private checkInterval: NodeJS.Timeout | null = null
-  private peakMemory: number = 0
-  private isRunning: boolean = false
+  #startTime: number
+  #checkInterval: NodeJS.Timeout | null = null
+  #peakMemory: number = 0
+  #isRunning: boolean = false
+  #limits: ResourceLimits
+  #logger: Logger
+  #onLimitExceeded: (limit: ResourceLimitExceeded) => void | Promise<void>
 
-  constructor(
-    private limits: ResourceLimits,
-    private logger: Logger,
-    private onLimitExceeded: (limit: ResourceLimitExceeded) => void | Promise<void>,
-  ) {
-    this.startTime = Date.now()
+  constructor(limits: ResourceLimits, logger: Logger, onLimitExceeded: (limit: ResourceLimitExceeded) => void | Promise<void>) {
+    this.#limits = limits
+    this.#logger = logger
+    this.#onLimitExceeded = onLimitExceeded
+    this.#startTime = Date.now()
   }
 
   /**
    * Start monitoring
    */
   start(checkIntervalMs: number = 30000): void {
-    if (this.isRunning) {
+    if (this.#isRunning) {
       return
     }
 
-    this.isRunning = true
-    this.checkInterval = setInterval(async () => {
+    this.#isRunning = true
+    this.#checkInterval = setInterval(async () => {
       try {
         await this.check()
       } catch (error) {
-        this.logger.error('Resource monitor check', error as Error)
+        this.#logger.error('Resource monitor check', error as Error)
       }
     }, checkIntervalMs)
 
-    this.logger.info('[ResourceMonitor] Started monitoring')
+    this.#logger.info('[ResourceMonitor] Started monitoring')
   }
 
   /**
    * Stop monitoring
    */
   stop(): void {
-    if (!this.isRunning) {
+    if (!this.#isRunning) {
       return
     }
 
-    this.isRunning = false
+    this.#isRunning = false
 
-    if (this.checkInterval) {
-      clearInterval(this.checkInterval)
-      this.checkInterval = null
+    if (this.#checkInterval) {
+      clearInterval(this.#checkInterval)
+      this.#checkInterval = null
     }
 
-    this.logger.info('[ResourceMonitor] Stopped monitoring')
+    this.#logger.info('[ResourceMonitor] Stopped monitoring')
   }
 
   /**
@@ -92,30 +94,32 @@ export class ResourceMonitor {
     // Check memory
     const memUsage = process.memoryUsage()
     const memUsedMB = memUsage.heapUsed / 1024 / 1024
-    this.peakMemory = Math.max(this.peakMemory, memUsedMB)
+    this.#peakMemory = Math.max(this.#peakMemory, memUsedMB)
 
-    if (this.limits.maxMemory && memUsedMB > this.limits.maxMemory) {
-      this.logger.warn(`[ResourceMonitor] Memory limit exceeded: ${memUsedMB.toFixed(2)}MB / ${this.limits.maxMemory}MB`)
+    if (this.#limits.maxMemory && memUsedMB > this.#limits.maxMemory) {
+      this.#logger.warn(`[ResourceMonitor] Memory limit exceeded: ${memUsedMB.toFixed(2)}MB / ${this.#limits.maxMemory}MB`)
 
-      await this.onLimitExceeded({
+      await this.#onLimitExceeded({
         limit: 'memory',
         current: memUsedMB,
-        max: this.limits.maxMemory,
-        message: `Memory usage (${memUsedMB.toFixed(2)}MB) exceeds limit (${this.limits.maxMemory}MB)`,
+        max: this.#limits.maxMemory,
+        message: `Memory usage (${memUsedMB.toFixed(2)}MB) exceeds limit (${this.#limits.maxMemory}MB)`,
       })
     }
 
     // Check session time
-    const elapsedMinutes = (Date.now() - this.startTime) / 60000
+    const elapsedMinutes = (Date.now() - this.#startTime) / 60000
 
-    if (this.limits.maxSessionTime && elapsedMinutes > this.limits.maxSessionTime) {
-      this.logger.warn(`[ResourceMonitor] Session time limit exceeded: ${elapsedMinutes.toFixed(2)}min / ${this.limits.maxSessionTime}min`)
+    if (this.#limits.maxSessionTime && elapsedMinutes > this.#limits.maxSessionTime) {
+      this.#logger.warn(
+        `[ResourceMonitor] Session time limit exceeded: ${elapsedMinutes.toFixed(2)}min / ${this.#limits.maxSessionTime}min`,
+      )
 
-      await this.onLimitExceeded({
+      await this.#onLimitExceeded({
         limit: 'sessionTime',
         current: elapsedMinutes,
-        max: this.limits.maxSessionTime,
-        message: `Session time (${elapsedMinutes.toFixed(2)}min) exceeds limit (${this.limits.maxSessionTime}min)`,
+        max: this.#limits.maxSessionTime,
+        message: `Session time (${elapsedMinutes.toFixed(2)}min) exceeds limit (${this.#limits.maxSessionTime}min)`,
       })
     }
   }
@@ -125,15 +129,15 @@ export class ResourceMonitor {
    */
   getCurrentUsage(): ResourceUsage {
     const memUsage = process.memoryUsage()
-    const elapsedMinutes = (Date.now() - this.startTime) / 60000
+    const elapsedMinutes = (Date.now() - this.#startTime) / 60000
 
     return {
       memoryMB: memUsage.heapUsed / 1024 / 1024,
-      peakMemoryMB: this.peakMemory,
+      peakMemoryMB: this.#peakMemory,
       sessionTimeMinutes: elapsedMinutes,
       withinLimits:
-        (this.limits.maxMemory === undefined || memUsage.heapUsed / 1024 / 1024 <= this.limits.maxMemory) &&
-        (this.limits.maxSessionTime === undefined || elapsedMinutes <= this.limits.maxSessionTime),
+        (this.#limits.maxMemory === undefined || memUsage.heapUsed / 1024 / 1024 <= this.#limits.maxMemory) &&
+        (this.#limits.maxSessionTime === undefined || elapsedMinutes <= this.#limits.maxSessionTime),
     }
   }
 
@@ -142,9 +146,9 @@ export class ResourceMonitor {
    * @returns percentage (0-100) or undefined if no memory limit is set
    */
   getMemoryUsagePercentage(): number | undefined {
-    if (!this.limits.maxMemory) return undefined
+    if (!this.#limits.maxMemory) return undefined
     const current = this.getCurrentUsage().memoryMB
-    return (current / this.limits.maxMemory) * 100
+    return (current / this.#limits.maxMemory) * 100
   }
 
   /**
@@ -152,8 +156,8 @@ export class ResourceMonitor {
    * @returns percentage (0-100) or undefined if no session time limit is set
    */
   getSessionTimePercentage(): number | undefined {
-    if (!this.limits.maxSessionTime) return undefined
+    if (!this.#limits.maxSessionTime) return undefined
     const current = this.getCurrentUsage().sessionTimeMinutes
-    return (current / this.limits.maxSessionTime) * 100
+    return (current / this.#limits.maxSessionTime) * 100
   }
 }

@@ -26,33 +26,34 @@ import type { Plan, Task, WorkflowContext } from './types'
  *     task-1.log
  */
 export class WorkingSpace {
-  private plansDir: string
-  private tasksDir: string
-  private pendingTasksDir: string
-  private completedTasksDir: string
-  private logsDir: string
+  #plansDir: string
+  #tasksDir: string
+  #pendingTasksDir: string
+  #completedTasksDir: string
+  #logsDir: string
+  #workingDir: string
+  #logger: Logger
 
-  constructor(
-    private workingDir: string,
-    private logger: Logger,
-  ) {
-    this.plansDir = path.join(workingDir, 'plans')
-    this.tasksDir = path.join(workingDir, 'tasks')
-    this.pendingTasksDir = path.join(this.tasksDir, 'pending')
-    this.completedTasksDir = path.join(this.tasksDir, 'completed')
-    this.logsDir = path.join(workingDir, 'logs')
+  constructor(workingDir: string, logger: Logger) {
+    this.#workingDir = workingDir
+    this.#logger = logger
+    this.#plansDir = path.join(workingDir, 'plans')
+    this.#tasksDir = path.join(workingDir, 'tasks')
+    this.#pendingTasksDir = path.join(this.#tasksDir, 'pending')
+    this.#completedTasksDir = path.join(this.#tasksDir, 'completed')
+    this.#logsDir = path.join(workingDir, 'logs')
   }
 
   /**
    * Initialize working directory structure
    */
   async initialize(): Promise<void> {
-    await fs.mkdir(this.plansDir, { recursive: true })
-    await fs.mkdir(this.pendingTasksDir, { recursive: true })
-    await fs.mkdir(this.completedTasksDir, { recursive: true })
-    await fs.mkdir(this.logsDir, { recursive: true })
+    await fs.mkdir(this.#plansDir, { recursive: true })
+    await fs.mkdir(this.#pendingTasksDir, { recursive: true })
+    await fs.mkdir(this.#completedTasksDir, { recursive: true })
+    await fs.mkdir(this.#logsDir, { recursive: true })
 
-    this.logger.info(`[WorkingSpace] Initialized: ${this.workingDir}`)
+    this.#logger.info(`[WorkingSpace] Initialized: ${this.#workingDir}`)
   }
 
   /**
@@ -61,12 +62,12 @@ export class WorkingSpace {
   async savePlan(plan: Plan): Promise<void> {
     const sanitizedGoal = this.sanitizeFilename(plan.goal.slice(0, 50))
     const filename = `${sanitizedGoal}.md`
-    const filepath = path.join(this.plansDir, filename)
+    const filepath = path.join(this.#plansDir, filename)
 
     const markdown = this.planToMarkdown(plan)
     await fs.writeFile(filepath, markdown, 'utf-8')
 
-    this.logger.info(`[WorkingSpace] Saved plan: ${filename}`)
+    this.#logger.info(`[WorkingSpace] Saved plan: ${filename}`)
   }
 
   /**
@@ -76,11 +77,11 @@ export class WorkingSpace {
     const plans: Plan[] = []
 
     try {
-      const files = await fs.readdir(this.plansDir)
+      const files = await fs.readdir(this.#plansDir)
       for (const file of files) {
         if (!file.endsWith('.md')) continue
 
-        const filepath = path.join(this.plansDir, file)
+        const filepath = path.join(this.#plansDir, file)
         const content = await fs.readFile(filepath, 'utf-8')
         const plan = this.markdownToPlan(content, file)
         if (plan) {
@@ -88,7 +89,7 @@ export class WorkingSpace {
         }
       }
     } catch (_error) {
-      this.logger.warn('[WorkingSpace] No plans found or error reading plans')
+      this.#logger.warn('[WorkingSpace] No plans found or error reading plans')
     }
 
     return plans
@@ -101,11 +102,11 @@ export class WorkingSpace {
     const tasks: Task[] = []
 
     try {
-      const files = await fs.readdir(this.pendingTasksDir)
+      const files = await fs.readdir(this.#pendingTasksDir)
       for (const file of files) {
         if (!file.endsWith('.md')) continue
 
-        const filepath = path.join(this.pendingTasksDir, file)
+        const filepath = path.join(this.#pendingTasksDir, file)
         const content = await fs.readFile(filepath, 'utf-8')
         const task = this.markdownToTask(content, file)
         if (task && task.status === 'pending') {
@@ -113,10 +114,10 @@ export class WorkingSpace {
         }
       }
     } catch (_error) {
-      this.logger.warn('[WorkingSpace] No pending tasks found')
+      this.#logger.warn('[WorkingSpace] No pending tasks found')
     }
 
-    this.logger.info(`[WorkingSpace] Discovered ${tasks.length} pending tasks`)
+    this.#logger.info(`[WorkingSpace] Discovered ${tasks.length} pending tasks`)
     return tasks
   }
 
@@ -126,8 +127,8 @@ export class WorkingSpace {
   async documentCompletedTask(task: Task, result: string): Promise<void> {
     const sanitizedTitle = this.sanitizeFilename(`${task.id}-${task.title.slice(0, 30)}`)
     const filename = `${sanitizedTitle}.md`
-    const sourcePath = path.join(this.pendingTasksDir, filename)
-    const destPath = path.join(this.completedTasksDir, filename)
+    const sourcePath = path.join(this.#pendingTasksDir, filename)
+    const destPath = path.join(this.#completedTasksDir, filename)
 
     // Update task status and add result
     const completedTask: Task = {
@@ -146,7 +147,7 @@ export class WorkingSpace {
       await fs.writeFile(destPath, markdown, 'utf-8')
     }
 
-    this.logger.info(`[WorkingSpace] Documented completed task: ${task.title}`)
+    this.#logger.info(`[WorkingSpace] Documented completed task: ${task.title}`)
   }
 
   /**
@@ -155,12 +156,12 @@ export class WorkingSpace {
   async createPendingTask(task: Task): Promise<void> {
     const sanitizedTitle = this.sanitizeFilename(`${task.id}-${task.title.slice(0, 30)}`)
     const filename = `${sanitizedTitle}.md`
-    const filepath = path.join(this.pendingTasksDir, filename)
+    const filepath = path.join(this.#pendingTasksDir, filename)
 
     const markdown = this.taskToMarkdown(task)
     await fs.writeFile(filepath, markdown, 'utf-8')
 
-    this.logger.info(`[WorkingSpace] Created pending task: ${task.title}`)
+    this.#logger.info(`[WorkingSpace] Created pending task: ${task.title}`)
   }
 
   /**
@@ -421,7 +422,7 @@ ${task.files.length > 0 ? task.files.map((f) => `- \`${f}\``).join('\n') : 'None
    * Get working directory path
    */
   getWorkingDir(): string {
-    return this.workingDir
+    return this.#workingDir
   }
 
   /**
@@ -429,7 +430,7 @@ ${task.files.length > 0 ? task.files.map((f) => `- \`${f}\``).join('\n') : 'None
    */
   async exists(): Promise<boolean> {
     try {
-      await fs.access(this.workingDir)
+      await fs.access(this.#workingDir)
       return true
     } catch {
       return false
@@ -441,15 +442,15 @@ ${task.files.length > 0 ? task.files.map((f) => `- \`${f}\``).join('\n') : 'None
    */
   async cleanupOldCompletedTasks(keepCount: number = 100): Promise<void> {
     try {
-      const files = await fs.readdir(this.completedTasksDir)
+      const files = await fs.readdir(this.#completedTasksDir)
       if (files.length <= keepCount) return
 
       // Sort by modification time and delete oldest
       const fileStats = await Promise.all(
         files.map(async (file) => ({
           file,
-          path: path.join(this.completedTasksDir, file),
-          mtime: (await fs.stat(path.join(this.completedTasksDir, file))).mtimeMs,
+          path: path.join(this.#completedTasksDir, file),
+          mtime: (await fs.stat(path.join(this.#completedTasksDir, file))).mtimeMs,
         })),
       )
 
@@ -460,9 +461,9 @@ ${task.files.length > 0 ? task.files.map((f) => `- \`${f}\``).join('\n') : 'None
         await fs.unlink(filepath)
       }
 
-      this.logger.info(`[WorkingSpace] Cleaned up ${toDelete.length} old completed tasks`)
+      this.#logger.info(`[WorkingSpace] Cleaned up ${toDelete.length} old completed tasks`)
     } catch (error) {
-      this.logger.warn('[WorkingSpace] Error cleaning up old tasks', error as Error)
+      this.#logger.warn('[WorkingSpace] Error cleaning up old tasks', error as Error)
     }
   }
 
@@ -482,9 +483,9 @@ ${task.files.length > 0 ? task.files.map((f) => `- \`${f}\``).join('\n') : 'None
 
     try {
       const [plans, pending, completed] = await Promise.all([
-        fs.readdir(this.plansDir).catch(() => [] as string[]),
-        fs.readdir(this.pendingTasksDir).catch(() => [] as string[]),
-        fs.readdir(this.completedTasksDir).catch(() => [] as string[]),
+        fs.readdir(this.#plansDir).catch(() => [] as string[]),
+        fs.readdir(this.#pendingTasksDir).catch(() => [] as string[]),
+        fs.readdir(this.#completedTasksDir).catch(() => [] as string[]),
       ])
 
       planCount = plans.filter((f) => f.endsWith('.md')).length
@@ -495,7 +496,7 @@ ${task.files.length > 0 ? task.files.map((f) => `- \`${f}\``).join('\n') : 'None
       // to avoid double-counting when files have the same name in different directories
       for (const file of plans) {
         try {
-          const stat = await fs.stat(path.join(this.plansDir, file))
+          const stat = await fs.stat(path.join(this.#plansDir, file))
           totalSize += stat.size
         } catch {
           // File might not exist
@@ -503,7 +504,7 @@ ${task.files.length > 0 ? task.files.map((f) => `- \`${f}\``).join('\n') : 'None
       }
       for (const file of pending) {
         try {
-          const stat = await fs.stat(path.join(this.pendingTasksDir, file))
+          const stat = await fs.stat(path.join(this.#pendingTasksDir, file))
           totalSize += stat.size
         } catch {
           // File might not exist
@@ -511,14 +512,14 @@ ${task.files.length > 0 ? task.files.map((f) => `- \`${f}\``).join('\n') : 'None
       }
       for (const file of completed) {
         try {
-          const stat = await fs.stat(path.join(this.completedTasksDir, file))
+          const stat = await fs.stat(path.join(this.#completedTasksDir, file))
           totalSize += stat.size
         } catch {
           // File might not exist
         }
       }
     } catch (error) {
-      this.logger.warn('[WorkingSpace] Error calculating stats', error as Error)
+      this.#logger.warn('[WorkingSpace] Error calculating stats', error as Error)
     }
 
     return { planCount, pendingTaskCount, completedTaskCount, totalSize }

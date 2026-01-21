@@ -31,19 +31,23 @@ const GoalDecompositionSchema = z.object({
  * Decomposes a high-level goal into actionable tasks
  */
 export class GoalDecomposer {
-  constructor(private context: WorkflowContext | CliWorkflowContext) {}
+  #context: WorkflowContext | CliWorkflowContext
+
+  constructor(context: WorkflowContext | CliWorkflowContext) {
+    this.#context = context
+  }
 
   /**
    * Decompose goal into implementation plan
    */
   async decompose(goal: string): Promise<GoalDecompositionResult> {
-    this.context.logger.info(`[GoalDecomposer] Analyzing goal: ${goal}`)
+    this.#context.logger.info(`[GoalDecomposer] Analyzing goal: ${goal}`)
 
     // Gather context about codebase
     const codebaseContext = await this.gatherCodebaseContext()
 
     // Use agent to decompose goal
-    const result = await runAgentWithSchema(this.context as CliWorkflowContext, {
+    const result = await runAgentWithSchema(this.#context as CliWorkflowContext, {
       systemPrompt: this.buildSystemPrompt(),
       userMessage: this.buildDecompositionPrompt(goal, codebaseContext),
       schema: GoalDecompositionSchema,
@@ -266,7 +270,7 @@ Return your response as a JSON object following the provided schema.`
 
     try {
       // Get project structure using git ls-files (cross-platform)
-      const pkgResult = await this.context.tools.executeCommand({
+      const pkgResult = await this.#context.tools.executeCommand({
         command: 'git ls-files "src/**/*.ts"',
         shell: true,
       })
@@ -282,7 +286,7 @@ Return your response as a JSON object following the provided schema.`
 
     try {
       // Get package.json info
-      const pkgContent = await this.context.tools.readFile({ path: 'package.json' })
+      const pkgContent = await this.#context.tools.readFile({ path: 'package.json' })
       if (pkgContent) {
         const pkg = JSON.parse(pkgContent)
 
@@ -298,7 +302,7 @@ Return your response as a JSON object following the provided schema.`
 
     try {
       // Get git info
-      const gitBranch = await this.context.tools.executeCommand({
+      const gitBranch = await this.#context.tools.executeCommand({
         command: 'git',
         args: ['branch', '--show-current'],
       })

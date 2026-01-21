@@ -7,25 +7,37 @@ import { Priority } from '../types'
  * Manages task approval requirements
  */
 export class ApprovalManager {
+  #logger: Logger
+  #approvalLevel: ApprovalLevel
+  #autoApproveSafeTasks: boolean
+  #maxAutoApprovalCost: number
+  #destructiveOperations: string[]
+
   constructor(
-    private logger: Logger,
-    private approvalLevel: ApprovalLevel,
-    private autoApproveSafeTasks: boolean,
-    private maxAutoApprovalCost: number,
-    private destructiveOperations: string[],
-  ) {}
+    logger: Logger,
+    approvalLevel: ApprovalLevel,
+    autoApproveSafeTasks: boolean,
+    maxAutoApprovalCost: number,
+    destructiveOperations: string[],
+  ) {
+    this.#logger = logger
+    this.#approvalLevel = approvalLevel
+    this.#autoApproveSafeTasks = autoApproveSafeTasks
+    this.#maxAutoApprovalCost = maxAutoApprovalCost
+    this.#destructiveOperations = destructiveOperations
+  }
 
   /**
    * Check if task requires approval
    */
   requiresApproval(task: Task): boolean {
     // Always approve if level is 'none'
-    if (this.approvalLevel === 'none') {
+    if (this.#approvalLevel === 'none') {
       return false
     }
 
     // Always require approval for all tasks if level is 'all'
-    if (this.approvalLevel === 'all') {
+    if (this.#approvalLevel === 'all') {
       return true
     }
 
@@ -35,12 +47,12 @@ export class ApprovalManager {
     }
 
     // Require approval for commits if level is 'commits'
-    if (this.approvalLevel === 'commits' && task.type === 'commit') {
+    if (this.#approvalLevel === 'commits' && task.type === 'commit') {
       return true
     }
 
     // Auto-approve safe tasks if within time threshold and low priority
-    if (this.autoApproveSafeTasks && task.estimatedTime <= this.maxAutoApprovalCost && task.priority === Priority.TRIVIAL) {
+    if (this.#autoApproveSafeTasks && task.estimatedTime <= this.#maxAutoApprovalCost && task.priority === Priority.TRIVIAL) {
       return false
     }
 
@@ -53,22 +65,22 @@ export class ApprovalManager {
   async requestApproval(task: Task): Promise<ApprovalDecision> {
     // Check if running in an interactive terminal
     if (!process.stdin.isTTY) {
-      this.logger.warn(`⚠️  Not running in an interactive terminal - auto-rejecting task: ${task.title}`)
+      this.#logger.warn(`⚠️  Not running in an interactive terminal - auto-rejecting task: ${task.title}`)
       return { approved: false, reason: 'Non-interactive environment (no TTY)' }
     }
 
-    this.logger.info(`\n${'═'.repeat(60)}`)
-    this.logger.info(`🤖 Approval Required: ${task.title}`)
-    this.logger.info('═'.repeat(60))
-    this.logger.info(`📝 Description: ${task.description}`)
-    this.logger.info(`🏷️  Type: ${task.type}`)
-    this.logger.info(`⚖️  Complexity: ${task.complexity}`)
-    this.logger.info(`📊 Priority: ${Priority[task.priority]} (${task.priority})`)
-    this.logger.info(`⏱️  Estimated Time: ${task.estimatedTime} minutes`)
+    this.#logger.info(`\n${'═'.repeat(60)}`)
+    this.#logger.info(`🤖 Approval Required: ${task.title}`)
+    this.#logger.info('═'.repeat(60))
+    this.#logger.info(`📝 Description: ${task.description}`)
+    this.#logger.info(`🏷️  Type: ${task.type}`)
+    this.#logger.info(`⚖️  Complexity: ${task.complexity}`)
+    this.#logger.info(`📊 Priority: ${Priority[task.priority]} (${task.priority})`)
+    this.#logger.info(`⏱️  Estimated Time: ${task.estimatedTime} minutes`)
     if (task.files.length > 0) {
-      this.logger.info(`📁 Files: ${task.files.join(', ')}`)
+      this.#logger.info(`📁 Files: ${task.files.join(', ')}`)
     }
-    this.logger.info('═'.repeat(60))
+    this.#logger.info('═'.repeat(60))
 
     // Read user input from stdin
     const readline = require('node:readline')
@@ -102,7 +114,7 @@ export class ApprovalManager {
    */
   private isDestructive(task: Task): boolean {
     // Check if task type is in destructive list
-    if (this.destructiveOperations.includes(task.type)) {
+    if (this.#destructiveOperations.includes(task.type)) {
       return true
     }
 
@@ -133,56 +145,56 @@ export class ApprovalManager {
   async requestPlanApproval(request: PlanApprovalRequest): Promise<ApprovalDecision> {
     // Check if running in an interactive terminal
     if (!process.stdin.isTTY) {
-      this.logger.warn(`⚠️  Not running in an interactive terminal - auto-rejecting plan: ${request.goal}`)
+      this.#logger.warn(`⚠️  Not running in an interactive terminal - auto-rejecting plan: ${request.goal}`)
       return { approved: false, reason: 'Non-interactive environment (no TTY)' }
     }
 
     // Display plan header
-    this.logger.info(`\n${'═'.repeat(60)}`)
-    this.logger.info(`📋 Plan Approval Required`)
-    this.logger.info('═'.repeat(60))
+    this.#logger.info(`\n${'═'.repeat(60)}`)
+    this.#logger.info(`📋 Plan Approval Required`)
+    this.#logger.info('═'.repeat(60))
 
     // Display goal
-    this.logger.info(`\n🎯 Goal: ${request.goal}`)
+    this.#logger.info(`\n🎯 Goal: ${request.goal}`)
 
     // Display task summary
-    this.logger.info(`\n📝 Tasks: ${request.tasks.length} tasks in ${request.executionOrder.length} phase(s)`)
+    this.#logger.info(`\n📝 Tasks: ${request.tasks.length} tasks in ${request.executionOrder.length} phase(s)`)
     for (let i = 0; i < request.executionOrder.length; i++) {
       const phase = request.executionOrder[i]
-      this.logger.info(`   Phase ${i + 1}: ${phase.length} task(s)`)
+      this.#logger.info(`   Phase ${i + 1}: ${phase.length} task(s)`)
     }
 
     // Display task details
-    this.logger.info(`\n📋 Task List:`)
+    this.#logger.info(`\n📋 Task List:`)
     for (let i = 0; i < request.tasks.length; i++) {
       const task = request.tasks[i]
       const priorityLabel = Priority[task.priority] || task.priority
-      this.logger.info(`   ${i + 1}. [${priorityLabel}] ${task.title}`)
-      this.logger.info(`      ${task.description}`)
+      this.#logger.info(`   ${i + 1}. [${priorityLabel}] ${task.title}`)
+      this.#logger.info(`      ${task.description}`)
     }
 
     // Display estimated time
     const timeInMinutes = Math.round(request.estimatedTime)
-    this.logger.info(`\n⏱️  Estimated Time: ${timeInMinutes} minutes`)
+    this.#logger.info(`\n⏱️  Estimated Time: ${timeInMinutes} minutes`)
 
     // Display risks if any
     if (request.risks.length > 0) {
-      this.logger.info(`\n⚠️  Risks:`)
+      this.#logger.info(`\n⚠️  Risks:`)
       for (const risk of request.risks) {
-        this.logger.info(`   - ${risk}`)
+        this.#logger.info(`   - ${risk}`)
       }
     }
 
     // Ask for approval
-    this.logger.info(`\n${'═'.repeat(60)}`)
+    this.#logger.info(`\n${'═'.repeat(60)}`)
 
     const answer = await this.askQuestion('Do you want to proceed with this plan? (yes/no): ')
 
     if (answer.toLowerCase() === 'yes' || answer.toLowerCase() === 'y') {
-      this.logger.info('✅ Plan approved - proceeding with execution\n')
+      this.#logger.info('✅ Plan approved - proceeding with execution\n')
       return { approved: true }
     } else {
-      this.logger.info('❌ Plan rejected - stopping execution\n')
+      this.#logger.info('❌ Plan rejected - stopping execution\n')
       return { approved: false, reason: 'User rejected the plan' }
     }
   }

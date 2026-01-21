@@ -18,44 +18,47 @@ export type HealthCheck = () => Promise<HealthStatus> | HealthStatus
  * Monitors agent health
  */
 export class HealthMonitor {
-  private checkInterval: NodeJS.Timeout | null = null
-  private lastHealthCheck: number = 0
-  private lastHealthStatus: HealthStatus | null = null
-  private isRunning: boolean = false
+  #checkInterval: NodeJS.Timeout | null = null
+  #lastHealthCheck: number = 0
+  #lastHealthStatus: HealthStatus | null = null
+  #isRunning: boolean = false
+  #logger: Logger
+  #healthCheck: HealthCheck
+  #onUnhealthy?: (status: HealthStatus) => void | Promise<void>
 
-  constructor(
-    private logger: Logger,
-    private healthCheck: HealthCheck,
-    private onUnhealthy?: (status: HealthStatus) => void | Promise<void>,
-  ) {}
+  constructor(logger: Logger, healthCheck: HealthCheck, onUnhealthy?: (status: HealthStatus) => void | Promise<void>) {
+    this.#logger = logger
+    this.#healthCheck = healthCheck
+    this.#onUnhealthy = onUnhealthy
+  }
 
   /**
    * Start health monitoring
    */
   start(intervalMs: number = 60000): void {
-    if (this.isRunning) {
+    if (this.#isRunning) {
       return
     }
 
-    this.isRunning = true
+    this.#isRunning = true
 
-    this.checkInterval = setInterval(async () => {
+    this.#checkInterval = setInterval(async () => {
       try {
         const status = await this.check()
-        this.lastHealthCheck = Date.now()
-        this.lastHealthStatus = status
+        this.#lastHealthCheck = Date.now()
+        this.#lastHealthStatus = status
 
         if (!status.healthy) {
-          this.logger.warn(`[HealthMonitor] Unhealthy: ${status.reason}`)
+          this.#logger.warn(`[HealthMonitor] Unhealthy: ${status.reason}`)
 
-          if (this.onUnhealthy) {
-            await this.onUnhealthy(status)
+          if (this.#onUnhealthy) {
+            await this.#onUnhealthy(status)
           }
         } else {
-          this.logger.debug('[HealthMonitor] Healthy')
+          this.#logger.debug('[HealthMonitor] Healthy')
         }
       } catch (error) {
-        this.logger.error('Health check error', error as Error)
+        this.#logger.error('Health check error', error as Error)
 
         // Treat errors as unhealthy
         const errorStatus: HealthStatus = {
@@ -64,53 +67,53 @@ export class HealthMonitor {
           details: { error: error instanceof Error ? error.message : String(error) },
         }
 
-        this.lastHealthStatus = errorStatus
+        this.#lastHealthStatus = errorStatus
 
-        if (this.onUnhealthy) {
-          await this.onUnhealthy(errorStatus)
+        if (this.#onUnhealthy) {
+          await this.#onUnhealthy(errorStatus)
         }
       }
     }, intervalMs)
 
-    this.logger.info('[HealthMonitor] Started health monitoring')
+    this.#logger.info('[HealthMonitor] Started health monitoring')
   }
 
   /**
    * Stop health monitoring
    */
   stop(): void {
-    if (!this.isRunning) {
+    if (!this.#isRunning) {
       return
     }
 
-    this.isRunning = false
+    this.#isRunning = false
 
-    if (this.checkInterval) {
-      clearInterval(this.checkInterval)
-      this.checkInterval = null
+    if (this.#checkInterval) {
+      clearInterval(this.#checkInterval)
+      this.#checkInterval = null
     }
 
-    this.logger.info('[HealthMonitor] Stopped health monitoring')
+    this.#logger.info('[HealthMonitor] Stopped health monitoring')
   }
 
   /**
    * Perform health check
    */
   async check(): Promise<HealthStatus> {
-    return await this.healthCheck()
+    return await this.#healthCheck()
   }
 
   /**
    * Get last health check status
    */
   getLastStatus(): HealthStatus | null {
-    return this.lastHealthStatus
+    return this.#lastHealthStatus
   }
 
   /**
    * Get time since last health check
    */
   getTimeSinceLastCheck(): number {
-    return Date.now() - this.lastHealthCheck
+    return Date.now() - this.#lastHealthCheck
   }
 }

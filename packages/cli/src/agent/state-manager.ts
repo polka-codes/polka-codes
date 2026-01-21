@@ -8,21 +8,21 @@ import type { AgentConfig, AgentState, Task } from './types'
  * Manages agent state persistence with immutable updates
  */
 export class AgentStateManager {
-  private state: AgentState | null = null
-  private stateFilePath: string
-  private saveTimer: NodeJS.Timeout | null = null
-  private checkpointDir: string
+  #state: AgentState | null = null
+  #stateFilePath: string
+  #saveTimer: NodeJS.Timeout | null = null
+  #checkpointDir: string
 
   constructor(stateDir: string, _sessionId: string) {
-    this.stateFilePath = path.join(stateDir, 'agent-state.json')
-    this.checkpointDir = path.join(stateDir, 'checkpoints')
+    this.#stateFilePath = path.join(stateDir, 'agent-state.json')
+    this.#checkpointDir = path.join(stateDir, 'checkpoints')
   }
 
   /**
    * Initialize a new agent state
    */
   async initialize(config: AgentConfig): Promise<AgentState> {
-    this.state = {
+    this.#state = {
       sessionId: this.generateSessionId(),
       currentMode: 'idle',
       config,
@@ -48,7 +48,7 @@ export class AgentStateManager {
     }
 
     await this.saveState()
-    return this.state
+    return this.#state
   }
 
   /**
@@ -56,7 +56,7 @@ export class AgentStateManager {
    */
   async loadState(): Promise<AgentState | null> {
     try {
-      const content = await fs.readFile(this.stateFilePath, 'utf-8')
+      const content = await fs.readFile(this.#stateFilePath, 'utf-8')
 
       // Validate JSON structure
       const state = JSON.parse(content) as AgentState
@@ -66,8 +66,8 @@ export class AgentStateManager {
         throw new StateCorruptionError('Missing required fields in state file')
       }
 
-      this.state = state
-      return this.state
+      this.#state = state
+      return this.#state
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
         return null // No existing state
@@ -85,23 +85,23 @@ export class AgentStateManager {
    * Get current state (readonly)
    */
   getState(): AgentState | null {
-    return this.state
+    return this.#state
   }
 
   /**
    * Update state with immutable merge
    */
   async updateState(updates: Partial<AgentState>): Promise<void> {
-    if (!this.state) {
+    if (!this.#state) {
       throw new Error('No state loaded. Call initialize() or loadState() first.')
     }
 
     // Create new state with updates (immutable)
-    this.state = {
-      ...this.state,
+    this.#state = {
+      ...this.#state,
       ...updates,
       timestamps: {
-        ...this.state.timestamps,
+        ...this.#state.timestamps,
         lastActivity: Date.now(),
       },
     }
@@ -114,18 +114,18 @@ export class AgentStateManager {
    * Update specific task in queue (immutable)
    */
   async updateTask(taskId: string, updates: Partial<Task>): Promise<void> {
-    if (!this.state) {
+    if (!this.#state) {
       throw new Error('No state loaded')
     }
 
     // Create new task array with updated task
-    const updatedQueue = this.state.taskQueue.map((task) => (task.id === taskId ? { ...task, ...updates } : task))
+    const updatedQueue = this.#state.taskQueue.map((task) => (task.id === taskId ? { ...task, ...updates } : task))
 
-    const updatedCompleted = this.state.completedTasks.map((task) => (task.id === taskId ? { ...task, ...updates } : task))
+    const updatedCompleted = this.#state.completedTasks.map((task) => (task.id === taskId ? { ...task, ...updates } : task))
 
-    const updatedFailed = this.state.failedTasks.map((task) => (task.id === taskId ? { ...task, ...updates } : task))
+    const updatedFailed = this.#state.failedTasks.map((task) => (task.id === taskId ? { ...task, ...updates } : task))
 
-    const updatedBlocked = this.state.blockedTasks.map((task) => (task.id === taskId ? { ...task, ...updates } : task))
+    const updatedBlocked = this.#state.blockedTasks.map((task) => (task.id === taskId ? { ...task, ...updates } : task))
 
     // Update state with new arrays
     await this.updateState({
@@ -140,32 +140,32 @@ export class AgentStateManager {
    * Move task from queue to completed/failed/blocked (immutable)
    */
   async moveTask(taskId: string, _from: 'queue', to: 'completed' | 'failed' | 'blocked'): Promise<void> {
-    if (!this.state) {
+    if (!this.#state) {
       throw new Error('No state loaded')
     }
 
     // Find task
-    const taskIndex = this.state.taskQueue.findIndex((t) => t.id === taskId)
+    const taskIndex = this.#state.taskQueue.findIndex((t) => t.id === taskId)
     if (taskIndex === -1) {
       throw new Error(`Task ${taskId} not found in queue`)
     }
 
-    const task = this.state.taskQueue[taskIndex]
+    const task = this.#state.taskQueue[taskIndex]
 
     // Remove from queue
-    const newQueue = this.state.taskQueue.filter((t) => t.id !== taskId)
+    const newQueue = this.#state.taskQueue.filter((t) => t.id !== taskId)
 
     // Add to destination
-    let newCompleted = this.state.completedTasks
-    let newFailed = this.state.failedTasks
-    let newBlocked = this.state.blockedTasks
+    let newCompleted = this.#state.completedTasks
+    let newFailed = this.#state.failedTasks
+    let newBlocked = this.#state.blockedTasks
 
     if (to === 'completed') {
-      newCompleted = [...this.state.completedTasks, task]
+      newCompleted = [...this.#state.completedTasks, task]
     } else if (to === 'failed') {
-      newFailed = [...this.state.failedTasks, task]
+      newFailed = [...this.#state.failedTasks, task]
     } else if (to === 'blocked') {
-      newBlocked = [...this.state.blockedTasks, task]
+      newBlocked = [...this.#state.blockedTasks, task]
     }
 
     // Update state
@@ -181,19 +181,19 @@ export class AgentStateManager {
    * Save state to disk
    */
   async saveState(): Promise<void> {
-    if (!this.state) {
+    if (!this.#state) {
       throw new Error('No state to save')
     }
 
-    this.state.timestamps.lastSaveTime = Date.now()
+    this.#state.timestamps.lastSaveTime = Date.now()
 
     // Ensure directory exists
-    await fs.mkdir(path.dirname(this.stateFilePath), { recursive: true })
+    await fs.mkdir(path.dirname(this.#stateFilePath), { recursive: true })
 
     // Write state atomically
-    const tempPath = `${this.stateFilePath}.tmp`
-    await fs.writeFile(tempPath, JSON.stringify(this.state, null, 2))
-    await fs.rename(tempPath, this.stateFilePath)
+    const tempPath = `${this.#stateFilePath}.tmp`
+    await fs.writeFile(tempPath, JSON.stringify(this.#state, null, 2))
+    await fs.rename(tempPath, this.#stateFilePath)
   }
 
   /**
@@ -201,7 +201,7 @@ export class AgentStateManager {
    */
   startAutoSave(intervalMs: number): void {
     this.stopAutoSave()
-    this.saveTimer = setInterval(async () => {
+    this.#saveTimer = setInterval(async () => {
       await this.saveState()
     }, intervalMs)
   }
@@ -210,9 +210,9 @@ export class AgentStateManager {
    * Stop auto-save timer
    */
   stopAutoSave(): void {
-    if (this.saveTimer) {
-      clearInterval(this.saveTimer)
-      this.saveTimer = null
+    if (this.#saveTimer) {
+      clearInterval(this.#saveTimer)
+      this.#saveTimer = null
     }
   }
 
@@ -220,14 +220,14 @@ export class AgentStateManager {
    * Create a named checkpoint
    */
   async checkpoint(name: string): Promise<string> {
-    if (!this.state) {
+    if (!this.#state) {
       throw new Error('No state to checkpoint')
     }
 
-    await fs.mkdir(this.checkpointDir, { recursive: true })
-    const checkpointPath = path.join(this.checkpointDir, `checkpoint-${name}-${Date.now()}.json`)
+    await fs.mkdir(this.#checkpointDir, { recursive: true })
+    const checkpointPath = path.join(this.#checkpointDir, `checkpoint-${name}-${Date.now()}.json`)
 
-    await fs.writeFile(checkpointPath, JSON.stringify(this.state, null, 2))
+    await fs.writeFile(checkpointPath, JSON.stringify(this.#state, null, 2))
     return checkpointPath
   }
 
@@ -236,7 +236,7 @@ export class AgentStateManager {
    */
   async listCheckpoints(): Promise<string[]> {
     try {
-      const files = await fs.readdir(this.checkpointDir)
+      const files = await fs.readdir(this.#checkpointDir)
       return files.filter((f) => f.startsWith('checkpoint-'))
     } catch {
       return []
@@ -254,24 +254,24 @@ export class AgentStateManager {
       throw new Error(`Checkpoint not found: ${checkpointName}`)
     }
 
-    const checkpointPath = path.join(this.checkpointDir, matching)
+    const checkpointPath = path.join(this.#checkpointDir, matching)
     const content = await fs.readFile(checkpointPath, 'utf-8')
-    this.state = JSON.parse(content) as AgentState
+    this.#state = JSON.parse(content) as AgentState
 
     await this.saveState()
     // state is guaranteed to be set after JSON.parse and saveState
-    return this.state as AgentState
+    return this.#state as AgentState
   }
 
   /**
    * Clear all state
    */
   async clearState(): Promise<void> {
-    this.state = null
+    this.#state = null
     this.stopAutoSave()
 
     try {
-      await fs.unlink(this.stateFilePath)
+      await fs.unlink(this.#stateFilePath)
     } catch {
       // Ignore if file doesn't exist
     }

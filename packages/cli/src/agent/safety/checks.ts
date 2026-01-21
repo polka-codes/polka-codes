@@ -5,10 +5,11 @@ import type { SafetyCheckResult, Task } from '../types'
  * Performs safety checks before task execution
  */
 export class SafetyChecker {
-  constructor(
-    _logger: Logger,
-    private tools: any,
-  ) {}
+  #tools: any
+
+  constructor(_logger: Logger, tools: any) {
+    this.#tools = tools
+  }
 
   /**
    * Perform pre-execution safety checks
@@ -65,7 +66,7 @@ export class SafetyChecker {
    */
   private async checkUncommittedChanges(task: Task): Promise<any> {
     try {
-      const result = await this.tools.executeCommand({
+      const result = await this.#tools.executeCommand({
         command: 'git status --porcelain',
         shell: true,
       })
@@ -137,7 +138,7 @@ export class SafetyChecker {
    */
   private async checkWorkingBranch(task: Task): Promise<any> {
     try {
-      const result = await this.tools.executeCommand({
+      const result = await this.#tools.executeCommand({
         command: 'git branch --show-current',
         shell: true,
       })
