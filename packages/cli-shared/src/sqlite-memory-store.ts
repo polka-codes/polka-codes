@@ -51,8 +51,14 @@ class FileLock {
               await rename(this.lockfilePath, `${this.lockfilePath}.stale.${Date.now()}`)
               continue // Retry acquisition
             }
-          } catch (_readError) {
-            // Can't read lock file, assume it's valid
+          } catch (readError) {
+            // If JSON parse fails, lock file is corrupted - treat as stale
+            if (readError instanceof SyntaxError) {
+              console.warn(`[FileLock] Lock file contains invalid JSON, treating as stale`)
+              await rename(this.lockfilePath, `${this.lockfilePath}.corrupt.${Date.now()}`)
+              continue // Retry acquisition
+            }
+            // Other read errors - assume lock is valid
           }
 
           // Lock is held by another process, wait and retry

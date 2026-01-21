@@ -65,11 +65,11 @@ export class TaskHistory {
     const avgError = errors.reduce((sum, e) => sum + e, 0) / errors.length
 
     const errorPercentages = this.#history.map((r) => Math.abs((r.estimatedTime - r.actualTime) / r.estimatedTime) * 100)
-    const _avgErrorPercentage = errorPercentages.reduce((sum, e) => sum + e, 0) / errorPercentages.length
+    const avgErrorPercentage = errorPercentages.reduce((sum, e) => sum + e, 0) / errorPercentages.length
 
     return {
       averageError: avgError,
-      averageErrorPercentage: _avgErrorPercentage,
+      averageErrorPercentage: avgErrorPercentage,
       totalTasks: this.#history.length,
     }
   }
@@ -104,8 +104,9 @@ Task History Report:
       const dir = path.dirname(this.#historyFilePath)
       await fs.mkdir(dir, { recursive: true })
       await fs.writeFile(this.#historyFilePath, JSON.stringify(this.#history, null, 2))
-    } catch (_error) {
-      // Fail silently - history is not critical
+    } catch (error) {
+      // Log but don't throw - history is not critical
+      console.warn(`[TaskHistory] Failed to save history: ${error}`)
     }
   }
 
