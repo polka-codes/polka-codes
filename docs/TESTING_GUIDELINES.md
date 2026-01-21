@@ -584,11 +584,11 @@ Tests run automatically in CI. Ensure:
 
 ## References
 
-- **Test Templates**: `packages/cli/test/templates/`
-- **Test Fixtures**: `packages/cli/src/test/`
+- **Test Fixtures**: `packages/cli/src/agent/test-fixtures.ts`
 - **Phase 4 Plan**: `plans/phase4-coverage-and-tooling.md`
 - **Test Review Plan**: `plans/test-review-plan.md`
+- **Testing Best Practices**: See `docs/TESTING_GUIDELINES.md`
 
 ---
 
-**Questions?** Refer to the test templates in `packages/cli/test/templates/` for examples of good test patterns.
+**Questions?** Refer to the test files in `packages/cli/src/agent/*.test.ts` for examples of good test patterns.
