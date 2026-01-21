@@ -201,27 +201,25 @@ describe('error-handling', () => {
     it('should include file path in error', () => {
       const content = '{invalid'
 
-      try {
-        safeJSONParse(content, '/config/test.json')
-        expect(true).toBe(false) // Should not reach here
-      } catch (error) {
-        expect(error).toBeInstanceOf(JSONParseError)
-        expect((error as JSONParseError).message).toContain('/config/test.json')
-        expect((error as JSONParseError).cause).toBeDefined()
-      }
+      expect(() => safeJSONParse(content, '/config/test.json')).toThrow(JSONParseError)
+      expect(() => safeJSONParse(content, '/config/test.json')).toThrow(
+        expect.objectContaining({
+          message: expect.stringContaining('/config/test.json'),
+          cause: expect.any(Error),
+        }),
+      )
     })
 
     it('should include raw content in error', () => {
       const content = '{invalid json'
 
-      try {
-        safeJSONParse(content, '/test.json')
-        expect(true).toBe(false)
-      } catch (error) {
-        expect(error).toBeInstanceOf(JSONParseError)
-        expect((error as JSONParseError).message).toContain('/test.json')
-        expect((error as JSONParseError).cause).toBeDefined()
-      }
+      expect(() => safeJSONParse(content, '/test.json')).toThrow(JSONParseError)
+      expect(() => safeJSONParse(content, '/test.json')).toThrow(
+        expect.objectContaining({
+          message: expect.stringContaining('/test.json'),
+          cause: expect.any(Error),
+        }),
+      )
     })
 
     it('should handle empty JSON object', () => {
