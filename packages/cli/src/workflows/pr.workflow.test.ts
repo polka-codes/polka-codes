@@ -6,7 +6,7 @@ import { createWorkflowTestContext } from '../test/workflow-fixtures'
 import { prWorkflow } from './pr.workflow'
 
 const createMockContext = () => {
-  const { context: baseContext, tools } = createWorkflowTestContext()
+  const { tools } = createWorkflowTestContext()
 
   // Add PR-specific tools
   tools.createPullRequest = mock(async (details) => details)

@@ -95,7 +95,7 @@ export class AgentLogger {
   /**
    * Log state transition
    */
-  stateTransition(from: string, to: string, reason?: string, meta?: Record<string, unknown>): void {
+  stateTransition(from: string, to: string, reason?: string, _meta?: Record<string, unknown>): void {
     const logEntry = {
       timestamp: new Date().toISOString(),
       sessionId: this.sessionId,
