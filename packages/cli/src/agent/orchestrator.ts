@@ -1,10 +1,10 @@
 import * as path from 'node:path'
+import type { Logger } from '@polka-codes/core'
 import { ulid } from 'ulid'
 import { AgentStatusError, SafetyViolationError } from './errors'
 import { TaskExecutor } from './executor'
 import { GoalDecomposer } from './goal-decomposer'
 import { createContinuousImprovementLoop } from './improvement-loop'
-import { AgentLogger } from './logger'
 import { MetricsCollector } from './metrics'
 import { createTaskPlanner } from './planner'
 import { ApprovalManager } from './safety/approval'
@@ -39,7 +39,7 @@ import { WorkingSpace } from './working-space'
 export class AutonomousAgent {
   private stateManager: AgentStateManager
   private taskHistory: TaskHistory
-  private logger: AgentLogger
+  private logger: Logger
   private metrics: MetricsCollector
   private approvalManager: ApprovalManager
   private safetyChecker: SafetyChecker
@@ -65,7 +65,7 @@ export class AutonomousAgent {
     // Initialize all components with correct constructor arguments
     this.stateManager = new AgentStateManager(stateDir, this.sessionId)
     this.taskHistory = new TaskHistory(stateDir)
-    this.logger = new AgentLogger(context.logger, path.join(stateDir, 'agent.log'), this.sessionId)
+    this.logger = context.logger
     this.metrics = new MetricsCollector()
     this.approvalManager = new ApprovalManager(
       this.logger,

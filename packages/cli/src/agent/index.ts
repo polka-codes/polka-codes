@@ -19,7 +19,6 @@ export { GoalDecomposer } from './goal-decomposer'
 export { HealthMonitor } from './health-monitor'
 export type { ContinuousImprovementLoop } from './improvement-loop'
 export { createContinuousImprovementLoop } from './improvement-loop'
-export { AgentLogger } from './logger'
 export { MetricsCollector } from './metrics'
 // Main orchestrator
 export { AutonomousAgent } from './orchestrator'
