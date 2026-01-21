@@ -311,11 +311,12 @@ Track these metrics throughout Phase 4:
 
 ## Related Documents
 
+- **Test Improvements Summary**: `plans/TEST_IMPROVEMENTS.md` - All phases summary
 - **Phase 2 Summary**: `plans/phase2-test-improvements.md`
 - **Test Review Plan**: `plans/test-review-plan.md`
-- **Testing Guidelines**: (To be created)
+- **Testing Guidelines**: `docs/TESTING_GUIDELINES.md` - Comprehensive guide
 
 ---
 
 **Last Updated**: 2025-01-21
-**Next Review**: After completing Priority 1 coverage improvements
+**Status**: 100% Complete
