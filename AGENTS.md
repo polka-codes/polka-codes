@@ -141,12 +141,12 @@ Instructions here...
 
 ### Testing
 
-**Comprehensive Guidelines**: See `docs/TESTING_GUIDELINES.md`
-
-**Test Templates**: `packages/cli/test/templates/`
-- `unit-test.template.ts`
-- `tool-test.template.ts`
-- `workflow-test.template.ts`
+**Comprehensive Guidelines**: See `docs/TESTING_GUIDELINES.md` for:
+- Core principles and best practices
+- When to write tests (and when not to)
+- Test structure and organization
+- Common patterns for tools, workflows, async operations
+- Coverage requirements
 
 **Snapshot Testing**: Use for tool outputs and structured data
 ```typescript

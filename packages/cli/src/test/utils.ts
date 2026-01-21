@@ -142,7 +142,8 @@ export function redactUnstableFields<T extends Record<string, any>>(obj: T, fiel
   const result = { ...obj }
   for (const field of fields) {
     if (field in result) {
-      result[field] = expect.any() as any
+      // Use a placeholder for unstable fields - actual replacement done in tests
+      result[field] = '[REDACTED]' as any
     }
   }
   return result
@@ -216,25 +217,14 @@ export function createTestMemoryEntry(
 }
 
 /**
- * Assert helpers
+ * Assert helpers (deprecated - use expect() directly in tests)
  */
 
-/**
- * Assert that a promise rejects with a specific error message
- * @param fn - Function that should reject
- * @param errorMessage - Expected error message or partial message
- * @returns Promise that resolves if assertion passes
- */
-export function expectToRejectWithMessage(fn: () => Promise<any>, errorMessage: string): Promise<void> {
-  return expect(fn()).rejects.toThrow(errorMessage)
-}
-
-/**
- * Assert that a function throws with a specific error type
- * @param fn - Function that should throw
- * @param errorType - Expected error type
- * @returns Promise that resolves if assertion passes
- */
-export function expectToThrowWithType<T extends Error>(fn: () => any, errorType: new (...args: any[]) => T): Promise<void> {
-  return expect(fn()).toThrow(errorType)
-}
+// Note: These helper functions are not used. Use expect() directly in tests.
+// export function expectToRejectWithMessage(fn: () => Promise<any>, errorMessage: string): Promise<void> {
+//   return expect(fn()).rejects.toThrow(errorMessage)
+// }
+//
+// export function expectToThrowWithType<T extends Error>(fn: () => any, errorType: new (...args: any[]) => T): Promise<void> {
+//   return expect(fn()).toThrow(errorType)
+// }

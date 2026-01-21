@@ -54,7 +54,10 @@ export function createWorkflowTestContext(): WorkflowTestContext {
 
   const step = mock(async (_name: string, arg2: unknown, arg3: unknown) => {
     const fn = typeof arg2 === 'function' ? arg2 : arg3
-    return fn()
+    if (typeof fn === 'function') {
+      return fn()
+    }
+    return undefined
   })
 
   const logger = {
@@ -131,10 +134,12 @@ export function mockCommandAttempts(tools: WorkflowTestContext['tools'], attempt
 }
 
 /**
- * Helper to verify exact number of tool calls
+ * Helper to verify exact number of tool calls (deprecated - use expect() directly)
  * @param tools - Tools object from createWorkflowTestContext
  * @param expectations - Object mapping tool names to expected call counts
  */
+// Note: Not used - use expect(tool).toHaveBeenCalledTimes(count) directly in tests
+/*
 export function expectToolCalls(
   tools: WorkflowTestContext['tools'],
   expectations: Partial<Record<keyof WorkflowTestContext['tools'], number>>,
@@ -144,3 +149,4 @@ export function expectToolCalls(
     expect(tool).toHaveBeenCalledTimes(expectedCount)
   }
 }
+*/
