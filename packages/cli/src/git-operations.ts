@@ -39,14 +39,28 @@ const validateBranchName = createValidator(
   'branch',
   /^[a-zA-Z0-9._\-/]+$/,
   'contains unsafe characters. Branch names can only contain alphanumeric, ., -, _, and /.',
+  (param) => {
+    // Block leading hyphens to prevent flag injection
+    if (param.startsWith('-')) {
+      throw new Error('Invalid branch name: cannot start with a hyphen to prevent flag injection.')
+    }
+  },
 )
 
 const validateFilePath = createValidator('file path', /^[a-zA-Z0-9._\-/@:~^ \s]+$/, 'contains potentially unsafe characters.')
 
-const validateGitRange = createValidator('range', /^[a-zA-Z0-9._\-/@:~^ \s]+$/, 'contains potentially unsafe characters.', (param) => {
+const validateGitRange = createValidator('range', /^[a-zA-Z0-9._\-/@:~^]+$/, 'contains potentially unsafe characters.', (param) => {
+  // Block leading hyphens to prevent flag injection
+  if (param.startsWith('-')) {
+    throw new Error('Invalid range: cannot start with a hyphen to prevent flag injection.')
+  }
   // Block `=` to prevent --option=value style flags
   if (param.includes('=')) {
     throw new Error("Invalid range: '=' characters are not allowed for security reasons.")
+  }
+  // Block spaces to prevent argument splitting
+  if (param.includes(' ')) {
+    throw new Error('Invalid range: spaces are not allowed to prevent argument injection.')
   }
 })
 
