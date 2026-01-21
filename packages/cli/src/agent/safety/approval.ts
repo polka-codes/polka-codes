@@ -82,25 +82,13 @@ export class ApprovalManager {
     }
     this.#logger.info('═'.repeat(60))
 
-    // Read user input from stdin
-    const readline = require('node:readline')
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout,
-    })
-
-    const answer = await new Promise<string>((resolve) => {
-      rl.question('Approve this task? (yes/no): ', (response: string) => {
-        rl.close()
-        resolve(response)
-      })
-    })
+    const answer = await this.askQuestion('Approve this task? (yes/no): ')
 
     if (!answer) {
       return { approved: false, reason: 'No response' }
     }
 
-    const normalized = answer.toLowerCase().trim()
+    const normalized = answer.toLowerCase()
 
     if (normalized === 'yes' || normalized === 'y') {
       return { approved: true }
