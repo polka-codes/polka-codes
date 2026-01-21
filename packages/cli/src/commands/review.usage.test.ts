@@ -32,8 +32,8 @@ describe('Review command usage consolidation', () => {
 
     // Verify usage structure
     expect(finalUsage).toHaveProperty('messageCount', 3)
-    expect(finalUsage).toHaveProperty('totalCost')
-    expect(typeof finalUsage.totalCost).toBe('number')
+    expect(finalUsage).toHaveProperty('cost')
+    expect(typeof finalUsage.cost).toBe('number')
   })
 
   test('should handle case where no task runs after review', () => {
@@ -44,6 +44,6 @@ describe('Review command usage consolidation', () => {
     const usage = usageMeter.usage
 
     expect(usage.messageCount).toBe(1)
-    expect(usage.totalCost).toBe(0)
+    expect(usage.cost).toBe(0)
   })
 })
