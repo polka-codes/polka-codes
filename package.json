@@ -17,7 +17,11 @@
     "cli": "bun run --no-check packages/cli/src/index.ts",
     "pr": "bun cli pr",
     "commit": "bun cli commit",
-    "codegen": "cd packages/github; graphql-codegen"
+    "codegen": "cd packages/github; graphql-codegen",
+    "test": "bun test",
+    "test:coverage": "bun test --coverage --coverage-reporter=text",
+    "test:coverage:lcov": "bun test --coverage --coverage-reporter=lcov",
+    "test:coverage:html": "bun test --coverage --coverage-reporter=html"
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.11",
