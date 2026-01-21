@@ -23,13 +23,5 @@
       "@polka-codes/cli-shared": ["./packages/cli-shared/src"]
     }
   },
-  "exclude": [
-    "**/node_modules",
-    "**/dist",
-    "**/*.test.ts",
-    "**/__tests__/**",
-    "packages/cli/test/templates/**",
-    "**/.claude/**",
-    "coverage/**"
-  ]
+  "exclude": ["**/node_modules", "**/dist", "**/.claude/**", "coverage/**"]
 }
