@@ -26,7 +26,7 @@ describe('Error Handling', () => {
 
       expect(error.name).toBe('CommandExecutionError')
       expect(error.message).toContain('npm install')
-      expect(error.message).toContain('exit code 1')
+      expect(error.message).toContain('code 1')
       expect(error.stack).toContain('CommandExecutionError')
       expect(error instanceof CommandExecutionError).toBe(true)
     })

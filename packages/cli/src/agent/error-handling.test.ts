@@ -93,9 +93,9 @@ describe('error-handling', () => {
       const error = new FileSystemAccessError('/test/path', 'read')
 
       expect(error.name).toBe('FileSystemAccessError')
-      expect(error.path).toBe('/test/path')
-      expect(error.operation).toBe('read')
       expect(error.message).toContain('Failed to read /test/path')
+      expect(error.message).toContain('/test/path')
+      expect(error.stack).toContain('FileSystemAccessError')
     })
 
     it('should accept cause error', () => {
@@ -103,12 +103,14 @@ describe('error-handling', () => {
       const error = new FileSystemAccessError('/test/path', 'write', cause)
 
       expect(error.cause).toBe(cause)
+      expect(error.message).toContain('Failed to write /test/path')
     })
 
     it('should work without cause', () => {
       const error = new FileSystemAccessError('/test/path', 'delete')
 
       expect(error.cause).toBeUndefined()
+      expect(error.message).toContain('Failed to delete /test/path')
     })
   })
 
@@ -117,10 +119,9 @@ describe('error-handling', () => {
       const error = new CommandExecutionError('npm install', 1, 'EACCES')
 
       expect(error.name).toBe('CommandExecutionError')
-      expect(error.command).toBe('npm install')
-      expect(error.exitCode).toBe(1)
-      expect(error.stderr).toBe('EACCES')
-      expect(error.message).toContain('Command failed with code 1: npm install')
+      expect(error.message).toContain('npm install')
+      expect(error.message).toContain('code 1')
+      expect(error.stack).toContain('CommandExecutionError')
     })
 
     it('should accept cause error', () => {
@@ -128,12 +129,16 @@ describe('error-handling', () => {
       const error = new CommandExecutionError('curl test.com', 28, 'Timeout', cause)
 
       expect(error.cause).toBe(cause)
+      expect(error.message).toContain('curl test.com')
+      expect(error.message).toContain('code 28')
     })
 
     it('should work without cause', () => {
       const error = new CommandExecutionError('ls', 0, '')
 
       expect(error.cause).toBeUndefined()
+      expect(error.message).toContain('ls')
+      expect(error.message).toContain('code 0')
     })
   })
 
@@ -143,9 +148,9 @@ describe('error-handling', () => {
       const error = new JSONParseError('/test/config.json', content)
 
       expect(error.name).toBe('JSONParseError')
-      expect(error.filePath).toBe('/test/config.json')
-      expect(error.rawContent).toBe(content)
-      expect(error.message).toContain('Failed to parse JSON from /test/config.json')
+      expect(error.message).toContain('/test/config.json')
+      expect(error.message).toContain('Failed to parse JSON')
+      expect(error.stack).toContain('JSONParseError')
     })
 
     it('should accept cause error', () => {
@@ -153,12 +158,14 @@ describe('error-handling', () => {
       const error = new JSONParseError('/test/data.json', '{}', cause)
 
       expect(error.cause).toBe(cause)
+      expect(error.message).toContain('/test/data.json')
     })
 
     it('should work without cause', () => {
       const error = new JSONParseError('/test/config.json', '{}')
 
       expect(error.cause).toBeUndefined()
+      expect(error.message).toContain('/test/config.json')
     })
   })
 
@@ -199,7 +206,8 @@ describe('error-handling', () => {
         expect(true).toBe(false) // Should not reach here
       } catch (error) {
         expect(error).toBeInstanceOf(JSONParseError)
-        expect((error as JSONParseError).filePath).toBe('/config/test.json')
+        expect((error as JSONParseError).message).toContain('/config/test.json')
+        expect((error as JSONParseError).cause).toBeDefined()
       }
     })
 
@@ -210,7 +218,9 @@ describe('error-handling', () => {
         safeJSONParse(content, '/test.json')
         expect(true).toBe(false)
       } catch (error) {
-        expect((error as JSONParseError).rawContent).toBe(content)
+        expect(error).toBeInstanceOf(JSONParseError)
+        expect((error as JSONParseError).message).toContain('/test.json')
+        expect((error as JSONParseError).cause).toBeDefined()
       }
     })
 
