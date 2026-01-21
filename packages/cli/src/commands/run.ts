@@ -56,7 +56,8 @@ export const runCommand = new Command('run')
       await executeScript(script, scriptName, logger, options.args || [])
     } catch (error) {
       if (error instanceof ScriptExecutionFailedError) {
-        process.exit(error.exitCode)
+        // Script failed, exit with code 1
+        process.exit(1)
       }
       throw error
     }

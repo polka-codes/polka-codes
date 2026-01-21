@@ -36,7 +36,7 @@ describe('Error Handling', () => {
     test('should create error with file path and content', () => {
       const content = '{invalid json'
       const originalError = new Error('Unexpected token')
-      const error = new JSONParseError('/test/config.json', originalError)
+      const error = new JSONParseError('/test/config.json', content, originalError)
 
       expect(error.name).toBe('JSONParseError')
       expect(error.message).toContain('/test/config.json')

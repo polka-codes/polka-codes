@@ -27,7 +27,7 @@ const createMockContext = () => {
         const fn = (typeof arg2 === 'function' ? arg2 : arg3) as () => Promise<any>
         return fn()
       },
-    }
+    } as any
     return prWorkflow(input, testContext)
   }
 

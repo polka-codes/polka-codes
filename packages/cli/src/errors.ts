@@ -5,7 +5,7 @@ import { createErrorClass } from '@polka-codes/core'
 /**
  * Error thrown when user cancels an operation
  */
-export const UserCancelledError = createErrorClass('UserCancelledError', (args: [string?] = []) => args[0] ?? 'User cancelled')
+export const UserCancelledError = createErrorClass('UserCancelledError', (args: any[]) => args[0] ?? 'User cancelled')
 
 /**
  * Base class for AI provider errors

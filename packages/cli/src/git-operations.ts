@@ -238,7 +238,7 @@ export class GitOperations {
    * Get commit messages for a range
    */
   async getCommitMessages(range: string): Promise<string> {
-    validateGitRange(range, 'range')
+    validateGitRange(range)
 
     const result = await this.tools.executeCommand({
       command: `git log --format=%s%n%b ${range}`,

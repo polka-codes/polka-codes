@@ -162,6 +162,6 @@ export function safeJSONParse<T = unknown>(content: string, filePath: string): T
     return JSON.parse(content) as T
   } catch (error) {
     // createErrorClass automatically extracts Error from last argument
-    throw new JSONParseError(filePath, error as Error)
+    throw new JSONParseError(filePath, content, error as Error)
   }
 }

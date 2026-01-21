@@ -46,10 +46,7 @@ export const ScriptTimeoutError = createErrorClass(
 /**
  * Error thrown when script execution fails
  */
-export const ScriptExecutionError = createErrorClass(
-  'ScriptExecutionError',
-  ([scriptPath]: [string]) => `Script execution failed: ${scriptPath}`,
-)
+export const ScriptExecutionError = createErrorClass('ScriptExecutionError', (args: any[]) => `Script execution failed: ${args[0]}`)
 
 /**
  * Options for script execution

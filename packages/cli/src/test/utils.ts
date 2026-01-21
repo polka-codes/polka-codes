@@ -5,6 +5,7 @@
  * and improve test maintainability across the codebase.
  */
 
+import { type Mock, mock } from 'bun:test'
 import { randomUUID } from 'node:crypto'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -39,8 +40,7 @@ export class TempDirectoryFixture {
    * @returns Path to the created directory
    */
   async setup(): Promise<string> {
-    this.dir = join(tmpdir(), `test-${randomUUID()}`)
-    mkdtempSync(this.dir, { recursive: true })
+    this.dir = mkdtempSync(join(tmpdir(), 'test-'))
     return this.dir
   }
 
@@ -91,7 +91,7 @@ export class TempDirectoryFixture {
  * @returns A mock function that can be configured
  */
 export function createMockFunction<T extends (...args: any[]) => any>(implementation?: T): T & { mock: Mock<T> } {
-  const mockFn = mock(implementation) as T & { mock: Mock<T> }
+  const mockFn = mock(implementation) as unknown as T & { mock: Mock<T> }
   return mockFn
 }
 
@@ -105,7 +105,7 @@ export function createPartialMock<T extends Record<string, any>>(obj: T, mockedM
   const result = {} as Partial<T>
   for (const key in obj) {
     if (mockedMethods.includes(key)) {
-      result[key] = mock()
+      result[key] = mock() as any
     } else {
       result[key] = obj[key]
     }

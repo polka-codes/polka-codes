@@ -55,13 +55,16 @@ describe('listTodoItems', () => {
       },
     })
     const items = result.message.value
+    if (!Array.isArray(items)) {
+      throw new Error('Expected items to be an array')
+    }
     expect(items).toHaveLength(5)
     // Verify sorting order
-    expect(items[0].id).toBe('1')
-    expect(items[1].id).toBe('1.1')
-    expect(items[2].id).toBe('1.2')
-    expect(items[3].id).toBe('2')
-    expect(items[4].id).toBe('10')
+    expect((items as TodoItem[])[0].id).toBe('1')
+    expect((items as TodoItem[])[1].id).toBe('1.1')
+    expect((items as TodoItem[])[2].id).toBe('1.2')
+    expect((items as TodoItem[])[3].id).toBe('2')
+    expect((items as TodoItem[])[4].id).toBe('10')
   })
 
   it('should filter items by status', async () => {
@@ -71,10 +74,13 @@ describe('listTodoItems', () => {
     // Verify only completed items are returned
     expect(result.success).toBe(true)
     const items = result.message.value
+    if (!Array.isArray(items)) {
+      throw new Error('Expected items to be an array')
+    }
     expect(items).toHaveLength(2)
-    expect(items.every((item: TodoItem) => item.status === 'completed')).toBe(true)
-    expect(items.some((item: TodoItem) => item.id === '2')).toBe(true)
-    expect(items.some((item: TodoItem) => item.id === '1.2')).toBe(true)
+    expect((items as TodoItem[]).every((item: TodoItem) => item.status === 'completed')).toBe(true)
+    expect((items as TodoItem[]).some((item: TodoItem) => item.id === '2')).toBe(true)
+    expect((items as TodoItem[]).some((item: TodoItem) => item.id === '1.2')).toBe(true)
   })
 
   it('should list sub-items for a given id', async () => {
@@ -85,7 +91,10 @@ describe('listTodoItems', () => {
     expect(listSpy).toHaveBeenCalledWith('1', undefined)
     // Verify sub-items are returned
     const items = result.message.value
+    if (!Array.isArray(items)) {
+      throw new Error('Expected items to be an array')
+    }
     expect(items).toHaveLength(2)
-    expect(items.every((item: TodoItem) => item.id.startsWith('1.'))).toBe(true)
+    expect((items as TodoItem[]).every((item: TodoItem) => item.id.startsWith('1.'))).toBe(true)
   })
 })

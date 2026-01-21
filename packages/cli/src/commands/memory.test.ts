@@ -347,7 +347,12 @@ describe('Memory Commands - Real Behavior Tests', () => {
 
       // Verify batchUpdateMemory is called with the validated entries
       expect(mockStore.batchUpdateMemory).toHaveBeenCalledTimes(1)
-      const batchCallArg = mockStore.batchUpdateMemory.mock.calls[0][0]
+      const batchCallArgs: any = mockStore.batchUpdateMemory.mock.calls[0]
+      expect(batchCallArgs).toBeDefined()
+      if (!batchCallArgs || batchCallArgs.length === 0) {
+        throw new Error('batchUpdateMemory was not called with arguments')
+      }
+      const batchCallArg = batchCallArgs[0] as any[]
       expect(batchCallArg).toHaveLength(3)
 
       // Check entry1 (entry_type defaulted to 'note')
@@ -406,7 +411,12 @@ describe('Memory Commands - Real Behavior Tests', () => {
       expect(consoleWarnSpy).toHaveBeenCalledWith('Entry "test" has invalid priority "invalid-priority", defaulting to null')
 
       // Verify batchUpdateMemory is called with priority as undefined
-      const batchCallArg = mockStore.batchUpdateMemory.mock.calls[0][0]
+      const batchCallArgs: any = mockStore.batchUpdateMemory.mock.calls[0]
+      expect(batchCallArgs).toBeDefined()
+      if (!batchCallArgs || batchCallArgs.length === 0) {
+        throw new Error('batchUpdateMemory was not called with arguments')
+      }
+      const batchCallArg = batchCallArgs[0] as any[]
       expect(batchCallArg).toHaveLength(1)
       expect(batchCallArg[0]).toEqual({
         operation: 'replace',

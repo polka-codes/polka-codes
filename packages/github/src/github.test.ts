@@ -11,11 +11,9 @@ describe.skipIf(!process.env.GITHUB_TOKEN)('github', () => {
 
     // Verify the issue was fetched successfully
     expect(issue).toBeDefined()
-    expect(issue?.number).toBe(1)
-    expect(issue?.title).toBeTruthy()
-    expect(issue?.body).toBeTruthy()
-    expect(issue?.state).toBeTruthy()
-    expect(issue?.user?.login).toBeTruthy()
+    expect(typeof issue).toBe('string')
+    expect(issue).toContain('#1:')
+    expect(issue).toBeTruthy()
   })
 
   test('fetchPR', async () => {
@@ -26,12 +24,9 @@ describe.skipIf(!process.env.GITHUB_TOKEN)('github', () => {
 
     // Verify the PR was fetched successfully
     expect(pr).toBeDefined()
-    expect(pr?.number).toBe(95)
-    expect(pr?.title).toBeTruthy()
-    expect(pr?.body).toBeTruthy()
-    expect(pr?.state).toBeTruthy()
-    expect(pr?.user?.login).toBeTruthy()
-    expect(pr?.head?.ref).toBeTruthy()
-    expect(pr?.base?.ref).toBeTruthy()
+    expect(typeof pr).toBe('string')
+    expect(pr).toContain('#95:')
+    expect(pr).toContain('Diff')
+    expect(pr).toBeTruthy()
   })
 })

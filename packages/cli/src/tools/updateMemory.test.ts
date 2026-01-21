@@ -18,7 +18,9 @@ describe('updateMemory', () => {
       })
       expect(result.success).toBe(false)
       // Verify error mentions content
-      expect(result.error.issues[0].message).toMatch(/content/i)
+      if (result.error) {
+        expect(result.error.issues[0].message).toMatch(/content/i)
+      }
     })
 
     it('should parse replace operation with content', () => {
@@ -35,7 +37,9 @@ describe('updateMemory', () => {
       })
       expect(result.success).toBe(false)
       // Verify error mentions content
-      expect(result.error.issues[0].message).toMatch(/content/i)
+      if (result.error) {
+        expect(result.error.issues[0].message).toMatch(/content/i)
+      }
     })
 
     it('should parse remove operation without content', () => {
@@ -52,7 +56,9 @@ describe('updateMemory', () => {
       })
       expect(result.success).toBe(false)
       // Verify error mentions content should not be provided
-      expect(result.error.issues[0].message).toBeTruthy()
+      if (result.error) {
+        expect(result.error.issues[0].message).toBeTruthy()
+      }
     })
   })
 

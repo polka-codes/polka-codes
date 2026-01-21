@@ -22,6 +22,14 @@ export interface WorkflowTestContext {
     taskEvent: ReturnType<typeof mock>
     getMemoryContext: ReturnType<typeof mock>
     updateMemory: ReturnType<typeof mock>
+    printChangeFile: ReturnType<typeof mock>
+    createCommit: ReturnType<typeof mock>
+    confirm: ReturnType<typeof mock>
+    select: ReturnType<typeof mock>
+    readFile: ReturnType<typeof mock>
+    writeToFile: ReturnType<typeof mock>
+    createPullRequest: ReturnType<typeof mock>
+    invokeTool: ReturnType<typeof mock>
   }
   step: ReturnType<typeof mock>
   logger: {
@@ -50,6 +58,14 @@ export function createWorkflowTestContext(): WorkflowTestContext {
     taskEvent: mock<() => Promise<void>>(),
     getMemoryContext: mock<() => Promise<string>>().mockResolvedValue(''),
     updateMemory: mock<() => Promise<void>>(),
+    printChangeFile: mock<() => Promise<{ stagedFiles: any[]; unstagedFiles: any[] }>>(),
+    createCommit: mock<() => Promise<{ message: string }>>(),
+    confirm: mock<() => Promise<boolean>>(),
+    select: mock<() => Promise<string>>(),
+    readFile: mock<() => Promise<string | null>>(),
+    writeToFile: mock<() => Promise<void>>(),
+    createPullRequest: mock<() => Promise<{ title: string; description: string }>>(),
+    invokeTool: mock<() => Promise<any>>(),
   }
 
   const step = mock(async (_name: string, arg2: unknown, arg3: unknown) => {

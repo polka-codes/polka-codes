@@ -140,7 +140,8 @@ async function tryExecuteCommand(commandName: string, logger: Logger): Promise<b
       await executeScript(script, commandName, logger, [])
     } catch (error) {
       if (error instanceof ScriptExecutionFailedError) {
-        process.exit(error.exitCode)
+        // Script failed, exit with code 1
+        process.exit(1)
       }
       throw error
     }
