@@ -1,0 +1,71 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`executeCommand should execute command successfully 1`] = `
+{
+  "message": {
+    "type": "text",
+    "value": 
+"<command>echo test</command>
+<command_exit_code>0</command_exit_code>
+<command_stdout>
+Command output
+</command_stdout>
+<command_stderr>
+stderr
+</command_stderr>
+"
+,
+  },
+  "success": true,
+}
+`;
+
+exports[`executeCommand should handle command errors 1`] = `
+{
+  "message": {
+    "type": "error-text",
+    "value": "Command failed",
+  },
+  "success": false,
+}
+`;
+
+exports[`executeCommand should handle command with non-zero exit code 1`] = `
+{
+  "message": {
+    "type": "error-text",
+    "value": 
+"<command>invalid-command</command>
+<command_exit_code>1</command_exit_code>
+<command_stdout>
+Command output
+</command_stdout>
+<command_stderr>
+stderr
+</command_stderr>
+"
+,
+  },
+  "success": false,
+}
+`;
+
+exports[`executeCommand should handle approval required 1`] = `
+{
+  "message": {
+    "type": "text",
+    "value": 
+"<command>rm -rf /</command>
+<command_exit_code>0</command_exit_code>
+<command_stdout>
+Approved command
+</command_stdout>
+<command_stderr>
+stderr
+</command_stderr>
+"
+,
+  },
+  "success": true,
+}
+`;
