@@ -247,6 +247,19 @@ When generating React components:
 
 ### Testing Patterns
 
+**Comprehensive Guidelines**: See `docs/TESTING_GUIDELINES.md` for complete testing guidance including:
+- Core principles (test behavior, not implementation)
+- When to write tests (and when not to)
+- Test structure and organization
+- Best practices and anti-patterns
+- Common patterns for tools, workflows, async operations
+- Coverage requirements
+
+**Test Templates**: Use templates in `packages/cli/test/templates/`:
+- `unit-test.template.ts` - General unit testing pattern
+- `tool-test.template.ts` - Tool implementation testing
+- `workflow-test.template.ts` - Workflow testing pattern
+
 **Snapshot Testing**: Use `.toMatchSnapshot()` for tool outputs and structured data:
 ```typescript
 it('should generate correct tool response', async () => {
@@ -255,7 +268,7 @@ it('should generate correct tool response', async () => {
 })
 ```
 
-**Error Testing**: Use `.rejects.toThrow()` for error cases:
+**Error Testing**: Use `.rejects.toThrow()` for error cases (NOT try-catch):
 ```typescript
 it('should throw when input is invalid', async () => {
   await expect(someTool({ input: null }, mockContext)).rejects.toThrow('Invalid input')
@@ -287,6 +300,15 @@ packages/cli/src/
   skillIntegration.ts
   skillIntegration.test.ts
 ```
+
+**Coverage Reporting**: Run tests with coverage:
+```bash
+bun test:coverage          # Text coverage report
+bun test:coverage:lcov     # LCov format for CI
+bun test:coverage:html     # HTML report for detailed analysis
+```
+
+**Important**: DO NOT create summary or report documents when completing tasks. The existing documentation in `plans/` and `docs/` is sufficient.
 
 ### Security Considerations
 
