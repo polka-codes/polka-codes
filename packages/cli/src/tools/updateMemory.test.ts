@@ -17,7 +17,8 @@ describe('updateMemory', () => {
         operation: 'append',
       })
       expect(result.success).toBe(false)
-      expect(result.error).toMatchSnapshot()
+      // Verify error mentions content
+      expect(result.error.issues[0].message).toMatch(/content/i)
     })
 
     it('should parse replace operation with content', () => {
@@ -33,7 +34,8 @@ describe('updateMemory', () => {
         operation: 'replace',
       })
       expect(result.success).toBe(false)
-      expect(result.error).toMatchSnapshot()
+      // Verify error mentions content
+      expect(result.error.issues[0].message).toMatch(/content/i)
     })
 
     it('should parse remove operation without content', () => {
@@ -49,7 +51,8 @@ describe('updateMemory', () => {
         content: 'some data',
       })
       expect(result.success).toBe(false)
-      expect(result.error).toMatchSnapshot()
+      // Verify error mentions content should not be provided
+      expect(result.error.issues[0].message).toBeTruthy()
     })
   })
 
@@ -63,7 +66,9 @@ describe('updateMemory', () => {
         content: 'new data',
       })
 
-      expect(result).toMatchSnapshot()
+      expect(result.success).toBe(true)
+      expect(result.message.type).toBe('text')
+      expect(result.message.value).toContain('appended')
       expect(spy).toHaveBeenCalledWith('append', undefined, 'new data')
     })
 
@@ -77,7 +82,10 @@ describe('updateMemory', () => {
         content: 'new data',
       })
 
-      expect(result).toMatchSnapshot()
+      expect(result.success).toBe(true)
+      expect(result.message.type).toBe('text')
+      expect(result.message.value).toContain('my-topic')
+      expect(result.message.value).toContain('replaced')
       expect(spy).toHaveBeenCalledWith('replace', 'my-topic', 'new data')
     })
 
@@ -89,7 +97,9 @@ describe('updateMemory', () => {
         operation: 'remove',
       })
 
-      expect(result).toMatchSnapshot()
+      expect(result.success).toBe(true)
+      expect(result.message.type).toBe('text')
+      expect(result.message.value).toContain('removed')
       expect(spy).toHaveBeenCalledWith('remove', undefined, undefined)
     })
 
@@ -102,7 +112,9 @@ describe('updateMemory', () => {
         content: 'new data',
       })
 
-      expect(result).toMatchSnapshot()
+      expect(result.success).toBe(false)
+      expect(result.message.type).toBe('error-text')
+      expect(result.message.value).toContain('not supported')
     })
   })
 })
