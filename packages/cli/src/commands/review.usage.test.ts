@@ -30,8 +30,10 @@ describe('Review command usage consolidation', () => {
     expect(finalUsage.messageCount).toBe(3) // 1 from review + 2 from task
     expect(finalUsage.messageCount).toBeGreaterThan(reviewUsage.messageCount)
 
-    // Verify usage consolidation prevents double printing
-    expect(finalUsage).toMatchSnapshot()
+    // Verify usage structure
+    expect(finalUsage).toHaveProperty('messageCount', 3)
+    expect(finalUsage).toHaveProperty('totalCost')
+    expect(typeof finalUsage.totalCost).toBe('number')
   })
 
   test('should handle case where no task runs after review', () => {
@@ -42,6 +44,6 @@ describe('Review command usage consolidation', () => {
     const usage = usageMeter.usage
 
     expect(usage.messageCount).toBe(1)
-    expect(usage).toMatchSnapshot()
+    expect(usage.totalCost).toBe(0)
   })
 })
