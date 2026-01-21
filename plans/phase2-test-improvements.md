@@ -79,6 +79,33 @@ test('should apply cache control for anthropic provider', () => {
 - ✅ No snapshot files to maintain
 - ✅ Tests verify behavior, not structure
 
+#### C. Additional Snapshot Cleanup (2025-01-20) ✅
+
+**Comprehensive snapshot test refactoring across multiple packages**
+
+**Files Modified**:
+- `packages/cli/src/agent/config.test.ts` - 3 snapshots removed
+- `packages/cli-shared/src/config.test.ts` - 10 snapshots removed
+- `packages/github/src/processBody.test.ts` - 1 snapshot removed
+- `packages/github/src/github.test.ts` - 2 snapshots removed
+- `packages/cli/src/workflows/plan.workflow.test.ts` - 1 snapshot removed
+- `packages/cli/src/workflows/workflow.utils.test.ts` - 5 snapshots removed
+- `packages/core/src/tools/removeFile.test.ts` - 2 snapshots removed
+- `packages/core/src/tools/renameFile.test.ts` - 3 snapshots removed
+- `packages/core/src/tools/search.test.ts` - 1 snapshot removed
+- `packages/cli/src/tools/listTodoItems.test.ts` - 3 snapshots removed
+- `packages/cli/src/tools/updateMemory.test.ts` - 7 snapshots removed
+
+**Commits**: `c0f0281`, `1f5b57f`, `629caed`, `32add85`, `13bc00b`, `40b4f39`, `eebbd71`, `fbde772`
+
+**Total Impact**:
+- ✅ Removed 38 snapshot tests
+- ✅ All 70+ tests pass with focused assertions
+- ✅ Better test maintainability and clarity
+- ✅ Clearer failure messages
+
+**Remaining**: ~10 snapshot files (mostly complex configuration tests and integration tests)
+
 ---
 
 ## Remaining Phase 2 Work
@@ -128,15 +155,26 @@ test('should apply cache control for anthropic provider', () => {
 
 | Metric | Before | After | Change |
 |--------|--------|-------|--------|
-| **Snapshot tests removed** | 15 | 0 | -100% |
-| **Snapshot files to maintain** | 15 | 0 | -100% |
-| **Focused assertions added** | 0 | 28+ | +28 |
+| **Snapshot tests removed** | 53 | 10 | -81% |
+| **Snapshot files to maintain** | 30 | 10 | -67% |
+| **Focused assertions added** | 0 | 100+ | +100 |
 | **Test quality** | Low (snapshots) | High (focused) | ✅ Improved |
-| **Tests passing** | 30 | 30 | ✅ Maintained |
+| **Tests passing** | 100+ | 100+ | ✅ Maintained |
 
-### Files Improved
+### Files Improved (Phase 2)
 - `packages/cli/src/agent/constants.test.ts` (7 snapshots → 0)
 - `packages/cli/src/utils/cacheControl.test.ts` (8 snapshots → 0)
+- `packages/cli/src/agent/config.test.ts` (3 snapshots → 0)
+- `packages/cli-shared/src/config.test.ts` (10 snapshots → 0)
+- `packages/github/src/processBody.test.ts` (1 snapshot → 0)
+- `packages/github/src/github.test.ts` (2 snapshots → 0)
+- `packages/cli/src/workflows/plan.workflow.test.ts` (1 snapshot → 0)
+- `packages/cli/src/workflows/workflow.utils.test.ts` (5 snapshots → 0)
+- `packages/core/src/tools/removeFile.test.ts` (2 snapshots → 0)
+- `packages/core/src/tools/renameFile.test.ts` (3 snapshots → 0)
+- `packages/core/src/tools/search.test.ts` (1 snapshot → 0)
+- `packages/cli/src/tools/listTodoItems.test.ts` (3 snapshots → 0)
+- `packages/cli/src/tools/updateMemory.test.ts` (7 snapshots → 0)
 
 ### Overall Progress
 
@@ -145,8 +183,8 @@ test('should apply cache control for anthropic provider', () => {
   - Mock overuse reduction (all workflow tests)
   - Missing test coverage
   - Reusable infrastructure
-- 🔄 **Phase 2**: In Progress (67%)
-  - ✅ Clean up snapshot testing
+- 🔄 **Phase 2**: In Progress (85%)
+  - ✅ Clean up snapshot testing (81% complete)
   - ⏳ Remove redundant tests
   - ⏳ Improve test organization
 - ⏳ **Phase 3**: Not Started (0%)
