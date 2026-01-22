@@ -2,7 +2,10 @@
 
 import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
+// Memory imports
+import { detectProjectScope, getGlobalConfigPath, loadConfigAtPath, MemoryManager, SQLiteMemoryStore } from '@polka-codes/cli-shared'
 import type { Logger, WorkflowFn } from '@polka-codes/core'
+import { DEFAULT_MEMORY_CONFIG } from '@polka-codes/core'
 import { z } from 'zod'
 import { commit } from '../api'
 import { runWorkflow } from '../runWorkflow'
@@ -18,6 +21,50 @@ import type { DefaultProviderConfig, McpServerTool, McpServerToolContext, Provid
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const projectRoot = path.resolve(__dirname, '../../../..')
+
+/**
+ * Get memory store instance for MCP server tools
+ * Lazy-loads memory store on first access
+ */
+let memoryStoreCache: { store: MemoryManager; close: () => void } | null = null
+
+async function getMemoryStore(): Promise<{ store: MemoryManager; close: () => void } | null> {
+  if (memoryStoreCache) {
+    return memoryStoreCache
+  }
+
+  try {
+    const globalConfigPath = getGlobalConfigPath()
+    const config = (await loadConfigAtPath(globalConfigPath)) as { memory?: { enabled: boolean; type: string; path?: string } } | null
+    const memoryConfig = config?.memory || DEFAULT_MEMORY_CONFIG
+
+    if (!memoryConfig.enabled || memoryConfig.type === 'memory') {
+      return null
+    }
+
+    const cwd = process.cwd()
+    const scope = detectProjectScope(cwd)
+    const dbPath = memoryConfig.path || DEFAULT_MEMORY_CONFIG.path
+    const resolvedDbPath = dbPath.startsWith('/') ? dbPath : path.resolve(cwd, dbPath)
+
+    const sqliteStore = new SQLiteMemoryStore({ enabled: true, type: 'sqlite', path: resolvedDbPath }, scope)
+    const memoryManager = new MemoryManager(sqliteStore)
+
+    memoryStoreCache = {
+      store: memoryManager,
+      close: () => {
+        sqliteStore.close()
+        memoryStoreCache = null
+      },
+    }
+
+    return memoryStoreCache
+  } catch (error) {
+    // If memory store fails to initialize, return null
+    console.error(`Failed to initialize memory store: ${error instanceof Error ? error.message : String(error)}`)
+    return null
+  }
+}
 
 /**
  * Schema for provider override options
@@ -505,6 +552,128 @@ Parameters:
             interactive: false,
           })
           return 'Commit created successfully'
+        } catch (error) {
+          return `Error: ${error instanceof Error ? error.message : String(error)}`
+        }
+      },
+    },
+    {
+      name: 'memory_read',
+      description: `Read content from a memory topic.
+
+Use this to retrieve information stored in previous workflow steps.
+Memory persists across tool calls, allowing you to maintain context
+between different operations.
+
+Parameters:
+- topic (optional): The memory topic to read from. Defaults to ":default:" which stores general conversation context.
+
+Returns the content stored in the specified topic, or a message indicating the topic is empty.`,
+      inputSchema: z.object({
+        topic: z.string().optional().describe('The memory topic to read from (defaults to ":default:")'),
+      }),
+      handler: async (args: Record<string, unknown>) => {
+        const { topic = ':default:' } = args as { topic?: string }
+        logger.info(`MCP: Reading from memory topic "${topic}"`)
+
+        const memoryStore = await getMemoryStore()
+        if (!memoryStore) {
+          return 'Error: Memory store is not enabled. Configure it in your .polkacodes.yml with memory.enabled: true'
+        }
+
+        try {
+          const content = await memoryStore.store.readMemory(topic)
+          if (content) {
+            return content
+          }
+          return `Memory topic "${topic}" is empty.`
+        } catch (error) {
+          return `Error: ${error instanceof Error ? error.message : String(error)}`
+        }
+      },
+    },
+    {
+      name: 'memory_update',
+      description: `Update content in a memory topic.
+
+Use this to store information for later retrieval in subsequent tool calls.
+Memory persists across tool calls, allowing you to maintain context
+between different operations.
+
+Parameters:
+- operation (required): The operation to perform. Use "append" to add content, "replace" to overwrite all content, or "remove" to delete the topic.
+- topic (optional): The memory topic to update. Defaults to ":default:".
+- content (optional): The content to store (required for "append" and "replace" operations).
+
+Returns a message confirming the operation performed.`,
+      inputSchema: z.object({
+        operation: z
+          .enum(['append', 'replace', 'remove'])
+          .describe('The operation: append (add content), replace (overwrite), or remove (delete topic)'),
+        topic: z.string().optional().describe('The memory topic to update (defaults to ":default:")'),
+        content: z.string().optional().describe('Content to store (required for append/replace, must be omitted for remove)'),
+      }),
+      handler: async (args: Record<string, unknown>) => {
+        const {
+          operation,
+          topic = ':default:',
+          content,
+        } = args as { operation: 'append' | 'replace' | 'remove'; topic?: string; content?: string }
+        logger.info(`MCP: Memory operation "${operation}" on topic "${topic}"`)
+
+        const memoryStore = await getMemoryStore()
+        if (!memoryStore) {
+          return 'Error: Memory store is not enabled. Configure it in your .polkacodes.yml with memory.enabled: true'
+        }
+
+        try {
+          // Validate content requirement
+          if ((operation === 'append' || operation === 'replace') && !content) {
+            return 'Error: Content is required for "append" and "replace" operations'
+          }
+          if (operation === 'remove' && content !== undefined) {
+            return 'Error: Content must not be provided for "remove" operation'
+          }
+
+          await memoryStore.store.updateMemory(operation, topic, content)
+
+          const messages = {
+            append: `Content appended to memory topic "${topic}"`,
+            replace: `Memory topic "${topic}" replaced`,
+            remove: `Memory topic "${topic}" removed`,
+          }
+
+          return messages[operation]
+        } catch (error) {
+          return `Error: ${error instanceof Error ? error.message : String(error)}`
+        }
+      },
+    },
+    {
+      name: 'memory_list',
+      description: `List all available memory topics.
+
+Use this to see what information has been stored and which topics are
+available to read from. Returns a list of topic names that have content.`,
+      inputSchema: z.object({}),
+      handler: async (_args: Record<string, unknown>) => {
+        logger.info('MCP: Listing memory topics')
+
+        const memoryStore = await getMemoryStore()
+        if (!memoryStore) {
+          return 'Error: Memory store is not enabled. Configure it in your .polkacodes.yml with memory.enabled: true'
+        }
+
+        try {
+          // Query all memory entries and extract unique topic names
+          const entries = await memoryStore.store.queryMemory({ scope: 'auto' }, { operation: 'select' })
+          if (!entries || !Array.isArray(entries) || entries.length === 0) {
+            return 'No memory topics found.'
+          }
+
+          // Extract unique topic names
+          const topics = [...new Set(entries.map((e) => e.name))]
+          return `Memory topics:\n${topics.join('\n')}`
         } catch (error) {
           return `Error: ${error instanceof Error ? error.message : String(error)}`
         }
