@@ -15,11 +15,6 @@ const mockLogger = {
   error: () => {},
 }
 
-// Mock tool context
-const mockContext = {
-  logger: mockLogger,
-}
-
 describe('SDK-based McpServer', () => {
   describe('Server Creation', () => {
     test('should create server with SDK', () => {
