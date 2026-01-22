@@ -30,8 +30,16 @@ export function createPolkaCodesMcpServer(tools: McpServerTool[], logger?: Logge
   )
 
   // Create context for tool handlers
+  // Use a safe default logger that writes to stderr (not stdout which is used for MCP protocol)
+  const defaultLogger: Logger = {
+    debug: () => {},
+    info: (message: string) => console.error(message),
+    warn: (message: string) => console.error(message),
+    error: (message: string) => console.error(message),
+  }
+
   const context: McpServerToolContext = {
-    logger: console as unknown as Logger,
+    logger: defaultLogger,
     defaultProvider,
   }
   if (logger) {
