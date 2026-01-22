@@ -30,7 +30,7 @@ import {
 } from '@polka-codes/core'
 import { merge } from 'lodash-es'
 import { AuthenticationError, ModelAccessError, ProviderError, QuotaExceededError, UserCancelledError } from './errors'
-import { getModel } from './getModel'
+import { type AiProvider, getModel } from './getModel'
 import { getProviderOptions } from './getProviderOptions'
 import { McpError } from './mcp/errors'
 import { McpManager } from './mcp/manager'
@@ -62,6 +62,12 @@ type RunWorkflowOptions = {
   interactive?: boolean
   getProvider?: (args: ProviderOptions) => ToolProvider
   onUsageMeterCreated?: (meter: UsageMeter) => void
+  /** Optional provider/model override for this workflow execution */
+  providerOverride?: {
+    provider?: string
+    model?: string
+    parameters?: Record<string, unknown>
+  }
 }
 
 export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
@@ -69,7 +75,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
   workflowInput: TInput,
   options: RunWorkflowOptions,
 ): Promise<TOutput | undefined> {
-  const { commandName, context, logger, interactive } = options
+  const { commandName, context, logger, interactive, providerOverride } = options
   const { providerConfig, config, verbose } = await parseOptions(context, {})
   const yes = context.yes
 
@@ -102,7 +108,21 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
   const onEvent: TaskEventCallback = printEvent(verbose, usage, process.stderr)
 
   // Get command config once and reuse
-  const commandConfig = providerConfig.getConfigForCommand(commandName)
+  let commandConfig = providerConfig.getConfigForCommand(commandName)
+
+  // Apply provider/model overrides if provided
+  if (providerOverride) {
+    const { provider: overrideProvider, model: overrideModel, parameters: overrideParameters } = providerOverride
+    // Create a merged config with overrides
+    if (commandConfig) {
+      commandConfig = {
+        ...commandConfig,
+        provider: (overrideProvider || commandConfig.provider) as AiProvider,
+        model: overrideModel || commandConfig.model,
+        parameters: overrideParameters ? { ...commandConfig.parameters, ...overrideParameters } : commandConfig.parameters,
+      }
+    }
+  }
 
   // All workflows currently require a provider, so validate config exists
   if (!commandConfig || !commandConfig.provider || !commandConfig.model) {

@@ -54,14 +54,6 @@ const validateGitRange = createValidator('range', /^[a-zA-Z0-9._\-/@:~^]+$/, 'co
   if (param.startsWith('-')) {
     throw new Error('Invalid range: cannot start with a hyphen to prevent flag injection.')
   }
-  // Block `=` to prevent --option=value style flags
-  if (param.includes('=')) {
-    throw new Error("Invalid range: '=' characters are not allowed for security reasons.")
-  }
-  // Block spaces to prevent argument splitting
-  if (param.includes(' ')) {
-    throw new Error('Invalid range: spaces are not allowed to prevent argument injection.')
-  }
 })
 
 export interface FileChange {

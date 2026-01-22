@@ -4,11 +4,16 @@ import { Command } from 'commander'
 import { createLogger } from '../logger'
 import { createPolkaCodesMcpServer, startStdioServer } from '../mcp-server/sdk-server'
 import { createPolkaCodesServerTools } from '../mcp-server/tools'
+import { addSharedOptions } from '../options'
 
 export const mcpServerCommand = new Command('mcp-server')
   .description('Start polka-codes as an MCP server')
+  .addOption(addSharedOptions(new Command('tmp')).options[0]) // -c --config
+  .addOption(addSharedOptions(new Command('tmp')).options[1]) // --api-provider
+  .addOption(addSharedOptions(new Command('tmp')).options[2]) // --model
+  .addOption(addSharedOptions(new Command('tmp')).options[3]) // --api-key
   .option('-v, --verbose', 'Enable verbose logging', false)
-  .action(async (options: { verbose: boolean }) => {
+  .action(async (options: { config?: string[]; apiProvider?: string; model?: string; apiKey?: string; verbose: boolean }) => {
     // Configure logger to write to stderr (stdout is reserved for MCP protocol)
     const logger = createLogger({
       verbose: options.verbose ? 1 : 0,
@@ -21,13 +26,32 @@ export const mcpServerCommand = new Command('mcp-server')
     logger.info('║           Polka Codes MCP Server               ║')
     logger.info('╚════════════════════════════════════════════════╝')
     logger.info('')
+
+    // Print server configuration if provided
+    if (options.apiProvider || options.model) {
+      logger.info('Server Configuration:')
+      if (options.apiProvider) {
+        logger.info(`  Provider: ${options.apiProvider}`)
+      }
+      if (options.model) {
+        logger.info(`  Model: ${options.model}`)
+      }
+      logger.info('')
+    }
+
     logger.info('Available Tools:')
 
     // Create tools (pass logger for workflow execution)
     const tools = createPolkaCodesServerTools(logger)
 
     // Create and start server using official SDK
-    const server = createPolkaCodesMcpServer(tools, logger)
+    // Pass default provider configuration from CLI options
+    const defaultProvider = {
+      provider: options.apiProvider,
+      model: options.model,
+      apiKey: options.apiKey,
+    }
+    const server = createPolkaCodesMcpServer(tools, logger, defaultProvider)
 
     // Print available tools to stderr via logger
     for (const tool of tools) {
@@ -48,9 +72,32 @@ export const mcpServerCommand = new Command('mcp-server')
     logger.info('      "polka": {')
     logger.info('        "command": "polka",')
     logger.info('        "args": ["mcp-server"]')
+    if (options.apiProvider || options.model) {
+      logger.info('        "args": ["mcp-server"')
+      if (options.apiProvider) {
+        logger.info(`          , "--api-provider", "${options.apiProvider}"`)
+      }
+      if (options.model) {
+        logger.info(`          , "--model", "${options.model}"`)
+      }
+      logger.info('        ]')
+    } else {
+      logger.info('        "args": ["mcp-server"]')
+    }
     logger.info('      }')
     logger.info('    }')
     logger.info('  }')
+    logger.info('')
+    logger.info('Server-level Provider Options:')
+    logger.info('  --api-provider <provider>  Set default AI provider')
+    logger.info('  --model <model>            Set default model')
+    logger.info('  --api-key <key>            Set API key')
+    logger.info('')
+    logger.info('Per-call Override Options:')
+    logger.info('  Each tool call can override the server defaults by including:')
+    logger.info('  - provider: Override provider for this call')
+    logger.info('  - model: Override model for this call')
+    logger.info('  - parameters: Override model parameters for this call')
     logger.info('')
     logger.info('Press Ctrl+C to stop the server')
     logger.info('═════════════════════════════════════════════════════════════════')

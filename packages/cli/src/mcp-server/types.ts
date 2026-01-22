@@ -5,6 +5,29 @@
  */
 
 import type { AnySchema } from '@modelcontextprotocol/sdk/server/zod-compat'
+import type { Logger } from '@polka-codes/core'
+
+/**
+ * Context passed to tool handlers for workflow execution
+ */
+export type McpServerToolContext = {
+  logger: Logger
+  defaultProvider?: DefaultProviderConfig
+}
+
+/**
+ * Default provider configuration
+ */
+export type DefaultProviderConfig = {
+  /** Default AI provider */
+  provider?: string
+  /** Default model */
+  model?: string
+  /** Default API key (overrides config file) */
+  apiKey?: string
+  /** Default model parameters */
+  parameters?: Record<string, unknown>
+}
 
 /**
  * Tool that can be exposed via MCP server
@@ -13,7 +36,7 @@ export interface McpServerTool {
   name: string
   description: string
   inputSchema: AnySchema
-  handler: (args: Record<string, unknown>) => Promise<unknown>
+  handler: (args: Record<string, unknown>, context: McpServerToolContext) => Promise<unknown>
 }
 
 /**
@@ -25,6 +48,18 @@ export interface McpServerResource {
   description?: string
   mimeType?: string
   handler: () => Promise<string>
+}
+
+/**
+ * Provider and model override options for individual tool calls
+ */
+export interface ProviderOverride {
+  /** Override the AI provider for this call (e.g., 'anthropic', 'deepseek', 'ollama') */
+  provider?: string
+  /** Override the model for this call (e.g., 'claude-sonnet-4-5', 'deepseek-chat') */
+  model?: string
+  /** Override model parameters for this call */
+  parameters?: Record<string, unknown>
 }
 
 /**
@@ -40,4 +75,6 @@ export interface McpServerConfig {
     resources?: boolean
     prompts?: boolean
   }
+  /** Default provider configuration for all tools */
+  defaultProvider?: DefaultProviderConfig
 }

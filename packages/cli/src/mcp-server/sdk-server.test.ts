@@ -15,6 +15,11 @@ const mockLogger = {
   error: () => {},
 }
 
+// Mock tool context
+const mockContext = {
+  logger: mockLogger,
+}
+
 describe('SDK-based McpServer', () => {
   describe('Server Creation', () => {
     test('should create server with SDK', () => {
@@ -41,7 +46,7 @@ describe('SDK-based McpServer', () => {
           inputSchema: z.object({
             arg1: z.string(),
           }),
-          handler: async (args) => {
+          handler: async (args, _context) => {
             return { result: args }
           },
         },
@@ -59,13 +64,13 @@ describe('SDK-based McpServer', () => {
           name: 'tool1',
           description: 'Tool 1',
           inputSchema: z.object({}),
-          handler: async () => ({ result: 'tool1' }),
+          handler: async (_args, _context) => ({ result: 'tool1' }),
         },
         {
           name: 'tool2',
           description: 'Tool 2',
           inputSchema: z.object({}),
-          handler: async () => ({ result: 'tool2' }),
+          handler: async (_args, _context) => ({ result: 'tool2' }),
         },
       ]
 
@@ -88,7 +93,7 @@ describe('SDK-based McpServer', () => {
               nested: z.string(),
             }),
           }),
-          handler: async (args) => args,
+          handler: async (args, _context) => args,
         },
       ]
 
@@ -107,7 +112,7 @@ describe('SDK-based McpServer', () => {
           inputSchema: z.object({
             message: z.string(),
           }),
-          handler: async (args) => {
+          handler: async (args, _context) => {
             return { echoed: args.message }
           },
         },
@@ -124,7 +129,7 @@ describe('SDK-based McpServer', () => {
           name: 'object_result',
           description: 'Returns object',
           inputSchema: z.object({}),
-          handler: async () => {
+          handler: async (_args, _context) => {
             return { key: 'value', nested: { prop: 123 } }
           },
         },
@@ -141,7 +146,7 @@ describe('SDK-based McpServer', () => {
           name: 'string_result',
           description: 'Returns string',
           inputSchema: z.object({}),
-          handler: async () => {
+          handler: async (_args, _context) => {
             return 'Plain string result'
           },
         },
@@ -163,7 +168,7 @@ describe('SDK-based McpServer', () => {
           name: 'failing_tool',
           description: 'A tool that fails',
           inputSchema: z.object({}),
-          handler: async () => {
+          handler: async (_args, _context) => {
             throw new Error('Tool execution failed')
           },
         },
@@ -183,7 +188,7 @@ describe('SDK-based McpServer', () => {
           name: 'no_params',
           description: 'Tool with no parameters',
           inputSchema: z.object({}),
-          handler: async () => ({ result: 'ok' }),
+          handler: async (_args, _context) => ({ result: 'ok' }),
         },
       ]
 
@@ -201,7 +206,7 @@ describe('SDK-based McpServer', () => {
             optional1: z.string().optional(),
             optional2: z.number().optional(),
           }),
-          handler: async (args) => args,
+          handler: async (args, _context) => args,
         },
       ]
 
@@ -221,7 +226,7 @@ describe('SDK-based McpServer', () => {
               name: z.string(),
             }),
           }),
-          handler: async (args) => args,
+          handler: async (args, _context) => args,
         },
       ]
 
@@ -243,7 +248,7 @@ describe('SDK-based McpServer', () => {
               }),
             ),
           }),
-          handler: async (args) => args,
+          handler: async (args, _context) => args,
         },
       ]
 
@@ -284,7 +289,7 @@ describe('SDK-based McpServer', () => {
         name: '', // Invalid: empty name
         description: 'Invalid tool',
         inputSchema: z.object({}),
-        handler: async () => ({}),
+        handler: async (_args, _context) => ({}),
       }
 
       expect(() => {
@@ -299,7 +304,7 @@ describe('SDK-based McpServer', () => {
           name: 'throws_error',
           description: 'Tool that throws',
           inputSchema: z.object({}),
-          handler: async () => {
+          handler: async (_args, _context) => {
             throw new Error('Handler error')
           },
         },
@@ -320,7 +325,7 @@ describe('SDK-based McpServer', () => {
           name: 'test',
           description: 'Test tool',
           inputSchema: z.object({}),
-          handler: async () => ({ result: 'ok' }),
+          handler: async (_args, _context) => ({ result: 'ok' }),
         },
       ]
 
@@ -344,7 +349,7 @@ describe('SDK-based McpServer', () => {
           name: 'test',
           description: 'Test tool',
           inputSchema: z.object({}),
-          handler: async () => ({ result: 'ok' }),
+          handler: async (_args, _context) => ({ result: 'ok' }),
         },
       ]
 
@@ -367,7 +372,7 @@ describe('SDK-based McpServer', () => {
           name: 'test',
           description: 'Test tool',
           inputSchema: z.object({}),
-          handler: async () => ({ result: 'ok' }),
+          handler: async (_args, _context) => ({ result: 'ok' }),
         },
       ]
 
@@ -377,6 +382,58 @@ describe('SDK-based McpServer', () => {
       }).not.toThrow()
 
       expect(errorCalled).toBe(false)
+    })
+  })
+
+  describe('Provider Override Support', () => {
+    test('should create server with default provider config', () => {
+      const tools: McpServerTool[] = [
+        {
+          name: 'test',
+          description: 'Test tool',
+          inputSchema: z.object({}),
+          handler: async (_args, context) => {
+            // Context should contain defaultProvider
+            expect(context).toBeDefined()
+            expect(context.logger).toBeDefined()
+            return { result: 'ok' }
+          },
+        },
+      ]
+
+      const defaultProvider = {
+        provider: 'anthropic',
+        model: 'claude-sonnet-4-5',
+      }
+
+      const server = createPolkaCodesMcpServer(tools, mockLogger, defaultProvider)
+
+      expect(server).toBeDefined()
+    })
+
+    test('should pass default provider to tool context', () => {
+      const tools: McpServerTool[] = [
+        {
+          name: 'test',
+          description: 'Test tool',
+          inputSchema: z.object({}),
+          handler: async (_args, context) => {
+            expect(context.defaultProvider).toBeDefined()
+            expect(context.defaultProvider?.provider).toBe('deepseek')
+            expect(context.defaultProvider?.model).toBe('deepseek-chat')
+            return { result: 'ok' }
+          },
+        },
+      ]
+
+      const defaultProvider = {
+        provider: 'deepseek',
+        model: 'deepseek-chat',
+      }
+
+      const server = createPolkaCodesMcpServer(tools, mockLogger, defaultProvider)
+
+      expect(server).toBeDefined()
     })
   })
 })

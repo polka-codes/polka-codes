@@ -12,12 +12,38 @@ import { fixWorkflow } from '../workflows/fix.workflow'
 import { planWorkflow } from '../workflows/plan.workflow'
 import { reviewWorkflow } from '../workflows/review.workflow'
 import type { BaseWorkflowInput } from '../workflows/workflow.utils'
-import type { McpServerTool } from './types'
+import type { McpServerTool, McpServerToolContext, ProviderOverride } from './types'
 
 // Get the project root directory (assuming we're in packages/cli/src/mcp-server)
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const projectRoot = path.resolve(__dirname, '../../../..')
+
+/**
+ * Schema for provider override options
+ * Can be added to any tool input to allow per-call provider/model overrides
+ */
+const providerOverrideSchema = z.object({
+  provider: z.string().optional().describe('Override the AI provider for this call (e.g., "anthropic", "deepseek", "ollama")'),
+  model: z.string().optional().describe('Override the model for this call (e.g., "claude-sonnet-4-5", "deepseek-chat")'),
+  parameters: z.record(z.string(), z.unknown()).optional().describe('Override model parameters for this call'),
+})
+
+/**
+ * Extract provider override from tool arguments
+ */
+function extractProviderOverride(args: Record<string, unknown>): ProviderOverride | undefined {
+  const { provider, model, parameters } = args as {
+    provider?: string
+    model?: string
+    parameters?: Record<string, unknown>
+  }
+
+  if (provider || model || parameters) {
+    return { provider, model, parameters }
+  }
+  return undefined
+}
 
 /**
  * Create a minimal execution context for running workflows from MCP server
@@ -38,23 +64,48 @@ function createExecutionContext(_logger: Logger) {
     file: undefined,
     // Provider configuration fields (will be populated by runWorkflow from config/env)
     // These are required for runWorkflow to properly initialize the AI provider
-    provider: undefined,
-    model: undefined,
-    apiProvider: undefined,
+    provider: undefined as string | undefined,
+    model: undefined as string | undefined,
+    apiProvider: undefined as string | undefined,
   }
 }
 
 /**
  * Helper to run a workflow and format the result for MCP response
+ *
+ * @param workflow - The workflow function to execute
+ * @param input - Input parameters for the workflow
+ * @param commandName - Name of the command (for config lookup)
+ * @param logger - Logger instance
+ * @param providerOverride - Optional provider/model override for this call
+ * @param defaultProvider - Default provider config from server startup
  */
 async function executeWorkflow<TInput>(
   workflow: WorkflowFn<TInput & BaseWorkflowInput, unknown, CliToolRegistry>,
   input: TInput,
   commandName: string,
   logger: Logger,
+  providerOverride?: ProviderOverride,
+  defaultProvider?: ProviderOverride,
 ): Promise<string> {
   try {
     const context = createExecutionContext(logger)
+
+    // Apply provider overrides in priority order:
+    // 1. Per-call override (highest priority)
+    // 2. Server default
+    // 3. Leave undefined to use config file/env defaults
+    const finalProvider = providerOverride?.provider || defaultProvider?.provider
+    const finalModel = providerOverride?.model || defaultProvider?.model
+    const finalParameters = providerOverride?.parameters || defaultProvider?.parameters
+
+    // Update context with overrides if provided
+    if (finalProvider) {
+      context.provider = finalProvider
+    }
+    if (finalModel) {
+      context.model = finalModel
+    }
 
     // Add default values for BaseWorkflowInput properties
     const workflowInput = {
@@ -68,6 +119,12 @@ async function executeWorkflow<TInput>(
       context,
       logger,
       interactive: false,
+      // Pass provider/model overrides to runWorkflow
+      providerOverride: {
+        provider: finalProvider,
+        model: finalModel,
+        parameters: finalParameters,
+      },
     })
 
     if (!result) {
@@ -111,6 +168,11 @@ async function executeWorkflow<TInput>(
  *
  * These tools integrate with the actual polka-codes workflows to enable
  * AI assistants (via MCP) to execute code tasks, reviews, planning, etc.
+ *
+ * Each tool now supports optional provider/model overrides via:
+ * - provider: Override the AI provider
+ * - model: Override the model
+ * - parameters: Override model parameters
  */
 export function createPolkaCodesServerTools(logger: Logger): McpServerTool[] {
   return [
@@ -130,14 +192,21 @@ The workflow will:
 Best used for implementing new features, refactoring existing code, fixing bugs across multiple files, adding tests, or code modernization.
 
 Parameters:
-- task (required): Detailed description of what needs to be implemented or changed`,
+- task (required): Detailed description of what needs to be implemented or changed
+- provider (optional): Override the AI provider for this call
+- model (optional): Override the model for this call
+- parameters (optional): Override model parameters for this call`,
       inputSchema: z.object({
         task: z.string().describe('The coding task to execute - be specific about what needs to be done'),
+        ...providerOverrideSchema.shape,
       }),
-      handler: async (args: Record<string, unknown>) => {
+      handler: async (args: Record<string, unknown>, toolContext: McpServerToolContext) => {
         const { task } = args as { task: string }
-        logger.info(`MCP: Executing code workflow - task: "${task}"`)
-        return await executeWorkflow(codeWorkflow, { task }, 'code', logger)
+        const providerOverride = extractProviderOverride(args)
+        logger.info(
+          `MCP: Executing code workflow - task: "${task}"${providerOverride?.provider ? ` with provider: ${providerOverride.provider}` : ''}`,
+        )
+        return await executeWorkflow(codeWorkflow, { task }, 'code', logger, providerOverride, toolContext.defaultProvider)
       },
     },
     {
@@ -168,7 +237,10 @@ Parameters:
 - pr (optional): Pull request number to review
 - range (optional): Git range to review (e.g., HEAD~3..HEAD, origin/main..HEAD). When omitted, reviews staged and unstaged local changes
 - files (optional): Specific files to review
-- context (optional): Additional context about the changes (purpose, constraints, technical background)`,
+- context (optional): Additional context about the changes (purpose, constraints, technical background)
+- provider (optional): Override the AI provider for this call
+- model (optional): Override the model for this call
+- parameters (optional): Override model parameters for this call`,
       inputSchema: z.object({
         pr: z.number().optional().describe('Pull request number to review (optional)'),
         range: z.string().optional().describe('Git range to review (e.g., HEAD~3..HEAD, origin/main..HEAD) (optional)'),
@@ -177,11 +249,22 @@ Parameters:
           .string()
           .optional()
           .describe('Additional context for the review - explains the purpose of changes, constraints, or areas of focus (optional)'),
+        ...providerOverrideSchema.shape,
       }),
-      handler: async (args: Record<string, unknown>) => {
+      handler: async (args: Record<string, unknown>, toolContext: McpServerToolContext) => {
         const { pr, range, files, context } = args as { pr?: number; range?: string; files?: string[]; context?: string }
-        logger.info(`MCP: Executing review workflow${pr ? ` - PR: ${pr}` : ''}${range ? ` - range: ${range}` : ''}`)
-        return await executeWorkflow(reviewWorkflow, { pr, range, files, context }, 'review', logger)
+        const providerOverride = extractProviderOverride(args)
+        logger.info(
+          `MCP: Executing review workflow${pr ? ` - PR: ${pr}` : ''}${range ? ` - range: ${range}` : ''}${providerOverride?.provider ? ` with provider: ${providerOverride.provider}` : ''}`,
+        )
+        return await executeWorkflow(
+          reviewWorkflow,
+          { pr, range, files, context },
+          'review',
+          logger,
+          providerOverride,
+          toolContext.defaultProvider,
+        )
       },
     },
     {
@@ -209,16 +292,36 @@ The plan includes:
 Best used for complex features, architecture changes, large refactorings, or migration strategies.
 
 Parameters:
-- task (required): Detailed description of what needs to be planned`,
+- task (required): Detailed description of what needs to be planned
+- provider (optional): Override the AI provider for this call
+- model (optional): Override the model for this call
+- parameters (optional): Override model parameters for this call`,
       inputSchema: z.object({
         task: z.string().describe('The task or feature to plan - provide details about requirements, constraints, and goals'),
+        ...providerOverrideSchema.shape,
       }),
-      handler: async (args: Record<string, unknown>) => {
+      handler: async (args: Record<string, unknown>, toolContext: McpServerToolContext) => {
         const { task } = args as { task: string }
-        logger.info(`MCP: Executing plan workflow - task: "${task}"`)
+        const providerOverride = extractProviderOverride(args)
+        logger.info(
+          `MCP: Executing plan workflow - task: "${task}"${providerOverride?.provider ? ` with provider: ${providerOverride.provider}` : ''}`,
+        )
 
         try {
           const context = createExecutionContext(logger)
+
+          // Apply provider overrides
+          const finalProvider = providerOverride?.provider || toolContext.defaultProvider?.provider
+          const finalModel = providerOverride?.model || toolContext.defaultProvider?.model
+          const finalParameters = providerOverride?.parameters || toolContext.defaultProvider?.parameters
+
+          if (finalProvider) {
+            context.provider = finalProvider
+          }
+          if (finalModel) {
+            context.model = finalModel
+          }
+
           const result = await runWorkflow(
             planWorkflow,
             { task, interactive: false },
@@ -227,6 +330,11 @@ Parameters:
               context,
               logger,
               interactive: false,
+              providerOverride: {
+                provider: finalProvider,
+                model: finalModel,
+                parameters: finalParameters,
+              },
             },
           )
 
@@ -302,14 +410,21 @@ Process:
 6. Iterate if needed until resolved
 
 Parameters:
-- task (required): Description of the issue - include error messages, stack traces, or describe what's not working`,
+- task (required): Description of the issue - include error messages, stack traces, or describe what's not working
+- provider (optional): Override the AI provider for this call
+- model (optional): Override the model for this call
+- parameters (optional): Override model parameters for this call`,
       inputSchema: z.object({
         task: z.string().describe("Description of the issue to fix - include error messages, stack traces, or describe what's not working"),
+        ...providerOverrideSchema.shape,
       }),
-      handler: async (args: Record<string, unknown>) => {
+      handler: async (args: Record<string, unknown>, toolContext: McpServerToolContext) => {
         const { task } = args as { task: string }
-        logger.info(`MCP: Executing fix workflow - task: "${task}"`)
-        return await executeWorkflow(fixWorkflow, { task }, 'fix', logger)
+        const providerOverride = extractProviderOverride(args)
+        logger.info(
+          `MCP: Executing fix workflow - task: "${task}"${providerOverride?.provider ? ` with provider: ${providerOverride.provider}` : ''}`,
+        )
+        return await executeWorkflow(fixWorkflow, { task }, 'fix', logger, providerOverride, toolContext.defaultProvider)
       },
     },
     {
@@ -336,7 +451,10 @@ Best practices followed:
 
 Parameters:
 - message (optional): Custom commit message. If not provided, AI analyzes changes and generates an appropriate message following best practices
-- stageFiles (optional): Files to stage before committing. Use "all" to stage all files, or provide an array of specific file paths to stage`,
+- stageFiles (optional): Files to stage before committing. Use "all" to stage all files, or provide an array of specific file paths to stage
+- provider (optional): Override the AI provider for this call
+- model (optional): Override the model for this call
+- parameters (optional): Override model parameters for this call`,
       inputSchema: z.object({
         message: z
           .string()
@@ -346,15 +464,29 @@ Parameters:
           .union([z.literal('all'), z.array(z.string())])
           .optional()
           .describe('Files to stage: "all" for all files, or array of specific file paths'),
+        ...providerOverrideSchema.shape,
       }),
-      handler: async (args: Record<string, unknown>) => {
+      handler: async (args: Record<string, unknown>, toolContext: McpServerToolContext) => {
         const { message, stageFiles } = args as { message?: string; stageFiles?: 'all' | string[] }
+        const providerOverride = extractProviderOverride(args)
         logger.info(
-          `MCP: Executing commit workflow${message ? ` - message: "${message}"` : ''}${stageFiles ? ` - stageFiles: "${JSON.stringify(stageFiles)}"` : ''}`,
+          `MCP: Executing commit workflow${message ? ` - message: "${message}"` : ''}${stageFiles ? ` - stageFiles: "${JSON.stringify(stageFiles)}"` : ''}${providerOverride?.provider ? ` with provider: ${providerOverride.provider}` : ''}`,
         )
         try {
+          // Apply provider overrides for commit
+          const context = createExecutionContext(logger)
+          const finalProvider = providerOverride?.provider || toolContext.defaultProvider?.provider
+          const finalModel = providerOverride?.model || toolContext.defaultProvider?.model
+
+          if (finalProvider) {
+            context.provider = finalProvider
+          }
+          if (finalModel) {
+            context.model = finalModel
+          }
+
           await commit({
-            ...createExecutionContext(logger),
+            ...context,
             context: message,
             all: stageFiles === 'all',
             files: Array.isArray(stageFiles) ? stageFiles : undefined,

@@ -3,16 +3,17 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import type { Logger } from '@polka-codes/core'
-import type { McpServerTool } from './types.js'
+import type { DefaultProviderConfig, McpServerTool, McpServerToolContext } from './types.js'
 
 /**
  * Create an MCP server using the official SDK
  *
  * @param tools - Array of tools to register
  * @param logger - Optional logger instance
+ * @param defaultProvider - Optional default provider configuration
  * @returns Configured MCP server instance
  */
-export function createPolkaCodesMcpServer(tools: McpServerTool[], logger?: Logger): McpServer {
+export function createPolkaCodesMcpServer(tools: McpServerTool[], logger?: Logger, defaultProvider?: DefaultProviderConfig): McpServer {
   // Create server instance with SDK
   const server = new McpServer(
     {
@@ -28,6 +29,15 @@ export function createPolkaCodesMcpServer(tools: McpServerTool[], logger?: Logge
     },
   )
 
+  // Create context for tool handlers
+  const context: McpServerToolContext = {
+    logger: console as unknown as Logger,
+    defaultProvider,
+  }
+  if (logger) {
+    context.logger = logger
+  }
+
   // Register polka-codes tools
   for (const tool of tools) {
     try {
@@ -39,8 +49,8 @@ export function createPolkaCodesMcpServer(tools: McpServerTool[], logger?: Logge
         },
         async (args: Record<string, unknown>) => {
           try {
-            // Call polka-codes tool handler
-            const result = await tool.handler(args)
+            // Call polka-codes tool handler with context
+            const result = await tool.handler(args, context)
 
             // Return result in MCP format
             return {

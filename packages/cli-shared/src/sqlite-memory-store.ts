@@ -37,7 +37,7 @@ class FileLock {
         })
         return // Lock acquired successfully
       } catch (error: unknown) {
-        const errorCode = (error as NodeJS.ErrnoException).code
+        const errorCode = (error as NodeJS.ErrnoException)?.code
         if (errorCode === 'EEXIST') {
           // Lock file exists, check if it's stale
           try {
