@@ -538,14 +538,14 @@ Parameters:
             context.apiKey = finalApiKey
           }
 
-          await commit({
+          const commitMessage = await commit({
             ...context,
             context: message,
             all: stageFiles === 'all',
             files: Array.isArray(stageFiles) ? stageFiles : undefined,
             interactive: false,
           })
-          return 'Commit created successfully'
+          return commitMessage || 'Commit created successfully'
         } catch (error) {
           return `Error: ${error instanceof Error ? error.message : String(error)}`
         }
