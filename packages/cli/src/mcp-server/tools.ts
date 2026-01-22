@@ -12,7 +12,7 @@ import { fixWorkflow } from '../workflows/fix.workflow'
 import { planWorkflow } from '../workflows/plan.workflow'
 import { reviewWorkflow } from '../workflows/review.workflow'
 import type { BaseWorkflowInput } from '../workflows/workflow.utils'
-import type { McpServerTool, McpServerToolContext, ProviderOverride } from './types'
+import type { DefaultProviderConfig, McpServerTool, McpServerToolContext, ProviderOverride } from './types'
 
 // Get the project root directory (assuming we're in packages/cli/src/mcp-server)
 const __filename = fileURLToPath(import.meta.url)
@@ -67,6 +67,7 @@ function createExecutionContext(_logger: Logger) {
     provider: undefined as string | undefined,
     model: undefined as string | undefined,
     apiProvider: undefined as string | undefined,
+    apiKey: undefined as string | undefined,
   }
 }
 
@@ -86,7 +87,7 @@ async function executeWorkflow<TInput>(
   commandName: string,
   logger: Logger,
   providerOverride?: ProviderOverride,
-  defaultProvider?: ProviderOverride,
+  defaultProvider?: DefaultProviderConfig,
 ): Promise<string> {
   try {
     const context = createExecutionContext(logger)
@@ -98,13 +99,17 @@ async function executeWorkflow<TInput>(
     const finalProvider = providerOverride?.provider || defaultProvider?.provider
     const finalModel = providerOverride?.model || defaultProvider?.model
     const finalParameters = providerOverride?.parameters || defaultProvider?.parameters
+    const finalApiKey = defaultProvider?.apiKey // Only use API key from server defaults (not per-call for security)
 
     // Update context with overrides if provided
     if (finalProvider) {
-      context.provider = finalProvider
+      context.apiProvider = finalProvider
     }
     if (finalModel) {
       context.model = finalModel
+    }
+    if (finalApiKey) {
+      context.apiKey = finalApiKey
     }
 
     // Add default values for BaseWorkflowInput properties
@@ -314,12 +319,16 @@ Parameters:
           const finalProvider = providerOverride?.provider || toolContext.defaultProvider?.provider
           const finalModel = providerOverride?.model || toolContext.defaultProvider?.model
           const finalParameters = providerOverride?.parameters || toolContext.defaultProvider?.parameters
+          const finalApiKey = toolContext.defaultProvider?.apiKey
 
           if (finalProvider) {
-            context.provider = finalProvider
+            context.apiProvider = finalProvider
           }
           if (finalModel) {
             context.model = finalModel
+          }
+          if (finalApiKey) {
+            context.apiKey = finalApiKey
           }
 
           const result = await runWorkflow(
@@ -477,12 +486,16 @@ Parameters:
           const context = createExecutionContext(logger)
           const finalProvider = providerOverride?.provider || toolContext.defaultProvider?.provider
           const finalModel = providerOverride?.model || toolContext.defaultProvider?.model
+          const finalApiKey = toolContext.defaultProvider?.apiKey
 
           if (finalProvider) {
-            context.provider = finalProvider
+            context.apiProvider = finalProvider
           }
           if (finalModel) {
             context.model = finalModel
+          }
+          if (finalApiKey) {
+            context.apiKey = finalApiKey
           }
 
           await commit({

@@ -113,14 +113,22 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
   // Apply provider/model overrides if provided
   if (providerOverride) {
     const { provider: overrideProvider, model: overrideModel, parameters: overrideParameters } = providerOverride
-    // Create a merged config with overrides
+
     if (commandConfig) {
+      // Create a merged config with overrides
       commandConfig = {
         ...commandConfig,
         provider: (overrideProvider || commandConfig.provider) as AiProvider,
         model: overrideModel || commandConfig.model,
         parameters: overrideParameters ? { ...commandConfig.parameters, ...overrideParameters } : commandConfig.parameters,
       }
+    } else if (overrideProvider) {
+      // No base config, but overrides provided - create config from overrides
+      commandConfig = providerConfig.resolveModelConfig({
+        provider: overrideProvider,
+        model: overrideModel,
+        parameters: overrideParameters,
+      })
     }
   }
 

@@ -4,14 +4,13 @@ import { Command } from 'commander'
 import { createLogger } from '../logger'
 import { createPolkaCodesMcpServer, startStdioServer } from '../mcp-server/sdk-server'
 import { createPolkaCodesServerTools } from '../mcp-server/tools'
-import { addSharedOptions } from '../options'
 
 export const mcpServerCommand = new Command('mcp-server')
   .description('Start polka-codes as an MCP server')
-  .addOption(addSharedOptions(new Command('tmp')).options[0]) // -c --config
-  .addOption(addSharedOptions(new Command('tmp')).options[1]) // --api-provider
-  .addOption(addSharedOptions(new Command('tmp')).options[2]) // --model
-  .addOption(addSharedOptions(new Command('tmp')).options[3]) // --api-key
+  .option('-c --config <paths>', 'Path to config file(s)', (value: string, prev: string[]) => prev.concat(value), [])
+  .option('--api-provider <provider>', 'API provider')
+  .option('--model <model>', 'Model ID')
+  .option('--api-key <key>', 'API key')
   .option('-v, --verbose', 'Enable verbose logging', false)
   .action(async (options: { config?: string[]; apiProvider?: string; model?: string; apiKey?: string; verbose: boolean }) => {
     // Configure logger to write to stderr (stdout is reserved for MCP protocol)
