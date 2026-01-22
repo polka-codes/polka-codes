@@ -64,7 +64,6 @@ function createExecutionContext(_logger: Logger) {
     file: undefined,
     // Provider configuration fields (will be populated by runWorkflow from config/env)
     // These are required for runWorkflow to properly initialize the AI provider
-    provider: undefined as string | undefined,
     model: undefined as string | undefined,
     apiProvider: undefined as string | undefined,
     apiKey: undefined as string | undefined,

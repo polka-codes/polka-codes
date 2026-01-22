@@ -30,7 +30,7 @@ import {
 } from '@polka-codes/core'
 import { merge } from 'lodash-es'
 import { AuthenticationError, ModelAccessError, ProviderError, QuotaExceededError, UserCancelledError } from './errors'
-import { type AiProvider, getModel } from './getModel'
+import { AiProvider, getModel } from './getModel'
 import { getProviderOptions } from './getProviderOptions'
 import { McpError } from './mcp/errors'
 import { McpManager } from './mcp/manager'
@@ -116,14 +116,21 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
 
     if (commandConfig) {
       // Create a merged config with overrides
+      // Validate provider is a valid AiProvider enum value
+      const validProvider =
+        overrideProvider && Object.values(AiProvider).includes(overrideProvider as AiProvider)
+          ? (overrideProvider as AiProvider)
+          : commandConfig.provider
+
       commandConfig = {
         ...commandConfig,
-        provider: (overrideProvider || commandConfig.provider) as AiProvider,
+        provider: validProvider,
         model: overrideModel || commandConfig.model,
         parameters: overrideParameters ? { ...commandConfig.parameters, ...overrideParameters } : commandConfig.parameters,
       }
     } else if (overrideProvider) {
       // No base config, but overrides provided - create config from overrides
+      // resolveModelConfig will handle validation
       commandConfig = providerConfig.resolveModelConfig({
         provider: overrideProvider,
         model: overrideModel,
