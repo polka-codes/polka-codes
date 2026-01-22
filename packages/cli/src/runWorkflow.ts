@@ -122,6 +122,13 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
           ? (overrideProvider as AiProvider)
           : commandConfig.provider
 
+      // Warn if provider override was provided but invalid
+      if (overrideProvider && validProvider !== overrideProvider) {
+        logger.warn(
+          `Invalid provider override: "${overrideProvider}". Valid providers: ${Object.values(AiProvider).join(', ')}. Falling back to configured provider.`,
+        )
+      }
+
       commandConfig = {
         ...commandConfig,
         provider: validProvider,
