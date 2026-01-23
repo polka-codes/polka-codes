@@ -29,8 +29,3 @@ excludeFiles:
   - "*.pem"
   - "*.key"
   - .npmrc
-rules:
-  - Bun
-  - TypeScript
-  - Biome
-  - Monorepo
