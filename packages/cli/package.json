@@ -14,7 +14,8 @@
     }
   },
   "scripts": {
-    "build": "bun build src/index.ts --outdir dist --target node"
+    "build": "bun build src/index.ts --outdir dist --target node && bun run build:copy-wasm",
+    "build:copy-wasm": "mkdir -p dist && cp ../../node_modules/sql.js/dist/sql-wasm.wasm dist/"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^2.0.57",
