@@ -386,7 +386,7 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput,
   // For ranges (e.g., "A..B"), use regular gitDiff which handles ranges correctly
   // Only use git-aware tools for single commits
   const targetCommit = extractTargetCommit(range, pr)
-  const isRange = range && range.includes('..')
+  const isRange = range?.includes('..')
 
   // Add targetCommit to changeInfo if present (and not a range)
   const finalChangeInfo = targetCommit && !isRange ? { ...changeInfo, targetCommit } : changeInfo
