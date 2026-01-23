@@ -382,21 +382,24 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput,
     return { overview: 'No changes to review.', specificReviews: [] }
   }
 
-  // Detect if we're reviewing a specific commit (not HEAD)
+  // Detect if we're reviewing a specific commit (not HEAD) or a commit range
+  // For ranges (e.g., "A..B"), use regular gitDiff which handles ranges correctly
+  // Only use git-aware tools for single commits
   const targetCommit = extractTargetCommit(range, pr)
-  const isReviewingCommit = targetCommit !== null
+  const isRange = range && range.includes('..')
 
-  // Add targetCommit to changeInfo if present
-  const finalChangeInfo = targetCommit ? { ...changeInfo, targetCommit } : changeInfo
+  // Add targetCommit to changeInfo if present (and not a range)
+  const finalChangeInfo = targetCommit && !isRange ? { ...changeInfo, targetCommit } : changeInfo
 
-  // If reviewing a specific commit, use git-aware tools
-  // Otherwise, use regular filesystem tools
-  const fileTools = isReviewingCommit && targetCommit ? createGitAwareTools(targetCommit) : { readFile, listFiles, readBinaryFile }
+  // If reviewing a specific commit (single commit, not range), use git-aware tools
+  // For ranges or local changes, use regular filesystem tools
+  const fileTools = targetCommit && !isRange ? createGitAwareTools(targetCommit) : { readFile, listFiles, readBinaryFile }
 
-  // When reviewing commits, use git-aware versions of all tools including gitDiff
+  // When reviewing single commits, use git-aware versions of all tools including gitDiff
   // gitDiff for commits uses `git show <commit>` to display changes
+  // For ranges or local changes, use regular gitDiff which handles them correctly
   const reviewTools =
-    isReviewingCommit && targetCommit
+    targetCommit && !isRange
       ? [fileTools.readFile, fileTools.readBinaryFile, fileTools.listFiles, createGitAwareDiff(targetCommit)]
       : [readFile, readBinaryFile, searchFiles, listFiles, gitDiff]
 
