@@ -73,7 +73,7 @@ export class TaskHistory {
         }
         return Math.abs((r.estimatedTime - r.actualTime) / r.estimatedTime) * 100
       })
-      .filter((e) => !isNaN(e))
+      .filter((e) => !Number.isNaN(e))
     const avgErrorPercentage = errorPercentages.reduce((sum, e) => sum + e, 0) / errorPercentages.length
 
     return {

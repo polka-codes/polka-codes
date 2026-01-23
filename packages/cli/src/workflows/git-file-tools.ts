@@ -3,6 +3,7 @@
 import type { FullToolInfo, ToolHandler, ToolInfo } from '@polka-codes/core'
 import type { CommandProvider } from '@polka-codes/core/src/tools/provider'
 import { z } from 'zod'
+import { annotateDiffWithLineNumbers } from '../tools/utils/diffLineNumbers'
 import { quoteForShell } from '../utils/shell'
 
 function getMediaType(path: string): string {
@@ -327,4 +328,117 @@ export function createGitAwareTools(commit: string): {
     listFiles: createGitListFiles(commit),
     readBinaryFile: createGitReadBinaryFile(commit),
   }
+}
+
+/**
+ * Create git-aware version of gitDiff that shows changes introduced by a specific commit
+ * Uses `git show <commit>` to display the diff for that commit
+ */
+export function createGitAwareDiff(commit: string): FullToolInfo {
+  const toolInfo = {
+    name: 'git_diff',
+    description: `Get the git diff for commit ${commit}. Shows the exact changes introduced by this specific commit. Use this to inspect what changed in each file. Always specify a file path.`,
+    parameters: z.object({
+      file: z
+        .string()
+        .describe('Get the diff for a specific file within the commit. This parameter is required.')
+        .meta({ usageValue: 'File path here (required)' }),
+      contextLines: z.coerce
+        .number()
+        .int()
+        .min(0)
+        .optional()
+        .default(5)
+        .describe('Number of context lines to include around changes.')
+        .meta({ usageValue: 'Context lines count (optional)' }),
+      includeLineNumbers: z
+        .preprocess((val) => {
+          if (typeof val === 'string') {
+            const lower = val.toLowerCase()
+            if (lower === 'false') return false
+            if (lower === 'true') return true
+          }
+          return val
+        }, z.boolean().optional().default(true))
+        .describe('Annotate the diff with line numbers for additions and deletions.')
+        .meta({ usageValue: 'true or false (optional)' }),
+    }),
+  } as const satisfies ToolInfo
+
+  const handler: ToolHandler<typeof toolInfo, CommandProvider> = async (provider, args) => {
+    if (!provider.executeCommand) {
+      return {
+        success: false,
+        message: {
+          type: 'error-text',
+          value: 'Not possible to execute command.',
+        },
+      }
+    }
+
+    const { file, contextLines, includeLineNumbers } = toolInfo.parameters.parse(args)
+
+    // SECURITY: Use quoteForShell to prevent command injection
+    const quotedCommit = quoteForShell(commit)
+
+    // Build git show command to display commit diff
+    // Use --no-color and -U for context lines
+    let command = `git show --no-color --format= -U${contextLines} ${quotedCommit}`
+
+    // If a specific file is requested, filter the output
+    if (file) {
+      const quotedFile = quoteForShell(file)
+      command = `git show --no-color --format= -U${contextLines} ${quotedCommit} -- ${quotedFile}`
+    }
+
+    try {
+      const result = await provider.executeCommand(command, false)
+
+      if (result.exitCode === 0) {
+        if (!result.stdout.trim()) {
+          return {
+            success: true,
+            message: {
+              type: 'text',
+              value: 'No diff found.',
+            },
+          }
+        }
+
+        let diffOutput = result.stdout
+        if (includeLineNumbers) {
+          diffOutput = annotateDiffWithLineNumbers(diffOutput)
+        }
+
+        return {
+          success: true,
+          message: {
+            type: 'text',
+            value: `<diff file="${file ?? 'all'}">\n${diffOutput}\n</diff>`,
+          },
+        }
+      }
+
+      return {
+        success: false,
+        message: {
+          type: 'error-text',
+          value: `\`${command}\` exited with code ${result.exitCode}:\n${result.stderr}`,
+        },
+      }
+    } catch (error) {
+      return {
+        success: false,
+        message: {
+          type: 'error-text',
+          value: error instanceof Error ? error.message : String(error),
+        },
+      }
+    }
+  }
+
+  return {
+    ...toolInfo,
+    handler,
+  } satisfies FullToolInfo
 }

@@ -12,18 +12,20 @@ ${TOOL_USAGE_INSTRUCTION}
     -   **Include**: Source code, config files, and template files.
     -   **Exclude**: Lockfiles, build artifacts, test snapshots, binary/media files, data and fixtures and other generated files.
 3.  **Inspect Changes**:
-    -   When the \`gitDiff\` tool is available: Use it on one file at a time to see the exact changes. When reviewing pull requests, use the \`commitRange\` parameter provided in the review instructions.
-    -   When the \`gitDiff\` tool is NOT available (reviewing past commits): Use \`readFile\` to inspect the file contents. You will not have access to the exact diff, so focus on reviewing the code for issues in the modified files listed in \`<file_status>\`.
+    -   The \`gitDiff\` tool is ALWAYS available for reviewing changes.
+    -   When reviewing pull requests or commit ranges: Use \`gitDiff\` with the file parameter to see exact changes.
+    -   When reviewing local changes: Use \`gitDiff\` with staged: true for staged changes, or without parameters for unstaged changes.
+    -   When reviewing a specific commit: Use \`gitDiff\` with the file parameter to see what changed in that commit.
 4.  **Analyze and Review**: Analyze the code for issues. When using \`gitDiff\`, focus only on the modified lines (additions/deletions). Provide specific, actionable feedback with accurate line numbers.
 
 ## Critical Rules
 
--   **Focus on Changes**: When using \`gitDiff\`, ONLY review the actual changes shown in the diff. Do not comment on existing, unmodified code. When \`gitDiff\` is not available, focus on the modified files listed in \`<file_status>\`.
+-   **Focus on Changes**: When using \`gitDiff\`, ONLY review the actual changes shown in the diff. Do not comment on existing, unmodified code.
 -   **Focus Scope**: Do not comment on overall project structure or architecture unless directly impacted by the changes in the diff.
 -   **No Feature Requests**: Do not comment on missing features or functionality that are not part of this diff.
--   **One File at a Time**: Review files individually using \`gitDiff\` (when available) with the specific file path, or \`readFile\` when reviewing past commits.
--   **No Empty Diffs**: MUST NOT call \`gitDiff\` with an empty or omitted file parameter when the tool is available.
--   **Accurate Line Numbers**: When using \`gitDiff\`, use the line numbers from the diff annotations (\`[Line N]\` for additions, \`[Line N removed]\` for deletions). When \`gitDiff\` is not available, use line numbers from \`readFile\` output.
+-   **One File at a Time**: Review files individually using \`gitDiff\` with the specific file path.
+-   **No Empty Diffs**: MUST NOT call \`gitDiff\` with an empty or omitted file parameter. Always specify a file path.
+-   **Accurate Line Numbers**: When using \`gitDiff\`, use the line numbers from the diff annotations (\`[Line N]\` for additions, \`[Line N removed]\` for deletions).
 -   **No Praise**: Provide only reviews for actual issues found. Do not include praise or positive feedback.
 -   **Clear Reasoning**: For each issue, provide clear reasoning explaining why it's a problem and what the impact could be.
 -   **Specific Advice**: Avoid generic advice. Provide concrete, actionable suggestions specific to the code being reviewed.
@@ -113,15 +115,15 @@ function formatContext(tag: string, value: string | undefined): string | undefin
 
 function getReviewInstructions(params: ReviewToolInput): string {
   if (params.targetCommit) {
-    return `Review the changes in commit '${params.targetCommit}'. The gitDiff tool is NOT available for past commits. Use readFile to inspect the file contents and identify issues in the modified files listed in <file_status>.`
+    return `Review the changes in commit '${params.targetCommit}'. Use the gitDiff tool with the file parameter to inspect what changed in each file. Focus your review on the actual changes shown in the diff.`
   }
   if (params.commitRange) {
-    return `Review the pull request. Use the gitDiff tool with commit range '${params.commitRange}' to inspect the actual code changes.`
+    return `Review the pull request or commit range '${params.commitRange}'. Use the gitDiff tool with the file parameter to inspect the actual code changes.`
   }
   if (params.staged) {
-    return 'Review the staged changes. Use the gitDiff tool with staged: true to inspect the actual code changes.'
+    return 'Review the staged changes. Use the gitDiff tool with the file parameter and staged: true to inspect the actual code changes.'
   }
-  return 'Review the unstaged changes. Use the gitDiff tool to inspect the actual code changes.'
+  return 'Review the unstaged changes. Use the gitDiff tool with the file parameter to inspect the actual code changes.'
 }
 
 export function formatReviewToolInput(params: ReviewToolInput): string {

@@ -4,7 +4,7 @@ import path from 'node:path'
 import { agentWorkflow, listFiles, readBinaryFile, readFile, searchFiles, type WorkflowFn } from '@polka-codes/core'
 import { gitDiff } from '../tools'
 import type { CliToolRegistry } from '../workflow-tools'
-import { createGitAwareTools, extractTargetCommit } from './git-file-tools'
+import { createGitAwareDiff, createGitAwareTools, extractTargetCommit } from './git-file-tools'
 import { CODE_REVIEW_SYSTEM_PROMPT, formatReviewToolInput, type ReviewToolInput } from './prompts'
 import {
   type BaseWorkflowInput,
@@ -393,12 +393,12 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput,
   // Otherwise, use regular filesystem tools
   const fileTools = isReviewingCommit && targetCommit ? createGitAwareTools(targetCommit) : { readFile, listFiles, readBinaryFile }
 
-  // Remove searchFiles and gitDiff when reviewing commits as they don't work with git history
-  // gitDiff shows local/staged changes which are irrelevant when reviewing a past commit
-  // Use git-aware file tools instead to read files at the specific commit
-  const reviewTools = isReviewingCommit
-    ? [fileTools.readFile, fileTools.readBinaryFile, fileTools.listFiles]
-    : [readFile, readBinaryFile, searchFiles, listFiles, gitDiff]
+  // When reviewing commits, use git-aware versions of all tools including gitDiff
+  // gitDiff for commits uses `git show <commit>` to display changes
+  const reviewTools =
+    isReviewingCommit && targetCommit
+      ? [fileTools.readFile, fileTools.readBinaryFile, fileTools.listFiles, createGitAwareDiff(targetCommit)]
+      : [readFile, readBinaryFile, searchFiles, listFiles, gitDiff]
 
   const result = await step('review', async () => {
     const defaultContext = await getDefaultContext('review')
