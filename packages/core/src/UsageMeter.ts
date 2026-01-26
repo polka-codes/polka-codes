@@ -233,7 +233,7 @@ export class UsageMeter {
       totalRequests,
       requestsWithCache,
       cacheHitRate,
-      entries: this.#providerMetadataEntries,
+      entries: [...this.#providerMetadataEntries],
     }
   }
 

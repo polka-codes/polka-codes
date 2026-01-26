@@ -376,7 +376,7 @@ describe('UsageMeter', () => {
       expect(metadata1).toEqual(metadata2)
     })
 
-    test('cacheStats.entries returns original array reference', () => {
+    test('cacheStats.entries returns a copy', () => {
       const mockModel = createMockModel('openai', 'gpt-4')
 
       meter.addUsage(mockModel as any, {
@@ -387,7 +387,9 @@ describe('UsageMeter', () => {
       const stats1 = meter.cacheStats
       const stats2 = meter.cacheStats
 
-      expect(stats1.entries).toBe(stats2.entries)
+      // Should return a new array each time (encapsulation)
+      expect(stats1.entries).not.toBe(stats2.entries)
+      expect(stats1.entries).toEqual(stats2.entries)
     })
   })
 })
