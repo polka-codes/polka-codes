@@ -214,8 +214,11 @@ export class UsageMeter {
 
     for (const entry of entries) {
       const metadata = entry.metadata
-      // Check for various provider cache fields
-      const cachedTokens = metadata.cachedPromptTokens ?? metadata.cacheReadTokens ?? metadata.promptCacheMissTokens ?? 0
+      // Check for cache hit fields only (NOT cache misses)
+      // OpenAI: cachedPromptTokens
+      // Anthropic: cacheReadTokens (prompt_cache_hit_tokens in newer versions)
+      // DeepSeek: prompt_cache_hit_tokens (if available)
+      const cachedTokens = metadata.cachedPromptTokens ?? metadata.cacheReadTokens ?? metadata.prompt_cache_hit_tokens ?? 0
 
       if (cachedTokens > 0) {
         totalCachedTokens += cachedTokens

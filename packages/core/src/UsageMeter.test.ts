@@ -171,13 +171,28 @@ describe('UsageMeter', () => {
 
       meter.addUsage(mockModel as any, {
         usage: createMockUsage(150, 75, 40),
-        providerMetadata: { deepseek: { promptCacheMissTokens: 20 } },
+        providerMetadata: { deepseek: { prompt_cache_hit_tokens: 20 } },
       })
 
       const stats = meter.cacheStats
       expect(stats.totalRequests).toBe(1)
       expect(stats.requestsWithCache).toBe(1)
       expect(stats.totalCachedTokens).toBe(20)
+    })
+
+    test('does not count cache misses as cached tokens', () => {
+      const mockModel = createMockModel('deepseek', 'deepseek-chat')
+
+      meter.addUsage(mockModel as any, {
+        usage: createMockUsage(150, 75, 40),
+        providerMetadata: { deepseek: { promptCacheMissTokens: 20 } },
+      })
+
+      const stats = meter.cacheStats
+      expect(stats.totalRequests).toBe(1)
+      expect(stats.requestsWithCache).toBe(0)
+      expect(stats.totalCachedTokens).toBe(0)
+      expect(stats.cacheHitRate).toBe(0)
     })
 
     test('aggregates statistics across multiple requests', () => {
