@@ -14,12 +14,20 @@ export type ModelInfo = {
 
 type Totals = { input: number; output: number; cachedRead: number; cost: number; messageCount: number }
 
+type ProviderMetadataEntry = {
+  provider: string
+  model: string
+  metadata: any
+  timestamp: number
+}
+
 /**
  * Tracks token / cost usage across any mix of LLM models.
  * Supports optional caps on total messages and total cost.
  */
 export class UsageMeter {
   #totals: Totals = { input: 0, output: 0, cachedRead: 0, cost: 0, messageCount: 0 }
+  #providerMetadataEntries: ProviderMetadataEntry[] = []
 
   readonly #modelInfos: Record<string, ModelInfo>
   readonly #maxMessages: number
@@ -126,15 +134,29 @@ export class UsageMeter {
     this.#totals.cachedRead += result.cachedRead || 0
     this.#totals.cost += result.cost || 0
     this.#totals.messageCount += 1
+
+    // Store provider metadata for analytics
+    if (resp.providerMetadata && Object.keys(resp.providerMetadata).length > 0) {
+      const providerKey = Object.keys(resp.providerMetadata)[0]
+      this.#providerMetadataEntries.push({
+        provider: providerKey || llm.provider,
+        model: llm.modelId,
+        metadata: resp.providerMetadata[providerKey] || resp.providerMetadata,
+        timestamp: Date.now(),
+      })
+    }
   }
 
   /** Override the running totals (e.g., restore from saved state). */
-  setUsage(newUsage: Partial<Totals>) {
+  setUsage(newUsage: Partial<Totals>, options: { clearMetadata?: boolean } = {}) {
     if (newUsage.input != null) this.#totals.input = newUsage.input
     if (newUsage.output != null) this.#totals.output = newUsage.output
     if (newUsage.cachedRead != null) this.#totals.cachedRead = newUsage.cachedRead
     if (newUsage.cost != null) this.#totals.cost = newUsage.cost
     if (newUsage.messageCount != null) this.#totals.messageCount = newUsage.messageCount
+    if (options.clearMetadata) {
+      this.#providerMetadataEntries = []
+    }
   }
 
   /** Manually bump the message count (useful if you record some messages without token info). */
@@ -145,6 +167,7 @@ export class UsageMeter {
   /** Reset the running totals. */
   resetUsage() {
     this.#totals = { input: 0, output: 0, cachedRead: 0, cost: 0, messageCount: 0 }
+    this.#providerMetadataEntries = []
   }
 
   /** Return true once either messages or cost exceed the configured caps. */
@@ -176,6 +199,46 @@ export class UsageMeter {
     return { ...this.#totals }
   }
 
+  /** Getter for provider metadata entries (immutable copy). */
+  get providerMetadata() {
+    return [...this.#providerMetadataEntries]
+  }
+
+  /** Calculate cache statistics from stored metadata entries. */
+  get cacheStats() {
+    const entries = this.#providerMetadataEntries
+    const totalRequests = entries.length
+
+    let totalCachedTokens = 0
+    let requestsWithCache = 0
+
+    for (const entry of entries) {
+      const metadata = entry.metadata
+      // Check for various provider cache fields
+      const cachedTokens = metadata.cachedPromptTokens ?? metadata.cacheReadTokens ?? metadata.promptCacheMissTokens ?? 0
+
+      if (cachedTokens > 0) {
+        totalCachedTokens += cachedTokens
+        requestsWithCache++
+      }
+    }
+
+    const cacheHitRate = totalRequests > 0 ? requestsWithCache / totalRequests : 0
+
+    return {
+      totalCachedTokens,
+      totalRequests,
+      requestsWithCache,
+      cacheHitRate,
+      entries: this.#providerMetadataEntries,
+    }
+  }
+
+  /** Clear stored provider metadata entries. */
+  clearProviderMetadata() {
+    this.#providerMetadataEntries = []
+  }
+
   /** Merge another UsageMeter's totals into this one. */
   merge(other: UsageMeter) {
     const otherUsage = other.usage
@@ -184,6 +247,7 @@ export class UsageMeter {
     this.#totals.cachedRead += otherUsage.cachedRead
     this.#totals.cost += otherUsage.cost
     this.#totals.messageCount += otherUsage.messageCount
+    this.#providerMetadataEntries.push(...other.providerMetadata)
   }
 
   getUsageText() {
