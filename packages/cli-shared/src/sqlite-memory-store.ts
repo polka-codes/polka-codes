@@ -16,7 +16,6 @@ class FileLock {
   private lockfilePath: string
   private static readonly LOCK_TIMEOUT = 30000 // 30 seconds max lock time
   private static readonly CLEANUP_AGE = 600000 // 10 minutes - cleanup old lock files
-  private static cleanupInProgress = false
 
   constructor(dbPath: string) {
     this.lockfilePath = `${dbPath}.lock`
@@ -24,18 +23,11 @@ class FileLock {
 
   /**
    * Clean up old lock files (.released.*, .stale.*, .invalid.*, .corrupt.*)
-   * Only removes files older than CLEANUP_AGE (24 hours by default)
-   * This method is safe to call multiple times concurrently - only one cleanup runs at a time
+   * Only removes files older than CLEANUP_AGE (10 minutes by default)
+   * This method is safe to call multiple times concurrently
    */
   static async cleanupOldLockFiles(dbPath: string, maxAge = FileLock.CLEANUP_AGE): Promise<void> {
-    // Prevent concurrent cleanups
-    if (FileLock.cleanupInProgress) {
-      return
-    }
-
     try {
-      FileLock.cleanupInProgress = true
-
       const lockDir = dirname(dbPath)
       const dbBaseName = dbPath.split('/').pop() || ''
       const files = await readdir(lockDir)
@@ -79,8 +71,6 @@ class FileLock {
     } catch (error) {
       // Silently ignore cleanup errors - this is a maintenance task, not critical
       console.debug(`[FileLock] Cleanup encountered an error: ${error instanceof Error ? error.message : String(error)}`)
-    } finally {
-      FileLock.cleanupInProgress = false
     }
   }
 
