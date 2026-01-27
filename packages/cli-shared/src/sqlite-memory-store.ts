@@ -15,7 +15,7 @@ import initSqlJs, { type Database, type SqlJsStatic } from 'sql.js'
 class FileLock {
   private lockfilePath: string
   private static readonly LOCK_TIMEOUT = 30000 // 30 seconds max lock time
-  private static readonly CLEANUP_AGE = 86400000 // 24 hours - cleanup old lock files
+  private static readonly CLEANUP_AGE = 600000 // 10 minutes - cleanup old lock files
   private static cleanupInProgress = false
 
   constructor(dbPath: string) {

@@ -647,7 +647,7 @@ describe('SQLiteMemoryStore', () => {
       const { writeFile } = await import('node:fs/promises')
 
       // Create some old lock files for a different database with a unique name
-      const oldTimestamp = Date.now() - 90000000 // 25 hours ago
+      const oldTimestamp = Date.now() - 700000 // ~11.5 minutes ago (> 10 min threshold)
       const uniqueId = Date.now()
       const lockDir = '/tmp'
       const testDbName = `test-cleanup-${uniqueId}.sqlite`
@@ -658,7 +658,7 @@ describe('SQLiteMemoryStore', () => {
       await writeFile(`${lockDir}/${testDbName}.lock.corrupt.${oldTimestamp}`, 'old corrupt lock')
 
       // Create recent lock file that should not be deleted
-      const recentTimestamp = Date.now() - 3600000 // 1 hour ago
+      const recentTimestamp = Date.now() - 300000 // 5 minutes ago (< 10 min threshold)
       await writeFile(`${lockDir}/${testDbName}.lock.released.${recentTimestamp}`, 'recent released lock')
 
       // Trigger cleanup by initializing database with that name
@@ -700,7 +700,7 @@ describe('SQLiteMemoryStore', () => {
       const uniqueId = Date.now()
       const lockDir = '/tmp'
       const testDbName = `test-cleanup-recent-${uniqueId}.sqlite`
-      const recentTimestamp = Date.now() - 3600000 // 1 hour ago
+      const recentTimestamp = Date.now() - 300000 // 5 minutes ago (< 10 min threshold)
 
       // Create recent lock files
       await writeFile(`${lockDir}/${testDbName}.lock.released.${recentTimestamp}`, 'recent lock')
