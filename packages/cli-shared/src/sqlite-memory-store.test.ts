@@ -1,9 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
 import { existsSync, unlinkSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import type { MemoryConfig, MemoryEntry } from '@polka-codes/core'
 import { SQLiteMemoryStore } from './sqlite-memory-store'
 
-const TEST_DB_PATH = '/tmp/test-memory.sqlite'
+const TEST_DB_PATH = join(tmpdir(), 'test-memory.sqlite')
 
 describe('SQLiteMemoryStore', () => {
   let store: SQLiteMemoryStore
@@ -649,7 +651,7 @@ describe('SQLiteMemoryStore', () => {
 
       // Create a dedicated temp directory for this test
       const uniqueId = Date.now() + Math.random()
-      const testDir = `/tmp/test-cleanup-${uniqueId}`
+      const testDir = join(tmpdir(), `test-cleanup-${uniqueId}`)
       const { mkdirSync } = await import('node:fs')
       mkdirSync(testDir, { recursive: true })
 
@@ -706,7 +708,7 @@ describe('SQLiteMemoryStore', () => {
 
       // Create a dedicated temp directory for this test
       const uniqueId = Date.now() + Math.random()
-      const testDir = `/tmp/test-recent-${uniqueId}`
+      const testDir = join(tmpdir(), `test-recent-${uniqueId}`)
       mkdirSync(testDir, { recursive: true })
 
       try {
@@ -751,7 +753,7 @@ describe('SQLiteMemoryStore', () => {
 
       // Create a dedicated temp directory for this test
       const uniqueId = Date.now() + Math.random()
-      const testDir = `/tmp/test-error-${uniqueId}`
+      const testDir = join(tmpdir(), `test-error-${uniqueId}`)
       mkdirSync(testDir, { recursive: true })
 
       try {

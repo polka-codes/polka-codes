@@ -2,7 +2,7 @@ import { AsyncLocalStorage } from 'node:async_hooks'
 import { randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { mkdir, readdir, readFile, rename, unlink, writeFile } from 'node:fs/promises'
-import { dirname, resolve } from 'node:path'
+import { basename, dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { DatabaseStats, IMemoryStore, MemoryConfig, MemoryEntry, MemoryOperation, MemoryQuery, QueryOptions } from '@polka-codes/core'
 import { DEFAULT_MEMORY_CONFIG, resolveHomePath } from '@polka-codes/core'
@@ -29,7 +29,7 @@ class FileLock {
   static async cleanupOldLockFiles(dbPath: string, maxAge = FileLock.CLEANUP_AGE): Promise<void> {
     try {
       const lockDir = dirname(dbPath)
-      const dbBaseName = dbPath.split('/').pop() || ''
+      const dbBaseName = basename(dbPath)
       const files = await readdir(lockDir)
 
       const now = Date.now()
@@ -147,7 +147,9 @@ class FileLock {
 
       // Trigger cleanup in the background after releasing lock
       // This is fire-and-forget - we don't await the result
-      FileLock.cleanupOldLockFiles(this.lockfilePath.replace('.lock', '')).catch(() => {
+      // Remove .lock suffix (5 chars) safely using slice
+      const dbPath = this.lockfilePath.slice(0, -5)
+      FileLock.cleanupOldLockFiles(dbPath).catch(() => {
         // Ignore errors
       })
     } catch (error: unknown) {

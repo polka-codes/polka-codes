@@ -276,14 +276,19 @@ export function createGitReadBinaryFile(commit: string): FullToolInfo {
     }
 
     // File exists, read it and encode as base64
-    // Use git show without piping to base64 for cross-platform compatibility
-    // The executeCommand should return the raw binary data as a Buffer
-    const result = await provider.executeCommand(`git show ${quotedCommit}:${quotedUrl}`, false)
+    // Use git show piped to base64 for cross-platform binary file handling
+    // Windows: use cmd /c for shell support
+    // Unix: use sh -c for shell support
+    const isWindows = process.platform === 'win32'
+    const command = isWindows
+      ? `cmd /c "git show ${quotedCommit}:${quotedUrl} | base64 -w 0"`
+      : `sh -c "git show ${quotedCommit}:${quotedUrl} | base64"`
+
+    const result = await provider.executeCommand(command, false)
 
     if (result.exitCode === 0) {
-      // Encode the binary data as base64 using Node.js Buffer API
-      // This works on all platforms (Windows, Linux, macOS)
-      const base64Data = Buffer.from(result.stdout, 'binary').toString('base64')
+      // The output is base64-encoded text, safe to pass through as string
+      const base64Data = result.stdout.trim()
       return {
         success: true,
         message: {

@@ -218,6 +218,13 @@ export class UsageMeter {
       // OpenAI: cachedPromptTokens
       // Anthropic: cacheReadTokens (prompt_cache_hit_tokens in newer versions)
       // DeepSeek: prompt_cache_hit_tokens (if available)
+
+      // Guard against metadata being a primitive value (number/string)
+      // This can happen if a provider returns flat metadata
+      if (typeof metadata !== 'object' || metadata === null) {
+        continue
+      }
+
       const cachedTokens = metadata.cachedPromptTokens ?? metadata.cacheReadTokens ?? metadata.prompt_cache_hit_tokens ?? 0
 
       if (cachedTokens > 0) {
