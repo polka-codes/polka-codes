@@ -394,8 +394,8 @@ export async function memoryStatus() {
 
     const globalConfigPath = getGlobalConfigPath()
     const config = (await loadConfigAtPath(globalConfigPath)) as Config | null
-    const memoryConfig = config?.memory || { path: '~/.config/polka-codes/memory.sqlite' }
-    const dbPath = resolveHomePath(memoryConfig.path || '~/.config/polka-codes/memory.sqlite')
+    const memoryConfig = config?.memory || { path: '~/.config/polkacodes/memory/memory.sqlite' }
+    const dbPath = resolveHomePath(memoryConfig.path || '~/.config/polkacodes/memory/memory.sqlite')
 
     console.log('\nMemory Store Status:')
     console.log('─'.repeat(80))

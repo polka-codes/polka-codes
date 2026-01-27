@@ -9,7 +9,7 @@ export const memoryConfigSchema = z
   .object({
     enabled: z.boolean().optional().default(true),
     type: z.enum(['sqlite', 'memory']).optional().default('sqlite'),
-    path: z.string().optional().default('~/.config/polka-codes/memory.sqlite'),
+    path: z.string().optional().default('~/.config/polkacodes/memory/memory.sqlite'),
   })
   .strict()
   .optional()
@@ -22,7 +22,7 @@ export type MemoryConfig = z.infer<typeof memoryConfigSchema> & MemoryStoreConfi
 export const DEFAULT_MEMORY_CONFIG: MemoryConfig = {
   enabled: true,
   type: 'sqlite',
-  path: '~/.config/polka-codes/memory.sqlite',
+  path: '~/.config/polkacodes/memory/memory.sqlite',
 }
 
 /**
