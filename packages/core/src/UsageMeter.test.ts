@@ -27,6 +27,297 @@ describe('UsageMeter', () => {
     meter = new UsageMeter()
   })
 
+  describe('constructor', () => {
+    test('initializes with default limits', () => {
+      const meter = new UsageMeter()
+      expect(meter.usage).toEqual({
+        input: 0,
+        output: 0,
+        cachedRead: 0,
+        cost: 0,
+        messageCount: 0,
+      })
+    })
+
+    test('normalizes provider and model names', () => {
+      const meter = new UsageMeter({
+        'google-vertex': {
+          'claude-3.5-sonnet': { inputPrice: 1, outputPrice: 2, cacheWritesPrice: 0, cacheReadsPrice: 0 },
+        },
+        'anthropic.messages': {
+          'claude-3-5-sonnet-20241022': { inputPrice: 3, outputPrice: 4, cacheWritesPrice: 0, cacheReadsPrice: 0 },
+        },
+      })
+
+      // Should normalize 'google-vertex' to 'google' and remove dots/dashes from model
+      const model1 = createMockModel('google', 'claude35sonnet')
+      meter.addUsage(model1 as any, {
+        usage: createMockUsage(1000, 500),
+        providerMetadata: { google: {} },
+      })
+
+      // google-vertex -> google, claude-3.5-sonnet -> claude35sonnet
+      // Price should be 1 (input) per million tokens
+      expect(meter.usage.cost).toBeCloseTo(0.002, 4) // (1000*1 + 500*2) / 1_000_000
+    })
+
+    test('accepts custom maxMessages and maxCost', () => {
+      const meter = new UsageMeter({}, { maxMessages: 100, maxCost: 50 })
+      const limits = meter.isLimitExceeded()
+
+      expect(limits.maxMessages).toBe(100)
+      expect(limits.maxCost).toBe(50)
+    })
+  })
+
+  describe('addUsage', () => {
+    test('accumulates usage across multiple calls', () => {
+      const model = createMockModel('openai', 'gpt-4')
+
+      meter.addUsage(model as any, { usage: createMockUsage(100, 50) })
+      meter.addUsage(model as any, { usage: createMockUsage(200, 100) })
+
+      expect(meter.usage.input).toBe(300)
+      expect(meter.usage.output).toBe(150)
+      expect(meter.usage.messageCount).toBe(2)
+    })
+
+    test('handles zero token usage', () => {
+      const model = createMockModel('openai', 'gpt-4')
+
+      meter.addUsage(model as any, { usage: createMockUsage(0, 0) })
+
+      expect(meter.usage.input).toBe(0)
+      expect(meter.usage.output).toBe(0)
+      expect(meter.usage.messageCount).toBe(1)
+    })
+  })
+
+  describe('cost calculation', () => {
+    test('calculates cost for default provider', () => {
+      const model = createMockModel('openai', 'gpt-4')
+
+      meter.addUsage(model as any, {
+        usage: createMockUsage(1000, 500),
+        providerMetadata: { openai: {} },
+      })
+
+      // Default provider has 0 pricing, so cost should be 0
+      expect(meter.usage.cost).toBe(0)
+    })
+
+    test('calculates cost for Anthropic with cache', () => {
+      const meter = new UsageMeter({
+        anthropic: {
+          claude: {
+            inputPrice: 3,
+            outputPrice: 15,
+            cacheWritesPrice: 3.75,
+            cacheReadsPrice: 0.375,
+          },
+        },
+      })
+
+      const model = createMockModel('anthropic', 'claude')
+      meter.addUsage(model as any, {
+        usage: createMockUsage(700, 500, 200),
+        providerMetadata: {
+          anthropic: {
+            cacheReadTokens: 200,
+            promptCacheMissTokens: 100,
+          },
+        },
+      })
+
+      // Input returned: 700 + 100 (cache write) + 200 (cache read) = 1000
+      // Cost calculated as: (700*3 + 100*3.75 + 200*0.375 + 500*15) / 1_000_000
+      // = (2100 + 375 + 75 + 7500) / 1_000_000 = 0.01005
+      expect(meter.usage.cost).toBeCloseTo(0.01005, 5)
+      expect(meter.usage.input).toBe(1000)
+    })
+
+    test('calculates cost for OpenRouter with provided cost', () => {
+      const meter = new UsageMeter({
+        openrouter: {
+          model: { inputPrice: 0, outputPrice: 0, cacheWritesPrice: 0, cacheReadsPrice: 0 },
+        },
+      })
+
+      const model = createMockModel('openrouter', 'model')
+      meter.addUsage(model as any, {
+        usage: createMockUsage(1000, 500),
+        providerMetadata: {
+          openrouter: {
+            usage: { cost: 0.005 },
+          },
+        },
+      })
+
+      expect(meter.usage.cost).toBe(0.005)
+    })
+  })
+
+  describe('isLimitExceeded', () => {
+    test('returns false when limits not exceeded', () => {
+      const meter = new UsageMeter({}, { maxMessages: 10, maxCost: 1 })
+
+      const result = meter.isLimitExceeded()
+      expect(result.result).toBe(false)
+      expect(result.messageCount).toBe(false)
+      expect(result.cost).toBe(false)
+    })
+
+    test('detects message count limit exceeded', () => {
+      const meter = new UsageMeter({}, { maxMessages: 2, maxCost: 100 })
+      const model = createMockModel('openai', 'gpt-4')
+
+      meter.addUsage(model as any, { usage: createMockUsage(100, 50) })
+      meter.addUsage(model as any, { usage: createMockUsage(100, 50) })
+
+      const result = meter.isLimitExceeded()
+      expect(result.result).toBe(true)
+      expect(result.messageCount).toBe(true)
+      expect(result.cost).toBe(false)
+    })
+
+    test('detects cost limit exceeded', () => {
+      const meter = new UsageMeter(
+        {
+          openai: {
+            gpt4: {
+              inputPrice: 10_000_000, // $10 per million
+              outputPrice: 10_000_000,
+              cacheWritesPrice: 0,
+              cacheReadsPrice: 0,
+            },
+          },
+        },
+        { maxMessages: 1000, maxCost: 0.05 },
+      )
+
+      const model = createMockModel('openai', 'gpt-4')
+      meter.addUsage(model as any, {
+        usage: createMockUsage(3000, 2000),
+        providerMetadata: { openai: {} },
+      })
+
+      const result = meter.isLimitExceeded()
+      expect(result.result).toBe(true)
+      expect(result.cost).toBe(true)
+    })
+
+    test('handles zero limits as no limit', () => {
+      const meter = new UsageMeter({}, { maxMessages: 0, maxCost: 0 })
+      const model = createMockModel('openai', 'gpt-4')
+
+      meter.addUsage(model as any, { usage: createMockUsage(100, 50) })
+
+      const result = meter.isLimitExceeded()
+      expect(result.result).toBe(false)
+    })
+  })
+
+  describe('checkLimit', () => {
+    test('throws when limit exceeded', () => {
+      const meter = new UsageMeter({}, { maxMessages: 1, maxCost: 100 })
+      const model = createMockModel('openai', 'gpt-4')
+
+      meter.addUsage(model as any, { usage: createMockUsage(100, 50) })
+
+      expect(() => meter.checkLimit()).toThrow('Usage limit exceeded')
+    })
+
+    test('does not throw when limits not exceeded', () => {
+      const meter = new UsageMeter({}, { maxMessages: 10, maxCost: 100 })
+
+      expect(() => meter.checkLimit()).not.toThrow()
+    })
+  })
+
+  describe('incrementMessageCount', () => {
+    test('increments message count without token info', () => {
+      meter.incrementMessageCount(5)
+      expect(meter.usage.messageCount).toBe(5)
+      expect(meter.usage.input).toBe(0)
+      expect(meter.usage.output).toBe(0)
+    })
+
+    test('defaults to incrementing by 1', () => {
+      meter.incrementMessageCount()
+      expect(meter.usage.messageCount).toBe(1)
+    })
+
+    test('accumulates with regular usage tracking', () => {
+      const model = createMockModel('openai', 'gpt-4')
+      meter.addUsage(model as any, { usage: createMockUsage(100, 50) })
+      meter.incrementMessageCount(3)
+
+      expect(meter.usage.messageCount).toBe(4)
+    })
+  })
+
+  describe('getUsageText', () => {
+    test('formats usage text correctly', () => {
+      const model = createMockModel('openai', 'gpt-4')
+      meter.addUsage(model as any, { usage: createMockUsage(1000, 500, 200) })
+
+      const text = meter.getUsageText()
+      expect(text).toBe('Usage - messages: 1, input: 1000, cached: 200, output: 500, cost: $0.0000')
+    })
+
+    test('rounds cost to 4 decimal places', () => {
+      const meter = new UsageMeter({
+        openai: {
+          gpt4: {
+            inputPrice: 1.23,
+            outputPrice: 1.0,
+            cacheWritesPrice: 0,
+            cacheReadsPrice: 0,
+          },
+        },
+      })
+
+      const model = createMockModel('openai', 'gpt4')
+      meter.addUsage(model as any, {
+        usage: createMockUsage(1000, 500),
+        providerMetadata: { openai: {} },
+      })
+
+      const text = meter.getUsageText()
+      expect(text).toContain('cost: $0.0017') // (1000*1.23 + 500*1) / 1_000_000 = 0.00173
+    })
+  })
+
+  describe('onFinishHandler', () => {
+    test('creates handler that records usage', () => {
+      const model = createMockModel('openai', 'gpt-4')
+      const handler = meter.onFinishHandler(model as any)
+
+      handler({
+        totalUsage: createMockUsage(100, 50, 25),
+        providerMetadata: { openai: {} },
+      })
+
+      expect(meter.usage.input).toBe(100)
+      expect(meter.usage.output).toBe(50)
+      expect(meter.usage.cachedRead).toBe(25)
+      expect(meter.usage.messageCount).toBe(1)
+    })
+
+    test('handler stores metadata from events', () => {
+      const model = createMockModel('openai', 'gpt-4')
+      const handler = meter.onFinishHandler(model as any)
+
+      handler({
+        totalUsage: createMockUsage(100, 50),
+        providerMetadata: { openai: { cachedPromptTokens: 30 } },
+      })
+
+      expect(meter.providerMetadata).toHaveLength(1)
+      expect(meter.providerMetadata[0].provider).toBe('openai')
+    })
+  })
+
   describe('provider metadata storage', () => {
     test('stores OpenAI provider metadata', () => {
       const mockModel = createMockModel('openai', 'gpt-4')
