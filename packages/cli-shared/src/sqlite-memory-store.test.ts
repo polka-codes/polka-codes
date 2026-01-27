@@ -669,6 +669,9 @@ describe('SQLiteMemoryStore', () => {
         const recentTimestamp = Date.now() - 300000 // 5 minutes ago (< 10 min threshold)
         await writeFile(`${testDir}/${testDbName}.lock.released.${recentTimestamp}`, 'recent released lock')
 
+        // Reset cleanup throttle to ensure cleanup runs in this test
+        SQLiteMemoryStore.resetCleanupThrottle()
+
         // Trigger cleanup by initializing database
         const cleanupConfig: MemoryConfig = {
           enabled: true,
@@ -719,6 +722,9 @@ describe('SQLiteMemoryStore', () => {
         await writeFile(`${testDir}/${testDbName}.lock.released.${recentTimestamp}`, 'recent lock')
         await writeFile(`${testDir}/${testDbName}.lock.stale.${recentTimestamp}`, 'recent stale')
 
+        // Reset cleanup throttle to ensure cleanup runs in this test
+        SQLiteMemoryStore.resetCleanupThrottle()
+
         // Trigger cleanup
         const cleanupConfig: MemoryConfig = {
           enabled: true,
@@ -760,6 +766,9 @@ describe('SQLiteMemoryStore', () => {
         // Create an invalid lock file (should not cause crash)
         const invalidFile = `${testDir}/invalid-lock-file.txt`
         await writeFile(invalidFile, 'not a lock file')
+
+        // Reset cleanup throttle to ensure cleanup runs in this test
+        SQLiteMemoryStore.resetCleanupThrottle()
 
         // This should not throw even with invalid files present
         const cleanupConfig: MemoryConfig = {

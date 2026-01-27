@@ -277,18 +277,20 @@ export function createGitReadBinaryFile(commit: string): FullToolInfo {
 
     // File exists, read it and encode as base64
     // Use git show piped to base64 for cross-platform binary file handling
-    // Windows: use cmd /c for shell support
-    // Unix: use sh -c for shell support
+    // Windows: requires Git Bash or Unix tools in PATH (base64 command)
+    // Unix: always available
+    // Note: On Windows without Git Bash, this will fail with a clear error
     const isWindows = process.platform === 'win32'
     const command = isWindows
-      ? `cmd /c "git show ${quotedCommit}:${quotedUrl} | base64 -w 0"`
-      : `sh -c "git show ${quotedCommit}:${quotedUrl} | base64"`
+      ? `cmd /c "git show ${quotedCommit}:${quotedUrl} | base64 -w 0 2>&1"`
+      : `sh -c "git show ${quotedCommit}:${quotedUrl} | base64 2>&1"`
 
     const result = await provider.executeCommand(command, false)
 
     if (result.exitCode === 0) {
-      // The output is base64-encoded text, safe to pass through as string
-      const base64Data = result.stdout.trim()
+      // The output is base64-encoded text, remove any newlines for consistent output
+      // Unix base64 wraps at 76 chars by default, Windows with -w 0 doesn't wrap
+      const base64Data = result.stdout.replace(/\n/g, '')
       return {
         success: true,
         message: {
@@ -304,11 +306,19 @@ export function createGitReadBinaryFile(commit: string): FullToolInfo {
         },
       }
     } else {
+      // Provide helpful error message if base64 command is not available
+      const isBase64Error =
+        result.stderr.includes('not recognized') || result.stderr.includes('command not found') || result.stderr.includes('base64')
+
+      const errorMessage = isBase64Error
+        ? `Failed to read binary file: base64 command not found. On Windows, ensure Git Bash or Unix tools are installed and in PATH.`
+        : `Failed to read binary file: ${result.stderr}`
+
       return {
         success: false,
         message: {
           type: 'error-text',
-          value: `Failed to read binary file: ${result.stderr}`,
+          value: errorMessage,
         },
       }
     }

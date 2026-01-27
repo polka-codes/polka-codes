@@ -16,17 +16,35 @@ class FileLock {
   private lockfilePath: string
   private static readonly LOCK_TIMEOUT = 30000 // 30 seconds max lock time
   private static readonly CLEANUP_AGE = 600000 // 10 minutes - cleanup old lock files
+  private static lastCleanupTime = 0
+  private static readonly CLEANUP_THROTTLE = 60000 // Throttle cleanup to once per minute
 
   constructor(dbPath: string) {
     this.lockfilePath = `${dbPath}.lock`
   }
 
   /**
+   * Reset the cleanup throttle. For testing purposes only.
+   */
+  static resetCleanupThrottle(): void {
+    FileLock.lastCleanupTime = 0
+  }
+
+  /**
    * Clean up old lock files (.released.*, .stale.*, .invalid.*, .corrupt.*)
    * Only removes files older than CLEANUP_AGE (10 minutes by default)
    * This method is safe to call multiple times concurrently
+   * Cleanup is throttled to run at most once per minute to avoid performance impact
+   * @param force - Skip throttling and force cleanup (for testing)
    */
-  static async cleanupOldLockFiles(dbPath: string, maxAge = FileLock.CLEANUP_AGE): Promise<void> {
+  static async cleanupOldLockFiles(dbPath: string, maxAge = FileLock.CLEANUP_AGE, force = false): Promise<void> {
+    // Throttle cleanup to avoid performance impact on high-throughput scenarios
+    const now = Date.now()
+    if (!force && now - FileLock.lastCleanupTime < FileLock.CLEANUP_THROTTLE) {
+      return
+    }
+    FileLock.lastCleanupTime = now
+
     try {
       const lockDir = dirname(dbPath)
       const dbBaseName = basename(dbPath)
@@ -37,7 +55,8 @@ class FileLock {
 
       for (const file of files) {
         // Match lock file patterns: {dbBaseName}.lock.released.*, etc.
-        if (!file.startsWith(dbBaseName) || !file.includes('.lock.')) {
+        // Use strict prefix check to avoid matching db.sqlite-wal when looking for db.sqlite.lock.*
+        if (!file.startsWith(`${dbBaseName}.lock.`)) {
           continue
         }
 
@@ -284,6 +303,13 @@ export class SQLiteMemoryStore implements IMemoryStore {
   private inTransaction = false // Track if we're in a transaction
   private transactionMutex = new ReentrantMutex() // Serialize transactions
   private fileLock!: FileLock // Cross-process file lock (initialized in getFileLock())
+
+  /**
+   * Reset the lock file cleanup throttle. For testing purposes only.
+   */
+  static resetCleanupThrottle(): void {
+    FileLock.resetCleanupThrottle()
+  }
 
   /**
    * Get the configured database path, or default if not set
