@@ -66,6 +66,8 @@ export const reviewCommand = new Command('review')
       // Override interactive mode: disable in JSON mode
       if (json) {
         workflowOpts.interactive = false
+        // Also set silent flag so the workflow creates a silent logger
+        workflowOpts.silent = true
       }
       const { verbose } = workflowOpts
       // In JSON mode, force silent mode to suppress all non-JSON output
