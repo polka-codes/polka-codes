@@ -640,4 +640,122 @@ describe('SQLiteMemoryStore', () => {
       expect(newEntryArray[0].tags).toBe('important')
     })
   })
+
+  describe('Lock File Cleanup', () => {
+    it('should clean up old lock files', async () => {
+      const { readdir } = await import('node:fs/promises')
+      const { writeFile } = await import('node:fs/promises')
+
+      // Create some old lock files for a different database with a unique name
+      const oldTimestamp = Date.now() - 90000000 // 25 hours ago
+      const uniqueId = Date.now()
+      const lockDir = '/tmp'
+      const testDbName = `test-cleanup-${uniqueId}.sqlite`
+
+      await writeFile(`${lockDir}/${testDbName}.lock.released.${oldTimestamp}`, 'old released lock')
+      await writeFile(`${lockDir}/${testDbName}.lock.stale.${oldTimestamp}`, 'old stale lock')
+      await writeFile(`${lockDir}/${testDbName}.lock.invalid.${oldTimestamp}`, 'old invalid lock')
+      await writeFile(`${lockDir}/${testDbName}.lock.corrupt.${oldTimestamp}`, 'old corrupt lock')
+
+      // Create recent lock file that should not be deleted
+      const recentTimestamp = Date.now() - 3600000 // 1 hour ago
+      await writeFile(`${lockDir}/${testDbName}.lock.released.${recentTimestamp}`, 'recent released lock')
+
+      // Trigger cleanup by initializing database with that name
+      const cleanupConfig: MemoryConfig = {
+        enabled: true,
+        type: 'sqlite',
+        path: `/tmp/${testDbName}`,
+      }
+      const cleanupStore = new SQLiteMemoryStore(cleanupConfig, 'project:/tmp/test-cleanup')
+      await cleanupStore.updateMemory('replace', 'test', 'content')
+
+      // Wait for background cleanup to complete
+      await new Promise((resolve) => setTimeout(resolve, 500))
+
+      // Check that old files are removed but recent one remains
+      const files = await readdir(lockDir)
+      const oldLockFiles = files.filter((f) => f.startsWith(testDbName) && f.includes('.lock.') && f.includes(`${oldTimestamp}`))
+      const recentLockFiles = files.filter(
+        (f) => f.startsWith(testDbName) && f.includes('.lock.released.') && f.includes(`${recentTimestamp}`),
+      )
+
+      expect(oldLockFiles).toHaveLength(0)
+      expect(recentLockFiles).toHaveLength(1)
+
+      // Clean up
+      await cleanupStore.close()
+      if (existsSync(`/tmp/${testDbName}`)) {
+        unlinkSync(`/tmp/${testDbName}`)
+      }
+      if (existsSync(`${lockDir}/${testDbName}.lock.released.${recentTimestamp}`)) {
+        unlinkSync(`${lockDir}/${testDbName}.lock.released.${recentTimestamp}`)
+      }
+    })
+
+    it('should not delete lock files younger than max age', async () => {
+      const { writeFile } = await import('node:fs/promises')
+      const { readdir } = await import('node:fs/promises')
+
+      const uniqueId = Date.now()
+      const lockDir = '/tmp'
+      const testDbName = `test-cleanup-recent-${uniqueId}.sqlite`
+      const recentTimestamp = Date.now() - 3600000 // 1 hour ago
+
+      // Create recent lock files
+      await writeFile(`${lockDir}/${testDbName}.lock.released.${recentTimestamp}`, 'recent lock')
+      await writeFile(`${lockDir}/${testDbName}.lock.stale.${recentTimestamp}`, 'recent stale')
+
+      // Trigger cleanup
+      const cleanupConfig: MemoryConfig = {
+        enabled: true,
+        type: 'sqlite',
+        path: `/tmp/${testDbName}`,
+      }
+      const cleanupStore = new SQLiteMemoryStore(cleanupConfig, 'project:/tmp/test-cleanup-recent')
+      await cleanupStore.updateMemory('replace', 'test2', 'content2')
+
+      // Wait for background cleanup to complete
+      await new Promise((resolve) => setTimeout(resolve, 500))
+
+      // Check that recent files still exist
+      const files = await readdir(lockDir)
+      const recentLockFiles = files.filter((f) => f.startsWith(testDbName) && f.includes('.lock.') && f.includes(`${recentTimestamp}`))
+
+      expect(recentLockFiles.length).toBeGreaterThanOrEqual(2)
+
+      // Clean up
+      await cleanupStore.close()
+      if (existsSync(`/tmp/${testDbName}`)) {
+        unlinkSync(`/tmp/${testDbName}`)
+      }
+      if (existsSync(`${lockDir}/${testDbName}.lock.released.${recentTimestamp}`)) {
+        unlinkSync(`${lockDir}/${testDbName}.lock.released.${recentTimestamp}`)
+      }
+      if (existsSync(`${lockDir}/${testDbName}.lock.stale.${recentTimestamp}`)) {
+        unlinkSync(`${lockDir}/${testDbName}.lock.stale.${recentTimestamp}`)
+      }
+    })
+
+    it('should handle cleanup errors gracefully', async () => {
+      const { writeFile } = await import('node:fs/promises')
+
+      const uniqueId = Date.now()
+      const lockDir = '/tmp'
+
+      // Create an invalid lock file (should not cause crash)
+      const invalidFile = `${lockDir}/invalid-lock-file-${uniqueId}.txt`
+      await writeFile(invalidFile, 'not a lock file')
+
+      // This should not throw even with invalid files present
+      const cleanupStore = new SQLiteMemoryStore(config, 'project:/tmp/test-cleanup-error')
+      await cleanupStore.updateMemory('replace', 'test3', 'content3')
+
+      // Clean up
+      await cleanupStore.close()
+      if (existsSync(invalidFile)) {
+        unlinkSync(invalidFile)
+      }
+    })
+  })
 })

@@ -1,7 +1,7 @@
 import { AsyncLocalStorage } from 'node:async_hooks'
 import { randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, readFile, rename, unlink, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { DatabaseStats, IMemoryStore, MemoryConfig, MemoryEntry, MemoryOperation, MemoryQuery, QueryOptions } from '@polka-codes/core'
@@ -15,9 +15,73 @@ import initSqlJs, { type Database, type SqlJsStatic } from 'sql.js'
 class FileLock {
   private lockfilePath: string
   private static readonly LOCK_TIMEOUT = 30000 // 30 seconds max lock time
+  private static readonly CLEANUP_AGE = 86400000 // 24 hours - cleanup old lock files
+  private static cleanupInProgress = false
 
   constructor(dbPath: string) {
     this.lockfilePath = `${dbPath}.lock`
+  }
+
+  /**
+   * Clean up old lock files (.released.*, .stale.*, .invalid.*, .corrupt.*)
+   * Only removes files older than CLEANUP_AGE (24 hours by default)
+   * This method is safe to call multiple times concurrently - only one cleanup runs at a time
+   */
+  static async cleanupOldLockFiles(dbPath: string, maxAge = FileLock.CLEANUP_AGE): Promise<void> {
+    // Prevent concurrent cleanups
+    if (FileLock.cleanupInProgress) {
+      return
+    }
+
+    try {
+      FileLock.cleanupInProgress = true
+
+      const lockDir = dirname(dbPath)
+      const dbBaseName = dbPath.split('/').pop() || ''
+      const files = await readdir(lockDir)
+
+      const now = Date.now()
+      let cleanedCount = 0
+
+      for (const file of files) {
+        // Match lock file patterns: {dbBaseName}.lock.released.*, etc.
+        if (!file.startsWith(dbBaseName) || !file.includes('.lock.')) {
+          continue
+        }
+
+        const match = file.match(/\.lock\.(released|stale|invalid|corrupt)\.(\d+)$/)
+        if (!match) {
+          continue
+        }
+
+        const filePath = resolve(lockDir, file)
+        const timestamp = Number.parseInt(match[2], 10)
+        const age = now - timestamp
+
+        // Only remove files older than maxAge
+        if (age > maxAge) {
+          try {
+            await unlink(filePath)
+            cleanedCount++
+          } catch (error) {
+            // Ignore errors - file might have been deleted by another process
+            const errorCode = (error as NodeJS.ErrnoException)?.code
+            if (errorCode !== 'ENOENT') {
+              console.warn(`[FileLock] Failed to delete old lock file ${file}: ${error instanceof Error ? error.message : String(error)}`)
+            }
+          }
+        }
+      }
+
+      if (cleanedCount > 0) {
+        console.log(`[FileLock] Cleaned up ${cleanedCount} old lock file(s) (older than ${maxAge}ms)`)
+      }
+    } catch (error) {
+      // Silently ignore cleanup errors - this is a maintenance task, not critical
+      console.debug(`[FileLock] Cleanup encountered an error: ${error instanceof Error ? error.message : String(error)}`)
+    } finally {
+      FileLock.cleanupInProgress = false
+    }
   }
 
   /**
@@ -90,6 +154,12 @@ class FileLock {
   async release(): Promise<void> {
     try {
       await rename(this.lockfilePath, `${this.lockfilePath}.released.${Date.now()}`)
+
+      // Trigger cleanup in the background after releasing lock
+      // This is fire-and-forget - we don't await the result
+      FileLock.cleanupOldLockFiles(this.lockfilePath.replace('.lock', '')).catch(() => {
+        // Ignore errors
+      })
     } catch (error: unknown) {
       const errorCode = (error as NodeJS.ErrnoException).code
       if (errorCode !== 'ENOENT') {
@@ -279,6 +349,12 @@ export class SQLiteMemoryStore implements IMemoryStore {
         if (!existsSync(dir)) {
           await mkdir(dir, { recursive: true, mode: 0o700 })
         }
+
+        // Trigger cleanup of old lock files in the background
+        // This is fire-and-forget - we don't await the result
+        FileLock.cleanupOldLockFiles(dbPath).catch(() => {
+          // Ignore errors
+        })
 
         // Load existing database data or create new one
         let dbData: Uint8Array | undefined
