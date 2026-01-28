@@ -23,9 +23,6 @@ export function loadConfigAtPath(path: string): Config | undefined {
     if (error instanceof ZodError) {
       // Validation errors should be logged as warnings
       console.warn(`Config validation failed for ${path}: ${error.message}`)
-    } else {
-      // Other errors (file not found, parse errors) are expected and logged at debug level
-      console.debug(`Could not load config from ${path}: ${error instanceof Error ? error.message : String(error)}`)
     }
     return undefined
   }
