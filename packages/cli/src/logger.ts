@@ -5,14 +5,14 @@ import { formatWithOptions } from 'node:util'
 import type { Logger } from '@polka-codes/core'
 
 function createStreamConsole(stdout: Writable, stderr: Writable) {
-  const isStdoutTTY = (stdout as any).isTTY
-  const isStderrTTY = (stderr as any).isTTY
+  const isStdoutTTY = 'isTTY' in stdout && (stdout as { isTTY?: boolean }).isTTY
+  const isStderrTTY = 'isTTY' in stderr && (stderr as { isTTY?: boolean }).isTTY
 
   return {
-    log: (...args: any[]) => stdout.write(`${formatWithOptions({ colors: isStdoutTTY }, ...args)}\n`),
-    info: (...args: any[]) => stdout.write(`${formatWithOptions({ colors: isStdoutTTY }, ...args)}\n`),
-    warn: (...args: any[]) => stderr.write(`${formatWithOptions({ colors: isStderrTTY }, ...args)}\n`),
-    error: (...args: any[]) => stderr.write(`${formatWithOptions({ colors: isStderrTTY }, ...args)}\n`),
+    log: (...args: unknown[]) => stdout.write(`${formatWithOptions({ colors: isStdoutTTY }, ...args)}\n`),
+    info: (...args: unknown[]) => stdout.write(`${formatWithOptions({ colors: isStdoutTTY }, ...args)}\n`),
+    warn: (...args: unknown[]) => stderr.write(`${formatWithOptions({ colors: isStderrTTY }, ...args)}\n`),
+    error: (...args: unknown[]) => stderr.write(`${formatWithOptions({ colors: isStderrTTY }, ...args)}\n`),
   }
 }
 
@@ -30,18 +30,18 @@ export const createLogger = (options: { verbose?: number; stream?: Writable }): 
   }
 
   return {
-    debug: (...args: any[]) => {
+    debug: (...args: unknown[]) => {
       if (verbose >= 1) {
         con.log(...args)
       }
     },
-    info: (...args: any[]) => {
+    info: (...args: unknown[]) => {
       con.info(...args)
     },
-    warn: (...args: any[]) => {
+    warn: (...args: unknown[]) => {
       con.warn(...args)
     },
-    error: (...args: any[]) => {
+    error: (...args: unknown[]) => {
       con.error(...args)
     },
   }
