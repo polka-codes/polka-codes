@@ -630,7 +630,7 @@ Returns a message confirming the operation performed.`,
             .enum(['append', 'replace', 'remove'])
             .describe('The operation: append (add content), replace (overwrite), or remove (delete topic(s))'),
           topic: z.string().optional().describe('Single memory topic to update (defaults to ":default:")'),
-          topics: z.array(z.string()).optional().describe('Array of topics for batch operations'),
+          topics: z.array(z.string()).min(1).optional().describe('Array of topics for batch operations'),
           content: z
             .union([z.string(), z.array(z.string())])
             .optional()
@@ -680,15 +680,11 @@ Returns a message confirming the operation performed.`,
         try {
           // Handle batch operations
           if (topics) {
-            // Handle empty topics array
-            if (topics.length === 0) {
-              return 'Error: No topics provided for batch operation'
-            }
             // Validate content requirement for batch
             if (operation === 'remove' && contentInput !== undefined) {
               return 'Error: Content must not be provided for "remove" operation'
             }
-            if ((operation === 'append' || operation === 'replace') && !contentInput) {
+            if ((operation === 'append' || operation === 'replace') && contentInput === undefined) {
               return 'Error: Content is required for "append" and "replace" operations'
             }
 
@@ -733,7 +729,7 @@ Returns a message confirming the operation performed.`,
           }
 
           // Handle single topic operation
-          if ((operation === 'append' || operation === 'replace') && !contentInput) {
+          if ((operation === 'append' || operation === 'replace') && contentInput === undefined) {
             return 'Error: Content is required for "append" and "replace" operations'
           }
           if (operation === 'remove' && contentInput !== undefined) {
@@ -764,13 +760,13 @@ available to read from. Returns a list of topic names that have content.
 
 Parameters:
 - pattern (optional): Filter topics by wildcard pattern (e.g., ":plan:*" for all plan topics)
-- scope (optional): Filter by scope ("auto", "project", "project:<path>", or "global")`,
+- scope (optional): Filter by scope ("auto", "project", or "global")`,
       inputSchema: z.object({
         pattern: z.string().optional().describe('Filter topics by wildcard pattern (e.g., ":plan:*")'),
-        scope: z.string().optional().describe('Filter by scope (defaults to "auto")'),
+        scope: z.enum(['auto', 'project', 'global']).optional().describe('Filter by scope (defaults to "auto")'),
       }),
       handler: async (args: Record<string, unknown>, toolContext: McpServerToolContext) => {
-        const { pattern, scope } = args as { pattern?: string; scope?: string }
+        const { pattern, scope } = args as { pattern?: string; scope?: 'auto' | 'project' | 'global' }
         toolContext.logger.info(`MCP: Listing memory topics${pattern ? ` with pattern "${pattern}"` : ''}`)
 
         const memoryStore = await getMemoryStore(toolContext.logger)
@@ -781,18 +777,7 @@ Parameters:
         try {
           // Query memory entries with filters
           const query: { scope?: 'global' | 'project' | 'auto' } = {}
-          if (scope) {
-            // Handle scope format: "auto", "global", "project", or "project:<path>"
-            if (scope === 'auto' || scope === 'global' || scope === 'project') {
-              query.scope = scope
-            } else if (scope.startsWith('project:')) {
-              query.scope = 'project'
-            } else {
-              query.scope = 'auto'
-            }
-          } else {
-            query.scope = 'auto'
-          }
+          query.scope = scope ?? 'auto'
 
           const entries = await memoryStore.store.queryMemory(query, { operation: 'select' })
           if (!entries || !Array.isArray(entries) || entries.length === 0) {
@@ -839,7 +824,7 @@ Returns matching entries with full metadata.`,
         status: z.string().optional().describe('Filter by status (open, completed, closed, etc.)'),
         priority: z.string().optional().describe('Filter by priority (null, low, medium, high)'),
         tags: z.string().optional().describe('Filter by tags'),
-        scope: z.string().optional().describe('Filter by scope (defaults to "auto")'),
+        scope: z.enum(['auto', 'project', 'global']).optional().describe('Filter by scope (defaults to "auto")'),
         operation: z.enum(['select', 'count']).optional().describe('Query operation (defaults to "select")'),
       }),
       handler: async (args: Record<string, unknown>, toolContext: McpServerToolContext) => {
@@ -857,7 +842,7 @@ Returns matching entries with full metadata.`,
           status?: string
           priority?: string
           tags?: string
-          scope?: string
+          scope?: 'auto' | 'project' | 'global'
           operation?: 'select' | 'count'
         }
         toolContext.logger.info(`MCP: Querying memory - operation: "${operation}"`)
@@ -878,16 +863,7 @@ Returns matching entries with full metadata.`,
             tags?: string
           } = {}
 
-          if (scope) {
-            // Handle scope format: "auto", "global", or "project"
-            if (scope === 'auto' || scope === 'global' || scope === 'project') {
-              memoryQuery.scope = scope as 'auto' | 'global' | 'project'
-            } else {
-              memoryQuery.scope = 'auto'
-            }
-          } else {
-            memoryQuery.scope = 'auto'
-          }
+          memoryQuery.scope = scope ?? 'auto'
           if (search) memoryQuery.search = search
           if (type) memoryQuery.type = type
           if (status) memoryQuery.status = status
