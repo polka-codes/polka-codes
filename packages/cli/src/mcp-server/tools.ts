@@ -4,7 +4,7 @@ import * as path from 'node:path'
 // Memory imports
 import { detectProjectScope, getGlobalConfigPath, loadConfigAtPath, MemoryManager, SQLiteMemoryStore } from '@polka-codes/cli-shared'
 import type { Logger, WorkflowFn } from '@polka-codes/core'
-import { DEFAULT_MEMORY_CONFIG } from '@polka-codes/core'
+import { DEFAULT_MEMORY_CONFIG, resolveHomePath } from '@polka-codes/core'
 import { z } from 'zod'
 import { commit } from '../api'
 import { runWorkflow } from '../runWorkflow'
@@ -39,7 +39,8 @@ async function getMemoryStore(logger: Logger): Promise<{ store: MemoryManager; c
     const cwd = process.cwd()
     const scope = detectProjectScope(cwd)
     const dbPath = memoryConfig.path || DEFAULT_MEMORY_CONFIG.path
-    const resolvedDbPath = path.resolve(cwd, dbPath)
+    // Resolve home directory and make path absolute
+    const resolvedDbPath = path.resolve(resolveHomePath(dbPath))
 
     const sqliteStore = new SQLiteMemoryStore({ enabled: true, type: 'sqlite', path: resolvedDbPath }, scope)
     const memoryManager = new MemoryManager(sqliteStore)
