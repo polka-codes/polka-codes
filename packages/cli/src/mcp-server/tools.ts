@@ -666,7 +666,11 @@ Returns a message confirming the operation performed.`,
 
         try {
           // Handle batch operations
-          if (topics && topics.length > 0) {
+          if (topics) {
+            // Handle empty topics array
+            if (topics.length === 0) {
+              return 'Error: No topics provided for batch operation'
+            }
             // Validate content requirement for batch
             if (operation === 'remove' && contentInput !== undefined) {
               return 'Error: Content must not be provided for "remove" operation'
@@ -697,10 +701,12 @@ Returns a message confirming the operation performed.`,
               return 'Error: Unable to query memory entries'
             }
 
-            // Convert wildcard pattern to regex, escaping special characters
-            const escapedPattern = escapeRegexPattern(topic)
-            const pattern = escapedPattern.replace(/\*/g, '.*').replace(/\?/g, '.')
-            const regex = new RegExp(`^${pattern}$`)
+            // Convert wildcard pattern to regex, escaping special characters except wildcards
+            // First replace wildcards with placeholders, escape everything else, then restore wildcards
+            const withWildcardsPlaceholders = topic.replace(/\*/g, '\0STAR\0').replace(/\?/g, '\0QUEST\0')
+            const escaped = escapeRegexPattern(withWildcardsPlaceholders)
+            const withWildcards = escaped.replace(/\0STAR\0/g, '.*').replace(/\0QUEST\0/g, '.')
+            const regex = new RegExp(`^${withWildcards}$`)
 
             const matchingTopics = allEntries.filter((e) => regex.test(e.name)).map((e) => e.name)
 
@@ -788,9 +794,11 @@ Parameters:
           // Extract topic names and filter by pattern if provided
           let topics = [...new Set(entries.map((e) => e.name))]
           if (pattern) {
-            const escapedPattern = escapeRegexPattern(pattern)
-            const regexPattern = escapedPattern.replace(/\*/g, '.*').replace(/\?/g, '.')
-            const regex = new RegExp(`^${regexPattern}$`)
+            // Convert wildcard pattern to regex, escaping special characters except wildcards
+            const withWildcardsPlaceholders = pattern.replace(/\*/g, '\0STAR\0').replace(/\?/g, '\0QUEST\0')
+            const escaped = escapeRegexPattern(withWildcardsPlaceholders)
+            const withWildcards = escaped.replace(/\0STAR\0/g, '.*').replace(/\0QUEST\0/g, '.')
+            const regex = new RegExp(`^${withWildcards}$`)
             topics = topics.filter((t) => regex.test(t))
           }
 
