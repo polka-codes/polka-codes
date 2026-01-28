@@ -224,8 +224,21 @@ export function createPolkaCodesServerTools(logger: Logger): McpServerTool[] {
    * Escape special regex characters in a pattern for safe regex construction
    */
   function escapeRegexPattern(pattern: string): string {
-    return pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&')
+    return pattern.replace(/[.+*?^${}()|[\]\\]/g, '\\$&')
   }
+
+  /**
+   * Create a regex from a wildcard pattern, supporting * and ? wildcards
+   * All special regex characters except * and ? are escaped
+   */
+  function createWildcardRegex(pattern: string): RegExp {
+    // First replace wildcards with placeholders, escape everything else, then restore wildcards
+    const withWildcardsPlaceholders = pattern.replace(/\*/g, '\0STAR\0').replace(/\?/g, '\0QUEST\0')
+    const escaped = escapeRegexPattern(withWildcardsPlaceholders)
+    const withWildcards = escaped.replace(/\0STAR\0/g, '.*').replace(/\0QUEST\0/g, '.')
+    return new RegExp(`^${withWildcards}$`)
+  }
+
   return [
     {
       name: 'code',
@@ -694,19 +707,14 @@ Returns a message confirming the operation performed.`,
 
           // Handle wildcard removal
           const topic = singleTopic || ':default:'
-          if (operation === 'remove' && topic.includes('*')) {
+          if (operation === 'remove' && (topic.includes('*') || topic.includes('?'))) {
             // Query all entries and filter by wildcard pattern
             const allEntries = await memoryStore.store.queryMemory({ scope: 'auto' }, { operation: 'select' })
             if (!Array.isArray(allEntries)) {
               return 'Error: Unable to query memory entries'
             }
 
-            // Convert wildcard pattern to regex, escaping special characters except wildcards
-            // First replace wildcards with placeholders, escape everything else, then restore wildcards
-            const withWildcardsPlaceholders = topic.replace(/\*/g, '\0STAR\0').replace(/\?/g, '\0QUEST\0')
-            const escaped = escapeRegexPattern(withWildcardsPlaceholders)
-            const withWildcards = escaped.replace(/\0STAR\0/g, '.*').replace(/\0QUEST\0/g, '.')
-            const regex = new RegExp(`^${withWildcards}$`)
+            const regex = createWildcardRegex(topic)
 
             const matchingTopics = allEntries.filter((e) => regex.test(e.name)).map((e) => e.name)
 
@@ -794,11 +802,7 @@ Parameters:
           // Extract topic names and filter by pattern if provided
           let topics = [...new Set(entries.map((e) => e.name))]
           if (pattern) {
-            // Convert wildcard pattern to regex, escaping special characters except wildcards
-            const withWildcardsPlaceholders = pattern.replace(/\*/g, '\0STAR\0').replace(/\?/g, '\0QUEST\0')
-            const escaped = escapeRegexPattern(withWildcardsPlaceholders)
-            const withWildcards = escaped.replace(/\0STAR\0/g, '.*').replace(/\0QUEST\0/g, '.')
-            const regex = new RegExp(`^${withWildcards}$`)
+            const regex = createWildcardRegex(pattern)
             topics = topics.filter((t) => regex.test(t))
           }
 
