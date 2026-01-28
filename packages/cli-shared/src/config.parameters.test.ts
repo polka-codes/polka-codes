@@ -249,9 +249,11 @@ providers:
   })
 
   describe('loadConfig edge cases', () => {
-    test('throws on missing config file', async () => {
+    test('returns undefined on missing config file', async () => {
       const configPath = join(testSubDir, 'nonexistent.yml')
-      await expect(loadConfig(configPath, testSubDir, testHomeDir)).rejects.toThrow()
+      const result = await loadConfig(configPath, testSubDir, testHomeDir)
+      // Missing config files should not throw - they should return undefined
+      expect(result).toBeUndefined()
     })
 
     test('throws on invalid YAML', async () => {

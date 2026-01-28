@@ -596,24 +596,59 @@ between different operations.
 
 Parameters:
 - operation (required): The operation to perform. Use "append" to add content, "replace" to overwrite all content, or "remove" to delete the topic.
-- topic (optional): The memory topic to update. Defaults to ":default:".
-- content (optional): The content to store (required for "append" and "replace" operations).
+- topics (optional): Array of topic names for batch operations. If provided, content must also be an array of the same length.
+- topic (optional): Single memory topic to update. Defaults to ":default:".
+- content (optional): The content to store (required for "append" and "replace" operations). For batch operations with topics, this must be an array of the same length.
+
+Supports wildcards in topic name for remove operation:
+- Use "*" to remove all topics (e.g., topic ":plan:*")
+- Use pattern matching like ":plan:*" to remove all topics starting with ":plan:"
 
 Returns a message confirming the operation performed.`,
-      inputSchema: z.object({
-        operation: z
-          .enum(['append', 'replace', 'remove'])
-          .describe('The operation: append (add content), replace (overwrite), or remove (delete topic)'),
-        topic: z.string().optional().describe('The memory topic to update (defaults to ":default:")'),
-        content: z.string().optional().describe('Content to store (required for append/replace, must be omitted for remove)'),
-      }),
+      inputSchema: z
+        .object({
+          operation: z
+            .enum(['append', 'replace', 'remove'])
+            .describe('The operation: append (add content), replace (overwrite), or remove (delete topic(s))'),
+          topic: z.string().optional().describe('Single memory topic to update (defaults to ":default:")'),
+          topics: z.array(z.string()).optional().describe('Array of topics for batch operations'),
+          content: z
+            .union([z.string(), z.array(z.string())])
+            .optional()
+            .describe('Content to store (string or array for batch). Required for append/replace, omitted for remove'),
+        })
+        .refine(
+          (data) => {
+            // Either topic or topics must be provided
+            if (!data.topic && !data.topics) {
+              return false
+            }
+            // If topics is provided, content must be an array of same length
+            if (data.topics && data.content) {
+              if (Array.isArray(data.content)) {
+                return data.content.length === data.topics.length
+              }
+              return data.topics.length === 1
+            }
+            return true
+          },
+          {
+            message: 'Either "topic" or "topics" must be provided. If "topics" is an array, "content" must be an array of the same length',
+          },
+        ),
       handler: async (args: Record<string, unknown>, toolContext: McpServerToolContext) => {
         const {
           operation,
-          topic = ':default:',
-          content,
-        } = args as { operation: 'append' | 'replace' | 'remove'; topic?: string; content?: string }
-        toolContext.logger.info(`MCP: Memory operation "${operation}" on topic "${topic}"`)
+          topic: singleTopic,
+          topics,
+          content: contentInput,
+        } = args as {
+          operation: 'append' | 'replace' | 'remove'
+          topic?: string
+          topics?: string[]
+          content?: string | string[]
+        }
+        toolContext.logger.info(`MCP: Memory operation "${operation}" on ${topics ? `${topics.length} topics` : `topic "${singleTopic}"`}`)
 
         const memoryStore = await getMemoryStore(toolContext.logger)
         if (!memoryStore) {
@@ -621,14 +656,67 @@ Returns a message confirming the operation performed.`,
         }
 
         try {
-          // Validate content requirement
-          if ((operation === 'append' || operation === 'replace') && !content) {
+          // Handle batch operations
+          if (topics && topics.length > 0) {
+            // Validate content requirement for batch
+            if (operation === 'remove' && contentInput !== undefined) {
+              return 'Error: Content must not be provided for "remove" operation'
+            }
+            if ((operation === 'append' || operation === 'replace') && !contentInput) {
+              return 'Error: Content is required for "append" and "replace" operations'
+            }
+
+            const contents = Array.isArray(contentInput) ? contentInput : topics.map(() => contentInput as string)
+
+            // Build batch operations
+            const operations = topics.map((topic, index) => ({
+              operation,
+              name: topic,
+              content: operation === 'remove' ? undefined : contents[index],
+            }))
+
+            await memoryStore.store.batchUpdateMemory(operations)
+            return `Batch operation "${operation}" completed on ${topics.length} topics:\n${topics.join('\n')}`
+          }
+
+          // Handle wildcard removal
+          const topic = singleTopic || ':default:'
+          if (operation === 'remove' && topic.includes('*')) {
+            // Query all entries and filter by wildcard pattern
+            const allEntries = await memoryStore.store.queryMemory({ scope: 'auto' }, { operation: 'select' })
+            if (!Array.isArray(allEntries)) {
+              return 'Error: Unable to query memory entries'
+            }
+
+            // Convert wildcard pattern to regex
+            const pattern = topic.replace(/\*/g, '.*').replace(/\?/g, '.')
+            const regex = new RegExp(`^${pattern}$`)
+
+            const matchingTopics = allEntries.filter((e) => regex.test(e.name)).map((e) => e.name)
+
+            if (matchingTopics.length === 0) {
+              return `No topics found matching pattern "${topic}"`
+            }
+
+            // Batch remove all matching topics
+            const operations = matchingTopics.map((matchingTopic) => ({
+              operation: 'remove' as const,
+              name: matchingTopic,
+            }))
+
+            await memoryStore.store.batchUpdateMemory(operations)
+            return `Removed ${matchingTopics.length} topic(s) matching pattern "${topic}":\n${matchingTopics.join('\n')}`
+          }
+
+          // Handle single topic operation
+          if ((operation === 'append' || operation === 'replace') && !contentInput) {
             return 'Error: Content is required for "append" and "replace" operations'
           }
-          if (operation === 'remove' && content !== undefined) {
+          if (operation === 'remove' && contentInput !== undefined) {
             return 'Error: Content must not be provided for "remove" operation'
           }
 
+          const content = typeof contentInput === 'string' ? contentInput : undefined
           await memoryStore.store.updateMemory(operation, topic, content)
 
           const messages = {
@@ -648,10 +736,18 @@ Returns a message confirming the operation performed.`,
       description: `List all available memory topics.
 
 Use this to see what information has been stored and which topics are
-available to read from. Returns a list of topic names that have content.`,
-      inputSchema: z.object({}),
-      handler: async (_args: Record<string, unknown>, toolContext: McpServerToolContext) => {
-        toolContext.logger.info('MCP: Listing memory topics')
+available to read from. Returns a list of topic names that have content.
+
+Parameters:
+- pattern (optional): Filter topics by wildcard pattern (e.g., ":plan:*" for all plan topics)
+- scope (optional): Filter by scope ("auto", "project:<path>", or "global")`,
+      inputSchema: z.object({
+        pattern: z.string().optional().describe('Filter topics by wildcard pattern (e.g., ":plan:*")'),
+        scope: z.string().optional().describe('Filter by scope (defaults to "auto")'),
+      }),
+      handler: async (args: Record<string, unknown>, toolContext: McpServerToolContext) => {
+        const { pattern, scope } = args as { pattern?: string; scope?: string }
+        toolContext.logger.info(`MCP: Listing memory topics${pattern ? ` with pattern "${pattern}"` : ''}`)
 
         const memoryStore = await getMemoryStore(toolContext.logger)
         if (!memoryStore) {
@@ -659,15 +755,145 @@ available to read from. Returns a list of topic names that have content.`,
         }
 
         try {
-          // Query all memory entries and extract unique topic names
-          const entries = await memoryStore.store.queryMemory({ scope: 'auto' }, { operation: 'select' })
+          // Query memory entries with filters
+          const query: { scope?: 'global' | 'project' | 'auto' } = {}
+          if (scope) {
+            // Handle scope format: "auto", "global", or "project:<path>"
+            if (scope === 'auto' || scope === 'global') {
+              query.scope = scope
+            } else if (scope.startsWith('project:')) {
+              query.scope = 'project'
+            } else {
+              query.scope = 'auto'
+            }
+          } else {
+            query.scope = 'auto'
+          }
+
+          const entries = await memoryStore.store.queryMemory(query, { operation: 'select' })
           if (!entries || !Array.isArray(entries) || entries.length === 0) {
             return 'No memory topics found.'
           }
 
-          // Extract unique topic names
-          const topics = [...new Set(entries.map((e) => e.name))]
-          return `Memory topics:\n${topics.join('\n')}`
+          // Extract topic names and filter by pattern if provided
+          let topics = [...new Set(entries.map((e) => e.name))]
+          if (pattern) {
+            const regex = new RegExp(`^${pattern.replace(/\*/g, '.*').replace(/\?/g, '.')}$`)
+            topics = topics.filter((t) => regex.test(t))
+          }
+
+          if (topics.length === 0) {
+            return pattern ? `No memory topics found matching pattern "${pattern}"` : 'No memory topics found.'
+          }
+
+          return `Memory topics (${topics.length}):\n${topics.join('\n')}`
+        } catch (error) {
+          return `Error: ${error instanceof Error ? error.message : String(error)}`
+        }
+      },
+    },
+    {
+      name: 'memory_query',
+      description: `Query memory with advanced filters.
+
+Use this to search memory entries by content, metadata, or other criteria.
+Returns detailed entry information with metadata.
+
+Parameters:
+- search (optional): Search text to find in content
+- type (optional): Filter by entry type (note, todo, plan, etc.)
+- status (optional): Filter by status (open, completed, closed, etc.)
+- priority (optional): Filter by priority (null, low, medium, high)
+- tags (optional): Filter by tags
+- scope (optional): Filter by scope ("auto", "project", or "global")
+- operation (optional): Query operation - "select" returns entries, "count" returns count
+
+Returns matching entries with full metadata.`,
+      inputSchema: z.object({
+        search: z.string().optional().describe('Search text to find in content'),
+        type: z.string().optional().describe('Filter by entry type (note, todo, plan, etc.)'),
+        status: z.string().optional().describe('Filter by status (open, completed, closed, etc.)'),
+        priority: z.string().optional().describe('Filter by priority (null, low, medium, high)'),
+        tags: z.string().optional().describe('Filter by tags'),
+        scope: z.string().optional().describe('Filter by scope (defaults to "auto")'),
+        operation: z.enum(['select', 'count']).optional().describe('Query operation (defaults to "select")'),
+      }),
+      handler: async (args: Record<string, unknown>, toolContext: McpServerToolContext) => {
+        const {
+          search,
+          type,
+          status,
+          priority,
+          tags,
+          scope,
+          operation = 'select',
+        } = args as {
+          search?: string
+          type?: string
+          status?: string
+          priority?: string
+          tags?: string
+          scope?: string
+          operation?: 'select' | 'count'
+        }
+        toolContext.logger.info(`MCP: Querying memory - operation: "${operation}"`)
+
+        const memoryStore = await getMemoryStore(toolContext.logger)
+        if (!memoryStore) {
+          return 'Error: Memory store is not enabled. Configure it in your .polkacodes.yml with memory.enabled: true'
+        }
+
+        try {
+          // Build query object
+          const memoryQuery: {
+            scope?: 'global' | 'project' | 'auto'
+            search?: string
+            type?: string
+            status?: string
+            priority?: string
+            tags?: string
+          } = {}
+
+          if (scope) {
+            // Handle scope format: "auto", "global", or "project"
+            if (scope === 'auto' || scope === 'global' || scope === 'project') {
+              memoryQuery.scope = scope as 'auto' | 'global' | 'project'
+            } else {
+              memoryQuery.scope = 'auto'
+            }
+          } else {
+            memoryQuery.scope = 'auto'
+          }
+          if (search) memoryQuery.search = search
+          if (type) memoryQuery.type = type
+          if (status) memoryQuery.status = status
+          if (priority) memoryQuery.priority = priority
+          if (tags) memoryQuery.tags = tags
+
+          const result = await memoryStore.store.queryMemory(memoryQuery, { operation })
+
+          if (operation === 'count') {
+            return `Found ${typeof result === 'number' ? result : 0} matching entries`
+          }
+
+          // Format entries for display
+          if (!Array.isArray(result) || result.length === 0) {
+            return 'No matching entries found.'
+          }
+
+          const formatted = result.map((entry) => {
+            const lines: string[] = []
+            lines.push(`Topic: ${entry.name}`)
+            if (entry.entry_type) lines.push(`  Type: ${entry.entry_type}`)
+            if (entry.status) lines.push(`  Status: ${entry.status}`)
+            if (entry.priority) lines.push(`  Priority: ${entry.priority}`)
+            if (entry.tags) lines.push(`  Tags: ${entry.tags}`)
+            if (entry.created_at) lines.push(`  Created: ${new Date(entry.created_at).toISOString()}`)
+            lines.push(`  Content: ${entry.content?.substring(0, 100)}${entry.content && entry.content.length > 100 ? '...' : ''}`)
+            return lines.join('\n')
+          })
+
+          return `Found ${result.length} entries:\n\n${formatted.join('\n\n')}`
         } catch (error) {
           return `Error: ${error instanceof Error ? error.message : String(error)}`
         }
