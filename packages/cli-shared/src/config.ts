@@ -158,8 +158,13 @@ export async function loadConfig(
         const config = readConfig(path)
         configs.push(config)
       } catch (error) {
-        console.error(`Error loading config file: ${path}\n${error}`)
-        throw error
+        // Only throw for validation errors, not missing files
+        if (error instanceof ZodError) {
+          console.error(`Error in config file: ${path}\n${error}`)
+          throw error
+        }
+        // Silently ignore ENOENT (file not found) and other IO errors
+        // Missing config files should not prevent the tool from running
       }
     }
   } else {
