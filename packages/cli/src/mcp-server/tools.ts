@@ -220,6 +220,12 @@ async function executeWorkflow<TInput>(
  * - parameters: Override model parameters
  */
 export function createPolkaCodesServerTools(logger: Logger): McpServerTool[] {
+  /**
+   * Escape special regex characters in a pattern for safe regex construction
+   */
+  function escapeRegexPattern(pattern: string): string {
+    return pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&')
+  }
   return [
     {
       name: 'code',
@@ -623,17 +629,20 @@ Returns a message confirming the operation performed.`,
             if (!data.topic && !data.topics) {
               return false
             }
-            // If topics is provided, content must be an array of same length
+            // If topics is provided with an array content, they must have same length
+            // String content is allowed for any number of topics (broadcasting)
             if (data.topics && data.content) {
               if (Array.isArray(data.content)) {
                 return data.content.length === data.topics.length
               }
-              return data.topics.length === 1
+              // String content can be broadcast to any number of topics
+              return true
             }
             return true
           },
           {
-            message: 'Either "topic" or "topics" must be provided. If "topics" is an array, "content" must be an array of the same length',
+            message:
+              'Either "topic" or "topics" must be provided. If "topics" is an array and "content" is an array, they must have the same length',
           },
         ),
       handler: async (args: Record<string, unknown>, toolContext: McpServerToolContext) => {
@@ -688,8 +697,9 @@ Returns a message confirming the operation performed.`,
               return 'Error: Unable to query memory entries'
             }
 
-            // Convert wildcard pattern to regex
-            const pattern = topic.replace(/\*/g, '.*').replace(/\?/g, '.')
+            // Convert wildcard pattern to regex, escaping special characters
+            const escapedPattern = escapeRegexPattern(topic)
+            const pattern = escapedPattern.replace(/\*/g, '.*').replace(/\?/g, '.')
             const regex = new RegExp(`^${pattern}$`)
 
             const matchingTopics = allEntries.filter((e) => regex.test(e.name)).map((e) => e.name)
@@ -778,7 +788,9 @@ Parameters:
           // Extract topic names and filter by pattern if provided
           let topics = [...new Set(entries.map((e) => e.name))]
           if (pattern) {
-            const regex = new RegExp(`^${pattern.replace(/\*/g, '.*').replace(/\?/g, '.')}$`)
+            const escapedPattern = escapeRegexPattern(pattern)
+            const regexPattern = escapedPattern.replace(/\*/g, '.*').replace(/\?/g, '.')
+            const regex = new RegExp(`^${regexPattern}$`)
             topics = topics.filter((t) => regex.test(t))
           }
 

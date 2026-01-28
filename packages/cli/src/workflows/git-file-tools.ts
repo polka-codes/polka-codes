@@ -282,8 +282,8 @@ export function createGitReadBinaryFile(commit: string): FullToolInfo {
     // Note: On Windows without Git Bash, this will fail with a clear error
     const isWindows = process.platform === 'win32'
     const command = isWindows
-      ? `cmd /c "git show ${quotedCommit}:${quotedUrl} | base64 -w 0 2>&1"`
-      : `sh -c "git show ${quotedCommit}:${quotedUrl} | base64 2>&1"`
+      ? `cmd /c "git show ${quotedCommit}:${quotedUrl} | base64 -w 0"`
+      : `sh -c "git show ${quotedCommit}:${quotedUrl} | base64"`
 
     const result = await provider.executeCommand(command, false)
 
