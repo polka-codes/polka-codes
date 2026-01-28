@@ -615,9 +615,9 @@ between different operations.
 
 Parameters:
 - operation (required): The operation to perform. Use "append" to add content, "replace" to overwrite all content, or "remove" to delete the topic.
-- topics (optional): Array of topic names for batch operations. If provided, content must also be an array of the same length.
+- topics (optional): Array of topic names for batch operations. Content can be an array (one per topic) or a single string (broadcast to all topics).
 - topic (optional): Single memory topic to update. Defaults to ":default:".
-- content (optional): The content to store (required for "append" and "replace" operations). For batch operations with topics, this must be an array of the same length.
+- content (optional): The content to store (required for "append" and "replace" operations). For batch operations with topics, provide an array of the same length or a single string to broadcast.
 
 Supports wildcards in topic name for remove operation:
 - Use "*" to remove all topics (e.g., topic ":plan:*")
@@ -638,24 +638,24 @@ Returns a message confirming the operation performed.`,
         })
         .refine(
           (data) => {
-            // Either topic or topics must be provided
-            if (!data.topic && !data.topics) {
-              return false
-            }
-            // If topics is provided with an array content, they must have same length
-            // String content is allowed for any number of topics (broadcasting)
+            // If topics array is provided with content, validate the combination
             if (data.topics && data.content) {
+              // Array content must match topics length
               if (Array.isArray(data.content)) {
                 return data.content.length === data.topics.length
               }
               // String content can be broadcast to any number of topics
               return true
             }
+            // If topics is not provided (single topic mode), content must be a string or undefined
+            if (!data.topics && data.content !== undefined && Array.isArray(data.content)) {
+              return false
+            }
             return true
           },
           {
             message:
-              'Either "topic" or "topics" must be provided. If "topics" is an array and "content" is an array, they must have the same length',
+              'For single topic mode, content must be a string. For batch mode with topics array, content can be an array (same length) or a string (broadcast to all topics)',
           },
         ),
       handler: async (args: Record<string, unknown>, toolContext: McpServerToolContext) => {
@@ -764,7 +764,7 @@ available to read from. Returns a list of topic names that have content.
 
 Parameters:
 - pattern (optional): Filter topics by wildcard pattern (e.g., ":plan:*" for all plan topics)
-- scope (optional): Filter by scope ("auto", "project:<path>", or "global")`,
+- scope (optional): Filter by scope ("auto", "project", "project:<path>", or "global")`,
       inputSchema: z.object({
         pattern: z.string().optional().describe('Filter topics by wildcard pattern (e.g., ":plan:*")'),
         scope: z.string().optional().describe('Filter by scope (defaults to "auto")'),
@@ -782,8 +782,8 @@ Parameters:
           // Query memory entries with filters
           const query: { scope?: 'global' | 'project' | 'auto' } = {}
           if (scope) {
-            // Handle scope format: "auto", "global", or "project:<path>"
-            if (scope === 'auto' || scope === 'global') {
+            // Handle scope format: "auto", "global", "project", or "project:<path>"
+            if (scope === 'auto' || scope === 'global' || scope === 'project') {
               query.scope = scope
             } else if (scope.startsWith('project:')) {
               query.scope = 'project'
