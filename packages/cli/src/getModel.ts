@@ -1,4 +1,5 @@
 import { appendFileSync } from 'node:fs'
+import { inspect } from 'node:util'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { createDeepSeek } from '@ai-sdk/deepseek'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
@@ -69,10 +70,10 @@ export const getModel = (config: ModelConfig, debugLogging = false): LanguageMod
           const requestBody = options?.body ? JSON.parse(options.body as string) : undefined
 
           if (debugLogging) {
-            console.log('-> Request URL:', url)
-            console.log('-> Request Headers:', options?.headers)
-            console.log('-> Request Body:')
-            console.dir(requestBody, { depth: null })
+            console.error('-> Request URL:', url)
+            console.error('-> Request Headers:', options?.headers)
+            console.error('-> Request Body:')
+            console.error(inspect(requestBody, { depth: null, colors: process.stderr.isTTY }))
           }
           if (TRACING_FILE) {
             appendFileSync(
@@ -94,7 +95,7 @@ export const getModel = (config: ModelConfig, debugLogging = false): LanguageMod
           const res = await fetch(url, options)
 
           if (debugLogging) {
-            console.log('<- Response Status:', res.status)
+            console.error('<- Response Status:', res.status)
           }
 
           const contentType = res.headers.get('content-type') || ''
@@ -111,7 +112,7 @@ export const getModel = (config: ModelConfig, debugLogging = false): LanguageMod
                   if (value) {
                     const text = decoder.decode(value)
                     if (debugLogging) {
-                      console.log('<- Stream chunk:', text.replace(/\n/g, '\\n'))
+                      console.error('<- Stream chunk:', text.replace(/\n/g, '\\n'))
                     }
                     if (TRACING_FILE) {
                       for (const line of text.split('\n')) {
@@ -177,8 +178,8 @@ export const getModel = (config: ModelConfig, debugLogging = false): LanguageMod
           }
 
           if (debugLogging) {
-            console.log('<- Response Body:')
-            console.dir(responseBody, { depth: null })
+            console.error('<- Response Body:')
+            console.error(inspect(responseBody, { depth: null, colors: process.stderr.isTTY }))
           }
           if (TRACING_FILE) {
             appendFileSync(

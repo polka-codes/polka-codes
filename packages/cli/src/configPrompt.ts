@@ -8,7 +8,7 @@ const fetchOllamaModels = async () => {
     const data = await resp.json()
     return data.models.map((model: any) => model.name) as string[]
   } catch (_error) {
-    console.log('Unable to fetch Ollama models')
+    console.error('Unable to fetch Ollama models')
     return []
   }
 }

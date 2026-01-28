@@ -51,7 +51,6 @@ class FileLock {
       const files = await readdir(lockDir)
 
       const now = Date.now()
-      let cleanedCount = 0
 
       for (const file of files) {
         // Match lock file patterns: {dbBaseName}.lock.released.*, etc.
@@ -73,7 +72,6 @@ class FileLock {
         if (age > maxAge) {
           try {
             await unlink(filePath)
-            cleanedCount++
           } catch (error) {
             // Ignore errors - file might have been deleted by another process
             const errorCode = (error as NodeJS.ErrnoException)?.code
@@ -82,10 +80,6 @@ class FileLock {
             }
           }
         }
-      }
-
-      if (cleanedCount > 0) {
-        console.log(`[FileLock] Cleaned up ${cleanedCount} old lock file(s) (older than ${maxAge}ms)`)
       }
     } catch (error) {
       // Silently ignore cleanup errors - this is a maintenance task, not critical

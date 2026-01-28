@@ -142,21 +142,21 @@ async function createCommit(input: { message: string }, _context: ToolCallContex
   return { message: input.message }
 }
 
-async function printChangeFile(_input: unknown, _context: ToolCallContext) {
+async function printChangeFile(_input: unknown, context: ToolCallContext) {
   const { stagedFiles, unstagedFiles } = getLocalChanges()
   if (stagedFiles.length === 0 && unstagedFiles.length === 0) {
-    console.log('No changes to commit.')
+    context.workflowContext.logger.info('No changes to commit.')
   } else {
     if (stagedFiles.length > 0) {
-      console.log('Staged files:')
+      context.workflowContext.logger.info('Staged files:')
       for (const file of stagedFiles) {
-        console.log(`- ${file.status}: ${file.path}`)
+        context.workflowContext.logger.info(`- ${file.status}: ${file.path}`)
       }
     }
     if (unstagedFiles.length > 0) {
-      console.log('\nUnstaged files:')
+      context.workflowContext.logger.info('\nUnstaged files:')
       for (const file of unstagedFiles) {
-        console.log(`- ${file.status}: ${file.path}`)
+        context.workflowContext.logger.info(`- ${file.status}: ${file.path}`)
       }
     }
   }
@@ -205,46 +205,6 @@ async function select(input: { message: string; choices: { name: string; value: 
 
 async function executeCommand(input: { command: string; shell?: boolean; pipe?: boolean; args?: string[] }) {
   return new Promise((resolve, reject) => {
-    // SECURITY: Whitelist of allowed commands for extra safety
-    const ALLOWED_COMMANDS = [
-      'git',
-      'npm',
-      'npx',
-      'node',
-      'bun',
-      'python',
-      'python3',
-      'ls',
-      'cat',
-      'grep',
-      'find',
-      'head',
-      'tail',
-      'wc',
-      'sort',
-      'uniq',
-      'awk',
-      'sed',
-      'curl',
-      'wget',
-      'rsync',
-      'cp',
-      'mv',
-      'rm',
-      'mkdir',
-      'chmod',
-      'chown',
-      'file',
-      'which',
-      'type',
-      'echo',
-    ]
-
-    if (!ALLOWED_COMMANDS.includes(input.command)) {
-      reject(new Error(`Command not allowed: ${input.command}`))
-      return
-    }
-
     // SECURITY: When shell: true, use args as separate parameters to prevent command injection
     // If args are provided, we use them as separate spawn arguments even with shell: true
     // This is safer than concatenating command + args into a single string

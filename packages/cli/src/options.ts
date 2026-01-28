@@ -57,7 +57,7 @@ export async function parseOptions(
   const cwd = options.baseDir ?? cwdArg ?? process.cwd()
 
   if (options.baseDir) {
-    console.log('Using base directory:', cwd)
+    console.error('Using base directory:', cwd)
     // Change to the base directory so all tools operate in the correct context
     process.chdir(cwd)
   }
