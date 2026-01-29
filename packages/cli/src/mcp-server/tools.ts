@@ -2,7 +2,7 @@
 
 import * as path from 'node:path'
 // Memory imports
-import { detectProjectScope, getGlobalConfigPath, loadConfigAtPath, MemoryManager, SQLiteMemoryStore } from '@polka-codes/cli-shared'
+import { getGlobalConfigPath, loadConfigAtPath, MemoryManager, SQLiteMemoryStore } from '@polka-codes/cli-shared'
 import type { Logger, WorkflowFn } from '@polka-codes/core'
 import { DEFAULT_MEMORY_CONFIG, resolveHomePath } from '@polka-codes/core'
 import { z } from 'zod'
@@ -20,11 +20,18 @@ import type { DefaultProviderConfig, McpServerTool, McpServerToolContext, Provid
  * Get memory store instance for MCP server tools
  * Lazy-loads memory store on first access
  */
-let memoryStoreCache: { store: MemoryManager; close: () => void } | null = null
+// Cache memory stores per project path
+const memoryStoreCache = new Map<string, { store: MemoryManager; close: () => void }>()
 
-async function getMemoryStore(logger: Logger): Promise<{ store: MemoryManager; close: () => void } | null> {
-  if (memoryStoreCache) {
-    return memoryStoreCache
+async function getMemoryStore(logger: Logger, projectPath: string): Promise<{ store: MemoryManager; close: () => void } | null> {
+  // Normalize the project path first - this ensures cache key consistency
+  // regardless of input format (relative, absolute, trailing slashes, etc.)
+  const normalizedPath = path.resolve(projectPath).split(path.sep).join('/')
+
+  // Check cache for existing store for this project using normalized path as key
+  const cached = memoryStoreCache.get(normalizedPath)
+  if (cached) {
+    return cached
   }
 
   try {
@@ -36,8 +43,8 @@ async function getMemoryStore(logger: Logger): Promise<{ store: MemoryManager; c
       return null
     }
 
-    const cwd = process.cwd()
-    const scope = detectProjectScope(cwd)
+    // Create scope using normalized path
+    const scope = `project:${normalizedPath}`
     const dbPath = memoryConfig.path || DEFAULT_MEMORY_CONFIG.path
     // Resolve home directory and make path absolute
     const resolvedDbPath = path.resolve(resolveHomePath(dbPath))
@@ -45,15 +52,17 @@ async function getMemoryStore(logger: Logger): Promise<{ store: MemoryManager; c
     const sqliteStore = new SQLiteMemoryStore({ enabled: true, type: 'sqlite', path: resolvedDbPath }, scope)
     const memoryManager = new MemoryManager(sqliteStore)
 
-    memoryStoreCache = {
+    const store = {
       store: memoryManager,
       close: () => {
         sqliteStore.close()
-        memoryStoreCache = null
+        memoryStoreCache.delete(normalizedPath)
       },
     }
 
-    return memoryStoreCache
+    memoryStoreCache.set(normalizedPath, store)
+
+    return store
   } catch (error) {
     // If memory store fails to initialize, return null
     logger.error(`Failed to initialize memory store: ${error instanceof Error ? error.message : String(error)}`)
@@ -580,17 +589,19 @@ Memory persists across tool calls, allowing you to maintain context
 between different operations.
 
 Parameters:
+- project (required): Absolute path to the project directory. This isolates memory to a specific project.
 - topic (optional): The memory topic to read from. Defaults to ":default:" which stores general conversation context.
 
 Returns the content stored in the specified topic, or a message indicating the topic is empty.`,
       inputSchema: z.object({
+        project: z.string().describe('Absolute path to the project directory (e.g., "/home/user/my-project")'),
         topic: z.string().optional().describe('The memory topic to read from (defaults to ":default:")'),
       }),
       handler: async (args: Record<string, unknown>, toolContext: McpServerToolContext) => {
-        const { topic = ':default:' } = args as { topic?: string }
-        toolContext.logger.info(`MCP: Reading from memory topic "${topic}"`)
+        const { project, topic = ':default:' } = args as { project: string; topic?: string }
+        toolContext.logger.info(`MCP: Reading from memory topic "${topic}" for project "${project}"`)
 
-        const memoryStore = await getMemoryStore(toolContext.logger)
+        const memoryStore = await getMemoryStore(toolContext.logger, project)
         if (!memoryStore) {
           return 'Error: Memory store is not enabled. Configure it in your .polkacodes.yml with memory.enabled: true'
         }
@@ -615,6 +626,7 @@ Memory persists across tool calls, allowing you to maintain context
 between different operations.
 
 Parameters:
+- project (required): Absolute path to the project directory. This isolates memory to a specific project.
 - operation (required): The operation to perform. Use "append" to add content, "replace" to overwrite all content, or "remove" to delete the topic.
 - topics (optional): Array of topic names for batch operations. Content can be an array (one per topic) or a single string (broadcast to all topics).
 - topic (optional): Single memory topic to update. Defaults to ":default:".
@@ -627,6 +639,7 @@ Supports wildcards in topic name for remove operation:
 Returns a message confirming the operation performed.`,
       inputSchema: z
         .object({
+          project: z.string().describe('Absolute path to the project directory (e.g., "/home/user/my-project")'),
           operation: z
             .enum(['append', 'replace', 'remove'])
             .describe('The operation: append (add content), replace (overwrite), or remove (delete topic(s))'),
@@ -661,19 +674,23 @@ Returns a message confirming the operation performed.`,
         ),
       handler: async (args: Record<string, unknown>, toolContext: McpServerToolContext) => {
         const {
+          project,
           operation,
           topic: singleTopic,
           topics,
           content: contentInput,
         } = args as {
+          project: string
           operation: 'append' | 'replace' | 'remove'
           topic?: string
           topics?: string[]
           content?: string | string[]
         }
-        toolContext.logger.info(`MCP: Memory operation "${operation}" on ${topics ? `${topics.length} topics` : `topic "${singleTopic}"`}`)
+        toolContext.logger.info(
+          `MCP: Memory operation "${operation}" on ${topics ? `${topics.length} topics` : `topic "${singleTopic}"`} for project "${project}"`,
+        )
 
-        const memoryStore = await getMemoryStore(toolContext.logger)
+        const memoryStore = await getMemoryStore(toolContext.logger, project)
         if (!memoryStore) {
           return 'Error: Memory store is not enabled. Configure it in your .polkacodes.yml with memory.enabled: true'
         }
@@ -760,27 +777,24 @@ Use this to see what information has been stored and which topics are
 available to read from. Returns a list of topic names that have content.
 
 Parameters:
-- pattern (optional): Filter topics by wildcard pattern (e.g., ":plan:*" for all plan topics)
-- scope (optional): Filter by scope ("auto", "project", or "global")`,
+- project (required): Absolute path to the project directory. This isolates memory to a specific project.
+- pattern (optional): Filter topics by wildcard pattern (e.g., ":plan:*" for all plan topics)`,
       inputSchema: z.object({
+        project: z.string().describe('Absolute path to the project directory (e.g., "/home/user/my-project")'),
         pattern: z.string().optional().describe('Filter topics by wildcard pattern (e.g., ":plan:*")'),
-        scope: z.enum(['auto', 'project', 'global']).optional().describe('Filter by scope (defaults to "auto")'),
       }),
       handler: async (args: Record<string, unknown>, toolContext: McpServerToolContext) => {
-        const { pattern, scope } = args as { pattern?: string; scope?: 'auto' | 'project' | 'global' }
-        toolContext.logger.info(`MCP: Listing memory topics${pattern ? ` with pattern "${pattern}"` : ''}`)
+        const { project, pattern } = args as { project: string; pattern?: string }
+        toolContext.logger.info(`MCP: Listing memory topics for project "${project}"${pattern ? ` with pattern "${pattern}"` : ''}`)
 
-        const memoryStore = await getMemoryStore(toolContext.logger)
+        const memoryStore = await getMemoryStore(toolContext.logger, project)
         if (!memoryStore) {
           return 'Error: Memory store is not enabled. Configure it in your .polkacodes.yml with memory.enabled: true'
         }
 
         try {
-          // Query memory entries with filters
-          const query: { scope?: 'global' | 'project' | 'auto' } = {}
-          query.scope = scope ?? 'auto'
-
-          const entries = await memoryStore.store.queryMemory(query, { operation: 'select' })
+          // Query all memory entries for this project (scope is automatically set by getMemoryStore)
+          const entries = await memoryStore.store.queryMemory({}, { operation: 'select' })
           if (!entries || !Array.isArray(entries) || entries.length === 0) {
             return 'No memory topics found.'
           }
@@ -810,53 +824,52 @@ Use this to search memory entries by content, metadata, or other criteria.
 Returns detailed entry information with metadata.
 
 Parameters:
+- project (required): Absolute path to the project directory. This isolates memory to a specific project.
 - search (optional): Search text to find in content
 - type (optional): Filter by entry type (note, todo, plan, etc.)
 - status (optional): Filter by status (open, completed, closed, etc.)
 - priority (optional): Filter by priority (null, low, medium, high)
 - tags (optional): Filter by tags
-- scope (optional): Filter by scope ("auto", "project", or "global")
 - operation (optional): Query operation - "select" returns entries, "count" returns count
 
 Returns matching entries with full metadata.`,
       inputSchema: z.object({
+        project: z.string().describe('Absolute path to the project directory (e.g., "/home/user/my-project")'),
         search: z.string().optional().describe('Search text to find in content'),
         type: z.string().optional().describe('Filter by entry type (note, todo, plan, etc.)'),
         status: z.string().optional().describe('Filter by status (open, completed, closed, etc.)'),
         priority: z.string().optional().describe('Filter by priority (null, low, medium, high)'),
         tags: z.string().optional().describe('Filter by tags'),
-        scope: z.enum(['auto', 'project', 'global']).optional().describe('Filter by scope (defaults to "auto")'),
         operation: z.enum(['select', 'count']).optional().describe('Query operation (defaults to "select")'),
       }),
       handler: async (args: Record<string, unknown>, toolContext: McpServerToolContext) => {
         const {
+          project,
           search,
           type,
           status,
           priority,
           tags,
-          scope,
           operation = 'select',
         } = args as {
+          project: string
           search?: string
           type?: string
           status?: string
           priority?: string
           tags?: string
-          scope?: 'auto' | 'project' | 'global'
           operation?: 'select' | 'count'
         }
-        toolContext.logger.info(`MCP: Querying memory - operation: "${operation}"`)
+        toolContext.logger.info(`MCP: Querying memory for project "${project}" - operation: "${operation}"`)
 
-        const memoryStore = await getMemoryStore(toolContext.logger)
+        const memoryStore = await getMemoryStore(toolContext.logger, project)
         if (!memoryStore) {
           return 'Error: Memory store is not enabled. Configure it in your .polkacodes.yml with memory.enabled: true'
         }
 
         try {
-          // Build query object
+          // Build query object (scope is automatically set by getMemoryStore)
           const memoryQuery: {
-            scope?: 'global' | 'project' | 'auto'
             search?: string
             type?: string
             status?: string
@@ -864,7 +877,6 @@ Returns matching entries with full metadata.`,
             tags?: string
           } = {}
 
-          memoryQuery.scope = scope ?? 'auto'
           if (search) memoryQuery.search = search
           if (type) memoryQuery.type = type
           if (status) memoryQuery.status = status
