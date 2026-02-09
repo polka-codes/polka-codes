@@ -1,6 +1,6 @@
 {
   "name": "@polka-codes/cli-shared",
-  "version": "0.9.99",
+  "version": "0.9.100",
   "license": "AGPL-3.0",
   "author": "github@polka.codes",
   "type": "module",
