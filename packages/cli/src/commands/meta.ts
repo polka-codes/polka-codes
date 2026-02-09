@@ -14,9 +14,11 @@ import { metaWorkflow } from '../workflows/meta.workflow'
 
 export async function runMeta(task: string | undefined, command: Command) {
   const workflowOpts = getBaseWorkflowOptions(command)
-  const { verbose } = workflowOpts
+  const { verbose, json } = workflowOpts
+
+  // Handle JSON output mode
   const logger = createLogger({
-    verbose,
+    verbose: json ? -1 : verbose, // Silent mode when JSON output
   })
 
   // Priority 1: Check if input is a command
@@ -33,7 +35,7 @@ export async function runMeta(task: string | undefined, command: Command) {
 
       logger.error(`Error: Unknown command '${words[0]}'`)
       logger.info('Available commands:')
-      logger.info('  Built-in: code, commit, pr, review, fix, plan, workflow, run')
+      logger.info('  Built-in: code, commit, pr, review, fix, plan, task, workflow, run')
 
       // List custom scripts from config
       const config = await loadConfig()
@@ -60,15 +62,22 @@ export async function runMeta(task: string | undefined, command: Command) {
     // Execute meta workflow for the task
     const workflowInput = {
       task,
+      jsonMode: json === true,
       ...workflowOpts,
     }
 
-    await runWorkflow(metaWorkflow, workflowInput, {
+    const result = await runWorkflow(metaWorkflow, workflowInput, {
       commandName: 'meta',
       context: workflowOpts,
       logger,
       ...workflowOpts,
     })
+
+    // Output JSON if requested
+    if (json && result) {
+      console.log(JSON.stringify(result, null, 2))
+    }
+
     return
   }
 
@@ -91,7 +100,7 @@ export async function runMeta(task: string | undefined, command: Command) {
 
     logger.error(`Error: Unknown command '${words[0]}'`)
     logger.info('Available commands:')
-    logger.info('  Built-in: code, commit, pr, review, fix, plan, workflow, run')
+    logger.info('  Built-in: code, commit, pr, review, fix, plan, task, workflow, run')
     return
   }
 
@@ -106,15 +115,21 @@ export async function runMeta(task: string | undefined, command: Command) {
   // Execute meta workflow for the task
   const workflowInput = {
     task: input,
+    jsonMode: json === true,
     ...workflowOpts,
   }
 
-  await runWorkflow(metaWorkflow, workflowInput, {
+  const result = await runWorkflow(metaWorkflow, workflowInput, {
     commandName: 'meta',
     context: workflowOpts,
     logger,
     ...workflowOpts,
   })
+
+  // Output JSON if requested
+  if (json && result) {
+    console.log(JSON.stringify(result, null, 2))
+  }
 }
 
 /**

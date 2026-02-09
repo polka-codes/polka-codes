@@ -17,6 +17,7 @@ import { prCommand } from './commands/pr'
 import { reviewCommand } from './commands/review'
 import { runCommand } from './commands/run'
 import { skillsCommand } from './commands/skills'
+import { taskCommand } from './commands/task'
 import { workflowCommand } from './commands/workflow'
 import { addSharedOptions } from './options'
 
@@ -52,6 +53,9 @@ program.addCommand(codeCommand)
 
 // Fix command
 program.addCommand(fixCommand)
+
+// Task command
+program.addCommand(taskCommand)
 
 // Run command
 program.addCommand(runCommand)

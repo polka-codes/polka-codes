@@ -16,7 +16,7 @@
  * ```
  */
 
-import type { UsageMeter } from '@polka-codes/core'
+import type { ExitReason, UsageMeter } from '@polka-codes/core'
 import { createLogger } from './logger'
 import type { ExecutionContext } from './runWorkflow'
 import { runWorkflow } from './runWorkflow'
@@ -37,6 +37,8 @@ import {
   type ReviewResult,
   type ReviewWorkflowInput,
   reviewWorkflow,
+  type TaskWorkflowInput,
+  taskWorkflow,
 } from './workflows'
 
 /**
@@ -378,6 +380,69 @@ export async function fix(options: FixOptions = {}): Promise<{ success: boolean;
 
   return runWorkflow(fixWorkflow, workflowInput, {
     commandName: 'fix',
+    context,
+    logger,
+    interactive: interactive !== false,
+    onUsageMeterCreated: onUsage,
+  })
+}
+
+/**
+ * Options for task function
+ */
+export interface TaskOptions extends BaseOptions {
+  /**
+   * The task to perform
+   */
+  task: string
+
+  /**
+   * Whether to output JSON
+   * @default false
+   */
+  jsonMode?: boolean
+
+  /**
+   * Whether to prompt for confirmations
+   * @default true
+   */
+  interactive?: boolean
+}
+
+/**
+ * Performs a generic task using an AI agent
+ *
+ * @param options - Task options
+ * @returns Task completion result (ExitReason with agent output)
+ *
+ * @example
+ * ```typescript
+ * // Run a simple task
+ * const result = await task({
+ *   task: 'Refactor the auth module'
+ * })
+ *
+ * // Non-interactive mode with JSON output
+ * const result = await task({
+ *   task: 'Update dependencies',
+ *   jsonMode: true,
+ *   interactive: false
+ * })
+ * ```
+ */
+export async function task(options: TaskOptions): Promise<ExitReason | undefined> {
+  const { task: taskInput, jsonMode, interactive, onUsage, ...context } = options
+
+  const verbose = context.silent ? -1 : (context.verbose ?? 0)
+  const logger = createLogger({ verbose })
+
+  const workflowInput: TaskWorkflowInput = {
+    task: taskInput,
+    jsonMode,
+  }
+
+  return runWorkflow(taskWorkflow, workflowInput, {
+    commandName: 'task',
     context,
     logger,
     interactive: interactive !== false,

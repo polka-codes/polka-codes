@@ -2,6 +2,7 @@
 
 import {
   agentWorkflow,
+  type ExitReason,
   executeCommand,
   type FullToolInfo,
   fetchUrl,
@@ -15,23 +16,25 @@ import {
   type WorkflowFn,
   writeToFile,
 } from '@polka-codes/core'
+import { z } from 'zod'
 import type { CliToolRegistry } from '../workflow-tools'
 import { type BaseWorkflowInput, getDefaultContext } from './workflow.utils'
 
 export type TaskWorkflowInput = {
   task: string
+  jsonMode?: boolean
 }
 
 const SYSTEM_PROMPT = `You are a generic AI assistant.
 You are able to perform simple tasks including making simple changes, reading code, and answering user questions.
 Use the available tools to perform the task.`
 
-export const taskWorkflow: WorkflowFn<TaskWorkflowInput & BaseWorkflowInput, { success: boolean }, CliToolRegistry> = async (
-  input,
-  context,
-) => {
+// Output schema for JSON mode - ensures the agent returns a JSON value
+const TaskOutputSchema = z.any().describe('A JSON value with the task result')
+
+export const taskWorkflow: WorkflowFn<TaskWorkflowInput & BaseWorkflowInput, ExitReason, CliToolRegistry> = async (input, context) => {
   const { logger, step } = context
-  const { task, additionalTools } = input
+  const { task, additionalTools, jsonMode } = input
 
   logger.info(`
 Running generic agent...
@@ -57,14 +60,16 @@ Running generic agent...
     agentTools.push(...additionalTools.mcpTools)
   }
 
-  await step('agent', async () => {
+  const result = await step('agent', async () => {
     const defaultContext = await getDefaultContext('task')
     const userMessage = `${task}\n\n${defaultContext}`
-    await agentWorkflow(
+    return await agentWorkflow(
       {
         systemPrompt: SYSTEM_PROMPT,
         userMessage: [{ role: 'user', content: userMessage }],
         tools: agentTools,
+        // In JSON mode, use outputSchema to ensure the agent returns JSON
+        outputSchema: jsonMode ? TaskOutputSchema : undefined,
       },
       context,
     )
@@ -74,5 +79,5 @@ Running generic agent...
 Agent finished!
 `)
 
-  return { success: true }
+  return result
 }

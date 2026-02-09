@@ -11,6 +11,7 @@ import type { BaseWorkflowInput } from './workflow.utils'
 export type MetaWorkflowInput = {
   task: string
   interactive?: boolean
+  jsonMode?: boolean
   additionalTools?: {
     search?: unknown
     mcpTools?: unknown[]
@@ -21,13 +22,30 @@ const DecisionSchema = z.object({
   workflow: z.enum(['code', 'task']),
 })
 
-export const metaWorkflow: WorkflowFn<MetaWorkflowInput & BaseWorkflowInput, void, CliToolRegistry> = async (input, context) => {
+// Output schema for JSON mode - ensures structured JSON output
+const MetaOutputSchema = z.object({
+  workflow: z.enum(['code', 'task']).describe('The workflow that was executed'),
+  success: z.boolean().describe('Whether the workflow completed successfully'),
+  summary: z.string().optional().describe('Summary of what was done'),
+  error: z.string().optional().describe('Error message if the workflow failed'),
+})
+
+export type MetaWorkflowOutput = z.infer<typeof MetaOutputSchema>
+
+export const metaWorkflow: WorkflowFn<MetaWorkflowInput & BaseWorkflowInput, MetaWorkflowOutput, CliToolRegistry> = async (
+  input,
+  context,
+) => {
   const { task } = input
   const { logger } = context
 
   if (!task) {
     logger.error('Task is not defined in the input for metaWorkflow.')
-    return
+    return {
+      workflow: 'task',
+      success: false,
+      error: 'Task is not defined in the input for metaWorkflow.',
+    }
   }
 
   logger.info(`\nDeciding which workflow to use for task...\n`)
@@ -48,23 +66,42 @@ export const metaWorkflow: WorkflowFn<MetaWorkflowInput & BaseWorkflowInput, voi
   )
 
   if (result.type !== 'Exit' || !result.object) {
-    throw new Error(`Could not decide which workflow to run. Agent exited with reason: ${result.type}`)
+    const errorMsg = `Could not decide which workflow to run. Agent exited with reason: ${result.type}`
+    logger.error(errorMsg)
+    return {
+      workflow: 'task',
+      success: false,
+      error: errorMsg,
+    }
   }
 
   const decision = result.object as z.infer<typeof DecisionSchema>
 
   if (!decision.workflow) {
-    throw new Error('Could not decide which workflow to run.')
+    const errorMsg = 'Could not decide which workflow to run.'
+    logger.error(errorMsg)
+    return {
+      workflow: 'task',
+      success: false,
+      error: errorMsg,
+    }
   }
 
   logger.info(`\nDecision: Using '${decision.workflow}' workflow.`)
 
   switch (decision.workflow) {
-    case 'code':
-      await codeWorkflow({ task, interactive: input.interactive, additionalTools: input.additionalTools }, context)
-      break
-    case 'task':
-      await taskWorkflow(
+    case 'code': {
+      const codeResult = await codeWorkflow({ task, interactive: input.interactive, additionalTools: input.additionalTools }, context)
+      // Return structured output
+      return {
+        workflow: 'code',
+        success: codeResult.success,
+        summary: codeResult.summaries?.join('\n'),
+        error: codeResult.success === false ? codeResult.reason : undefined,
+      }
+    }
+    case 'task': {
+      const taskResult = await taskWorkflow(
         {
           task,
           interactive: input.interactive,
@@ -72,8 +109,31 @@ export const metaWorkflow: WorkflowFn<MetaWorkflowInput & BaseWorkflowInput, voi
         },
         context,
       )
-      break
-    default:
-      throw new Error(`Unknown workflow: ${decision.workflow}`)
+      // Convert ExitReason to structured output
+      if (taskResult.type === 'Exit') {
+        return {
+          workflow: 'task',
+          success: true,
+          summary: taskResult.message,
+        }
+      } else if (taskResult.type === 'Error') {
+        return {
+          workflow: 'task',
+          success: false,
+          error: taskResult.error.message,
+        }
+      } else {
+        // UsageExceeded
+        return {
+          workflow: 'task',
+          success: false,
+          error: 'Usage limit exceeded',
+        }
+      }
+    }
+    default: {
+      const errorMsg = `Unknown workflow: ${decision.workflow}`
+      throw new Error(errorMsg)
+    }
   }
 }
