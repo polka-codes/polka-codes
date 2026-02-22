@@ -374,4 +374,50 @@ rules: "Local Rule"
     expect(mergedConfig?.rules).toContain('Global Rule 2')
     expect(mergedConfig?.rules).toContain('Local Rule')
   })
+
+  test('handles loadRules configuration', async () => {
+    const configPath = join(testSubDir, 'load-rules-config.yml')
+
+    // Test explicitly disabling both
+    writeFileSync(
+      configPath,
+      `
+loadRules:
+  AGENTS.md: false
+  CLAUDE.md: false
+      `,
+    )
+
+    const config = await loadConfig(configPath, testSubDir, testHomeDir)
+    expect(config?.loadRules?.['AGENTS.md']).toBe(false)
+    expect(config?.loadRules?.['CLAUDE.md']).toBe(false)
+
+    // Test explicitly enabling both
+    writeFileSync(
+      configPath,
+      `
+loadRules:
+  AGENTS.md: true
+  CLAUDE.md: true
+      `,
+    )
+
+    const enabledConfig = await loadConfig(configPath, testSubDir, testHomeDir)
+    expect(enabledConfig?.loadRules?.['AGENTS.md']).toBe(true)
+    expect(enabledConfig?.loadRules?.['CLAUDE.md']).toBe(true)
+
+    // Test mixed settings
+    writeFileSync(
+      configPath,
+      `
+loadRules:
+  AGENTS.md: true
+  CLAUDE.md: false
+      `,
+    )
+
+    const mixedConfig = await loadConfig(configPath, testSubDir, testHomeDir)
+    expect(mixedConfig?.loadRules?.['AGENTS.md']).toBe(true)
+    expect(mixedConfig?.loadRules?.['CLAUDE.md']).toBe(false)
+  })
 })

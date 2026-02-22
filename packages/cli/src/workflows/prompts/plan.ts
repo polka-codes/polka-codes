@@ -13,7 +13,8 @@ ${planSection}`
 import { z } from 'zod'
 import { AGENTS_INSTRUCTION, createJsonResponseInstruction, MEMORY_USAGE_SECTION, TOOL_USAGE_INSTRUCTION } from './shared'
 
-export const PLANNER_SYSTEM_PROMPT = `Role: Expert software architect and planner.
+export function getPlannerSystemPrompt(loadRules?: Record<string, boolean>): string {
+  return `Role: Expert software architect and planner.
 Goal: Analyze user requests and create detailed, actionable implementation plans for software development tasks.
 
 You are an expert software architect and planner with deep experience in breaking down complex requirements into actionable implementation plans.
@@ -22,7 +23,7 @@ ${MEMORY_USAGE_SECTION}
 
 ${TOOL_USAGE_INSTRUCTION}
 
-${AGENTS_INSTRUCTION}
+${AGENTS_INSTRUCTION(loadRules)}
 
 ## Your Role
 
@@ -197,6 +198,10 @@ ${createJsonResponseInstruction({
   files: ['path/to/file1.ts', 'path/to/file2.ts'],
 })}
 `
+}
+
+// Backward-compatible constant that uses defaults
+export const PLANNER_SYSTEM_PROMPT = getPlannerSystemPrompt()
 
 export const PlanSchema = z.object({
   plan: z.string().nullish(),

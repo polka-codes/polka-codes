@@ -404,7 +404,7 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput,
       : [readFile, readBinaryFile, searchFiles, listFiles, gitDiff]
 
   const result = await step('review', async () => {
-    const defaultContext = await getDefaultContext('review')
+    const { context: defaultContext } = await getDefaultContext(input.config, 'review')
     const memoryContext = await tools.getMemoryContext()
     const reviewInput = formatReviewToolInput(finalChangeInfo)
     const fullContent = `${reviewInput}\n\n${defaultContext}\n${memoryContext}`

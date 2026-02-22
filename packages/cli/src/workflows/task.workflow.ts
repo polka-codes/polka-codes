@@ -61,7 +61,7 @@ Running generic agent...
   }
 
   const result = await step('agent', async () => {
-    const defaultContext = await getDefaultContext('task')
+    const { context: defaultContext } = await getDefaultContext(input.config, 'task')
     const userMessage = `${task}\n\n${defaultContext}`
     return await agentWorkflow(
       {

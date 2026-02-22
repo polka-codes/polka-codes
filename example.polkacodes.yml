@@ -423,3 +423,16 @@ excludeFiles:
   - "package-lock.json"
   - "yarn.lock"
   - "pnpm-lock.yaml"
+
+#============================================================================
+# Project Instructions Files
+#============================================================================
+# Control auto-loading of project instruction files
+# All default to true (enabled) for backward compatibility
+
+loadRules:
+  # Load AGENTS.md if present in project directory
+  AGENTS.md: true
+
+  # Load CLAUDE.md if present in project directory
+  CLAUDE.md: true

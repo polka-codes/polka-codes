@@ -95,6 +95,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
     ...workflowInput,
     interactive: resolvedInteractive,
     additionalTools,
+    config,
   }
 
   const usage = new UsageMeter(merge(prices, config.prices ?? {}), {

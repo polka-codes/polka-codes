@@ -21,7 +21,7 @@ import { z } from 'zod'
 import type { CliToolRegistry } from '../workflow-tools'
 import { fixWorkflow } from './fix.workflow'
 import { planWorkflow } from './plan.workflow'
-import { CODER_SYSTEM_PROMPT, getImplementPrompt } from './prompts'
+import { getCoderSystemPrompt, getImplementPrompt } from './prompts'
 import { type BaseWorkflowInput, getDefaultContext } from './workflow.utils'
 
 export type JsonImagePart = {
@@ -134,7 +134,7 @@ export const codeWorkflow: WorkflowFn<
   }
 
   const res = await step('implement', async () => {
-    const defaultContext = await getDefaultContext('code')
+    const { context: defaultContext, loadRules } = await getDefaultContext(input.config, 'code')
     const memoryContext = await tools.getMemoryContext()
     const textContent = userContent.find((c) => c.type === 'text')
     if (textContent && textContent.type === 'text') {
@@ -145,7 +145,8 @@ export const codeWorkflow: WorkflowFn<
         text: `${defaultContext}\n${memoryContext}`,
       })
     }
-    const systemPrompt = additionalInstructions ? `${CODER_SYSTEM_PROMPT}\n\n${additionalInstructions}` : CODER_SYSTEM_PROMPT
+    const baseSystemPrompt = getCoderSystemPrompt(loadRules)
+    const systemPrompt = additionalInstructions ? `${baseSystemPrompt}\n\n${additionalInstructions}` : baseSystemPrompt
     return await agentWorkflow(
       {
         systemPrompt,

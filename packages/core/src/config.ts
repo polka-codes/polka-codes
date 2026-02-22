@@ -216,6 +216,7 @@ export const configSchema = z
     excludeFiles: z.array(z.string()).optional(),
     agent: agentSchema,
     memory: memoryConfigSchema,
+    loadRules: z.record(z.string(), z.boolean()).optional(),
   })
   .strict()
   .nullish()

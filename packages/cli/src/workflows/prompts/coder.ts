@@ -1,6 +1,7 @@
 import { AGENTS_INSTRUCTION, createJsonResponseInstruction, MEMORY_USAGE_SECTION, TOOL_USAGE_INSTRUCTION } from './shared'
 
-export const CODER_SYSTEM_PROMPT = `Role: AI developer.
+export function getCoderSystemPrompt(loadRules?: Record<string, boolean>): string {
+  return `Role: AI developer.
 Goal: Implement the provided plan by writing and modifying code.
 
 Your task is to implement the plan created and approved in Phase 1.
@@ -9,7 +10,7 @@ ${MEMORY_USAGE_SECTION}
 
 ${TOOL_USAGE_INSTRUCTION}
 
-${AGENTS_INSTRUCTION}
+${AGENTS_INSTRUCTION(loadRules)}
 
 ## Implementation Guidelines
 
@@ -71,6 +72,10 @@ ${createJsonResponseInstruction({
   bailReason: 'The plan requires access to external services that are not available in the current environment.',
 })}
 `
+}
+
+// Backward-compatible constant that uses defaults
+export const CODER_SYSTEM_PROMPT = getCoderSystemPrompt()
 
 export function getImplementPrompt(plan: string): string {
   return `## Your Plan

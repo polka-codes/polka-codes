@@ -3,7 +3,7 @@
 import { execSync } from 'node:child_process'
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
-import { listFiles, loadConfig, resolveRules } from '@polka-codes/cli-shared'
+import { type LoadedConfig, listFiles, resolveRules } from '@polka-codes/cli-shared'
 import type { FullToolInfo, Logger } from '@polka-codes/core'
 import { z } from 'zod'
 import { ApiProviderConfig } from '../ApiProviderConfig'
@@ -15,6 +15,7 @@ export type BaseWorkflowInput = {
     search?: FullToolInfo
     mcpTools?: FullToolInfo[]
   }
+  config?: LoadedConfig
 }
 
 export type FileChange = {
@@ -332,8 +333,10 @@ export function formatElapsedTime(ms: number): string {
   return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`
 }
 
-export async function getDefaultContext(commandName?: string): Promise<string> {
-  const config = await loadConfig()
+export async function getDefaultContext(
+  config: LoadedConfig | undefined,
+  commandName?: string,
+): Promise<{ context: string; loadRules: Record<string, boolean> | undefined }> {
   const cwd = process.cwd()
   const [files, truncated] = await listFiles(cwd, true, 2000, cwd, config?.excludeFiles ?? [])
   const fileList = files.join('\n')
@@ -348,11 +351,25 @@ ${fileList}
     `<now_date>${formattedDate}</now_date>`,
   ]
 
-  try {
-    const agentsMdContent = await fs.readFile(path.join(cwd, 'AGENTS.md'), 'utf-8')
-    contextParts.push(`<agents_instructions>\n${agentsMdContent}\n</agents_instructions>`)
-  } catch {
-    // Ignore error
+  // Load rules files based on loadRules config (defaults to all enabled for backward compatibility)
+  const loadRules = config?.loadRules
+  const defaultLoadRules = {
+    'AGENTS.md': true,
+    'CLAUDE.md': true,
+  }
+  const mergedRules = { ...defaultLoadRules, ...loadRules }
+
+  // Load each enabled rule file
+  for (const [fileName, shouldLoad] of Object.entries(mergedRules)) {
+    if (shouldLoad) {
+      try {
+        const content = await fs.readFile(path.join(cwd, fileName), 'utf-8')
+        const tagName = fileName.replace(/\./g, '_')
+        contextParts.push(`<${tagName}_instructions>\n${content}\n</${tagName}_instructions>`)
+      } catch {
+        // Ignore error if file doesn't exist
+      }
+    }
   }
 
   let rules = await resolveRules(config?.rules)
@@ -395,5 +412,5 @@ ${fileList}
     }
   }
 
-  return contextParts.join('\n')
+  return { context: contextParts.join('\n'), loadRules }
 }

@@ -63,6 +63,36 @@ Use topic names that clearly describe the task. The content should include the f
 - **Global scope**: When working outside a project, memory is shared globally
 `
 
-export const AGENTS_INSTRUCTION = `## AGENTS.md Instructions
+export function AGENTS_INSTRUCTION(loadRules?: Record<string, boolean>): string {
+  // Merge with defaults to ensure consistent behavior
+  const defaultLoadRules = {
+    'AGENTS.md': true,
+    'CLAUDE.md': true,
+  }
+  const mergedRules = { ...defaultLoadRules, ...loadRules }
 
-If you are working in a subdirectory, check if there is an AGENTS.md file in that directory or parent directories for specific instructions. These files contain project-specific guidelines and conventions that you must follow.`
+  const enabledFiles = Object.entries(mergedRules)
+    .filter(([, enabled]) => enabled)
+    .map(([fileName]) => fileName)
+
+  if (enabledFiles.length === 0) {
+    return `## Project Instructions
+
+Project-specific instruction files are currently disabled via configuration.`
+  }
+
+  const fileList = enabledFiles.join(', ')
+  return `## Project Instructions (${fileList})
+
+If you are working in a subdirectory, check if there is an ${enabledFiles.join(' or ')} file in that directory or parent directories for specific instructions. These files contain project-specific guidelines and conventions that you must follow.
+
+Note: The loading of these files can be controlled via the loadRules configuration option in .polkacodes.yml.
+
+Example:
+\`\`\`yaml
+loadRules:
+  AGENTS.md: true
+  CLAUDE.md: true
+\`\`\`
+`
+}
