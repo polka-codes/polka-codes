@@ -3,7 +3,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import type { Logger } from '@polka-codes/core'
-import type { DefaultProviderConfig, McpServerTool, McpServerToolContext } from './types.js'
+import type { DefaultProviderConfig, McpServerTool, McpServerToolContext } from './types'
 
 /**
  * Create an MCP server using the official SDK

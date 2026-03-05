@@ -15,6 +15,7 @@ providers:
   anthropic:
     apiKey: "sk-ant-..." # Your Anthropic API key
     defaultModel: "claude-sonnet-4-5-20250929" # Claude Sonnet 4.5
+    # baseUrl: "https://custom.anthropic.proxy" # Optional: Custom base URL for enterprise gateways, AWS Bedrock proxies, or other endpoints
     defaultParameters:
       thinkingBudgetTokens: 8192 # Enable extended thinking mode
 
@@ -27,6 +28,7 @@ providers:
   openai:
     apiKey: "sk-..." # Your OpenAI API key
     defaultModel: "gpt-4o"
+    # baseUrl: "https://your-azure-openai-endpoint.openai.azure.com/openai/deployments/your-deployment" # Optional: For Azure OpenAI or custom endpoints
 
   # OpenAI-compatible provider configuration
   # Use this for any OpenAI-compatible API (e.g., Together AI, Anyscale, Groq, etc.)

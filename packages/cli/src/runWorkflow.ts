@@ -17,6 +17,7 @@ import {
   DEFAULT_MEMORY_CONFIG,
   type Logger,
   makeStepFn,
+  PricingService,
   resolveHomePath,
   search,
   type TaskEventCallback,
@@ -98,9 +99,13 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
     config,
   }
 
-  const usage = new UsageMeter(merge(prices, config.prices ?? {}), {
+  // Initialize pricing service (always enabled)
+  const pricingService = new PricingService(merge({}, prices, config.prices ?? {}))
+
+  const usage = new UsageMeter(merge({}, prices, config.prices ?? {}), {
     maxMessages: config.maxMessageCount,
     maxCost: config.budget,
+    pricingService,
   })
 
   options.onUsageMeterCreated?.(usage)
@@ -293,6 +298,10 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
 
     logger.info('Running workflow...')
     const output = await workflow(finalWorkflowInput, workflowContext)
+
+    // Wait for any pending usage updates to complete
+    await usage.waitForPending()
+
     logger.info('\n\nWorkflow completed successfully.')
     logger.info(usage.getUsageText())
     return output
@@ -376,6 +385,9 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
         },
       })
     }
+
+    // Wait for any pending usage updates to complete
+    await usage.waitForPending()
 
     logger.info(usage.getUsageText())
     return undefined

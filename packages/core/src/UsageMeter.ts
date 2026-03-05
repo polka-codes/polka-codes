@@ -4,6 +4,7 @@
  */
 
 import type { LanguageModelV2, LanguageModelV2Usage } from '@ai-sdk/provider'
+import type { PricingService } from './pricing/index'
 
 export type ModelInfo = {
   inputPrice: number
@@ -28,12 +29,17 @@ type ProviderMetadataEntry = {
 export class UsageMeter {
   #totals: Totals = { input: 0, output: 0, cachedRead: 0, cost: 0, messageCount: 0 }
   #providerMetadataEntries: ProviderMetadataEntry[] = []
+  #pendingUpdates: Set<Promise<void>> = new Set()
 
   readonly #modelInfos: Record<string, ModelInfo>
   readonly #maxMessages: number
   readonly #maxCost: number
+  readonly #pricingService?: PricingService
 
-  constructor(modelInfos: Record<string, Record<string, Partial<ModelInfo>>> = {}, opts: { maxMessages?: number; maxCost?: number } = {}) {
+  constructor(
+    modelInfos: Record<string, Record<string, Partial<ModelInfo>>> = {},
+    opts: { maxMessages?: number; maxCost?: number; pricingService?: PricingService } = {},
+  ) {
     const infos: Record<string, ModelInfo> = {}
     for (const [provider, providerInfo] of Object.entries(modelInfos)) {
       for (const [model, modelInfo] of Object.entries(providerInfo)) {
@@ -51,6 +57,7 @@ export class UsageMeter {
     this.#modelInfos = infos
     this.#maxMessages = opts.maxMessages ?? 1000
     this.#maxCost = opts.maxCost ?? 100
+    this.#pricingService = opts.pricingService
   }
 
   #calculateUsage(usage: LanguageModelV2Usage, providerMetadata: any, modelInfo: ModelInfo) {
@@ -115,36 +122,71 @@ export class UsageMeter {
     llm: LanguageModelV2,
     resp: { usage: LanguageModelV2Usage; providerMetadata?: any } | { totalUsage: LanguageModelV2Usage; providerMetadata?: any },
     options: { modelInfo?: ModelInfo } = {},
-  ) {
-    const modelInfo = options.modelInfo ??
-      // make google.vertex.chat to google
-      // and anthropic.messages to anthropic
-      this.#modelInfos[`${llm.provider.split('.')[0]}:${llm.modelId.replace(/[.-]/g, '')}`] ?? {
+  ): Promise<void> {
+    const provider = llm.provider.split('.')[0]
+    const normalizedModel = llm.modelId.replace(/[.-]/g, '')
+    const key = `${provider}:${normalizedModel}`
+
+    let modelInfo = options.modelInfo ?? this.#modelInfos[key]
+
+    // Lazy fetch from PricingService if not found (async but non-blocking)
+    // Note: This is intentionally async to allow API calls without blocking the main flow.
+    // The usage meter is updated in-place, so the async nature doesn't cause issues
+    // for callers that don't await this method. The pricing is cached after the first
+    // fetch, so subsequent calls are fast.
+    const updatePromise = (async () => {
+      try {
+        if (!modelInfo && this.#pricingService) {
+          modelInfo = await this.#pricingService.getPricing(provider, llm.modelId)
+          // Cache the fetched pricing to avoid repeated calls
+          this.#modelInfos[key] = modelInfo
+        }
+      } catch {
+        // Fall back to zero pricing if getPricing fails
+        modelInfo = {
+          inputPrice: 0,
+          outputPrice: 0,
+          cacheWritesPrice: 0,
+          cacheReadsPrice: 0,
+        }
+      }
+
+      // Fallback to zero pricing
+      modelInfo = modelInfo ?? {
         inputPrice: 0,
         outputPrice: 0,
         cacheWritesPrice: 0,
         cacheReadsPrice: 0,
       }
 
-    const usage = 'totalUsage' in resp ? resp.totalUsage : resp.usage
-    const result = this.#calculateUsage(usage, resp.providerMetadata, modelInfo)
+      const usage = 'totalUsage' in resp ? resp.totalUsage : resp.usage
+      const result = this.#calculateUsage(usage, resp.providerMetadata, modelInfo)
 
-    this.#totals.input += result.input || 0
-    this.#totals.output += result.output || 0
-    this.#totals.cachedRead += result.cachedRead || 0
-    this.#totals.cost += result.cost || 0
-    this.#totals.messageCount += 1
+      this.#totals.input += result.input || 0
+      this.#totals.output += result.output || 0
+      this.#totals.cachedRead += result.cachedRead || 0
+      this.#totals.cost += result.cost || 0
+      this.#totals.messageCount += 1
 
-    // Store provider metadata for analytics
-    if (resp.providerMetadata && Object.keys(resp.providerMetadata).length > 0) {
-      const providerKey = Object.keys(resp.providerMetadata)[0]
-      this.#providerMetadataEntries.push({
-        provider: providerKey || llm.provider,
-        model: llm.modelId,
-        metadata: resp.providerMetadata[providerKey] || resp.providerMetadata,
-        timestamp: Date.now(),
-      })
-    }
+      // Store provider metadata for analytics
+      if (resp.providerMetadata && Object.keys(resp.providerMetadata).length > 0) {
+        const providerKey = Object.keys(resp.providerMetadata)[0]
+        this.#providerMetadataEntries.push({
+          provider: providerKey || llm.provider,
+          model: llm.modelId,
+          metadata: resp.providerMetadata[providerKey] || resp.providerMetadata,
+          timestamp: Date.now(),
+        })
+      }
+    })()
+
+    // Track pending update
+    this.#pendingUpdates.add(updatePromise)
+    updatePromise.finally(() => {
+      this.#pendingUpdates.delete(updatePromise)
+    })
+
+    return updatePromise
   }
 
   /** Override the running totals (e.g., restore from saved state). */
@@ -260,14 +302,24 @@ export class UsageMeter {
     this.#providerMetadataEntries.push(...other.providerMetadata)
   }
 
+  /** Wait for all pending usage updates to complete. */
+  async waitForPending(): Promise<void> {
+    const pending = Array.from(this.#pendingUpdates)
+    // Use allSettled to ensure we don't crash if any promise rejects
+    await Promise.allSettled(pending)
+  }
+
   getUsageText() {
     const u = this.usage
     return `Usage - messages: ${u.messageCount}, input: ${u.input}, cached: ${u.cachedRead}, output: ${u.output}, cost: $${u.cost.toFixed(4)}`
   }
 
   onFinishHandler(llm: LanguageModelV2) {
-    return (evt: { totalUsage: LanguageModelV2Usage; providerMetadata: any }) => {
-      this.addUsage(llm, evt)
+    // Returns an async function that updates usage tracking.
+    // Note: The AI SDK's onFinish callback is fire-and-forget and doesn't await
+    // the result, so this is safe even though addUsage is async.
+    return async (evt: { totalUsage: LanguageModelV2Usage; providerMetadata: any }) => {
+      await this.addUsage(llm, evt)
     }
   }
 }
