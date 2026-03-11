@@ -269,7 +269,6 @@ Polka Codes supports multiple AI providers:
 1. DeepSeek (Recommended)
 2. Anthropic (Claude 3 Sonnet recommended)
 3. OpenRouter
-4. Ollama
 
 Configure your provider in `.env`:
 
@@ -278,7 +277,7 @@ Configure your provider in `.env`:
 POLKA_API_KEY=your_api_key_here
 
 # Optional - override defaults
-POLKA_API_PROVIDER=deepseek  # or anthropic, openrouter, ollama
+POLKA_API_PROVIDER=deepseek  # or anthropic, openrouter, openai
 POLKA_MODEL=deepseek-chat  # or claude-3-7-sonnet-20250219
 ```
 

@@ -1,5 +1,7 @@
-import type { LanguageModelV2ToolResultOutput } from '@ai-sdk/provider'
+import type { LanguageModelV3ToolResultOutput } from '@ai-sdk/provider'
 import type { FilePart, ImagePart, TextPart } from 'ai'
+
+const NO_REASON_PROVIDED = 'No reason provided'
 
 export const responsePrompts = {
   errorInvokeTool: (tool: string, error: unknown) => `An error occurred while invoking the tool "${tool}": ${error}`,
@@ -12,7 +14,7 @@ Avoid unnecessary escape characters or special characters.
 `,
   requireUseToolNative: `Error: No tool use detected. You MUST use a tool before proceeding.
 `,
-  toolResults: (tool: string, result: LanguageModelV2ToolResultOutput): Array<TextPart | ImagePart | FilePart> => {
+  toolResults: (tool: string, result: LanguageModelV3ToolResultOutput): Array<TextPart | ImagePart | FilePart> => {
     switch (result.type) {
       case 'text':
         return [
@@ -49,27 +51,52 @@ Avoid unnecessary escape characters or special characters.
             text: `<tool_response name=${tool}>`,
           },
           ...result.value.map((part) => {
+            // Handle text parts directly
             if (part.type === 'text') {
               return part
             }
-            if (part.mediaType.startsWith('image/')) {
+            // Handle image-data parts
+            if ('mediaType' in part && 'data' in part && part.mediaType.startsWith('image/')) {
               return {
                 type: 'image',
                 mediaType: part.mediaType,
                 image: part.data,
               } as const
             }
+            // Handle file-data parts
+            if ('mediaType' in part && 'data' in part) {
+              return {
+                type: 'file',
+                mediaType: part.mediaType,
+                data: part.data,
+              } as const
+            }
+            // Fallback for URL-based and other part types
             return {
-              type: 'file',
-              mediaType: part.mediaType,
-              data: part.data,
-            } as const
+              type: 'text',
+              text: JSON.stringify(part),
+            } satisfies TextPart
           }),
           {
             type: 'text',
             text: '</tool_response>',
           },
         ]
+      case 'execution-denied':
+        return [
+          {
+            type: 'text',
+            text: `<tool_response_error name=${tool}>Execution denied: ${result.reason ?? NO_REASON_PROVIDED}</tool_response_error>`,
+          },
+        ]
+      default: {
+        return [
+          {
+            type: 'text',
+            text: `<tool_response_error name=${tool}>Unknown result type: ${JSON.stringify(result)}</tool_response_error>`,
+          },
+        ]
+      }
     }
   },
   commandResult: (command: string, exitCode: number, stdout: string, stderr: string) => `<command>${command}</command>

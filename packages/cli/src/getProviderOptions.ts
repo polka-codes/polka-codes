@@ -65,8 +65,6 @@ export function getProviderOptions(options: GetProviderOptionsArgs): Record<stri
         },
       }
       break
-    case AiProvider.Ollama:
-      break
     case AiProvider.DeepSeek:
       break
     case AiProvider.OpenAI:

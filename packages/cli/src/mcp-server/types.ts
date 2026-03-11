@@ -54,7 +54,7 @@ export interface McpServerResource {
  * Provider and model override options for individual tool calls
  */
 export interface ProviderOverride {
-  /** Override the AI provider for this call (e.g., 'anthropic', 'deepseek', 'ollama') */
+  /** Override the AI provider for this call (e.g., 'anthropic', 'deepseek', 'openai') */
   provider?: string
   /** Override the model for this call (e.g., 'claude-sonnet-4-5', 'deepseek-chat') */
   model?: string

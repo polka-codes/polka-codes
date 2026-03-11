@@ -4,7 +4,6 @@ import { AiProvider } from './getModel'
 
 const defaultModels = {
   [AiProvider.Anthropic]: 'claude-sonnet-4-20250514',
-  [AiProvider.Ollama]: 'deepseek-r1:32b',
   [AiProvider.DeepSeek]: 'deepseek-chat',
   [AiProvider.OpenRouter]: 'google/gemini-2.5-pro',
   [AiProvider.OpenAI]: 'gpt-5-2025-08-07',

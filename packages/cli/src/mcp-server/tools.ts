@@ -75,7 +75,7 @@ async function getMemoryStore(logger: Logger, projectPath: string): Promise<{ st
  * Can be added to any tool input to allow per-call provider/model overrides
  */
 const providerOverrideSchema = z.object({
-  provider: z.string().optional().describe('Override the AI provider for this call (e.g., "anthropic", "deepseek", "ollama")'),
+  provider: z.string().optional().describe('Override the AI provider for this call (e.g., "anthropic", "deepseek", "openai")'),
   model: z.string().optional().describe('Override the model for this call (e.g., "claude-sonnet-4-5", "deepseek-chat")'),
   parameters: z.record(z.string(), z.unknown()).optional().describe('Override model parameters for this call'),
 })

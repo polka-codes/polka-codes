@@ -44,8 +44,6 @@ export default {
     'claude-haiku-4-5-20250929': { inputPrice: 1, outputPrice: 5, cacheWritesPrice: 1.25, cacheReadsPrice: 0.1, supportsThinking: false },
   },
 
-  [AiProvider.Ollama]: {},
-
   [AiProvider.DeepSeek]: {
     'deepseek-chat': { inputPrice: 0.28, outputPrice: 0.42, cacheWritesPrice: 0, cacheReadsPrice: 0.028 },
     'deepseek-reasoner': { inputPrice: 0.55, outputPrice: 2.19, cacheWritesPrice: 0, cacheReadsPrice: 0.14, supportsThinking: true },

@@ -17,12 +17,12 @@
     "build": "bun build src/index.ts --outdir dist --target node"
   },
   "dependencies": {
-    "@ai-sdk/google-vertex": "^3.0.97",
-    "@ai-sdk/provider": "^2.0.1",
-    "@ai-sdk/provider-utils": "^3.0.20",
+    "@ai-sdk/google-vertex": "^4.0.80",
+    "@ai-sdk/provider": "^3.0.8",
+    "@ai-sdk/provider-utils": "^4.0.19",
     "@inquirer/prompts": "^8.1.0",
     "@polka-codes/core": "workspace:*",
-    "ai": "^5.0.117",
+    "ai": "^6.0.116",
     "chalk": "^5.6.2",
     "ignore": "^7.0.5",
     "lodash-es": "^4.17.22",

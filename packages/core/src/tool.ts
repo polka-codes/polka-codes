@@ -29,7 +29,7 @@ export type ToolResponseResultMedia = {
   url: string
 }
 
-// Modified LanguageModelV2ToolResultOutput
+// Modified LanguageModelV3ToolResultOutput
 export type ToolResponseResult =
   | {
       type: 'text'

@@ -5,19 +5,26 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { UsageMeter } from './UsageMeter'
 
-// Mock LanguageModelV2 for testing
+// Mock LanguageModelV3 for testing
 const createMockModel = (provider: string, modelId: string) => ({
   provider,
   modelId,
-  specificationVersion: 'v2' as const,
+  specificationVersion: 'v3' as const,
 })
 
-// Helper to create mock usage objects
+// Helper to create mock usage objects (V3 format)
 const createMockUsage = (inputTokens: number, outputTokens: number, cachedInputTokens: number = 0) => ({
-  inputTokens,
-  outputTokens,
-  cachedInputTokens,
-  totalTokens: inputTokens + outputTokens,
+  inputTokens: {
+    total: inputTokens + cachedInputTokens,
+    noCache: inputTokens,
+    cacheRead: cachedInputTokens,
+    cacheWrite: 0,
+  },
+  outputTokens: {
+    total: outputTokens,
+    text: outputTokens,
+    reasoning: 0,
+  },
 })
 
 describe('UsageMeter', () => {

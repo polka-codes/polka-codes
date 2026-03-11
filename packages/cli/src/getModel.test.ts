@@ -14,16 +14,6 @@ describe('getModel', () => {
     expect(model.modelId).toBe('claude-3-5-sonnet-20241022')
   })
 
-  it('should create Ollama model', () => {
-    const model = getModel({
-      provider: AiProvider.Ollama,
-      model: 'llama3.2',
-      baseUrl: 'http://localhost:11434',
-    })
-
-    expect(model).toBeDefined()
-  })
-
   it('should create OpenAI model', () => {
     const model = getModel({
       provider: AiProvider.OpenAI,

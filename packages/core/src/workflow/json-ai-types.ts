@@ -9,6 +9,7 @@ import type {
   ReasoningPart,
   SystemModelMessage,
   TextPart,
+  ToolApprovalRequest,
   ToolModelMessage,
   ToolResultPart,
   UserContent,
@@ -135,7 +136,9 @@ interface JsonToolCallPart {
 Content of an assistant message.
 It can be a string or an array of text, image, reasoning, redacted reasoning, and tool call parts.
  */
-type JsonAssistantContent = string | Array<TextPart | JsonFilePart | ReasoningPart | JsonToolCallPart | ToolResultPart>
+type JsonAssistantContent =
+  | string
+  | Array<TextPart | JsonFilePart | ReasoningPart | JsonToolCallPart | ToolResultPart | ToolApprovalRequest>
 
 export type JsonModelMessage = SystemModelMessage | JsonUserModelMessage | JsonAssistantModelMessage | ToolModelMessage
 

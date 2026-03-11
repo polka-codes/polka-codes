@@ -141,13 +141,6 @@ describe('prices', () => {
     })
   })
 
-  describe('Ollama', () => {
-    it('should have empty pricing for Ollama (local models)', () => {
-      const ollamaPrices = prices[AiProvider.Ollama]
-      expect(ollamaPrices).toEqual({})
-    })
-  })
-
   describe('OpenRouter', () => {
     it('should have empty pricing for OpenRouter (uses API usage)', () => {
       const openRouterPrices = prices[AiProvider.OpenRouter]

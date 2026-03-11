@@ -6,9 +6,8 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createVertex } from '@ai-sdk/google-vertex'
 import { createOpenAI } from '@ai-sdk/openai'
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
-import type { LanguageModelV2 } from '@ai-sdk/provider'
+import type { LanguageModelV3 } from '@ai-sdk/provider'
 import { createOpenRouter } from '@openrouter/ai-sdk-provider'
-import { createOllama } from 'ollama-ai-provider-v2'
 import { getEnv } from './env'
 
 function headersToObject(headers: HeadersInit | undefined): Record<string, string> | undefined {
@@ -41,7 +40,6 @@ function redactHeaders(headers: Record<string, string> | undefined): Record<stri
 }
 export enum AiProvider {
   Anthropic = 'anthropic',
-  Ollama = 'ollama',
   DeepSeek = 'deepseek',
   OpenRouter = 'openrouter',
   OpenAI = 'openai',
@@ -61,7 +59,7 @@ export type ModelConfig = {
   name?: string // For OpenAI-compatible providers
 }
 
-export const getModel = (config: ModelConfig, debugLogging = false): LanguageModelV2 => {
+export const getModel = (config: ModelConfig, debugLogging = false): LanguageModelV3 => {
   const { TRACING_FILE } = getEnv()
 
   const fetchOverride: typeof fetch | undefined =
@@ -213,14 +211,6 @@ export const getModel = (config: ModelConfig, debugLogging = false): LanguageMod
         fetch: fetchOverride,
       })
       return anthropic(config.model)
-    }
-
-    case AiProvider.Ollama: {
-      const ollama = createOllama({
-        baseURL: config.baseUrl,
-        fetch: fetchOverride,
-      })
-      return ollama(config.model)
     }
 
     case AiProvider.DeepSeek: {
