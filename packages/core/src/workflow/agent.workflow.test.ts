@@ -22,14 +22,14 @@ const listFilesTool = createMockTool('listFiles', 'List files in a directory', a
     return {
       success: true,
       message: {
-        type: 'json',
-        value: ['index.ts', 'agent.workflow.ts'],
+        type: 'text',
+        value: JSON.stringify(['index.ts', 'agent.workflow.ts']),
       },
     }
   }
   return {
     success: true,
-    message: { type: 'json', value: [] },
+    message: { type: 'text', value: JSON.stringify([]) },
   }
 })
 

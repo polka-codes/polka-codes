@@ -43,8 +43,7 @@ export async function configPrompt(existingConfig?: Partial<ProviderConfig>): Pr
       break
   }
 
-  let apiKey: string | undefined
-  apiKey = await password({ message: 'Enter API Key:', mask: '*' })
+  const apiKey = await password({ message: 'Enter API Key:', mask: '*' })
 
   let baseURL: string | undefined
 

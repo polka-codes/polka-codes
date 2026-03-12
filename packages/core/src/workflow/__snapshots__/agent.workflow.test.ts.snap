@@ -4,11 +4,8 @@ exports[`should handle mixed valid and invalid tool calls by returning results f
 [
   {
     "output": {
-      "type": "json",
-      "value": [
-        "index.ts",
-        "agent.workflow.ts",
-      ],
+      "type": "text",
+      "value": "[\"index.ts\",\"agent.workflow.ts\"]",
     },
     "toolCallId": "call-1",
     "toolName": "listFiles",
