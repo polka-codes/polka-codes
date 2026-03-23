@@ -6,7 +6,7 @@
  */
 
 import { mock } from 'bun:test'
-import type { WorkflowContext } from '@polka-codes/core'
+import type { BaseWorkflowContext } from '@polka-codes/core'
 import type { CliToolRegistry } from '../workflow-tools'
 
 /**
@@ -14,7 +14,7 @@ import type { CliToolRegistry } from '../workflow-tools'
  * Only mocks what's necessary for testing, using concrete implementations where possible
  */
 export interface WorkflowTestContext {
-  context: WorkflowContext<CliToolRegistry>
+  context: BaseWorkflowContext<CliToolRegistry>
   tools: {
     executeCommand: ReturnType<typeof mock>
     input: ReturnType<typeof mock>
@@ -87,7 +87,7 @@ export function createWorkflowTestContext(): WorkflowTestContext {
     tools,
     step,
     logger,
-  } as unknown as WorkflowContext<CliToolRegistry>
+  } as unknown as BaseWorkflowContext<CliToolRegistry>
 
   return { context, tools, step, logger }
 }

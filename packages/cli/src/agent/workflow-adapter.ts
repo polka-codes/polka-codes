@@ -6,7 +6,7 @@ import type { FixWorkflowInput } from '../workflows/fix.workflow'
 import type { PlanWorkflowInput } from '../workflows/plan.workflow'
 import type { ReviewWorkflowInput } from '../workflows/review.workflow'
 import { WorkflowInvocationError } from './errors'
-import type { WorkflowContext, WorkflowExecutionResult } from './types'
+import type { CliWorkflowContext, ToolRegistry, WorkflowExecutionResult } from './types'
 
 /**
  * Adapts existing workflow outputs to WorkflowExecutionResult format
@@ -21,7 +21,7 @@ import type { WorkflowContext, WorkflowExecutionResult } from './types'
  */
 export async function adaptCodeWorkflow(
   input: CodeWorkflowInput & BaseWorkflowInput,
-  context: WorkflowContext<CliToolRegistry>,
+  context: CliWorkflowContext<CliToolRegistry>,
 ): Promise<WorkflowExecutionResult> {
   try {
     // Dynamic import to avoid circular dependencies
@@ -55,7 +55,7 @@ export async function adaptCodeWorkflow(
  */
 export async function adaptFixWorkflow(
   input: FixWorkflowInput & BaseWorkflowInput,
-  context: WorkflowContext<CliToolRegistry>,
+  context: CliWorkflowContext<CliToolRegistry>,
 ): Promise<WorkflowExecutionResult> {
   try {
     const { fixWorkflow } = await import('../workflows/fix.workflow')
@@ -88,7 +88,7 @@ export async function adaptFixWorkflow(
  */
 export async function adaptPlanWorkflow(
   input: PlanWorkflowInput & BaseWorkflowInput,
-  context: WorkflowContext<CliToolRegistry>,
+  context: CliWorkflowContext<CliToolRegistry>,
 ): Promise<WorkflowExecutionResult> {
   try {
     const { planWorkflow } = await import('../workflows/plan.workflow')
@@ -122,7 +122,7 @@ export async function adaptPlanWorkflow(
  */
 export async function adaptReviewWorkflow(
   input: ReviewWorkflowInput & BaseWorkflowInput,
-  context: WorkflowContext<CliToolRegistry>,
+  context: CliWorkflowContext<CliToolRegistry>,
 ): Promise<WorkflowExecutionResult> {
   try {
     const { reviewWorkflow } = await import('../workflows/review.workflow')
@@ -149,7 +149,7 @@ export async function adaptReviewWorkflow(
  */
 export async function adaptCommitWorkflow(
   input: CommitWorkflowInput & BaseWorkflowInput,
-  context: WorkflowContext<CliToolRegistry>,
+  context: CliWorkflowContext<CliToolRegistry>,
 ): Promise<WorkflowExecutionResult> {
   try {
     const { commitWorkflow } = await import('../workflows/commit.workflow')
@@ -188,10 +188,10 @@ export async function adaptCommitWorkflow(
  * @param context - Workflow context (logger, tools, etc.)
  * @param signal - Optional AbortSignal for cancellation
  */
-export async function invokeWorkflow(
+export async function invokeWorkflow<TTools extends ToolRegistry = CliToolRegistry>(
   workflowName: string,
   input: unknown,
-  context: WorkflowContext,
+  context: CliWorkflowContext<TTools>,
   signal?: AbortSignal,
 ): Promise<WorkflowExecutionResult> {
   // Check if operation was aborted before starting
@@ -217,8 +217,16 @@ export async function invokeWorkflow(
   // The caller is responsible for passing the correct input structure
   const workflowInput = input as Record<string, unknown> & BaseWorkflowInput
 
-  // Cast context to CliToolRegistry since all workflows expect that
-  const cliContext = wrappedContext as WorkflowContext<CliToolRegistry>
+  // NOTE: Type assertion to CliToolRegistry is needed here because:
+  // - invokeWorkflow is generic (accepts any ToolRegistry)
+  // - Actual workflow adapters require CliToolRegistry (full tool set)
+  // - Agent command currently provides AgentToolsRegistry (subset)
+  //
+  // This is a known limitation - see agent.ts lines 86-102 for the TODO
+  // about refactoring to provide full tool support to the agent.
+  //
+  // Runtime errors will occur if workflows try to use tools not provided by the caller.
+  const cliContext = wrappedContext as CliWorkflowContext<CliToolRegistry>
 
   switch (workflowName) {
     case 'code':
@@ -240,10 +248,10 @@ export async function invokeWorkflow(
  * Execute workflow with timeout
  * Wraps workflow execution with timeout protection
  */
-export async function invokeWorkflowWithTimeout(
+export async function invokeWorkflowWithTimeout<TTools extends ToolRegistry = CliToolRegistry>(
   workflowName: string,
   input: unknown,
-  context: WorkflowContext,
+  context: CliWorkflowContext<TTools>,
   timeoutMs: number,
 ): Promise<WorkflowExecutionResult> {
   const timeoutPromise = new Promise<never>((_, reject) => {

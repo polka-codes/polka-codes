@@ -4,10 +4,11 @@ import * as path from 'node:path'
 import { promisify } from 'node:util'
 import type { Logger } from '@polka-codes/core'
 import { ulid } from 'ulid'
+import type { CliToolRegistry } from '../workflow-tools'
 import { AdvancedDiscoveryStrategies } from './advanced-discovery'
 import { Priority } from './constants'
 import { logAndSuppress } from './error-handling'
-import type { Task, WorkflowContext } from './types'
+import type { CliWorkflowContext, Task, ToolRegistry } from './types'
 
 // Promisified exec for non-blocking command execution
 const exec = promisify(execCallback)
@@ -91,7 +92,7 @@ async function getGitHead(logger?: Logger): Promise<string> {
  *
  * Strategy: Run typecheck first, then build if types pass
  */
-async function discoverBuildErrors(context: WorkflowContext): Promise<Task[]> {
+async function discoverBuildErrors<TTools extends ToolRegistry>(context: CliWorkflowContext<TTools>): Promise<Task[]> {
   const tasks: Task[] = []
 
   try {
@@ -182,7 +183,7 @@ async function discoverBuildErrors(context: WorkflowContext): Promise<Task[]> {
 /**
  * Discover failing tests
  */
-async function discoverTestFailures(context: WorkflowContext): Promise<Task[]> {
+async function discoverTestFailures<TTools extends ToolRegistry>(context: CliWorkflowContext<TTools>): Promise<Task[]> {
   const tasks: Task[] = []
 
   try {
@@ -237,7 +238,7 @@ async function discoverTestFailures(context: WorkflowContext): Promise<Task[]> {
 /**
  * Discover type errors (if not already found in build)
  */
-async function discoverTypeErrors(context: WorkflowContext): Promise<Task[]> {
+async function discoverTypeErrors<TTools extends ToolRegistry>(context: CliWorkflowContext<TTools>): Promise<Task[]> {
   const tasks: Task[] = []
 
   try {
@@ -287,7 +288,7 @@ async function discoverTypeErrors(context: WorkflowContext): Promise<Task[]> {
 /**
  * Discover lint issues
  */
-async function discoverLintIssues(context: WorkflowContext): Promise<Task[]> {
+async function discoverLintIssues<TTools extends ToolRegistry>(context: CliWorkflowContext<TTools>): Promise<Task[]> {
   const tasks: Task[] = []
 
   try {
@@ -343,7 +344,7 @@ async function discoverLintIssues(context: WorkflowContext): Promise<Task[]> {
  *
  * CRITICAL: Only use cache if git HEAD unchanged
  */
-async function loadFromCache(context: WorkflowContext, cacheDir: string): Promise<Task[] | null> {
+async function loadFromCache<TTools extends ToolRegistry>(context: CliWorkflowContext<TTools>, cacheDir: string): Promise<Task[] | null> {
   try {
     const cacheFile = path.join(cacheDir, 'discovery-cache.json')
     const exists = await fs
@@ -387,7 +388,11 @@ async function loadFromCache(context: WorkflowContext, cacheDir: string): Promis
 /**
  * Save discovery results to cache
  */
-async function saveToCache(context: WorkflowContext, cacheDir: string, tasks: Task[]): Promise<void> {
+async function saveToCache<TTools extends ToolRegistry>(
+  context: CliWorkflowContext<TTools>,
+  cacheDir: string,
+  tasks: Task[],
+): Promise<void> {
   try {
     await fs.mkdir(cacheDir, { recursive: true })
 
@@ -431,7 +436,9 @@ export interface TaskDiscoveryEngine {
   resetBackoff(): void
 }
 
-export function createTaskDiscoveryEngine(context: WorkflowContext): TaskDiscoveryEngine {
+export function createTaskDiscoveryEngine<TTools extends ToolRegistry = CliToolRegistry>(
+  context: CliWorkflowContext<TTools>,
+): TaskDiscoveryEngine {
   const state: TaskDiscoveryEngineState = {
     cacheDir: path.join(process.cwd(), '.polka', 'cache'),
     backoffSeconds: 60,
@@ -482,23 +489,20 @@ export function createTaskDiscoveryEngine(context: WorkflowContext): TaskDiscove
         context.logger.info('[Discovery] Running advanced discovery strategies...')
 
         try {
-          // Security analysis (always enabled in advanced mode)
-          const securityIssues = await AdvancedDiscoveryStrategies.securityStrategy.execute(context)
-          tasks.push(...securityIssues)
+          // Advanced discovery strategies only use context.logger and context.workingDir
+          // Create a minimal context to avoid generic type propagation issues
+          const ctx = { logger: context.logger, workingDir: context.workingDir }
 
-          // Test coverage analysis
-          const testCoverageGaps = await AdvancedDiscoveryStrategies.testCoverageStrategy.execute(context)
-          tasks.push(...testCoverageGaps)
+          // Run all strategies in parallel for efficiency
+          const [securityIssues, testCoverageGaps, refactoringTasks, documentationTasks, performanceTasks] = await Promise.all([
+            AdvancedDiscoveryStrategies.securityStrategy.execute(ctx as any),
+            AdvancedDiscoveryStrategies.testCoverageStrategy.execute(ctx as any),
+            AdvancedDiscoveryStrategies.refactoringStrategy.execute(ctx as any),
+            AdvancedDiscoveryStrategies.documentationStrategy.execute(ctx as any),
+            AdvancedDiscoveryStrategies.performanceStrategy.execute(ctx as any),
+          ])
 
-          // Optional strategies (disabled by default as they can be noisy)
-          const refactoringTasks = await AdvancedDiscoveryStrategies.refactoringStrategy.execute(context)
-          tasks.push(...refactoringTasks)
-
-          const documentationTasks = await AdvancedDiscoveryStrategies.documentationStrategy.execute(context)
-          tasks.push(...documentationTasks)
-
-          const performanceTasks = await AdvancedDiscoveryStrategies.performanceStrategy.execute(context)
-          tasks.push(...performanceTasks)
+          tasks.push(...securityIssues, ...testCoverageGaps, ...refactoringTasks, ...documentationTasks, ...performanceTasks)
         } catch (error) {
           context.logger.warn('[Discovery] Advanced strategies failed', error as Error)
         }

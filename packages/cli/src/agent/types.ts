@@ -2,7 +2,8 @@
  * Core type definitions for the autonomous agent system
  */
 
-import type { ToolRegistry as CoreToolRegistry, Logger, StepFn, WorkflowTools } from '@polka-codes/core'
+import type { BaseWorkflowContext, ToolRegistry as CoreToolRegistry } from '@polka-codes/core'
+import type { CliToolRegistry } from '../workflow-tools'
 
 // Re-export ToolRegistry for use in other agent modules
 export type ToolRegistry = CoreToolRegistry
@@ -685,53 +686,15 @@ export interface ProgressReport {
   metrics: AgentMetrics
 }
 
-/**
- * Workflow context (extended from core)
- */
-export interface WorkflowContext<TTools extends ToolRegistry = ToolRegistry> {
-  /** Logger */
-  logger: Logger
-
-  /** Tools */
-  tools: WorkflowTools<TTools>
-
-  /** Step function for workflow execution */
-  step: StepFn
-
-  /** State directory */
+export interface CliWorkflowContext<TTools extends ToolRegistry = CliToolRegistry> extends BaseWorkflowContext<TTools> {
   stateDir: string
-
-  /** Working directory */
   workingDir: string
-
-  /** Session ID */
   sessionId: string
-
-  /** Config */
   config?: AgentConfig
-
-  /**
-   * Check if workflow was aborted
-   *
-   * This method is added by WorkflowAdapter when an AbortSignal is provided.
-   * Workflows can call this method periodically to check if they should stop.
-   *
-   * @throws {WorkflowInvocationError} If the workflow was aborted
-   *
-   * @example
-   * ```ts
-   * context.checkAbort()  // Throws if aborted
-   * ```
-   *
-   * @note This is an optional property that may not be present if no AbortSignal was provided
-   */
   checkAbort?: () => void
 }
 
-/**
- * Discovery strategy for finding tasks
- */
-export interface DiscoveryStrategy {
+export interface DiscoveryStrategy<TTools extends ToolRegistry = CliToolRegistry> {
   /** Strategy name */
   name: string
 
@@ -739,7 +702,7 @@ export interface DiscoveryStrategy {
   description: string
 
   /** Execute discovery */
-  execute: (context: WorkflowContext) => Promise<Task[]>
+  execute: (context: CliWorkflowContext<TTools>) => Promise<Task[]>
 
   /** Calculate priority */
   priority: (task: Task) => PriorityResult

@@ -1,17 +1,18 @@
+import type { CliToolRegistry } from '../workflow-tools'
 import { TaskExecutor } from './executor'
-import { createTaskPlanner } from './planner'
+import { createTaskPlanner, type TaskPlanner } from './planner'
 import type { AgentStateManager } from './state-manager'
-import { createTaskDiscoveryEngine } from './task-discovery'
+import { createTaskDiscoveryEngine, type TaskDiscoveryEngine } from './task-discovery'
 import { TaskPrioritizer } from './task-prioritizer'
-import type { Plan, Task, WorkflowContext } from './types'
+import type { CliWorkflowContext, Plan, Task, ToolRegistry } from './types'
 
 /**
  * Continuous improvement loop state
  */
-interface ContinuousImprovementLoopState {
-  discovery: any
-  planner: any
-  executor: TaskExecutor
+interface ContinuousImprovementLoopState<TTools extends ToolRegistry = CliToolRegistry> {
+  discovery: TaskDiscoveryEngine
+  planner: TaskPlanner
+  executor: TaskExecutor<TTools>
   prioritizer: TaskPrioritizer
   running: boolean
   iterationCount: number
@@ -36,12 +37,12 @@ export interface ContinuousImprovementLoop {
   isRunning(): boolean
 }
 
-export function createContinuousImprovementLoop(
-  context: WorkflowContext,
+export function createContinuousImprovementLoop<TTools extends ToolRegistry = CliToolRegistry>(
+  context: CliWorkflowContext<TTools>,
   stateManager: AgentStateManager,
   _sessionId: string,
 ): ContinuousImprovementLoop {
-  const state: ContinuousImprovementLoopState = {
+  const state: ContinuousImprovementLoopState<TTools> = {
     discovery: createTaskDiscoveryEngine(context),
     planner: createTaskPlanner(context),
     executor: new TaskExecutor(context, context.logger),

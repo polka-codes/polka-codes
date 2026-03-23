@@ -10,14 +10,10 @@ import {
   renameFile,
   replaceInFile,
   searchFiles,
-  type WorkflowContext,
   writeToFile,
 } from '@polka-codes/core'
 import type { z } from 'zod'
-import type { CliToolRegistry } from '../workflow-tools'
-
-// Re-export with proper type
-export type CliWorkflowContext = WorkflowContext<CliToolRegistry>
+import type { CliWorkflowContext } from '../agent/types'
 
 export interface AgentToolConfig {
   includeInteractive?: boolean
@@ -27,9 +23,6 @@ export interface AgentToolConfig {
   }
 }
 
-/**
- * Build a standardized list of agent tools
- */
 export function buildAgentToolList(config: AgentToolConfig = {}): FullToolInfo[] {
   const tools: FullToolInfo[] = [
     readFile,
@@ -107,9 +100,6 @@ export async function runAgentWithSchema<T extends z.ZodSchema>(
   return result.object as z.infer<T>
 }
 
-/**
- * Options for running an agent workflow without schema validation
- */
 export interface RunAgentOptions {
   systemPrompt: string
   userMessage: string
@@ -119,9 +109,6 @@ export interface RunAgentOptions {
   model?: string
 }
 
-/**
- * Wrapper for agent workflow without schema validation
- */
 export async function runAgent(context: CliWorkflowContext, options: RunAgentOptions): Promise<string> {
   const tools = options.tools || buildAgentToolList(options.toolConfig)
 
@@ -150,9 +137,6 @@ export async function runAgent(context: CliWorkflowContext, options: RunAgentOpt
   return result.message
 }
 
-/**
- * Continue an agent workflow with existing messages
- */
 export interface ContinueAgentOptions {
   messages: JsonModelMessage[]
   tools?: FullToolInfo[]
@@ -161,9 +145,6 @@ export interface ContinueAgentOptions {
   model?: string
 }
 
-/**
- * Continue an agent workflow with existing message history
- */
 export async function continueAgent(
   context: CliWorkflowContext,
   options: ContinueAgentOptions,

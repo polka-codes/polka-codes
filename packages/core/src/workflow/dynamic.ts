@@ -16,7 +16,7 @@ import {
   WorkflowFileSchema,
   type WorkflowStepDefinition,
 } from './dynamic-types'
-import type { Logger, StepFn, ToolRegistry, WorkflowContext, WorkflowFn, WorkflowTools } from './workflow'
+import type { BaseWorkflowContext, Logger, StepFn, ToolRegistry, WorkflowFn, WorkflowTools } from './workflow'
 
 /**
  * Maximum iterations for while loops to prevent infinite loops
@@ -703,14 +703,17 @@ function compareValues(left: unknown, right: unknown, op: string): boolean {
   }
 }
 
-function createRunWorkflowFn<TTools extends ToolRegistry>(args: {
+function createRunWorkflowFn<
+  TTools extends ToolRegistry,
+  TContext extends BaseWorkflowContext<TTools> = BaseWorkflowContext<TTools>,
+>(args: {
   input: Record<string, unknown>
   state: Record<string, unknown>
-  context: WorkflowContext<TTools>
+  context: TContext
   runInternal: (
     workflowId: string,
     input: Record<string, unknown>,
-    context: WorkflowContext<TTools>,
+    context: TContext,
     inheritedState: Record<string, unknown>,
   ) => Promise<unknown>
 }) {
@@ -720,17 +723,20 @@ function createRunWorkflowFn<TTools extends ToolRegistry>(args: {
   }
 }
 
-async function executeStepWithAgent<TTools extends ToolRegistry>(
+async function executeStepWithAgent<
+  TTools extends ToolRegistry,
+  TContext extends BaseWorkflowContext<TTools> = BaseWorkflowContext<TTools>,
+>(
   stepDef: WorkflowStepDefinition,
   workflowId: string,
   input: Record<string, unknown>,
   state: Record<string, unknown>,
-  context: WorkflowContext<TTools>,
+  context: TContext,
   options: DynamicWorkflowRunnerOptions,
   runInternal: (
     workflowId: string,
     input: Record<string, unknown>,
-    context: WorkflowContext<TTools>,
+    context: TContext,
     inheritedState: Record<string, unknown>,
   ) => Promise<unknown>,
 ): Promise<unknown> {
@@ -903,17 +909,20 @@ async function executeStepWithAgent<TTools extends ToolRegistry>(
   throw new Error(`Agent step '${stepDef.id}' in workflow '${workflowId}' exited unexpectedly with unhandled type`)
 }
 
-async function executeStepWithTimeout<TTools extends ToolRegistry>(
+async function executeStepWithTimeout<
+  TTools extends ToolRegistry,
+  TContext extends BaseWorkflowContext<TTools> = BaseWorkflowContext<TTools>,
+>(
   stepDef: WorkflowStepDefinition,
   workflowId: string,
   input: Record<string, unknown>,
   state: Record<string, unknown>,
-  context: WorkflowContext<TTools>,
+  context: TContext,
   options: DynamicWorkflowRunnerOptions,
   runInternal: (
     workflowId: string,
     input: Record<string, unknown>,
-    context: WorkflowContext<TTools>,
+    context: TContext,
     inheritedState: Record<string, unknown>,
   ) => Promise<unknown>,
 ): Promise<unknown> {
@@ -945,17 +954,17 @@ async function executeStepWithTimeout<TTools extends ToolRegistry>(
   return await executeStepLogic()
 }
 
-async function executeStep<TTools extends ToolRegistry>(
+async function executeStep<TTools extends ToolRegistry, TContext extends BaseWorkflowContext<TTools> = BaseWorkflowContext<TTools>>(
   stepDef: WorkflowStepDefinition,
   workflowId: string,
   input: Record<string, unknown>,
   state: Record<string, unknown>,
-  context: WorkflowContext<TTools>,
+  context: TContext,
   options: DynamicWorkflowRunnerOptions,
   runInternal: (
     workflowId: string,
     input: Record<string, unknown>,
-    context: WorkflowContext<TTools>,
+    context: TContext,
     inheritedState: Record<string, unknown>,
   ) => Promise<unknown>,
 ): Promise<unknown> {
@@ -1056,17 +1065,20 @@ function getStepId(step: WorkflowControlFlowStep): string {
 /**
  * Execute a single control flow step (basic step, while loop, if/else, break, continue)
  */
-async function executeControlFlowStep<TTools extends ToolRegistry>(
+async function executeControlFlowStep<
+  TTools extends ToolRegistry,
+  TContext extends BaseWorkflowContext<TTools> = BaseWorkflowContext<TTools>,
+>(
   step: WorkflowControlFlowStep,
   workflowId: string,
   input: Record<string, unknown>,
   state: Record<string, unknown>,
-  context: WorkflowContext<TTools>,
+  context: TContext,
   options: DynamicWorkflowRunnerOptions,
   runInternal: (
     workflowId: string,
     input: Record<string, unknown>,
-    context: WorkflowContext<TTools>,
+    context: TContext,
     inheritedState: Record<string, unknown>,
   ) => Promise<unknown>,
   loopDepth: number,
@@ -1296,10 +1308,10 @@ async function executeControlFlowStep<TTools extends ToolRegistry>(
   return { result: stepResult, shouldBreak: false, shouldContinue: false }
 }
 
-export function createDynamicWorkflow<TTools extends ToolRegistry = DynamicWorkflowRegistry>(
-  definition: WorkflowFile | string,
-  options: DynamicWorkflowRunnerOptions = {},
-) {
+export function createDynamicWorkflow<
+  TTools extends ToolRegistry = DynamicWorkflowRegistry,
+  TContext extends BaseWorkflowContext<TTools> = BaseWorkflowContext<TTools>,
+>(definition: WorkflowFile | string, options: DynamicWorkflowRunnerOptions = {}) {
   if (typeof definition === 'string') {
     const res = parseDynamicWorkflowDefinition(definition)
     if (!res.success) {
@@ -1311,7 +1323,7 @@ export function createDynamicWorkflow<TTools extends ToolRegistry = DynamicWorkf
   const runInternal = async (
     workflowId: string,
     input: Record<string, unknown>,
-    context: WorkflowContext<TTools>,
+    context: TContext,
     inheritedState: Record<string, unknown>,
   ): Promise<unknown> => {
     const workflow = definition.workflows[workflowId]
@@ -1321,7 +1333,7 @@ export function createDynamicWorkflow<TTools extends ToolRegistry = DynamicWorkf
         context.logger.info(`[Workflow] Delegating to built-in workflow '${workflowId}'`)
         // Built-in workflows are typed as WorkflowFn<any, any, any>, so we need to cast context
         // TODO: Improve built-in workflow typing to preserve context type constraints
-        return await builtIn(input, context as WorkflowContext<ToolRegistry>)
+        return await builtIn(input, context as BaseWorkflowContext<ToolRegistry>)
       }
       throw new Error(`Workflow '${workflowId}' not found`)
     }
@@ -1381,7 +1393,7 @@ export function createDynamicWorkflow<TTools extends ToolRegistry = DynamicWorkf
     return state
   }
 
-  return async (workflowId: string, input: Record<string, unknown>, context: WorkflowContext<TTools>) => {
+  return async (workflowId: string, input: Record<string, unknown>, context: TContext) => {
     return await runInternal(workflowId, input, context, {})
   }
 }

@@ -6,7 +6,7 @@
  */
 
 import type { Logger, StepFn, WorkflowTools } from '@polka-codes/core'
-import type { WorkflowContext } from './types'
+import type { CliWorkflowContext } from './types'
 
 /**
  * Mock logger for testing
@@ -57,7 +57,7 @@ export function createMockTools(): WorkflowTools<any> {
 /**
  * Mock workflow context for testing
  */
-export function createMockContext(overrides?: Partial<WorkflowContext>): WorkflowContext {
+export function createMockContext(overrides?: Partial<CliWorkflowContext>): CliWorkflowContext {
   return {
     logger: createMockLogger(),
     tools: createMockTools(),

@@ -1,7 +1,7 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import { ulid } from 'ulid'
-import type { DiscoveryStrategy, Task, WorkflowContext } from './types'
+import type { CliWorkflowContext, DiscoveryStrategy, Task, ToolRegistry } from './types'
 import { Priority } from './types'
 
 /**
@@ -108,7 +108,7 @@ export class AdvancedDiscoveryStrategies {
   /**
    * Discover refactoring opportunities
    */
-  private static async discoverRefactoringOpportunities(context: WorkflowContext): Promise<Task[]> {
+  private static async discoverRefactoringOpportunities<TTools extends ToolRegistry>(context: CliWorkflowContext<TTools>): Promise<Task[]> {
     const tasks: Task[] = []
 
     context.logger.debug('[AdvancedDiscovery] Analyzing code for refactoring opportunities...')
@@ -193,7 +193,7 @@ export class AdvancedDiscoveryStrategies {
   /**
    * Discover documentation gaps
    */
-  private static async discoverDocumentationGaps(context: WorkflowContext): Promise<Task[]> {
+  private static async discoverDocumentationGaps<TTools extends ToolRegistry>(context: CliWorkflowContext<TTools>): Promise<Task[]> {
     const tasks: Task[] = []
 
     context.logger.debug('[AdvancedDiscovery] Checking for documentation gaps...')
@@ -288,7 +288,7 @@ export class AdvancedDiscoveryStrategies {
   /**
    * Discover security issues
    */
-  private static async discoverSecurityIssues(context: WorkflowContext): Promise<Task[]> {
+  private static async discoverSecurityIssues<TTools extends ToolRegistry>(context: CliWorkflowContext<TTools>): Promise<Task[]> {
     const tasks: Task[] = []
 
     context.logger.debug('[AdvancedDiscovery] Analyzing for security issues...')
@@ -424,7 +424,7 @@ export class AdvancedDiscoveryStrategies {
   /**
    * Discover test coverage gaps
    */
-  private static async discoverTestCoverageGaps(context: WorkflowContext): Promise<Task[]> {
+  private static async discoverTestCoverageGaps<TTools extends ToolRegistry>(context: CliWorkflowContext<TTools>): Promise<Task[]> {
     const tasks: Task[] = []
 
     context.logger.debug('[AdvancedDiscovery] Analyzing test coverage...')
@@ -504,7 +504,7 @@ export class AdvancedDiscoveryStrategies {
   /**
    * Discover performance issues
    */
-  private static async discoverPerformanceIssues(context: WorkflowContext): Promise<Task[]> {
+  private static async discoverPerformanceIssues<TTools extends ToolRegistry>(context: CliWorkflowContext<TTools>): Promise<Task[]> {
     const tasks: Task[] = []
 
     context.logger.debug('[AdvancedDiscovery] Analyzing for performance issues...')

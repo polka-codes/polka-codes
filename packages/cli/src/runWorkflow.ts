@@ -14,6 +14,7 @@ import {
   SQLiteMemoryStore,
 } from '@polka-codes/cli-shared'
 import {
+  type BaseWorkflowContext,
   DEFAULT_MEMORY_CONFIG,
   type Logger,
   makeStepFn,
@@ -25,7 +26,6 @@ import {
   type ToolProvider,
   type ToolRegistry,
   UsageMeter,
-  type WorkflowContext,
   type WorkflowFn,
   type WorkflowTools,
 } from '@polka-codes/core'
@@ -246,7 +246,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
     mcpManager,
   }
 
-  let workflowContext: WorkflowContext<TTools>
+  let workflowContext: BaseWorkflowContext<TTools>
 
   // Create a tools proxy with dynamic dispatch.
   // Note: We cast to WorkflowTools<TTools> even though the actual return type is Promise<ToolResponse>.

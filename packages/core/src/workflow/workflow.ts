@@ -25,13 +25,18 @@ export interface StepFn {
   <T>(name: string, options: StepOptions, fn: () => Promise<T>): Promise<T>
 }
 
-export type WorkflowContext<TTools extends ToolRegistry> = {
+export interface BaseWorkflowContext<TTools extends ToolRegistry> {
   step: StepFn
   logger: Logger
   tools: WorkflowTools<TTools>
 }
 
-export type WorkflowFn<TInput, TOutput, TTools extends ToolRegistry> = (input: TInput, context: WorkflowContext<TTools>) => Promise<TOutput>
+export type WorkflowFn<
+  TInput,
+  TOutput,
+  TTools extends ToolRegistry,
+  TContext extends BaseWorkflowContext<TTools> = BaseWorkflowContext<TTools>,
+> = (input: TInput, context: TContext) => Promise<TOutput>
 
 // Create a default silent logger
 const silentLogger: Logger = {
@@ -45,7 +50,7 @@ export function createContext<TTools extends ToolRegistry>(
   tools: WorkflowTools<TTools>,
   stepFn?: StepFn,
   logger: Logger = silentLogger,
-): WorkflowContext<TTools> {
+): BaseWorkflowContext<TTools> {
   if (!stepFn) {
     // simple default step function
     stepFn = async <T>(_name: string, arg2: (() => Promise<T>) | StepOptions, arg3?: StepOptions | (() => Promise<T>)) => {

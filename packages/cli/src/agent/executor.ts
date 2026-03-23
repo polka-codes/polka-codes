@@ -1,6 +1,7 @@
 import type { Logger } from '@polka-codes/core'
+import type { CliToolRegistry } from '../workflow-tools'
 import { TaskExecutionError } from './errors'
-import type { AgentState, Task, WorkflowContext, WorkflowExecutionResult } from './types'
+import type { AgentState, CliWorkflowContext, Task, ToolRegistry, WorkflowExecutionResult } from './types'
 import { invokeWorkflow } from './workflow-adapter'
 
 /**
@@ -11,15 +12,15 @@ import { invokeWorkflow } from './workflow-adapter'
  * - Proper workflow cancellation on timeout
  * - Manual task cancellation support
  */
-export class TaskExecutor {
+export class TaskExecutor<TTools extends ToolRegistry = CliToolRegistry> {
   #abortControllers: Map<string, AbortController> = new Map()
   #taskTimeouts: Map<string, NodeJS.Timeout> = new Map()
-  #context: WorkflowContext
+  #context: CliWorkflowContext<TTools>
   #logger: Logger
   #defaultTimeoutMs: number
 
   constructor(
-    context: WorkflowContext,
+    context: CliWorkflowContext<TTools>,
     logger: Logger,
     defaultTimeoutMs: number = 60 * 60 * 1000, // 60 minutes default
   ) {

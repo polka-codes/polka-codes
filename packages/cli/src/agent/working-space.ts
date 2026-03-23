@@ -1,7 +1,7 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import type { Logger } from '@polka-codes/core'
-import type { Plan, Task, WorkflowContext } from './types'
+import type { CliWorkflowContext, Plan, Task } from './types'
 
 /**
  * Working Space Manager
@@ -529,7 +529,7 @@ ${task.files.length > 0 ? task.files.map((f) => `- \`${f}\``).join('\n') : 'None
 /**
  * Create a working space manager and initialize it
  */
-export async function createWorkingSpace(workingDir: string, logger: Logger, _context: WorkflowContext): Promise<WorkingSpace> {
+export async function createWorkingSpace(workingDir: string, logger: Logger, _context: CliWorkflowContext): Promise<WorkingSpace> {
   const space = new WorkingSpace(workingDir, logger)
 
   // Initialize the working directory structure

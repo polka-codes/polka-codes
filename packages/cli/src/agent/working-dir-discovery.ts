@@ -1,5 +1,5 @@
 import type { Priority } from './constants'
-import type { DiscoveryStrategy, Task, WorkflowContext } from './types'
+import type { CliWorkflowContext, DiscoveryStrategy, Task } from './types'
 import type { WorkingSpace } from './working-space'
 
 /**
@@ -16,7 +16,7 @@ export function createWorkingDirDiscoveryStrategy(workingSpace: WorkingSpace): D
     enabled: true,
     checkChanges: false,
 
-    async execute(context: WorkflowContext): Promise<Task[]> {
+    async execute(context: CliWorkflowContext): Promise<Task[]> {
       context.logger.info('[Discovery] Scanning working directory for pending tasks...')
 
       const tasks = await workingSpace.discoverPendingTasks()
@@ -41,7 +41,7 @@ export function createWorkingDirDiscoveryStrategy(workingSpace: WorkingSpace): D
  * Create working directory discovery strategy
  */
 export async function setupWorkingDirDiscovery(
-  context: WorkflowContext,
+  context: CliWorkflowContext,
   workingDir: string,
 ): Promise<{
   workingSpace: WorkingSpace

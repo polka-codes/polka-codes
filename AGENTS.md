@@ -49,7 +49,7 @@ bun commit               # Create commits
 
 **Core Workflow** (`packages/core/src/workflow/workflow.ts`):
 - `WorkflowFn<TInput, TOutput, TTools>` - Core workflow type
-- `WorkflowContext<TTools>` - Provides `step`, `logger`, `tools`
+- `BaseWorkflowContext<TTools>` - Provides `step`, `logger`, `tools`
 - `step` function - Named execution units with retry and caching
 - `ToolRegistry` - Type-safe tool registry
 
@@ -232,7 +232,7 @@ try {
 
 ### Workflow Composition
 
-Workflows use `step` function within `WorkflowContext`:
+Workflows use `step` function within `BaseWorkflowContext`:
 ```typescript
 step('step-name', async () => await otherWorkflow(input, context))
 ```
@@ -281,7 +281,7 @@ All agent execution emits events via `TaskEvent`:
 
 **Workflow Errors**:
 - Use `step` function for workflow calls
-- Verify `WorkflowContext` passed correctly
+- Verify `BaseWorkflowContext` passed correctly
 - Check tools available via `context.tools`
 
 **Type Errors**:

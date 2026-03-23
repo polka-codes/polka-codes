@@ -4,6 +4,7 @@ import type { LoadedConfig } from '@polka-codes/cli-shared'
 import {
   agentWorkflow,
   askFollowupQuestion,
+  type BaseWorkflowContext,
   type FullToolInfo,
   fetchUrl,
   type JsonModelMessage,
@@ -12,7 +13,6 @@ import {
   readBinaryFile,
   readFile,
   searchFiles,
-  type WorkflowContext,
   type WorkflowFn,
 } from '@polka-codes/core'
 import { UserCancelledError } from '../errors'
@@ -32,7 +32,7 @@ type CreatePlanInput = {
   config?: LoadedConfig
 }
 
-async function createPlan(input: CreatePlanInput, context: WorkflowContext<CliToolRegistry>) {
+async function createPlan(input: CreatePlanInput, context: BaseWorkflowContext<CliToolRegistry>) {
   const { tools, step } = context
   const { task, files, plan: inputPlan, userFeedback, interactive, messages, additionalTools } = input
 
@@ -180,10 +180,12 @@ export type PlanWorkflowOutput = {
 
 type State = 'Generating' | 'Reviewing' | 'Done'
 
-export const planWorkflow: WorkflowFn<PlanWorkflowInput & BaseWorkflowInput, PlanWorkflowOutput, CliToolRegistry> = async (
-  input,
-  context,
-) => {
+export const planWorkflow: WorkflowFn<
+  PlanWorkflowInput & BaseWorkflowInput,
+  PlanWorkflowOutput,
+  CliToolRegistry,
+  BaseWorkflowContext<CliToolRegistry>
+> = async (input, context) => {
   const { tools, logger, step } = context
   const { fileContent, filePath, mode: inputMode, interactive, additionalTools } = input
   const mode = interactive === false ? 'noninteractive' : (inputMode ?? 'interactive')

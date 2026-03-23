@@ -1,7 +1,8 @@
 import { z } from 'zod'
-import { type CliWorkflowContext, runAgentWithSchema } from '../workflows/agent-builder'
+import type { CliToolRegistry } from '../workflow-tools'
+import { runAgentWithSchema } from '../workflows/agent-builder'
 import { WORKFLOW_MAPPING } from './constants'
-import type { GoalDecompositionResult, Task, TaskComplexity, WorkflowContext } from './types'
+import type { CliWorkflowContext, GoalDecompositionResult, Task, TaskComplexity, ToolRegistry } from './types'
 import { Priority } from './types'
 
 /**
@@ -30,10 +31,10 @@ const GoalDecompositionSchema = z.object({
 /**
  * Decomposes a high-level goal into actionable tasks
  */
-export class GoalDecomposer {
-  #context: WorkflowContext | CliWorkflowContext
+export class GoalDecomposer<TTools extends ToolRegistry = CliToolRegistry> {
+  #context: CliWorkflowContext<TTools>
 
-  constructor(context: WorkflowContext | CliWorkflowContext) {
+  constructor(context: CliWorkflowContext<TTools>) {
     this.#context = context
   }
 

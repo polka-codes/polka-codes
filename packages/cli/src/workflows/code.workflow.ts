@@ -3,6 +3,7 @@
 import {
   agentWorkflow,
   askFollowupQuestion,
+  type BaseWorkflowContext,
   executeCommand,
   type FullToolInfo,
   fetchUrl,
@@ -57,7 +58,8 @@ export type CodeWorkflowInput = {
 export const codeWorkflow: WorkflowFn<
   CodeWorkflowInput & BaseWorkflowInput,
   { success: true; summaries: string[] } | { success: false; reason: string; summaries: string[] },
-  CliToolRegistry
+  CliToolRegistry,
+  BaseWorkflowContext<CliToolRegistry>
 > = async (input, context) => {
   const { logger, step, tools } = context
   const { task, files, mode: inputMode, customTools, additionalInstructions, interactive, additionalTools } = input

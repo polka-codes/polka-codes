@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, mock } from 'bun:test'
-import type { CliWorkflowContext } from '../workflows/agent-builder'
 import { Priority } from './constants'
 import { GoalDecomposer } from './goal-decomposer'
+import type { CliWorkflowContext } from './types'
 
 describe('GoalDecomposer', () => {
   const mockTools = {
@@ -18,6 +18,9 @@ describe('GoalDecomposer', () => {
     },
     tools: mockTools as any,
     step: {} as any,
+    stateDir: '/test/state',
+    workingDir: '/test/workspace',
+    sessionId: 'test-session',
   }
 
   let decomposer: GoalDecomposer

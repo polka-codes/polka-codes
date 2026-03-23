@@ -1,4 +1,5 @@
-import type { Plan, Task, WorkflowContext } from './types'
+import type { CliToolRegistry } from '../workflow-tools'
+import type { CliWorkflowContext, Plan, Task, ToolRegistry } from './types'
 
 /**
  * Constants for agent planner
@@ -23,7 +24,7 @@ const PLANNER_CONSTANTS = {
 /**
  * Resolve task dependencies
  */
-function resolveDependencies(tasks: Task[], context: WorkflowContext): Task[] {
+function resolveDependencies<TTools extends ToolRegistry>(tasks: Task[], context: CliWorkflowContext<TTools>): Task[] {
   const taskMap = new Map(tasks.map((t) => [t.id, t]))
 
   const resolved = tasks.map((task) => {
@@ -63,7 +64,7 @@ function resolveDependencies(tasks: Task[], context: WorkflowContext): Task[] {
  * Create execution phases using topological sort
  * Tasks in each phase can be executed in parallel
  */
-function createExecutionPhases(tasks: Task[], _context: WorkflowContext): string[][] {
+function createExecutionPhases<TTools extends ToolRegistry>(tasks: Task[], _context: CliWorkflowContext<TTools>): string[][] {
   const phases: string[][] = []
   const completed = new Set<string>()
   const _taskMap = new Map(tasks.map((t) => [t.id, t]))
@@ -144,7 +145,7 @@ function identifyRisks(tasks: Task[]): string[] {
 /**
  * Generate high-level plan description
  */
-function generateHighLevelPlan(goal: string, tasks: Task[], context: WorkflowContext): string {
+function generateHighLevelPlan<TTools extends ToolRegistry>(goal: string, tasks: Task[], context: CliWorkflowContext<TTools>): string {
   const lines: string[] = []
 
   lines.push(`**Goal:** ${goal}`)
@@ -210,7 +211,7 @@ export interface TaskPlanner {
   createPlan(goal: string, tasks: Task[]): Plan
 }
 
-export function createTaskPlanner(context: WorkflowContext): TaskPlanner {
+export function createTaskPlanner<TTools extends ToolRegistry = CliToolRegistry>(context: CliWorkflowContext<TTools>): TaskPlanner {
   return {
     createPlan(goal: string, tasks: Task[]): Plan {
       context.logger.info(`[Planner] Creating plan with ${tasks.length} tasks`)

@@ -8,6 +8,7 @@ import { createErrorResponse, createSuccessResponse } from '@polka-codes/core'
 import { Command } from 'commander'
 import { loadConfig } from '../agent/config'
 import { AutonomousAgent } from '../agent/orchestrator'
+import type { CliWorkflowContext } from '../agent/types'
 import { createLogger } from '../logger'
 import { quoteForShell } from '../utils/shell'
 
@@ -196,14 +197,13 @@ export async function runAgent(goal: string | undefined, options: Record<string,
     throw new Error('Invalid step function call')
   }
 
-  const context = {
+  const context: CliWorkflowContext<AgentToolsRegistry> = {
     logger,
     step,
     workingDir,
     stateDir,
     sessionId,
     tools,
-    env: process.env,
   }
 
   // Create agent

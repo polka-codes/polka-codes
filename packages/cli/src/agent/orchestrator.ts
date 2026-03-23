@@ -1,19 +1,20 @@
 import * as path from 'node:path'
 import type { Logger } from '@polka-codes/core'
 import { ulid } from 'ulid'
+import type { CliToolRegistry } from '../workflow-tools'
 import { AgentStatusError, SafetyViolationError } from './errors'
 import { TaskExecutor } from './executor'
 import { GoalDecomposer } from './goal-decomposer'
 import { createContinuousImprovementLoop } from './improvement-loop'
 import { MetricsCollector } from './metrics'
-import { createTaskPlanner } from './planner'
+import { createTaskPlanner, type TaskPlanner } from './planner'
 import { ApprovalManager } from './safety/approval'
 import { SafetyChecker } from './safety/checks'
 import { InterruptHandler } from './safety/interrupt'
 import { acquire, release } from './session'
 import { AgentStateManager } from './state-manager'
 import { TaskHistory } from './task-history'
-import type { AgentConfig, AgentState, Plan, Task, WorkflowContext } from './types'
+import type { AgentConfig, AgentState, CliWorkflowContext, Plan, Task, ToolRegistry } from './types'
 import { WorkingSpace } from './working-space'
 
 /**
@@ -36,7 +37,7 @@ import { WorkingSpace } from './working-space'
  * - Discovers tasks from working directory
  * - Documents completed tasks in working directory
  */
-export class AutonomousAgent {
+export class AutonomousAgent<TTools extends ToolRegistry = CliToolRegistry> {
   #stateManager: AgentStateManager
   #taskHistory: TaskHistory
   #logger: Logger
@@ -44,18 +45,18 @@ export class AutonomousAgent {
   #approvalManager: ApprovalManager
   #safetyChecker: SafetyChecker
   #interruptHandler: InterruptHandler
-  #goalDecomposer: GoalDecomposer
-  #taskPlanner: ReturnType<typeof createTaskPlanner>
-  #taskExecutor: TaskExecutor
+  #goalDecomposer: GoalDecomposer<TTools>
+  #taskPlanner: TaskPlanner
+  #taskExecutor: TaskExecutor<TTools>
   #improvementLoop?: ReturnType<typeof createContinuousImprovementLoop>
   #workingSpace?: WorkingSpace
 
   #initialized: boolean = false
   #sessionId: string
   #config: AgentConfig
-  #context: WorkflowContext
+  #context: CliWorkflowContext<TTools>
 
-  constructor(config: AgentConfig, context: WorkflowContext) {
+  constructor(config: AgentConfig, context: CliWorkflowContext<TTools>) {
     this.#config = config
     this.#context = context
     this.#sessionId = this.generateSessionId()
