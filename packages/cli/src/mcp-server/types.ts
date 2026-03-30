@@ -4,8 +4,8 @@
  * MCP Server type definitions
  */
 
-import type { AnySchema } from '@modelcontextprotocol/sdk/server/zod-compat'
 import type { Logger } from '@polka-codes/core'
+import type { ZodType } from 'zod'
 
 /**
  * Context passed to tool handlers for workflow execution
@@ -35,7 +35,7 @@ export type DefaultProviderConfig = {
 export interface McpServerTool {
   name: string
   description: string
-  inputSchema: AnySchema
+  inputSchema: ZodType
   handler: (args: Record<string, unknown>, context: McpServerToolContext) => Promise<unknown>
 }
 

@@ -14,7 +14,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "bun build src/index.ts --outdir dist --target node"
+    "build": "tsup src/index.ts --format esm --clean && tsc --emitDeclarationOnly"
   },
   "dependencies": {
     "@ai-sdk/google-vertex": "^4.0.80",

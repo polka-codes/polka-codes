@@ -4,7 +4,8 @@
     "composite": true,
     "outDir": "dist",
     "rootDir": "src",
-    "declarationMap": true
+    "declarationMap": true,
+    "paths": {}
   },
   "include": ["src"],
   "references": [{ "path": "../core" }, { "path": "../cli-shared" }]
