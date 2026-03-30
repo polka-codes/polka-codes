@@ -14,7 +14,7 @@
     }
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm --clean && tsc --emitDeclarationOnly && bun run build:copy-wasm",
+    "build": "tsc --build --force && tsup src/index.ts --format esm && bun run build:copy-wasm",
     "build:copy-wasm": "mkdir -p dist && cp ../../node_modules/sql.js/dist/sql-wasm.wasm dist/"
   },
   "dependencies": {
