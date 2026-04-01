@@ -23,35 +23,36 @@ import { type BaseWorkflowInput, getDefaultContext } from './workflow.utils'
 export type TaskWorkflowInput = {
   task: string
   jsonMode?: boolean
+  readonly?: boolean
+  systemPrompt?: string
 }
 
 const SYSTEM_PROMPT = `You are a generic AI assistant.
 You are able to perform simple tasks including making simple changes, reading code, and answering user questions.
 Use the available tools to perform the task.`
 
+const READONLY_SYSTEM_PROMPT = `You are a generic AI assistant in READ-ONLY mode.
+You can analyze code, read files, and answer questions, but you cannot modify files or execute commands.
+Use the available tools to perform analysis tasks.`
+
 // Output schema for JSON mode - ensures the agent returns a JSON value
 const TaskOutputSchema = z.any().describe('A JSON value with the task result')
 
 export const taskWorkflow: WorkflowFn<TaskWorkflowInput & BaseWorkflowInput, ExitReason, CliToolRegistry> = async (input, context) => {
   const { logger, step } = context
-  const { task, additionalTools, jsonMode } = input
+  const { task, additionalTools, jsonMode, readonly, systemPrompt } = input
 
   logger.info(`
-Running generic agent...
+Running generic agent${readonly ? ' in READ-ONLY mode' : ''}...
 `)
 
-  const agentTools: FullToolInfo[] = [
-    readFile,
-    writeToFile,
-    replaceInFile,
-    searchFiles,
-    listFiles,
-    executeCommand,
-    fetchUrl,
-    readBinaryFile,
-    removeFile,
-    renameFile,
-  ]
+  // Base tools - conditionally include write/execute tools based on readonly mode
+  const agentTools: FullToolInfo[] = [readFile, searchFiles, listFiles, fetchUrl, readBinaryFile]
+
+  // Only add write/execute tools if not in readonly mode
+  if (!readonly) {
+    agentTools.push(writeToFile, replaceInFile, executeCommand, removeFile, renameFile)
+  }
 
   if (additionalTools?.search) {
     agentTools.push(additionalTools.search)
@@ -65,7 +66,7 @@ Running generic agent...
     const userMessage = `${task}\n\n${defaultContext}`
     return await agentWorkflow(
       {
-        systemPrompt: SYSTEM_PROMPT,
+        systemPrompt: systemPrompt ?? (readonly ? READONLY_SYSTEM_PROMPT : SYSTEM_PROMPT),
         userMessage: [{ role: 'user', content: userMessage }],
         tools: agentTools,
         // In JSON mode, use outputSchema to ensure the agent returns JSON
