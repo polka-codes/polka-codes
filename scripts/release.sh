@@ -64,6 +64,9 @@ echo "Version bumped to $VERSION in all package.json files under packages direct
 git add .
 git commit -m "chore: release $VERSION"
 
+# Reinstall to update workspace dependency resolutions
+bun install
+
 bun run clean
 bun run build
 bun publish --cwd packages/core --access public || exit 1
