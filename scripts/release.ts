@@ -205,10 +205,30 @@ async function main(): Promise<void> {
     await prepareAndPublishPackage(packageDir, version, workspacePackageNames)
   }
 
-  await shell`git tag ${`v${version}`}`
-  await shell`git push origin ${`v${version}`}`
-  await shell`git push`
-  await shell`gh release create ${`v${version}`} --generate-notes`
+  console.log('Creating git tag...')
+  const tagResult = await shell`git tag ${`v${version}`}`.quiet()
+  if (tagResult.exitCode !== 0) {
+    throw new Error(`Failed to create tag: ${tagResult.stderr.toString()}`)
+  }
+
+  console.log('Pushing tag to origin...')
+  const pushTagResult = await shell`git push origin ${`v${version}`}`.quiet()
+  if (pushTagResult.exitCode !== 0) {
+    throw new Error(`Failed to push tag: ${pushTagResult.stderr.toString()}`)
+  }
+
+  console.log('Pushing to origin...')
+  const pushResult = await shell`git push`.quiet()
+  if (pushResult.exitCode !== 0) {
+    throw new Error(`Failed to push: ${pushResult.stderr.toString()}`)
+  }
+
+  console.log('Creating GitHub release...')
+  const ghRelease = await shell`gh release create ${`v${version}`} --generate-notes`.quiet().nothrow()
+  if (ghRelease.exitCode !== 0) {
+    console.warn(`Warning: Failed to create GitHub release: ${ghRelease.stderr.toString().trim()}`)
+    console.warn('You can create it manually at: https://github.com/your-org/your-repo/releases/new')
+  }
 }
 
 if (import.meta.main) {
