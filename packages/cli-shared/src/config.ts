@@ -9,7 +9,7 @@ import { merge } from 'lodash-es'
 import { parse } from 'yaml'
 import { ZodError } from 'zod'
 
-export { configSchema, type Config }
+export { type Config, configSchema }
 
 export function getGlobalConfigPath(home = homedir()): string {
   return join(home, '.config', 'polkacodes', 'config.yml')

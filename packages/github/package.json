@@ -17,13 +17,13 @@
     "build": "tsup src/index.ts --experimental-dts --format esm --clean --loader .gql=text"
   },
   "dependencies": {
-    "@octokit/core": "^6.1.4",
+    "@octokit/core": "^7.0.6",
     "mdast": "^3.0.0",
     "remark-gfm": "^4.0.1",
     "remark-parse": "^11.0.0",
     "remark-stringify": "^11.0.0",
     "unified": "^11.0.5",
-    "unist-util-visit": "^5.0.0"
+    "unist-util-visit": "^5.1.0"
   },
   "devDependencies": {
     "@types/mdast": "^4.0.4"

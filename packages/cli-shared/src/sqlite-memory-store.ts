@@ -225,7 +225,7 @@ class ReentrantMutex {
 }
 
 // Re-export types from core for convenience
-export type { MemoryEntry, MemoryQuery, QueryOptions, MemoryOperation }
+export type { MemoryEntry, MemoryOperation, MemoryQuery, QueryOptions }
 
 let SqlJs: SqlJsStatic | null = null
 let SqlJsInitPromise: Promise<SqlJsStatic> | null = null

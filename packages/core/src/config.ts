@@ -16,7 +16,7 @@ export {
   toolConfigSchema,
 } from './config/base'
 
-export { memoryConfigSchema, DEFAULT_MEMORY_CONFIG, type MemoryConfig, resolveHomePath }
+export { DEFAULT_MEMORY_CONFIG, type MemoryConfig, memoryConfigSchema, resolveHomePath }
 
 export const ruleSchema = z.union([
   z.string(),
