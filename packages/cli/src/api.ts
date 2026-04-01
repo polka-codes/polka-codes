@@ -403,6 +403,17 @@ export interface TaskOptions extends BaseOptions {
   jsonMode?: boolean
 
   /**
+   * Whether to run in read-only mode (no file modifications or command execution)
+   * @default false
+   */
+  readonly?: boolean
+
+  /**
+   * Custom system prompt to override the default
+   */
+  systemPrompt?: string
+
+  /**
    * Whether to prompt for confirmations
    * @default true
    */
@@ -431,7 +442,7 @@ export interface TaskOptions extends BaseOptions {
  * ```
  */
 export async function task(options: TaskOptions): Promise<ExitReason | undefined> {
-  const { task: taskInput, jsonMode, interactive, onUsage, ...context } = options
+  const { task: taskInput, jsonMode, readonly, systemPrompt, interactive, onUsage, ...context } = options
 
   const verbose = context.silent ? -1 : (context.verbose ?? 0)
   const logger = createLogger({ verbose })
@@ -439,6 +450,8 @@ export async function task(options: TaskOptions): Promise<ExitReason | undefined
   const workflowInput: TaskWorkflowInput = {
     task: taskInput,
     jsonMode,
+    readonly,
+    systemPrompt,
   }
 
   return runWorkflow(taskWorkflow, workflowInput, {
