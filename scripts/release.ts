@@ -189,14 +189,18 @@ async function main(): Promise<void> {
   await updateWorkspaceVersions(version)
   console.log(`Version bumped to ${version} in all package.json files under packages directory`)
 
-  const releasePackages = listWorkspacePackageDirs()
-  await shell`git add ${releasePackages.map((packageDir) => `${packageDir}/package.json`)}`
+  const allPackages = listWorkspacePackageDirs()
+  await shell`git add ${allPackages.map((packageDir) => `${packageDir}/package.json`)}`
   await shell`git commit -m ${`chore: release ${version}`}`
 
   await shell`bun run clean`
   await shell`bun run build`
 
   const workspacePackageNames = await getWorkspacePackageNames()
+  const releasePackages = ['core', 'github', 'cli-shared', 'cli', 'runner']
+    .map((name) => allPackages.find((pkg) => pkg.endsWith(name)))
+    .filter((pkg): pkg is string => pkg !== undefined)
+
   for (const packageDir of releasePackages) {
     await prepareAndPublishPackage(packageDir, version, workspacePackageNames)
   }
