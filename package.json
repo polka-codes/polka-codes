@@ -15,6 +15,7 @@
     "prepare": "husky",
     "clean": "rm -rf packages/*/dist packages/*/tsconfig.tsbuildinfo",
     "cli": "bun run --no-check packages/cli/src/index.ts",
+    "release": "bun run scripts/release.ts",
     "pr": "bun cli pr",
     "commit": "bun cli commit",
     "codegen": "cd packages/github; graphql-codegen",
