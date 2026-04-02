@@ -13,6 +13,9 @@
       "types": "./dist/index.d.ts"
     }
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc --build --force && tsup src/index.ts --format esm && bun run build:copy-wasm",
     "build:copy-wasm": "mkdir -p dist && cp ../../node_modules/sql.js/dist/sql-wasm.wasm dist/"
@@ -29,8 +32,8 @@
     "@inquirer/prompts": "^8.3.2",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@openrouter/ai-sdk-provider": "^2.3.3",
-    "@polka-codes/cli-shared": "workspace:*",
-    "@polka-codes/core": "workspace:*",
+    "@polka-codes/cli-shared": "^0.10.16",
+    "@polka-codes/core": "^0.10.16",
     "ai": "^6.0.142",
     "chalk": "^5.6.2",
     "commander": "^14.0.2",

@@ -13,6 +13,9 @@
   "files": [
     "dist"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc --build && tsup src/index.ts --format esm"
   },
@@ -21,7 +24,7 @@
     "@ai-sdk/provider": "^3.0.8",
     "@ai-sdk/provider-utils": "^4.0.21",
     "@inquirer/prompts": "^8.3.2",
-    "@polka-codes/core": "workspace:*",
+    "@polka-codes/core": "^0.10.16",
     "ai": "^6.0.142",
     "chalk": "^5.6.2",
     "ignore": "^7.0.5",
