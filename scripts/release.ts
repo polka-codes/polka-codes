@@ -25,10 +25,13 @@ type ParsedArgs = {
 
 const dependencyFields: DependencyField[] = ['dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies']
 const usage = `Usage:
-  bun run scripts/release.ts --bump patch
-  bun run scripts/release.ts --bump minor
-  bun run scripts/release.ts --bump major
-  bun run scripts/release.ts --version 1.2.3`
+  bun release
+  bun release patch
+  bun release minor
+  bun release major
+  bun release 1.2.3
+  bun release --bump patch
+  bun release --version 1.2.3`
 
 async function readPackageJson(packageJsonPath: string): Promise<PackageJson> {
   return (await Bun.file(packageJsonPath).json()) as PackageJson
@@ -106,6 +109,16 @@ function parseArgs(argv: string[]): ParsedArgs {
 
       version = value
       index += 1
+      continue
+    }
+
+    if (isBumpType(argument)) {
+      bump = argument
+      continue
+    }
+
+    if (isSemver(argument)) {
+      version = argument
       continue
     }
 
@@ -195,7 +208,7 @@ async function main(): Promise<void> {
     writePackageJson(packageJsonPath, nextPackageJson)
   }
 
-  console.log(`Prepared release version ${nextVersion}.`)
+  console.log(`Prepared release version ${nextVersion}. Commit and merge these package.json changes, then run \`bun release:publish\`.`)
 }
 
 await main().catch((error: unknown) => {

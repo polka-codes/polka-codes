@@ -3,18 +3,9 @@ name: Release
 on:
   workflow_dispatch:
     inputs:
-      bump:
-        description: Version bump type
-        required: true
-        default: patch
-        type: choice
-        options:
-          - patch
-          - minor
-          - major
       version:
-        description: Exact version to release; overrides bump when provided
-        required: false
+        description: Expected version already merged on master
+        required: true
         type: string
 
 permissions:
@@ -26,11 +17,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  prepare:
+  publish:
     runs-on: ubuntu-latest
-    outputs:
-      release_sha: ${{ steps.commit.outputs.release_sha }}
-      release_version: ${{ steps.version.outputs.release_version }}
 
     steps:
       - name: Checkout repository
@@ -38,6 +26,13 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Ensure release runs from master
+        run: |
+          if [ "${{ github.ref_name }}" != "master" ]; then
+            echo "Release workflow must run from master, got ${{ github.ref_name }}."
+            exit 1
+          fi
+
       - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
@@ -54,69 +49,20 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
-
-      - name: Validate release state
-        run: |
-          bun check
-          bun test
-
-      - name: Configure Git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-      - name: Prepare release version
-        run: |
-          if [ -n "${{ inputs.version }}" ]; then
-            bun run scripts/release.ts --version "${{ inputs.version }}"
-          else
-            bun run scripts/release.ts --bump "${{ inputs.bump }}"
-          fi
 
       - name: Capture release version
         id: version
         run: echo "release_version=$(jq -r '.version' packages/core/package.json)" >> "$GITHUB_OUTPUT"
 
-      - name: Commit and push version bump
-        id: commit
+      - name: Validate release version
         run: |
-          if git diff --quiet -- packages/*/package.json; then
-            echo "release_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-            exit 0
+          if [ "${{ steps.version.outputs.release_version }}" != "${{ inputs.version }}" ]; then
+            echo "Release version mismatch: repo has ${{ steps.version.outputs.release_version }}, expected ${{ inputs.version }}."
+            exit 1
           fi
 
-          git add packages/*/package.json
-          git commit -m "chore: release ${{ steps.version.outputs.release_version }}"
-          git push origin HEAD:master
-          echo "release_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-
-  publish:
-    needs: prepare
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout release commit
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ needs.prepare.outputs.release_sha }}
-          fetch-depth: 0
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          registry-url: https://registry.npmjs.org/
-
-      - name: Upgrade npm
-        run: npm install --global npm@11
-
-      - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
+      - name: Validate release state
+        run: bun check
 
       - name: Build packages
         run: bun run build
@@ -128,21 +74,21 @@ jobs:
 
       - name: Push release tag
         run: |
-          if git ls-remote --exit-code --tags origin "refs/tags/v${{ needs.prepare.outputs.release_version }}" >/dev/null 2>&1; then
-            echo "Tag v${{ needs.prepare.outputs.release_version }} already exists; skipping."
+          if git ls-remote --exit-code --tags origin "refs/tags/v${{ steps.version.outputs.release_version }}" >/dev/null 2>&1; then
+            echo "Tag v${{ steps.version.outputs.release_version }} already exists; skipping."
             exit 0
           fi
 
-          git tag "v${{ needs.prepare.outputs.release_version }}"
-          git push origin "v${{ needs.prepare.outputs.release_version }}"
+          git tag "v${{ steps.version.outputs.release_version }}"
+          git push origin "v${{ steps.version.outputs.release_version }}"
 
       - name: Create GitHub release
         run: |
-          if gh release view "v${{ needs.prepare.outputs.release_version }}" >/dev/null 2>&1; then
-            echo "GitHub release v${{ needs.prepare.outputs.release_version }} already exists; skipping."
+          if gh release view "v${{ steps.version.outputs.release_version }}" >/dev/null 2>&1; then
+            echo "GitHub release v${{ steps.version.outputs.release_version }} already exists; skipping."
             exit 0
           fi
 
-          gh release create "v${{ needs.prepare.outputs.release_version }}" --generate-notes --verify-tag
+          gh release create "v${{ steps.version.outputs.release_version }}" --generate-notes --verify-tag
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

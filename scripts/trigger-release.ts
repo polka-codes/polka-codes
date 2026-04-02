@@ -1,33 +1,37 @@
 #!/usr/bin/env bun
 
 import { spawnSync } from 'node:child_process'
-
-type BumpType = 'patch' | 'minor' | 'major'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 
 type ParsedArgs = {
-  bump: BumpType
+  ref: string
   version: string | null
 }
 
 const usage = `Usage:
-  bun release
-  bun release patch
-  bun release minor
-  bun release major
-  bun release 1.2.3
-  bun release --bump patch
-  bun release --version 1.2.3`
-
-function isBumpType(value: string): value is BumpType {
-  return value === 'patch' || value === 'minor' || value === 'major'
-}
+  bun release:publish
+  bun release:publish 1.2.3
+  bun release:publish --version 1.2.3
+  bun release:publish --ref master`
 
 function isSemver(value: string): boolean {
   return /^\d+\.\d+\.\d+$/.test(value)
 }
 
+function readCurrentVersion(): string {
+  const packageJsonPath = resolve(import.meta.dir, '..', 'packages', 'core', 'package.json')
+  const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8')) as { version?: unknown }
+
+  if (typeof packageJson.version !== 'string' || !isSemver(packageJson.version)) {
+    throw new Error(`Could not determine release version from ${packageJsonPath}`)
+  }
+
+  return packageJson.version
+}
+
 function parseArgs(argv: string[]): ParsedArgs {
-  let bump: BumpType = 'patch'
+  let ref = 'master'
   let version: string | null = null
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -38,13 +42,13 @@ function parseArgs(argv: string[]): ParsedArgs {
       process.exit(0)
     }
 
-    if (argument === '--bump') {
+    if (argument === '--ref') {
       const value = argv[index + 1]
-      if (!value || !isBumpType(value)) {
-        throw new Error('`--bump` must be one of: patch, minor, major')
+      if (!value) {
+        throw new Error('`--ref` requires a git ref value')
       }
 
-      bump = value
+      ref = value
       index += 1
       continue
     }
@@ -60,31 +64,21 @@ function parseArgs(argv: string[]): ParsedArgs {
       continue
     }
 
-    if (isBumpType(argument)) {
-      bump = argument
-      continue
-    }
-
     if (isSemver(argument)) {
       version = argument
       continue
     }
 
-    throw new Error(`Unknown release argument: ${argument}\n\n${usage}`)
+    throw new Error(`Unknown release:publish argument: ${argument}\n\n${usage}`)
   }
 
-  return { bump, version }
+  return { ref, version }
 }
 
 function main(): void {
-  const { bump, version } = parseArgs(Bun.argv.slice(2))
-  const command = ['workflow', 'run', 'release.yml', '--ref', 'master']
-
-  if (version) {
-    command.push('-f', `version=${version}`)
-  } else {
-    command.push('-f', `bump=${bump}`)
-  }
+  const { ref, version } = parseArgs(Bun.argv.slice(2))
+  const releaseVersion = version ?? readCurrentVersion()
+  const command = ['workflow', 'run', 'release.yml', '--ref', ref, '-f', `version=${releaseVersion}`]
 
   const result = spawnSync('gh', command, { stdio: 'inherit' })
   if (result.status !== 0) {
