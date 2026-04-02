@@ -165,6 +165,14 @@ async function ensureMasterBranch(): Promise<void> {
   }
 }
 
+async function ensureNpmAuth(): Promise<void> {
+  const whoami = await shell`npm whoami --registry=${NPM_REGISTRY_URL}`.quiet().nothrow()
+
+  if (whoami.exitCode !== 0) {
+    throw new Error('npm authentication is not configured. Run `npm login` or configure `NPM_CONFIG_TOKEN` before releasing.')
+  }
+}
+
 async function hasStagedChanges(paths: string[]): Promise<boolean> {
   const diff = await shell`git diff --cached --quiet -- ${paths}`.quiet().nothrow()
 
@@ -183,11 +191,14 @@ async function sleep(milliseconds: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, milliseconds))
 }
 
+async function isVersionPublished(packageName: string, version: string): Promise<boolean> {
+  const publishedVersion = await shell`npm view ${`${packageName}@${version}`} version --registry=${NPM_REGISTRY_URL}`.quiet().nothrow()
+  return publishedVersion.exitCode === 0 && publishedVersion.stdout.toString().trim() === version
+}
+
 async function waitForPublishedVersion(packageName: string, version: string): Promise<void> {
   for (let attempt = 1; attempt <= PUBLISH_VISIBILITY_RETRY_COUNT; attempt += 1) {
-    const publishedVersion = await shell`npm view ${`${packageName}@${version}`} version --registry=${NPM_REGISTRY_URL}`.quiet().nothrow()
-
-    if (publishedVersion.exitCode === 0 && publishedVersion.stdout.toString().trim() === version) {
+    if (await isVersionPublished(packageName, version)) {
       return
     }
 
@@ -211,9 +222,16 @@ async function prepareAndPublishPackage(packageDir: string, version: string, wor
     const preparedDirectory = await preparePublishDirectory(packageDir, version, tempRoot, workspacePackageNames)
     const packageJson = await readPackageJson(join(preparedDirectory, 'package.json'))
 
+    if (await isVersionPublished(packageJson.name, version)) {
+      console.log(`${packageJson.name}@${version} is already published; skipping.`)
+      return
+    }
+
     console.log(`Publishing ${packageJson.name}@${version}...`)
 
-    const publishResult = await $.cwd(preparedDirectory)`bun publish --access public --ignore-scripts --tolerate-republish`.nothrow()
+    const publishResult = await $.cwd(
+      preparedDirectory,
+    )`npm publish --access public --ignore-scripts --registry=${NPM_REGISTRY_URL}`.nothrow()
     if (publishResult.exitCode !== 0) {
       const stderr = publishResult.stderr.toString().trim()
       const stdout = publishResult.stdout.toString().trim()
@@ -236,6 +254,7 @@ async function main(): Promise<void> {
 
   await ensureCleanWorktree()
   await ensureMasterBranch()
+  await ensureNpmAuth()
   await shell`git pull`
 
   await updateWorkspaceVersions(version)
