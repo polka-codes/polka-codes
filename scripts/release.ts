@@ -1,11 +1,13 @@
 #!/usr/bin/env bun
 
+import { spawnSync } from 'node:child_process'
 import { existsSync, readdirSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 
 type DependencyField = 'dependencies' | 'devDependencies' | 'optionalDependencies' | 'peerDependencies'
 type BumpType = 'patch' | 'minor' | 'major'
 type PackageDependencies = Record<string, string>
+type SpawnStdIo = 'inherit' | 'pipe'
 
 type PackageJson = {
   name: string
@@ -21,6 +23,12 @@ type PackageJson = {
 type ParsedArgs = {
   bump: BumpType
   version: string | null
+}
+
+type PreparedRelease = {
+  didBump: boolean
+  packageJsonPaths: string[]
+  version: string
 }
 
 const dependencyFields: DependencyField[] = ['dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies']
@@ -163,13 +171,78 @@ function rewriteInternalDependencyVersions(
   )
 }
 
-async function main(): Promise<void> {
-  const { bump, version } = parseArgs(Bun.argv.slice(2))
+function runCommand(command: string, args: string[], stdio: SpawnStdIo = 'pipe'): string {
+  const result = spawnSync(command, args, { encoding: 'utf8', stdio })
+
+  if (result.status !== 0) {
+    const output = result.stderr?.trim() || result.stdout?.trim()
+    throw new Error(output || `${command} ${args.join(' ')} failed`)
+  }
+
+  return result.stdout?.trim() ?? ''
+}
+
+function ensureCleanWorkspace(): void {
+  const status = runCommand('git', ['status', '--short'])
+  if (status) {
+    throw new Error('Workspace must be clean before release.')
+  }
+}
+
+function ensureGhAuth(): void {
+  runCommand('gh', ['auth', 'status'], 'inherit')
+}
+
+function readCurrentBranch(): string {
+  const currentBranch = runCommand('git', ['rev-parse', '--abbrev-ref', 'HEAD'])
+
+  if (!currentBranch || currentBranch === 'HEAD') {
+    throw new Error('Release must be run from a branch, not a detached HEAD.')
+  }
+
+  return currentBranch
+}
+
+function hasUpstream(): boolean {
+  const result = spawnSync('git', ['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{upstream}'], {
+    encoding: 'utf8',
+    stdio: 'pipe',
+  })
+
+  return result.status === 0
+}
+
+function stageAndCommit(packageJsonPaths: string[], version: string): void {
+  runCommand('git', ['add', ...packageJsonPaths], 'inherit')
+  runCommand('git', ['commit', '-m', `chore: release ${version}`], 'inherit')
+}
+
+function pushCurrentBranch(branch: string): void {
+  if (hasUpstream()) {
+    runCommand('git', ['push'], 'inherit')
+    return
+  }
+
+  runCommand('git', ['push', '--set-upstream', 'origin', branch], 'inherit')
+}
+
+function triggerReleaseWorkflow(branch: string, version: string): void {
+  runCommand('bun', ['run', 'scripts/trigger-release.ts', '--ref', branch, '--version', version], 'inherit')
+}
+
+async function prepareRelease({ bump, version }: ParsedArgs): Promise<PreparedRelease> {
   const packageDirs = listPublishablePackageDirs()
-  const packageJsonPaths = packageDirs.map((packageDir) => join(packageDir, 'package.json'))
-  const packageJsons = await Promise.all(packageJsonPaths.map((packageJsonPath) => readPackageJson(packageJsonPath)))
-  const publishablePackages = packageJsons.filter((packageJson) => packageJson.private !== true)
-  const currentVersions = new Set(publishablePackages.map((packageJson) => packageJson.version))
+  const workspacePackages = await Promise.all(
+    packageDirs.map(async (packageDir) => {
+      const packageJsonPath = join(packageDir, 'package.json')
+      return {
+        packageJson: await readPackageJson(packageJsonPath),
+        packageJsonPath,
+      }
+    }),
+  )
+  const publishablePackages = workspacePackages.filter(({ packageJson }) => packageJson.private !== true)
+  const currentVersions = new Set(publishablePackages.map(({ packageJson }) => packageJson.version))
 
   if (currentVersions.size !== 1) {
     throw new Error(`Expected publishable packages to share one version, found: ${Array.from(currentVersions).join(', ')}`)
@@ -177,25 +250,23 @@ async function main(): Promise<void> {
 
   const currentVersion = Array.from(currentVersions)[0] as string
   const nextVersion = version ?? bumpVersion(currentVersion, bump)
-  const workspacePackageNames = new Set(publishablePackages.map((packageJson) => packageJson.name))
+  const workspacePackageNames = new Set(publishablePackages.map(({ packageJson }) => packageJson.name))
 
   if (compareSemver(nextVersion, currentVersion) < 0) {
     throw new Error(`Release version ${nextVersion} is lower than current version ${currentVersion}`)
   }
 
+  const publishablePackageJsonPaths = publishablePackages.map(({ packageJsonPath }) => packageJsonPath)
+
   if (nextVersion === currentVersion) {
-    console.log(`Release version is already ${nextVersion}; no version bump needed.`)
-    return
+    return {
+      didBump: false,
+      packageJsonPaths: publishablePackageJsonPaths,
+      version: nextVersion,
+    }
   }
 
-  for (let index = 0; index < packageJsons.length; index += 1) {
-    const packageJson = packageJsons[index]
-    const packageJsonPath = packageJsonPaths[index]
-
-    if (packageJson.private === true) {
-      continue
-    }
-
+  for (const { packageJson, packageJsonPath } of publishablePackages) {
     const nextPackageJson: PackageJson = {
       ...packageJson,
       version: nextVersion,
@@ -208,7 +279,33 @@ async function main(): Promise<void> {
     writePackageJson(packageJsonPath, nextPackageJson)
   }
 
-  console.log(`Prepared release version ${nextVersion}. Commit and merge these package.json changes, then run \`bun release:publish\`.`)
+  return {
+    didBump: true,
+    packageJsonPaths: publishablePackageJsonPaths,
+    version: nextVersion,
+  }
+}
+
+async function main(): Promise<void> {
+  const parsedArgs = parseArgs(Bun.argv.slice(2))
+
+  ensureCleanWorkspace()
+  ensureGhAuth()
+
+  const branch = readCurrentBranch()
+  const preparedRelease = await prepareRelease(parsedArgs)
+
+  if (preparedRelease.didBump) {
+    console.log(`Prepared release version ${preparedRelease.version}.`)
+    stageAndCommit(preparedRelease.packageJsonPaths, preparedRelease.version)
+  } else {
+    console.log(`Release version is already ${preparedRelease.version}; no version bump needed.`)
+  }
+
+  pushCurrentBranch(branch)
+  triggerReleaseWorkflow(branch, preparedRelease.version)
+
+  console.log(`Triggered release workflow for ${preparedRelease.version} from ${branch}.`)
 }
 
 await main().catch((error: unknown) => {

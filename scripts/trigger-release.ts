@@ -13,10 +13,20 @@ const usage = `Usage:
   bun release:publish
   bun release:publish 1.2.3
   bun release:publish --version 1.2.3
-  bun release:publish --ref master`
+  bun release:publish --ref my-branch`
 
 function isSemver(value: string): boolean {
   return /^\d+\.\d+\.\d+$/.test(value)
+}
+
+function runGit(args: string[]): string {
+  const result = spawnSync('git', args, { encoding: 'utf8' })
+
+  if (result.status !== 0) {
+    throw new Error(result.stderr?.trim() || `git ${args.join(' ')} failed`)
+  }
+
+  return result.stdout.trim()
 }
 
 function readCurrentVersion(): string {
@@ -30,8 +40,18 @@ function readCurrentVersion(): string {
   return packageJson.version
 }
 
+function readCurrentRef(): string {
+  const currentRef = runGit(['rev-parse', '--abbrev-ref', 'HEAD'])
+
+  if (!currentRef || currentRef === 'HEAD') {
+    throw new Error('Release publish must be run from a branch, not a detached HEAD.')
+  }
+
+  return currentRef
+}
+
 function parseArgs(argv: string[]): ParsedArgs {
-  let ref = 'master'
+  let ref: string | null = null
   let version: string | null = null
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -72,7 +92,7 @@ function parseArgs(argv: string[]): ParsedArgs {
     throw new Error(`Unknown release:publish argument: ${argument}\n\n${usage}`)
   }
 
-  return { ref, version }
+  return { ref: ref ?? readCurrentRef(), version }
 }
 
 function main(): void {

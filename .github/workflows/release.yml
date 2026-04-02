@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: Expected version already merged on master
+        description: Expected version on the selected git ref
         required: true
         type: string
 
@@ -25,13 +25,6 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-
-      - name: Ensure release runs from master
-        run: |
-          if [ "${{ github.ref_name }}" != "master" ]; then
-            echo "Release workflow must run from master, got ${{ github.ref_name }}."
-            exit 1
-          fi
 
       - name: Set up Node.js
         uses: actions/setup-node@v6
