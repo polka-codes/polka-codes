@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 
+import { spawnSync } from 'node:child_process'
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, join, resolve, sep } from 'node:path'
@@ -168,8 +169,28 @@ async function ensureMasterBranch(): Promise<void> {
 async function ensureNpmAuth(): Promise<void> {
   const whoami = await shell`npm whoami --registry=${NPM_REGISTRY_URL}`.quiet().nothrow()
 
-  if (whoami.exitCode !== 0) {
+  if (whoami.exitCode === 0) {
+    return
+  }
+
+  if (!process.stdin.isTTY || !process.stdout.isTTY) {
     throw new Error('npm authentication is not configured. Run `npm login` or configure `NPM_CONFIG_TOKEN` before releasing.')
+  }
+
+  console.log('npm authentication is missing. Starting `npm login`...')
+
+  const login = spawnSync('npm', ['login', '--registry', NPM_REGISTRY_URL], {
+    cwd: projectRoot,
+    stdio: 'inherit',
+  })
+
+  if (login.status !== 0) {
+    throw new Error('`npm login` did not complete successfully.')
+  }
+
+  const authenticatedWhoami = await shell`npm whoami --registry=${NPM_REGISTRY_URL}`.quiet().nothrow()
+  if (authenticatedWhoami.exitCode !== 0) {
+    throw new Error('`npm login` completed, but npm authentication is still unavailable.')
   }
 }
 
