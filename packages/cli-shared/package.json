@@ -3,6 +3,11 @@
   "version": "0.10.16",
   "license": "AGPL-3.0",
   "author": "github@polka.codes",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/polka-codes/polka-codes.git",
+    "directory": "packages/cli-shared"
+  },
   "type": "module",
   "exports": {
     ".": {

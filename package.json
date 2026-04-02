@@ -1,6 +1,10 @@
 {
   "name": "polka-codes",
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/polka-codes/polka-codes.git"
+  },
   "workspaces": [
     "packages/*"
   ],
