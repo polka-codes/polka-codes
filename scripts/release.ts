@@ -23,6 +23,9 @@ const dependencyFields: DependencyField[] = ['dependencies', 'devDependencies', 
 const projectRoot = resolve(import.meta.dir, '..')
 const shell = $.cwd(projectRoot)
 const RELEASE_BRANCH = process.env.RELEASE_BRANCH || 'master'
+const NPM_REGISTRY_URL = 'https://registry.npmjs.org/'
+const PUBLISH_VISIBILITY_RETRY_COUNT = 12
+const PUBLISH_VISIBILITY_RETRY_DELAY_MS = 5_000
 
 async function readPackageJson(packageJsonPath: string): Promise<PackageJson> {
   return (await Bun.file(packageJsonPath).json()) as PackageJson
@@ -162,6 +165,43 @@ async function ensureMasterBranch(): Promise<void> {
   }
 }
 
+async function hasStagedChanges(paths: string[]): Promise<boolean> {
+  const diff = await shell`git diff --cached --quiet -- ${paths}`.quiet().nothrow()
+
+  if (diff.exitCode === 0) {
+    return false
+  }
+
+  if (diff.exitCode === 1) {
+    return true
+  }
+
+  throw new Error(`Failed to inspect staged changes: ${diff.stderr.toString().trim()}`)
+}
+
+async function sleep(milliseconds: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, milliseconds))
+}
+
+async function waitForPublishedVersion(packageName: string, version: string): Promise<void> {
+  for (let attempt = 1; attempt <= PUBLISH_VISIBILITY_RETRY_COUNT; attempt += 1) {
+    const publishedVersion = await shell`npm view ${`${packageName}@${version}`} version --registry=${NPM_REGISTRY_URL}`.quiet().nothrow()
+
+    if (publishedVersion.exitCode === 0 && publishedVersion.stdout.toString().trim() === version) {
+      return
+    }
+
+    if (attempt < PUBLISH_VISIBILITY_RETRY_COUNT) {
+      console.log(
+        `Waiting for ${packageName}@${version} to become visible in the npm registry (${attempt}/${PUBLISH_VISIBILITY_RETRY_COUNT})...`,
+      )
+      await sleep(PUBLISH_VISIBILITY_RETRY_DELAY_MS)
+    }
+  }
+
+  throw new Error(`Timed out waiting for ${packageName}@${version} to become visible in ${NPM_REGISTRY_URL}`)
+}
+
 async function prepareAndPublishPackage(packageDir: string, version: string, workspacePackageNames: ReadonlySet<string>): Promise<void> {
   const tempRoot = mkdtempSync(join(tmpdir(), 'polka-release-'))
 
@@ -169,9 +209,21 @@ async function prepareAndPublishPackage(packageDir: string, version: string, wor
     // Bun resolves workspace:* dependencies from bun.lock, but we need exact versions
     // for published packages. Create a rewritten copy with pinned versions.
     const preparedDirectory = await preparePublishDirectory(packageDir, version, tempRoot, workspacePackageNames)
-    const tarball = (await $.cwd(preparedDirectory)`npm pack --ignore-scripts --silent`.quiet().text()).trim()
+    const packageJson = await readPackageJson(join(preparedDirectory, 'package.json'))
 
-    await shell`bun publish --access public ${join(preparedDirectory, tarball)}`
+    console.log(`Publishing ${packageJson.name}@${version}...`)
+
+    const publishResult = await $.cwd(preparedDirectory)`bun publish --access public --ignore-scripts --tolerate-republish`.nothrow()
+    if (publishResult.exitCode !== 0) {
+      const stderr = publishResult.stderr.toString().trim()
+      const stdout = publishResult.stdout.toString().trim()
+      const output = stderr || stdout
+      throw new Error(
+        `Failed to publish ${packageJson.name}@${version}.${output ? ` ${output}` : ''} Check npm authentication and scope access before retrying.`,
+      )
+    }
+
+    await waitForPublishedVersion(packageJson.name, version)
   } finally {
     rmSync(tempRoot, { force: true, recursive: true })
   }
@@ -190,8 +242,14 @@ async function main(): Promise<void> {
   console.log(`Version bumped to ${version} in all package.json files under packages directory`)
 
   const allPackages = listWorkspacePackageDirs()
-  await shell`git add ${allPackages.map((packageDir) => `${packageDir}/package.json`)}`
-  await shell`git commit -m ${`chore: release ${version}`}`
+  const packageJsonPaths = allPackages.map((packageDir) => `${packageDir}/package.json`)
+  await shell`git add ${packageJsonPaths}`
+
+  if (await hasStagedChanges(packageJsonPaths)) {
+    await shell`git commit -m ${`chore: release ${version}`}`
+  } else {
+    console.log(`Package versions are already set to ${version}; skipping release version commit.`)
+  }
 
   await shell`bun run clean`
   await shell`bun run build`
