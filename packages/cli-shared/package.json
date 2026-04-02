@@ -22,7 +22,8 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsc --build && tsup src/index.ts --format esm"
+    "build": "tsc --build && tsup src/index.ts --format esm && bun run build:copy-wasm",
+    "build:copy-wasm": "mkdir -p dist && cp ../../node_modules/sql.js/dist/sql-wasm.wasm dist/"
   },
   "dependencies": {
     "@ai-sdk/google-vertex": "^4.0.98",

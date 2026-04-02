@@ -230,14 +230,17 @@ export type { MemoryEntry, MemoryOperation, MemoryQuery, QueryOptions }
 let SqlJs: SqlJsStatic | null = null
 let SqlJsInitPromise: Promise<SqlJsStatic> | null = null
 
+// Check for bundled WASM file once at module initialization
+const moduleDir = dirname(fileURLToPath(import.meta.url))
+const bundledWasmPath = resolve(moduleDir, 'sql-wasm.wasm')
+const hasBundledWasm = existsSync(bundledWasmPath)
+
 /**
  * Initialize sql.js WASM module (singleton)
  *
- * The WASM file location is resolved by trying multiple paths in order:
- * 1. Same directory as this module (when CLI is installed: dist/sql-wasm.wasm)
- * 2. Parent directory's dist (when running from monorepo source)
- * 3. node_modules/sql.js/dist/sql-wasm.wasm (development mode)
- * 4. Absolute path from cwd (fallback)
+ * The WASM file location is resolved using sql.js's built-in Node.js resolution.
+ * When bundled with this package, we use our bundled copy; otherwise we let sql.js
+ * find its own WASM file in node_modules.
  */
 async function getSqlJs(): Promise<SqlJsStatic> {
   if (SqlJs) {
@@ -247,35 +250,25 @@ async function getSqlJs(): Promise<SqlJsStatic> {
     return SqlJsInitPromise
   }
 
-  // Build a list of candidate paths to try
-  const moduleDir = dirname(fileURLToPath(import.meta.url))
-  const candidates = [
-    // Same directory as the bundled module (published CLI: dist/sql-wasm.wasm)
-    resolve(moduleDir, 'sql-wasm.wasm'),
-    // Development: CLI's dist directory from source
-    resolve(moduleDir, '..', 'dist', 'sql-wasm.wasm'),
-    // Development: sql.js in local node_modules
-    resolve(moduleDir, '..', 'node_modules', 'sql.js', 'dist', 'sql-wasm.wasm'),
-    // Workspace monorepo: node_modules at root
-    resolve(moduleDir, '..', '..', '..', 'node_modules', 'sql.js', 'dist', 'sql-wasm.wasm'),
-    // Absolute path from cwd (for when CLI is run from project root)
-    resolve(process.cwd(), 'node_modules', 'sql.js', 'dist', 'sql-wasm.wasm'),
-  ]
-
-  SqlJsInitPromise = initSqlJs({
-    locateFile: (file: string) => {
-      // Try each candidate path
-      for (const candidate of candidates) {
-        if (existsSync(candidate)) {
-          return candidate
+  try {
+    SqlJsInitPromise = initSqlJs({
+      locateFile: (filename: string, prefix: string) => {
+        if (hasBundledWasm) {
+          return bundledWasmPath
         }
-      }
-      // Fall back to default behavior (node_modules resolution)
-      return file
-    },
-  })
-  SqlJs = await SqlJsInitPromise
-  return SqlJs
+        return prefix + filename
+      },
+    })
+    SqlJs = await SqlJsInitPromise
+    return SqlJs
+  } catch (error) {
+    throw new Error(
+      `Failed to initialize sql.js: ${error instanceof Error ? error.message : String(error)}\n\n` +
+        `Attempted to locate WASM at:\n` +
+        `  - ${bundledWasmPath}\n\n` +
+        `If you're developing, run: bun run build in packages/cli-shared`,
+    )
+  }
 }
 
 /**
