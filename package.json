@@ -12,6 +12,7 @@
     "fix": "biome check --write --unsafe",
     "check": "tsc --noEmit && biome check",
     "changeset": "changeset",
+    "release:publish": "bun run build && bunx changeset publish",
     "typecheck": "tsc --noEmit",
     "version-packages": "changeset version",
     "prepare": "husky",
