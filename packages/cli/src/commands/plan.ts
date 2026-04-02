@@ -9,6 +9,8 @@ export const planCommand = new Command('plan')
   .argument('[task]', 'The task to plan.')
   .option('-p, --plan-file <path>', 'The path to the plan file.')
   .action(async (task: string | undefined, options: { planFile?: string }, command: Command) => {
+    const workflowOpts = getBaseWorkflowOptions(command)
+
     let taskInput = task
     let fileContent: string | undefined
     if (options.planFile) {
@@ -26,12 +28,10 @@ export const planCommand = new Command('plan')
       }
 
       if (!taskInput.trim()) {
-        console.log('No task provided. Exiting...')
+        workflowOpts.logger.info('No task provided. Exiting...')
         return
       }
     }
-
-    const workflowOpts = getBaseWorkflowOptions(command)
 
     await plan({
       task: taskInput,

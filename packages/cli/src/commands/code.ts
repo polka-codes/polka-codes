@@ -51,6 +51,8 @@ export async function runCode(task: string | undefined, _options: any, command: 
     taskInput = stdin
   }
 
+  const workflowOpts = getBaseWorkflowOptions(command)
+
   const { file: files } = await parseOptions(command.opts(), { commandName: 'code' })
 
   const fileContents: (JsonFilePart | JsonImagePart)[] = []
@@ -75,10 +77,10 @@ export async function runCode(task: string | undefined, _options: any, command: 
             })
           }
         } else {
-          console.warn(`Unknown mime type for file: ${file}`)
+          workflowOpts.logger.warn(`Unknown mime type for file: ${file}`)
         }
       } catch (error) {
-        console.error(`Error reading file '${file}': ${(error as Error).message}`)
+        workflowOpts.logger.error(`Error reading file '${file}': ${(error as Error).message}`)
       }
     }
   }
@@ -95,12 +97,9 @@ export async function runCode(task: string | undefined, _options: any, command: 
   }
 
   if (!taskInput) {
-    // This should not happen based on the logic above, but as a safeguard:
-    console.error('No task provided. Aborting.')
+    workflowOpts.logger.error('No task provided. Aborting.')
     return
   }
-
-  const workflowOpts = getBaseWorkflowOptions(command)
 
   await code({
     task: taskInput,

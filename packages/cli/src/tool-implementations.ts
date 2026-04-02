@@ -357,8 +357,7 @@ async function generateText(input: { messages: JsonModelMessage[]; tools: ToolSe
 
       await stream.consumeStream({
         onError: (error) => {
-          // Log stream errors but don't throw - let the main error handler deal with it
-          console.error('Error in stream:', error)
+          context.workflowContext.logger.error('Error in stream:', error)
           lastError = error instanceof Error ? error : new Error(String(error))
         },
       })
@@ -369,12 +368,12 @@ async function generateText(input: { messages: JsonModelMessage[]; tools: ToolSe
       // Handle AbortError (timeouts and repetition)
       if (error instanceof Error && error.name === 'AbortError') {
         if (repetitionDetected) {
-          console.warn('Repetition detected, retrying...')
+          context.workflowContext.logger.warn('Repetition detected, retrying...')
           lastError = new Error('Repetition detected in model output')
           continue
         }
         // This is a timeout
-        console.warn(`Request timed out after ${requestTimeoutSeconds} seconds, retrying...`)
+        context.workflowContext.logger.warn(`Request timed out after ${requestTimeoutSeconds} seconds, retrying...`)
         lastError = new ProviderTimeoutError(model.provider, model.modelId, requestTimeoutSeconds)
         continue
       }
@@ -395,11 +394,11 @@ async function generateText(input: { messages: JsonModelMessage[]; tools: ToolSe
 
         // Only retry if error is retryable
         if (providerError.retryable && (statusCode === 429 || statusCode >= 500)) {
-          console.warn(`${providerError.message} (attempt ${i + 1}/${retryCount})`)
+          context.workflowContext.logger.warn(`${providerError.message} (attempt ${i + 1}/${retryCount})`)
           lastError = providerError
 
           const backoff = computeRateLimitBackoffSeconds(i)
-          console.debug(`Waiting ${backoff}s before retry...`)
+          context.workflowContext.logger.debug(`Waiting ${backoff}s before retry...`)
           await new Promise((resolve) => setTimeout(resolve, backoff * 1000))
           continue
         }
@@ -412,13 +411,13 @@ async function generateText(input: { messages: JsonModelMessage[]; tools: ToolSe
       if (error instanceof Error) {
         // Check for network errors
         if (error.message.includes('ECONNREFUSED') || error.message.includes('ENOTFOUND') || error.message.includes('ETIMEDOUT')) {
-          console.warn(`Network error: ${error.message}, retrying...`)
+          context.workflowContext.logger.warn(`Network error: ${error.message}, retrying...`)
           lastError = error
           continue
         }
 
         // Unknown error - save and continue to retry
-        console.warn(`Unexpected error: ${error.message}, retrying...`)
+        context.workflowContext.logger.warn(`Unexpected error: ${error.message}, retrying...`)
         lastError = error
         continue
       }

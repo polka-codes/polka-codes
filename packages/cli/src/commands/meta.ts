@@ -69,7 +69,6 @@ export async function runMeta(task: string | undefined, command: Command) {
     const result = await runWorkflow(metaWorkflow, workflowInput, {
       commandName: 'meta',
       context: workflowOpts,
-      logger,
       ...workflowOpts,
     })
 
@@ -122,7 +121,6 @@ export async function runMeta(task: string | undefined, command: Command) {
   const result = await runWorkflow(metaWorkflow, workflowInput, {
     commandName: 'meta',
     context: workflowOpts,
-    logger,
     ...workflowOpts,
   })
 

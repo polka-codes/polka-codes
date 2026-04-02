@@ -4,6 +4,9 @@ import type { Writable } from 'node:stream'
 import { formatWithOptions } from 'node:util'
 import type { Logger } from '@polka-codes/core'
 
+// Re-export Logger type for convenience
+export type { Logger }
+
 function createStreamConsole(stdout: Writable, stderr: Writable) {
   const isStdoutTTY = 'isTTY' in stdout && (stdout as { isTTY?: boolean }).isTTY
   const isStderrTTY = 'isTTY' in stderr && (stderr as { isTTY?: boolean }).isTTY

@@ -85,6 +85,8 @@ process.on('uncaughtException', (error) => {
     process.exit(0)
   } else {
     // Log error and exit with code 1
+    // Note: We use console.error here since logger may not be available in all contexts
+    // and this is a last-resort error handler
     console.error('Uncaught exception:', error)
     process.exit(1)
   }

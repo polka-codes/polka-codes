@@ -2,7 +2,9 @@
  * Shared utilities for command-line command handlers
  */
 
+import type { Logger } from '@polka-codes/core'
 import type { Command } from 'commander'
+import { createLogger } from '../logger'
 import type { CliOptions } from '../options'
 
 /**
@@ -40,10 +42,16 @@ export function getGlobalOptions(command: Command): CliOptions {
  * })
  * ```
  */
-export function getBaseWorkflowOptions(command: Command): CliOptions & { interactive: boolean } {
+export function getBaseWorkflowOptions(command: Command): CliOptions & { interactive: boolean; logger: Logger } {
   const globalOpts = getGlobalOptions(command)
+  const verbose = globalOpts.silent ? -1 : (globalOpts.verbose ?? 0)
+
+  // Create logger
+  const logger: Logger = createLogger({ verbose })
+
   return {
     interactive: !globalOpts.yes,
     ...globalOpts,
+    logger,
   }
 }
