@@ -1,1 +1,1 @@
-export * from './replaceInFile'
+export * from './replaceInFile.js'

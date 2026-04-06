@@ -1,6 +1,6 @@
-export { PricingService } from './pricing-service'
+export { PricingService } from './pricing-service.js'
 export type {
   ModelInfo,
   PortkeyPricingConfig,
   PortkeyPricingResponse,
-} from './types'
+} from './types.js'

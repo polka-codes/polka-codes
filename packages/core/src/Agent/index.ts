@@ -1,2 +1,2 @@
-export * from './parseJsonFromMarkdown'
-export * from './prompts'
+export * from './parseJsonFromMarkdown.js'
+export * from './prompts.js'
