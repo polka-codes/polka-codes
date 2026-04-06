@@ -34,4 +34,29 @@ describe('eventHandler', () => {
 
     expect(stream.output).toMatchSnapshot()
   })
+
+  test('should not log global tool call stats when verbose < 0 (silent mode)', () => {
+    const stream = new TestStream()
+    const usageMeter = { getUsageText: () => '' } as any
+
+    const handleEvent = printEvent(1, usageMeter, stream)
+
+    // Generate some tool call stats
+    handleEvent({ kind: TaskEventKind.StartTask, systemPrompt: 'sys' })
+    handleEvent({ kind: TaskEventKind.ToolUse, tool: 'test-tool', params: {} })
+    handleEvent({ kind: TaskEventKind.ToolReply, tool: 'test-tool', content: { type: 'text', value: 'ok' } })
+    handleEvent({
+      kind: TaskEventKind.EndTask,
+      exitReason: { type: 'Exit', message: 'done', messages: [] },
+    })
+
+    // Clear output to focus on global stats
+    stream.output = ''
+
+    // Call with verbose < 0 (silent mode)
+    logGlobalToolCallStats(stream, -1)
+
+    // Should not output anything
+    expect(stream.output).toBe('')
+  })
 })

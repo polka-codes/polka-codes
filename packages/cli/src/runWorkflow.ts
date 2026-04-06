@@ -402,6 +402,6 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
     }
     // Disconnect MCP servers
     await mcpManager.disconnectAll()
-    logGlobalToolCallStats(process.stderr)
+    logGlobalToolCallStats(process.stderr, verbose)
   }
 }

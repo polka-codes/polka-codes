@@ -46,7 +46,10 @@ const mergeToolCallStats = (a: Map<string, ToolStat>, b: Map<string, ToolStat>) 
   return merged
 }
 
-export function logGlobalToolCallStats(stream: Writable) {
+export function logGlobalToolCallStats(stream: Writable, verbose: number = 0) {
+  if (verbose < 0) {
+    return
+  }
   const merged = mergeToolCallStats(globalToolCallStats, taskToolCallStats)
 
   logToolCallStats(stream, merged, 'Global Tool Call Stats')
