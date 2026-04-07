@@ -1,4 +1,4 @@
-import type { ToolResponseResult } from '../tool'
+import type { ToolResponseResult } from '../tool.js'
 import type { JsonModelMessage } from './json-ai-types'
 
 /**

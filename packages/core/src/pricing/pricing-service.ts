@@ -2,9 +2,9 @@ import { randomUUID } from 'node:crypto'
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { convertPortkeyToModelInfo } from './converter'
-import { fetchPricing } from './portkey-client'
-import type { ModelInfo } from './types'
+import { convertPortkeyToModelInfo } from './converter.js'
+import { fetchPricing } from './portkey-client.js'
+import type { ModelInfo } from './types.js'
 
 interface CachedPricing {
   pricing: ModelInfo

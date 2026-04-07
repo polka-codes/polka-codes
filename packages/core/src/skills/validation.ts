@@ -1,7 +1,7 @@
 import { join, normalize } from 'node:path'
-import { SKILL_LIMITS, SUSPICIOUS_PATTERNS } from './constants'
-import type { Skill } from './types'
-import { SkillValidationError } from './types'
+import { SKILL_LIMITS, SUSPICIOUS_PATTERNS } from './constants.js'
+import type { Skill } from './types.js'
+import { SkillValidationError } from './types.js'
 
 /**
  * Validate a skill's security constraints

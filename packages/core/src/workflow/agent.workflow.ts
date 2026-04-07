@@ -3,11 +3,11 @@
 import type { LanguageModelV3ToolResultOutput } from '@ai-sdk/provider'
 import { jsonSchema, type ToolCallPart, type ToolSet } from 'ai'
 import { toJSONSchema, z } from 'zod'
-import { parseJsonFromMarkdown } from '../Agent/parseJsonFromMarkdown'
-import type { FullToolInfo, ToolResponse } from '../tool'
+import { parseJsonFromMarkdown } from '../Agent/parseJsonFromMarkdown.js'
+import type { FullToolInfo, ToolResponse } from '../tool.js'
 import type { JsonModelMessage, JsonResponseMessage, JsonUserModelMessage } from './json-ai-types'
 import { type ExitReason, type TaskEvent, TaskEventKind } from './types'
-import type { WorkflowFn } from './workflow'
+import type { WorkflowFn } from './workflow.js'
 
 function isValidToolResultOutput(value: unknown): value is LanguageModelV3ToolResultOutput {
   return (

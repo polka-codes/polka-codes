@@ -2,7 +2,7 @@
 // Tool for renaming files in the filesystem
 
 import { z } from 'zod'
-import type { FullToolInfo, ToolHandler, ToolInfo } from '../tool'
+import type { FullToolInfo, ToolHandler, ToolInfo } from '../tool.js'
 import type { FilesystemProvider } from './provider'
 
 export const toolInfo = {

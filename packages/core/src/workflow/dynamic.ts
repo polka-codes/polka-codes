@@ -1,7 +1,7 @@
 import { parse } from 'yaml'
 import { z } from 'zod'
-import { parseJsonFromMarkdown } from '../Agent/parseJsonFromMarkdown'
-import type { FullToolInfo, ToolResponseResult } from '../tool'
+import { parseJsonFromMarkdown } from '../Agent/parseJsonFromMarkdown.js'
+import type { FullToolInfo, ToolResponseResult } from '../tool.js'
 import { type AgentToolRegistry, agentWorkflow } from './agent.workflow'
 import {
   type BreakStep,

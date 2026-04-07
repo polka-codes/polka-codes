@@ -1,4 +1,4 @@
-import type { PortkeyPricingResponse } from './types'
+import type { PortkeyPricingResponse } from './types.js'
 
 const PORTKEY_BASE_URL = 'https://api.portkey.ai/model-configs/pricing'
 const TIMEOUT_MS = 5000

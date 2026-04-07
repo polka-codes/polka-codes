@@ -1,5 +1,5 @@
 // Re-export from response-builders for backward compatibility
-export { createProviderErrorResponse as createProviderError } from './response-builders'
+export { createProviderErrorResponse as createProviderError } from './response-builders.js'
 
 /**
  * Simplify boolean string preprocessing

@@ -3,7 +3,7 @@
  * Eliminates duplication across 20+ tool files
  */
 
-import type { ToolResponse } from '../tool'
+import type { ToolResponse } from '../tool.js'
 
 /**
  * Create a successful tool response

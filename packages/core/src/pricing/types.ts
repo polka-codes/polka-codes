@@ -1,4 +1,4 @@
-import type { ModelInfo } from '../UsageMeter'
+import type { ModelInfo } from '../UsageMeter.js'
 
 export type { ModelInfo }
 

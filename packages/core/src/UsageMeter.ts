@@ -5,7 +5,7 @@
 
 import type { LanguageModelV3, LanguageModelV3Usage } from '@ai-sdk/provider'
 import type { LanguageModelUsage } from 'ai'
-import type { PricingService } from './pricing/index'
+import type { PricingService } from './pricing/index.js'
 
 // Zero pricing fallback constant
 const ZERO_PRICING = {

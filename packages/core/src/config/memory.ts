@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { MemoryStoreConfig } from '../memory'
+import type { MemoryStoreConfig } from '../memory/index.js'
 
 /**
  * Memory configuration schema

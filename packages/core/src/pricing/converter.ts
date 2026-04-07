@@ -1,4 +1,4 @@
-import type { ModelInfo, PortkeyPricingResponse } from './types'
+import type { ModelInfo, PortkeyPricingResponse } from './types.js'
 
 /**
  * Convert Portkey pricing (cents per token) to ModelInfo (USD per 1M tokens)

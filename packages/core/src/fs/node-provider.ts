@@ -3,7 +3,7 @@
 import { existsSync } from 'node:fs'
 import { readdir, readFile, stat } from 'node:fs/promises'
 import { join, normalize } from 'node:path'
-import type { DirectoryEntry, FileStats, FileSystemProvider, FileSystemProviderOptions } from './provider'
+import type { DirectoryEntry, FileStats, FileSystemProvider, FileSystemProviderOptions } from './provider.js'
 
 /**
  * Node.js file system provider implementation

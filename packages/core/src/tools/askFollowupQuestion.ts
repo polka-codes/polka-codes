@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { FullToolInfo, ToolHandler, ToolInfo } from '../tool'
+import type { FullToolInfo, ToolHandler, ToolInfo } from '../tool.js'
 import type { InteractionProvider } from './provider'
 
 const questionObject = z.object({

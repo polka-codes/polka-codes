@@ -1,4 +1,4 @@
-import type { TodoItem, UpdateTodoItemInput, UpdateTodoItemOutput } from './todo'
+import type { TodoItem, UpdateTodoItemInput, UpdateTodoItemOutput } from './todo.js'
 
 export type FilesystemProvider = {
   readFile?: (path: string, includeIgnored: boolean) => Promise<string | undefined>

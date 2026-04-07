@@ -1,6 +1,6 @@
 import { z } from 'zod'
-import { providerConfigSchema as baseProviderConfigSchema } from './config/base'
-import { DEFAULT_MEMORY_CONFIG, type MemoryConfig, memoryConfigSchema, resolveHomePath } from './config/memory'
+import { providerConfigSchema as baseProviderConfigSchema } from './config/base.js'
+import { DEFAULT_MEMORY_CONFIG, type MemoryConfig, memoryConfigSchema, resolveHomePath } from './config/memory.js'
 
 // Re-export base configuration patterns
 export {
@@ -14,7 +14,7 @@ export {
   providerConfigSchema,
   type ToolConfig,
   toolConfigSchema,
-} from './config/base'
+} from './config/base.js'
 
 export { DEFAULT_MEMORY_CONFIG, type MemoryConfig, memoryConfigSchema, resolveHomePath }
 

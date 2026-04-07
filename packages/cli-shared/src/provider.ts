@@ -8,9 +8,9 @@ import type { IMemoryStore, TodoItem, ToolProvider } from '@polka-codes/core'
 import { generateText, stepCountIs } from 'ai'
 import ignore from 'ignore'
 import { lookup } from 'mime-types'
-import { checkRipgrep } from './utils/checkRipgrep'
-import { listFiles } from './utils/listFiles'
-import { searchFiles } from './utils/searchFiles'
+import { checkRipgrep } from './utils/checkRipgrep.js'
+import { listFiles } from './utils/listFiles.js'
+import { searchFiles } from './utils/searchFiles.js'
 
 export interface ProviderDataStore<T> {
   read(): Promise<T | undefined>

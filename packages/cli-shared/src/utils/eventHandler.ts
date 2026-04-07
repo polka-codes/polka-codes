@@ -2,7 +2,7 @@ import { Console } from 'node:console'
 import type { Writable } from 'node:stream'
 import { type TaskEvent, TaskEventKind, type UsageMeter } from '@polka-codes/core'
 import chalk from 'chalk'
-import { simplifyToolParameters } from './parameterSimplifier'
+import { simplifyToolParameters } from './parameterSimplifier.js'
 
 type ToolStat = { calls: number; success: number; errors: number }
 const taskToolCallStats = new Map<string, ToolStat>()
