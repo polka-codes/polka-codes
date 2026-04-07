@@ -17,7 +17,7 @@
     "check": "tsc --noEmit && biome check",
     "typecheck": "tsc --noEmit",
     "prepare": "husky",
-    "clean": "rm -rf packages/*/dist packages/*/tsconfig.tsbuildinfo",
+    "clean": "rm -rf packages/*/dist packages/*/tsconfig.tsbuildinfo packages/*/.tsbuildinfo packages/*/node_modules/.cache",
     "cli": "bun run --no-check packages/cli/src/index.ts",
     "release": "bun run scripts/release.ts",
     "release:publish": "bun run scripts/trigger-release.ts",
