@@ -1,6 +1,6 @@
 {
   "name": "@polka-codes/runner",
-  "version": "0.10.21",
+  "version": "0.10.22",
   "license": "AGPL-3.0",
   "author": "github@polka.codes",
   "repository": {
@@ -26,8 +26,8 @@
   },
   "dependencies": {
     "@ai-sdk/provider": "^3.0.8",
-    "@polka-codes/cli-shared": "^0.10.21",
-    "@polka-codes/core": "^0.10.21",
+    "@polka-codes/cli-shared": "^0.10.22",
+    "@polka-codes/core": "^0.10.22",
     "commander": "^14.0.2",
     "dotenv": "^17.3.1",
     "ignore": "^7.0.5",
