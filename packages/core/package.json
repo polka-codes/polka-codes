@@ -12,7 +12,7 @@
   "exports": {
     ".": {
       "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/_tsup-dts-rollup.d.ts"
     }
   },
   "files": [
