@@ -1,6 +1,6 @@
 {
   "name": "@polka-codes/cli",
-  "version": "0.10.23",
+  "version": "0.10.24",
   "license": "AGPL-3.0",
   "author": "github@polka.codes",
   "repository": {
@@ -37,8 +37,8 @@
     "@inquirer/prompts": "^8.3.2",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@openrouter/ai-sdk-provider": "^2.3.3",
-    "@polka-codes/cli-shared": "^0.10.23",
-    "@polka-codes/core": "^0.10.23",
+    "@polka-codes/cli-shared": "^0.10.24",
+    "@polka-codes/core": "^0.10.24",
     "ai": "^6.0.142",
     "chalk": "^5.6.2",
     "commander": "^14.0.2",
