@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import type { FullToolInfo, ToolHandler, ToolInfo } from '../tool.js'
-import type { WebProvider } from './provider'
+import type { WebProvider } from './provider.js'
 
 export const toolInfo = {
   name: 'search',

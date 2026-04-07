@@ -3,7 +3,7 @@
 
 import { z } from 'zod'
 import type { FullToolInfo, ToolHandler, ToolInfo } from '../tool.js'
-import type { FilesystemProvider } from './provider'
+import type { FilesystemProvider } from './provider.js'
 
 export const toolInfo = {
   name: 'renameFile',

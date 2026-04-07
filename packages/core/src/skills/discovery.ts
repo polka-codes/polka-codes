@@ -4,9 +4,9 @@ import { parse } from 'yaml'
 import { ZodError } from 'zod'
 import type { FileSystemProvider } from '../fs/index.js'
 import { NodeFileSystemProvider } from '../fs/index.js'
-import { IGNORED_DIRECTORIES, SKILL_ERROR_MESSAGES, SKILL_LIMITS } from './constants'
-import type { Skill, SkillContext, SkillMetadata, SkillReference } from './types'
-import { SkillDiscoveryError, skillMetadataSchema } from './types'
+import { IGNORED_DIRECTORIES, SKILL_ERROR_MESSAGES, SKILL_LIMITS } from './constants.js'
+import type { Skill, SkillContext, SkillMetadata, SkillReference } from './types.js'
+import { SkillDiscoveryError, skillMetadataSchema } from './types.js'
 
 /**
  * PERFORMANCE CONSIDERATION

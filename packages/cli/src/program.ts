@@ -1,0 +1,89 @@
+// disable AI SDK Warning: The "temperature" setting is not supported by this model - temperature is not supported for reasoning models
+globalThis.AI_SDK_LOG_WARNINGS = false
+
+import 'dotenv/config'
+import { Command } from 'commander'
+import { version } from '../package.json'
+import { agentCommand } from './commands/agent'
+import { codeCommand } from './commands/code'
+import { commitCommand } from './commands/commit'
+import { fixCommand } from './commands/fix'
+import { initCommand } from './commands/init'
+import { mcpServerCommand } from './commands/mcp-server'
+import { registerMemoryCommands } from './commands/memory'
+import { runMeta } from './commands/meta'
+import { planCommand } from './commands/plan'
+import { prCommand } from './commands/pr'
+import { reviewCommand } from './commands/review'
+import { runCommand } from './commands/run'
+import { skillsCommand } from './commands/skills'
+import { taskCommand } from './commands/task'
+import { workflowCommand } from './commands/workflow'
+import { addSharedOptions } from './options'
+
+const program = new Command()
+
+program.name('polka').description('Polka Codes CLI').version(version)
+
+// Main command for executing tasks
+program.argument('[task]', 'The task to execute').action((task, _options, command) => runMeta(task, command))
+
+// Init command
+program.addCommand(initCommand)
+
+// Agent command
+program.addCommand(agentCommand)
+
+// Commit command
+program.addCommand(commitCommand)
+
+// PR command
+program.addCommand(prCommand)
+
+// Review command
+program.addCommand(reviewCommand)
+
+// Plan command
+program.addCommand(planCommand)
+
+// Code command
+program.addCommand(codeCommand)
+
+// Fix command
+program.addCommand(fixCommand)
+
+// Task command
+program.addCommand(taskCommand)
+
+// Run command
+program.addCommand(runCommand)
+
+// Skills command
+program.addCommand(skillsCommand)
+
+// MCP Server command
+program.addCommand(mcpServerCommand)
+
+program.addCommand(workflowCommand)
+
+// Memory commands
+registerMemoryCommands(program)
+
+addSharedOptions(program)
+
+export function main(argv = process.argv): void {
+  program.parse(argv)
+}
+
+process.on('uncaughtException', (error) => {
+  if (error instanceof Error && error.name === 'ExitPromptError') {
+    // User cancelled - exit gracefully
+    process.exit(0)
+  } else {
+    // Log error and exit with code 1
+    // Note: We use console.error here since logger may not be available in all contexts
+    // and this is a last-resort error handler
+    console.error('Uncaught exception:', error)
+    process.exit(1)
+  }
+})

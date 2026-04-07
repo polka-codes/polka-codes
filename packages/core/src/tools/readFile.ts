@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import type { FullToolInfo, ToolHandler, ToolInfo } from '../tool.js'
-import type { FilesystemProvider } from './provider'
-import { createFileElement, createProviderError, preprocessBoolean } from './utils'
+import type { FilesystemProvider } from './provider.js'
+import { createFileElement, createProviderError, preprocessBoolean } from './utils.js'
 
 export const toolInfo = {
   name: 'readFile',

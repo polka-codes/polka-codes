@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import type { FullToolInfo, ToolHandler, ToolInfo } from '../tool.js'
-import type { InteractionProvider } from './provider'
+import type { InteractionProvider } from './provider.js'
 
 const questionObject = z.object({
   prompt: z.string().describe('The text of the question.').meta({ usageValue: 'question text here' }),

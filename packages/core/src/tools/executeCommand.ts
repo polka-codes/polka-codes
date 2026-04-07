@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import type { FullToolInfo, ToolHandler, ToolInfo } from '../tool.js'
-import type { CommandProvider } from './provider'
-import { createProviderError, preprocessBoolean } from './utils'
+import type { CommandProvider } from './provider.js'
+import { createProviderError, preprocessBoolean } from './utils.js'
 
 export const toolInfo = {
   name: 'executeCommand',

@@ -10,7 +10,7 @@
   },
   "type": "module",
   "bin": {
-    "polka": "cli.mjs"
+    "polka": "dist/bin.cjs"
   },
   "exports": {
     ".": {
@@ -22,7 +22,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsc --build --force && tsup src/index.ts --format esm --no-splitting && bun run build:copy-wasm",
+    "build": "rm -rf dist && tsc --build --force && tsup --config tsup.config.ts && bun run build:copy-wasm",
     "build:copy-wasm": "mkdir -p dist && cp ../../node_modules/sql.js/dist/sql-wasm.wasm dist/"
   },
   "dependencies": {
@@ -51,8 +51,7 @@
     "zod": "^4.3.6"
   },
   "files": [
-    "dist",
-    "cli.mjs"
+    "dist"
   ],
   "devDependencies": {
     "@types/lodash-es": "^4.17.12",

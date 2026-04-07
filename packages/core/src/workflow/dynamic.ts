@@ -2,7 +2,7 @@ import { parse } from 'yaml'
 import { z } from 'zod'
 import { parseJsonFromMarkdown } from '../Agent/parseJsonFromMarkdown.js'
 import type { FullToolInfo, ToolResponseResult } from '../tool.js'
-import { type AgentToolRegistry, agentWorkflow } from './agent.workflow'
+import { type AgentToolRegistry, agentWorkflow } from './agent.workflow.js'
 import {
   type BreakStep,
   type ContinueStep,
@@ -15,8 +15,8 @@ import {
   type WorkflowFile,
   WorkflowFileSchema,
   type WorkflowStepDefinition,
-} from './dynamic-types'
-import type { BaseWorkflowContext, Logger, StepFn, ToolRegistry, WorkflowFn, WorkflowTools } from './workflow'
+} from './dynamic-types.js'
+import type { BaseWorkflowContext, Logger, StepFn, ToolRegistry, WorkflowFn, WorkflowTools } from './workflow.js'
 
 /**
  * Maximum iterations for while loops to prevent infinite loops

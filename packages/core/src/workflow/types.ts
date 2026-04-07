@@ -1,5 +1,5 @@
 import type { ToolResponseResult } from '../tool.js'
-import type { JsonModelMessage } from './json-ai-types'
+import type { JsonModelMessage } from './json-ai-types.js'
 
 /**
  * Enum representing different kinds of task events
