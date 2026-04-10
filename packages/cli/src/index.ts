@@ -1,4 +1,7 @@
 export * from './api'
+export * from './config-validation'
+export * from './errors'
+export * from './mcp/errors'
 export { main } from './program.js'
 
 import { main } from './program.js'

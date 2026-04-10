@@ -2,6 +2,7 @@
 
 import path from 'node:path'
 import { agentWorkflow, listFiles, readBinaryFile, readFile, searchFiles, type WorkflowFn } from '@polka-codes/core'
+import { MissingDependencyError } from '../errors'
 import { gitDiff } from '../tools'
 import type { CliToolRegistry } from '../workflow-tools'
 import { createGitAwareDiff, createGitAwareTools, extractTargetCommit } from './git-file-tools'
@@ -82,7 +83,7 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput,
   if (pr) {
     const ghCheckResult = await tools.executeCommand({ command: 'gh', args: ['--version'] })
     if (ghCheckResult.exitCode !== 0) {
-      throw new Error('Error: GitHub CLI (gh) is not installed. Please install it from https://cli.github.com/')
+      throw new MissingDependencyError('gh', 'GitHub CLI (gh) is not installed. Please install it from https://cli.github.com/')
     }
 
     await step(`Checking out PR #${pr}...`, async () => {

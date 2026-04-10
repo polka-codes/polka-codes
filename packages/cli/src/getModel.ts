@@ -9,6 +9,7 @@ import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
 import type { LanguageModelV3 } from '@ai-sdk/provider'
 import { createOpenRouter } from '@openrouter/ai-sdk-provider'
 import { getEnv } from './env'
+import { ConfigurationError } from './errors'
 
 function headersToObject(headers: HeadersInit | undefined): Record<string, string> | undefined {
   if (!headers) {
@@ -248,7 +249,7 @@ export const getModel = (config: ModelConfig, debugLogging = false): LanguageMod
 
     case AiProvider.OpenAICompatible: {
       if (!config.baseUrl) {
-        throw new Error('OpenAI-compatible providers require a baseUrl')
+        throw new ConfigurationError('OpenAI-compatible providers require a baseUrl')
       }
       const openaiCompatible = createOpenAICompatible({
         apiKey: config.apiKey,

@@ -7,6 +7,7 @@ import { type LoadedConfig, listFiles, resolveRules } from '@polka-codes/cli-sha
 import type { FullToolInfo, Logger } from '@polka-codes/core'
 import { z } from 'zod'
 import { ApiProviderConfig } from '../ApiProviderConfig'
+import { MissingDependencyError } from '../errors'
 import type { CliToolRegistry } from '../workflow-tools'
 
 export type BaseWorkflowInput = {
@@ -271,7 +272,7 @@ type ExecuteCommandFn = (input: CliToolRegistry['executeCommand']['input']) => P
 export const checkGhInstalled = async (executeCommand: ExecuteCommandFn) => {
   const result = await executeCommand({ command: 'gh', args: ['--version'] })
   if (result.exitCode !== 0) {
-    throw new Error('GitHub CLI (gh) is not installed. Please install it from https://cli.github.com/')
+    throw new MissingDependencyError('gh', 'GitHub CLI (gh) is not installed. Please install it from https://cli.github.com/')
   }
 }
 

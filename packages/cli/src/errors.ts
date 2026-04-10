@@ -8,6 +8,16 @@ import { createErrorClass } from '@polka-codes/core'
 export const UserCancelledError = createErrorClass('UserCancelledError', (args: any[]) => args[0] ?? 'User cancelled')
 
 /**
+ * Error thrown when Polka is misconfigured.
+ */
+export const ConfigurationError = createErrorClass('ConfigurationError', (args: [string, Error?]) => args[0])
+
+/**
+ * Error thrown when a required external dependency is missing.
+ */
+export const MissingDependencyError = createErrorClass('MissingDependencyError', (args: [string, string, Error?]) => args[1])
+
+/**
  * Base class for AI provider errors
  */
 export abstract class ProviderError extends Error {

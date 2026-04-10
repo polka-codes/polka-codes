@@ -30,7 +30,7 @@ import {
   type WorkflowTools,
 } from '@polka-codes/core'
 import { merge } from 'lodash-es'
-import { AuthenticationError, ModelAccessError, ProviderError, QuotaExceededError, UserCancelledError } from './errors'
+import { AuthenticationError, ConfigurationError, ModelAccessError, ProviderError, QuotaExceededError, UserCancelledError } from './errors'
 import { AiProvider, getModel } from './getModel'
 import { getProviderOptions } from './getProviderOptions'
 import { McpError } from './mcp/errors'
@@ -154,7 +154,9 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
 
   // All workflows currently require a provider, so validate config exists
   if (!commandConfig?.provider || !commandConfig.model) {
-    const error = new Error(`No provider configured for command: ${commandName}. Please run "polka init" to configure your AI provider.`)
+    const error = new ConfigurationError(
+      `No provider configured for command: ${commandName}. Please run "polka init" to configure your AI provider.`,
+    )
     logger.error(`Error: ${error.message}`)
     throw error
   }

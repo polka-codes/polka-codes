@@ -6,6 +6,7 @@ import type { Command } from 'commander'
 import { set } from 'lodash-es'
 import { ApiProviderConfig } from './ApiProviderConfig'
 import { type Env, getEnv } from './env'
+import { ConfigurationError } from './errors'
 import { AiProvider } from './getModel'
 
 export interface CliOptions {
@@ -74,7 +75,7 @@ export async function parseOptions(
 
   if (apiKey) {
     if (!defaultProvider) {
-      throw new Error('Must specify a provider if providing an API key')
+      throw new ConfigurationError('Must specify a provider if providing an API key')
     }
     set(config, ['providers', defaultProvider, 'apiKey'], apiKey)
   }

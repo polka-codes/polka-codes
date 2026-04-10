@@ -6,12 +6,13 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { confirm, input, select } from '@inquirer/prompts'
-import { type Config, getGlobalConfigPath, loadConfigAtPath, localConfigFileName, readConfig } from '@polka-codes/cli-shared'
+import { type Config, getGlobalConfigPath, localConfigFileName } from '@polka-codes/cli-shared'
 import type { Logger } from '@polka-codes/core'
 import { Command } from 'commander'
 import { set } from 'lodash-es'
 import { parseDocument, stringify } from 'yaml'
 import { BUILT_IN_COMMANDS, type BuiltInCommand } from '../builtin-commands'
+import { validateConfig } from '../config-validation'
 import { configPrompt } from '../configPrompt'
 import { createLogger } from '../logger'
 import { runWorkflow } from '../runWorkflow'
@@ -202,70 +203,73 @@ if (import.meta.main) {
   writeFileSync(scriptPathActual, template)
   logger.info(`Created script: ${scriptPathActual}`)
 
-  // Add to config if it exists
+  // Add to config if it exists and is valid
   const configPath = isGlobal ? getGlobalConfigPath() : localConfigFileName
   if (existsSync(configPath)) {
-    try {
-      const config = readConfig(configPath)
-      if (!config.scripts) {
-        config.scripts = {}
+    const validation = await validateConfig(configPath, { includeGlobal: false })
+    if (!validation.valid) {
+      logger.warn('Could not update config file due to validation errors:')
+      for (const error of validation.errors) {
+        logger.warn(`  ${error.message}`)
       }
-      config.scripts[name] = {
-        script: scriptPathConfig,
-        description: `Custom script: ${name}`,
-      }
-
-      // Append script to config file while preserving existing content
-      const configContent = readFileSync(configPath, 'utf-8')
-      let newContent = configContent
-
-      // Check if scripts section exists
-      if (!configContent.includes('scripts:')) {
-        // Add scripts section at the end
-        newContent = `${configContent.trimEnd()}\n\nscripts:\n  ${name}:\n    script: ${scriptPathConfig}\n    description: Custom script: ${name}\n`
-      } else {
-        // Parse YAML to safely insert into scripts section
-        try {
-          // Use parseDocument to preserve comments
-          const doc = parseDocument(configContent)
-
-          if (!doc.has('scripts')) {
-            doc.set('scripts', {})
-          }
-
-          doc.setIn(['scripts', name], {
-            script: scriptPathConfig,
-            description: `Custom script: ${name}`,
-          })
-
-          newContent = doc.toString()
-        } catch (parseError) {
-          // Fallback to string append if YAML parsing fails
-          logger.warn('Could not parse config file safely. Please add the script manually:')
-          logger.info(`  scripts:`)
-          logger.info(`    ${name}:`)
-          logger.info(`      script: ${scriptPathConfig}`)
-          logger.info(`      description: Custom script: ${name}`)
-          if (parseError instanceof Error) {
-            logger.debug(`Error: ${parseError.message}`)
-          }
-          return
-        }
-      }
-
-      writeFileSync(configPath, newContent)
-      logger.info(`Added script to config: ${configPath}`)
-      logger.info(`Run with: polka run ${name}`)
-    } catch (error) {
-      logger.warn('Could not update config file. Add the script manually:')
+      logger.info('Add the script manually to your config:')
       logger.info(`  scripts:`)
       logger.info(`    ${name}:`)
       logger.info(`      script: ${scriptPathConfig}`)
       logger.info(`      description: Custom script: ${name}`)
-      if (error instanceof Error) {
-        logger.debug(`Error: ${error.message}`)
+      return
+    }
+
+    const config = validation.config
+    if (!config.scripts) {
+      config.scripts = {}
+    }
+    config.scripts[name] = {
+      script: scriptPathConfig,
+      description: `Custom script: ${name}`,
+    }
+
+    // Append script to config file while preserving existing content
+    const configContent = readFileSync(configPath, 'utf-8')
+    let newContent = configContent
+
+    // Check if scripts section exists
+    if (!configContent.includes('scripts:')) {
+      // Add scripts section at the end
+      newContent = `${configContent.trimEnd()}\n\nscripts:\n  ${name}:\n    script: ${scriptPathConfig}\n    description: Custom script: ${name}\n`
+    } else {
+      // Parse YAML to safely insert into scripts section
+      try {
+        // Use parseDocument to preserve comments
+        const doc = parseDocument(configContent)
+
+        if (!doc.has('scripts')) {
+          doc.set('scripts', {})
+        }
+
+        doc.setIn(['scripts', name], {
+          script: scriptPathConfig,
+          description: `Custom script: ${name}`,
+        })
+
+        newContent = doc.toString()
+      } catch (parseError) {
+        // Fallback to string append if YAML parsing fails
+        logger.warn('Could not parse config file safely. Please add the script manually:')
+        logger.info(`  scripts:`)
+        logger.info(`    ${name}:`)
+        logger.info(`      script: ${scriptPathConfig}`)
+        logger.info(`      description: Custom script: ${name}`)
+        if (parseError instanceof Error) {
+          logger.debug(`Error: ${parseError.message}`)
+        }
+        return
       }
     }
+
+    writeFileSync(configPath, newContent)
+    logger.info(`Added script to config: ${configPath}`)
+    logger.info(`Run with: polka run ${name}`)
   } else {
     logger.info(`Tip: Add this script to your .polkacodes.yml:`)
     logger.info(`  scripts:`)
@@ -460,11 +464,17 @@ export const initCommand = new Command('init')
     logger.info(`Config file path: ${configPath}`)
 
     let existingConfig: Config = {}
-    try {
-      existingConfig = readConfig(configPath)
-    } catch (error) {
-      logger.error(`Unable to parse config file: ${configPath}`, error)
-      throw error
+    if (existsSync(configPath)) {
+      // Validate existing config to provide better error messages
+      const validation = await validateConfig(configPath, { includeGlobal: false })
+      if (!validation.valid) {
+        logger.error(`Config validation failed for ${configPath}:`)
+        for (const error of validation.errors) {
+          logger.error(`  ${error.code}: ${error.message}`)
+        }
+        throw new Error(`Invalid config file: ${configPath}`)
+      }
+      existingConfig = validation.config
     }
 
     const providerConfig = await configPrompt({})
@@ -487,7 +497,9 @@ export const initCommand = new Command('init')
         case 'local':
           break
         case 'global': {
-          const globalConfig = loadConfigAtPath(globalConfigPath) ?? {}
+          // Validate or create global config
+          const globalValidation = await validateConfig(globalConfigPath, { includeGlobal: false })
+          const globalConfig = globalValidation.valid ? globalValidation.config : {}
           set(globalConfig, ['providers', provider, 'apiKey'], apiKey)
           writeFileSync(globalConfigPath, stringify(globalConfig))
           logger.info(`API key saved to global config file: ${globalConfigPath}`)
