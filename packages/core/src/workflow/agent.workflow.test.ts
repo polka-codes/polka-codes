@@ -6,6 +6,7 @@ import { z } from 'zod'
 import type { FullToolInfo, ToolResponse } from '../'
 import { type AgentToolRegistry, agentWorkflow } from './agent.workflow'
 import { type JsonResponseMessage, toJsonModelMessage } from './json-ai-types'
+import { TaskEventKind } from './types'
 import { createContext, type WorkflowTools } from './workflow'
 
 const createMockTool = (name: string, description: string, handler: (args: any) => Promise<ToolResponse>): FullToolInfo => ({
@@ -200,4 +201,352 @@ test('should handle mixed valid and invalid tool calls by returning results for 
   )
 
   expect(capturedToolResults).toMatchSnapshot()
+})
+
+test('should continue after a recoverable error-text tool failure', async () => {
+  const errorMessage = 'Error searching files: Ripgrep process exited with code 2: bad regex'
+  const failingSearchFilesTool = createMockTool('searchFiles', 'Search files in a directory', async () => ({
+    success: false,
+    message: {
+      type: 'error-text',
+      value: errorMessage,
+    },
+  }))
+
+  const mockResponses: ModelMessage[] = [
+    {
+      role: 'assistant',
+      content: [
+        {
+          type: 'tool-call',
+          toolCallId: 'search-call-1',
+          toolName: 'searchFiles',
+          input: { path: './src' },
+        },
+      ],
+    },
+    {
+      role: 'assistant',
+      content: 'The search failed because the regex is invalid.',
+    },
+  ]
+
+  const events: any[] = []
+  let capturedToolResults: any[] | undefined
+
+  const tools: WorkflowTools<AgentToolRegistry> = {
+    generateText: async ({ messages }) => {
+      const lastMessage = messages[messages.length - 1]
+      if (lastMessage.role === 'tool') {
+        capturedToolResults = structuredClone(lastMessage.content as any[])
+      }
+
+      const response = mockResponses.shift()
+      return [response!] as JsonResponseMessage[]
+    },
+    invokeTool: async ({ toolName, input }) => {
+      if (toolName !== failingSearchFilesTool.name) {
+        throw new Error(`Tool not found: ${toolName}`)
+      }
+      return await failingSearchFilesTool.handler({} as any, input as any)
+    },
+    taskEvent: async (input) => {
+      events.push(input)
+    },
+  }
+
+  const result = await agentWorkflow(
+    {
+      userMessage: [toJsonModelMessage({ role: 'user', content: 'Search for this regex.' })] as any,
+      tools: [failingSearchFilesTool],
+      systemPrompt: 'You are a helpful assistant.',
+    },
+    createContext(tools),
+  )
+
+  expect(result).toMatchObject({
+    type: 'Exit',
+    message: 'The search failed because the regex is invalid.',
+  })
+  expect(events).toContainEqual({
+    kind: TaskEventKind.ToolError,
+    tool: 'searchFiles',
+    error: {
+      type: 'error-text',
+      value: errorMessage,
+    },
+  })
+  expect(capturedToolResults).toEqual([
+    {
+      type: 'tool-result',
+      toolCallId: 'search-call-1',
+      toolName: 'searchFiles',
+      output: {
+        type: 'error-text',
+        value: errorMessage,
+      },
+    },
+  ])
+})
+
+test('should continue after a recoverable replaceInFile error-text tool failure', async () => {
+  const errorMessage =
+    '<replace_in_file_result path="packages/core/src/workflow/agent.workflow.ts" status="failed" message="Unable to apply changes" />'
+  const failingReplaceInFileTool = createMockTool('replaceInFile', 'Replace content in a file', async () => ({
+    success: false,
+    message: {
+      type: 'error-text',
+      value: errorMessage,
+    },
+  }))
+
+  const mockResponses: ModelMessage[] = [
+    {
+      role: 'assistant',
+      content: [
+        {
+          type: 'tool-call',
+          toolCallId: 'replace-call-1',
+          toolName: 'replaceInFile',
+          input: { path: './src' },
+        },
+      ],
+    },
+    {
+      role: 'assistant',
+      content: 'The replacement did not apply cleanly.',
+    },
+  ]
+
+  const events: any[] = []
+  let capturedToolResults: any[] | undefined
+
+  const tools: WorkflowTools<AgentToolRegistry> = {
+    generateText: async ({ messages }) => {
+      const lastMessage = messages[messages.length - 1]
+      if (lastMessage.role === 'tool') {
+        capturedToolResults = structuredClone(lastMessage.content as any[])
+      }
+
+      const response = mockResponses.shift()
+      return [response!] as JsonResponseMessage[]
+    },
+    invokeTool: async ({ toolName, input }) => {
+      if (toolName !== failingReplaceInFileTool.name) {
+        throw new Error(`Tool not found: ${toolName}`)
+      }
+      return await failingReplaceInFileTool.handler({} as any, input as any)
+    },
+    taskEvent: async (input) => {
+      events.push(input)
+    },
+  }
+
+  const result = await agentWorkflow(
+    {
+      userMessage: [toJsonModelMessage({ role: 'user', content: 'Update the workflow file.' })] as any,
+      tools: [failingReplaceInFileTool],
+      systemPrompt: 'You are a helpful assistant.',
+    },
+    createContext(tools),
+  )
+
+  expect(result).toMatchObject({
+    type: 'Exit',
+    message: 'The replacement did not apply cleanly.',
+  })
+  expect(events).toContainEqual({
+    kind: TaskEventKind.ToolError,
+    tool: 'replaceInFile',
+    error: {
+      type: 'error-text',
+      value: errorMessage,
+    },
+  })
+  expect(capturedToolResults).toEqual([
+    {
+      type: 'tool-result',
+      toolCallId: 'replace-call-1',
+      toolName: 'replaceInFile',
+      output: {
+        type: 'error-text',
+        value: errorMessage,
+      },
+    },
+  ])
+})
+
+test('should preserve recoverable error-json tool failures for the next model request', async () => {
+  const errorPayload = {
+    code: 'regex-error',
+    detail: 'bad regex',
+  }
+  const failingSearchFilesTool = createMockTool('searchFiles', 'Search files in a directory', async () => ({
+    success: false,
+    message: {
+      type: 'error-json',
+      value: errorPayload,
+    },
+  }))
+
+  const mockResponses: ModelMessage[] = [
+    {
+      role: 'assistant',
+      content: [
+        {
+          type: 'tool-call',
+          toolCallId: 'search-call-2',
+          toolName: 'searchFiles',
+          input: { path: './src' },
+        },
+      ],
+    },
+    {
+      role: 'assistant',
+      content: 'The search tool returned a structured error.',
+    },
+  ]
+
+  const events: any[] = []
+  let capturedToolResults: any[] | undefined
+
+  const tools: WorkflowTools<AgentToolRegistry> = {
+    generateText: async ({ messages }) => {
+      const lastMessage = messages[messages.length - 1]
+      if (lastMessage.role === 'tool') {
+        capturedToolResults = structuredClone(lastMessage.content as any[])
+      }
+
+      const response = mockResponses.shift()
+      return [response!] as JsonResponseMessage[]
+    },
+    invokeTool: async ({ toolName, input }) => {
+      if (toolName !== failingSearchFilesTool.name) {
+        throw new Error(`Tool not found: ${toolName}`)
+      }
+      return await failingSearchFilesTool.handler({} as any, input as any)
+    },
+    taskEvent: async (input) => {
+      events.push(input)
+    },
+  }
+
+  const result = await agentWorkflow(
+    {
+      userMessage: [toJsonModelMessage({ role: 'user', content: 'Search for this regex.' })] as any,
+      tools: [failingSearchFilesTool],
+      systemPrompt: 'You are a helpful assistant.',
+    },
+    createContext(tools),
+  )
+
+  expect(result).toMatchObject({
+    type: 'Exit',
+    message: 'The search tool returned a structured error.',
+  })
+  expect(events).toContainEqual({
+    kind: TaskEventKind.ToolError,
+    tool: 'searchFiles',
+    error: {
+      type: 'error-json',
+      value: errorPayload,
+    },
+  })
+  expect(capturedToolResults).toEqual([
+    {
+      type: 'tool-result',
+      toolCallId: 'search-call-2',
+      toolName: 'searchFiles',
+      output: {
+        type: 'error-json',
+        value: errorPayload,
+      },
+    },
+  ])
+})
+
+test('should accept SDK-compatible content tool results without a url field', async () => {
+  const contentTool = createMockTool('readBinaryFile', 'Read binary content', async () => ({
+    success: true,
+    message: {
+      type: 'content',
+      value: [
+        {
+          type: 'media',
+          data: 'aGVsbG8=',
+          mediaType: 'image/png',
+        },
+      ],
+    },
+  }))
+
+  const mockResponses: ModelMessage[] = [
+    {
+      role: 'assistant',
+      content: [
+        {
+          type: 'tool-call',
+          toolCallId: 'binary-call-1',
+          toolName: 'readBinaryFile',
+          input: { path: './src' },
+        },
+      ],
+    },
+    {
+      role: 'assistant',
+      content: 'Binary content was received.',
+    },
+  ]
+
+  let capturedToolResults: any[] | undefined
+
+  const tools: WorkflowTools<AgentToolRegistry> = {
+    generateText: async ({ messages }) => {
+      const lastMessage = messages[messages.length - 1]
+      if (lastMessage.role === 'tool') {
+        capturedToolResults = structuredClone(lastMessage.content as any[])
+      }
+
+      const response = mockResponses.shift()
+      return [response!] as JsonResponseMessage[]
+    },
+    invokeTool: async ({ toolName, input }) => {
+      if (toolName !== contentTool.name) {
+        throw new Error(`Tool not found: ${toolName}`)
+      }
+      return await contentTool.handler({} as any, input as any)
+    },
+    taskEvent: async () => {},
+  }
+
+  const result = await agentWorkflow(
+    {
+      userMessage: [toJsonModelMessage({ role: 'user', content: 'Read a binary file.' })] as any,
+      tools: [contentTool],
+      systemPrompt: 'You are a helpful assistant.',
+    },
+    createContext(tools),
+  )
+
+  expect(result).toMatchObject({
+    type: 'Exit',
+    message: 'Binary content was received.',
+  })
+  expect(capturedToolResults).toEqual([
+    {
+      type: 'tool-result',
+      toolCallId: 'binary-call-1',
+      toolName: 'readBinaryFile',
+      output: {
+        type: 'content',
+        value: [
+          {
+            type: 'media',
+            data: 'aGVsbG8=',
+            mediaType: 'image/png',
+          },
+        ],
+      },
+    },
+  ])
 })

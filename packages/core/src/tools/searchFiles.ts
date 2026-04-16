@@ -80,12 +80,13 @@ ${files.join('\n')}
 `,
       },
     }
-  } catch (error) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
     return {
       success: false,
       message: {
         type: 'error-text',
-        value: `Error searching files: ${error}`,
+        value: `Error searching files: ${errorMessage}`,
       },
     }
   }

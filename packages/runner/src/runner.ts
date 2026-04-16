@@ -171,7 +171,13 @@ export class Runner {
                     if (part.type === 'media') {
                       return {
                         type: 'text' as const,
-                        text: `<media url="${part.url}" media-type="${part.mediaType}" />`,
+                        text: `<media media-type="${part.mediaType}" />`,
+                      }
+                    }
+                    if (part.type === 'image-url' || part.type === 'file-url') {
+                      return {
+                        type: 'text' as const,
+                        text: `<media url="${part.url}" />`,
                       }
                     }
                     return part

@@ -74,6 +74,9 @@ describe('updateMemory', () => {
 
       expect(result.success).toBe(true)
       expect(result.message.type).toBe('text')
+      if (result.message.type !== 'text') {
+        throw new Error('Expected message type text')
+      }
       expect(result.message.value).toContain('appended')
       expect(spy).toHaveBeenCalledWith('append', undefined, 'new data')
     })
@@ -90,6 +93,9 @@ describe('updateMemory', () => {
 
       expect(result.success).toBe(true)
       expect(result.message.type).toBe('text')
+      if (result.message.type !== 'text') {
+        throw new Error('Expected message type text')
+      }
       expect(result.message.value).toContain('my-topic')
       expect(result.message.value).toContain('replaced')
       expect(spy).toHaveBeenCalledWith('replace', 'my-topic', 'new data')
@@ -105,6 +111,9 @@ describe('updateMemory', () => {
 
       expect(result.success).toBe(true)
       expect(result.message.type).toBe('text')
+      if (result.message.type !== 'text') {
+        throw new Error('Expected message type text')
+      }
       expect(result.message.value).toContain('removed')
       expect(spy).toHaveBeenCalledWith('remove', undefined, undefined)
     })
@@ -120,6 +129,9 @@ describe('updateMemory', () => {
 
       expect(result.success).toBe(false)
       expect(result.message.type).toBe('error-text')
+      if (result.message.type !== 'error-text') {
+        throw new Error('Expected message type error-text')
+      }
       expect(result.message.value).toContain('not supported')
     })
   })

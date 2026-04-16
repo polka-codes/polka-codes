@@ -60,6 +60,7 @@ export async function searchFiles(
 
   return new Promise((resolve, reject) => {
     const results: string[] = []
+    let stderr = ''
 
     const rg = spawn('rg', args, {
       cwd,
@@ -71,6 +72,10 @@ export async function searchFiles(
       results.push(...lines)
     })
 
+    rg.stderr.on('data', (data) => {
+      stderr += data.toString()
+    })
+
     rg.on('error', (error) => {
       reject(new Error(`Failed to execute ripgrep: ${error.message}`))
     })
@@ -78,7 +83,9 @@ export async function searchFiles(
     rg.on('close', (code) => {
       if (code !== 0 && code !== 1) {
         // code 1 means no matches found, which is not an error
-        reject(new Error(`Ripgrep process exited with code ${code}`))
+        const stderrMessage = stderr.trim()
+        const details = stderrMessage.length > 0 ? `: ${stderrMessage}` : ''
+        reject(new Error(`Ripgrep process exited with code ${code}${details}`))
         return
       }
       resolve(results)

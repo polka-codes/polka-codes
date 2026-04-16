@@ -1,4 +1,4 @@
-import type { JSONValue } from '@ai-sdk/provider'
+import type { ToolResultOutput } from '@ai-sdk/provider-utils'
 import type { z } from 'zod'
 
 export type ToolParameterValue = string | { [key: string]: ToolParameterValue } | ToolParameterValue[]
@@ -22,41 +22,10 @@ export type FullToolInfo = ToolInfo & {
   handler: ToolHandler<ToolInfo, any>
 }
 
-export type ToolResponseResultMedia = {
-  type: 'media'
-  data: string // base64 encoded
-  mediaType: string
-  url: string
-}
+export type ToolResponseResult = ToolResultOutput
 
-// Modified LanguageModelV3ToolResultOutput
-export type ToolResponseResult =
-  | {
-      type: 'text'
-      value: string
-    }
-  | {
-      type: 'json'
-      value: JSONValue
-    }
-  | {
-      type: 'error-text'
-      value: string
-    }
-  | {
-      type: 'error-json'
-      value: JSONValue
-    }
-  | {
-      type: 'content'
-      value: Array<
-        | {
-            type: 'text'
-            text: string
-          }
-        | ToolResponseResultMedia
-      >
-    }
+export type ToolResponseResultContentPart = Extract<ToolResponseResult, { type: 'content' }>['value'][number]
+export type ToolResponseResultMedia = Extract<ToolResponseResultContentPart, { type: 'media' }>
 
 export type ToolResponse = {
   success: boolean

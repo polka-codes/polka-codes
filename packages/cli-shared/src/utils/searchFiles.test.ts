@@ -173,6 +173,22 @@ describe('searchFiles with mocks', () => {
     expect(results).toEqual([])
   })
 
+  it('should include stderr text in ripgrep exit failures', async () => {
+    const mockSpawn = spyOn(child_process, 'spawn')
+
+    const mockProcess = new EventEmitter() as any
+    mockProcess.stdout = new EventEmitter()
+    mockProcess.stderr = new EventEmitter()
+    mockSpawn.mockImplementation(() => mockProcess)
+
+    const searchPromise = searchFiles('src', 'bad(', '*.ts', '/test/path')
+
+    mockProcess.stderr.emit('data', 'regex parse error: unclosed group\n')
+    mockProcess.emit('close', 2)
+
+    await expect(searchPromise).rejects.toThrow('Ripgrep process exited with code 2: regex parse error: unclosed group')
+  })
+
   it('should handle errors', async () => {
     const mockSpawn = spyOn(child_process, 'spawn')
 

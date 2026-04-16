@@ -295,12 +295,17 @@ export function createGitReadBinaryFile(commit: string): FullToolInfo {
         message: {
           type: 'content',
           value: [
-            {
-              type: 'media',
-              url,
-              data: base64Data,
-              mediaType: getMediaType(url),
-            },
+            getMediaType(url).startsWith('image/')
+              ? {
+                  type: 'image-data',
+                  data: base64Data,
+                  mediaType: getMediaType(url),
+                }
+              : {
+                  type: 'file-data',
+                  data: base64Data,
+                  mediaType: getMediaType(url),
+                },
           ],
         },
       }

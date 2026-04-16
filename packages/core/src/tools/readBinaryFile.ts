@@ -32,12 +32,17 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
       message: {
         type: 'content',
         value: [
-          {
-            type: 'media',
-            url,
-            data: filePart.base64Data,
-            mediaType: filePart.mediaType,
-          },
+          filePart.mediaType.startsWith('image/')
+            ? {
+                type: 'image-data',
+                data: filePart.base64Data,
+                mediaType: filePart.mediaType,
+              }
+            : {
+                type: 'file-data',
+                data: filePart.base64Data,
+                mediaType: filePart.mediaType,
+              },
         ],
       },
     }

@@ -54,6 +54,10 @@ describe('listTodoItems', () => {
         value: expect.any(Array),
       },
     })
+    expect(result.message.type).toBe('json')
+    if (result.message.type !== 'json') {
+      throw new Error('Expected message type json')
+    }
     const items = result.message.value
     if (!Array.isArray(items)) {
       throw new Error('Expected items to be an array')
@@ -73,6 +77,10 @@ describe('listTodoItems', () => {
 
     // Verify only completed items are returned
     expect(result.success).toBe(true)
+    expect(result.message.type).toBe('json')
+    if (result.message.type !== 'json') {
+      throw new Error('Expected message type json')
+    }
     const items = result.message.value
     if (!Array.isArray(items)) {
       throw new Error('Expected items to be an array')
@@ -90,6 +98,10 @@ describe('listTodoItems', () => {
 
     expect(listSpy).toHaveBeenCalledWith('1', undefined)
     // Verify sub-items are returned
+    expect(result.message.type).toBe('json')
+    if (result.message.type !== 'json') {
+      throw new Error('Expected message type json')
+    }
     const items = result.message.value
     if (!Array.isArray(items)) {
       throw new Error('Expected items to be an array')
