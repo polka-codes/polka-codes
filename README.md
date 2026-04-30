@@ -27,7 +27,7 @@ Polka Codes is a powerful TypeScript-based AI coding assistant framework that he
 - 📦 **Extensible Architecture**: Modular design for adding AI providers, tools, and agents
 - ⚡ **Type Safety**: Fully typed with TypeScript for better DX
 - 🧪 **Thoroughly Tested**: 800+ tests using `bun:test` with snapshot testing
-- 🤖 **Multiple AI Providers**: Anthropic Claude, Google Vertex, DeepSeek, OpenAI, OpenRouter, Ollama
+- 🤖 **Multiple AI Providers**: Anthropic Claude, Google Vertex, DeepSeek, OpenAI, OpenRouter, Ollama, and OpenAI-compatible endpoints
 - 🔌 **MCP Support**: Consume tools from external MCP servers and expose workflows via MCP server
 - 🚀 **Auto-Fix**: Automatically detect and fix lint/type errors after code changes
 
@@ -235,7 +235,7 @@ Found 2 checkpoint(s):
    Next: Implement user authentication
 
 Resume with:
-  bun polka continue feature-complete
+  polka continue feature-complete
 ```
 
 For more details:
@@ -341,7 +341,7 @@ Or manually edit `~/.claude/config.json`:
 }
 ```
 
-For detailed MCP usage instructions and configuration options, see [MCP_GUIDE.md](MCP_GUIDE.md).
+For detailed MCP configuration options, see the [`example.polkacodes.yml`](example.polkacodes.yml) file.
 
 ## Project Structure
 

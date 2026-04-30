@@ -231,44 +231,19 @@ polka agent "Fix all failing tests"
 
 **Note:** This is experimental and primarily used for task discovery and planning.
 
-### Git Integration
-
-#### `commit`
-
-Generate a commit message based on your staged changes.
-
-```bash
-# Generate commit message for staged changes
-polka commit
-
-# Generate commit message with additional context
-polka commit "closes #123"
-
-# Stage all changes and commit
-polka commit -a
-```
-
-#### `pr`
-
-Create a pull request with an AI-generated title and description.
-
-```bash
-# Create PR for the current branch
-polka pr
-
-# Create PR with additional context
-polka pr "implements feature #456"
-```
-
 ## Configuration
 
 ### Provider Setup
 
 Polka Codes supports multiple AI providers:
 
-1. DeepSeek (Recommended)
-2. Anthropic (Claude 3 Sonnet recommended)
-3. OpenRouter
+1. **Anthropic** — Claude Sonnet 4.5, Claude Haiku 4.5, Claude Opus 4.5
+2. **DeepSeek** — DeepSeek Chat, DeepSeek Reasoner (cost-effective)
+3. **OpenAI** — GPT-4o, GPT-4o-mini
+4. **OpenRouter** — Access to many models through a single API
+5. **Google Vertex** — Gemini 2.5 Pro, Gemini 2.5 Flash
+6. **Ollama** — Run local models (e.g., Qwen 2.5 Coder)
+7. **OpenAI-compatible** — Any OpenAI-compatible endpoint (Together AI, Groq, Anyscale, etc.)
 
 Configure your provider in `.env`:
 
@@ -277,8 +252,8 @@ Configure your provider in `.env`:
 POLKA_API_KEY=your_api_key_here
 
 # Optional - override defaults
-POLKA_API_PROVIDER=deepseek  # or anthropic, openrouter, openai
-POLKA_MODEL=deepseek-chat  # or claude-3-7-sonnet-20250219
+POLKA_API_PROVIDER=anthropic  # or deepseek, openai, openrouter, google-vertex, ollama
+POLKA_MODEL=claude-sonnet-4-5-20250929  # or deepseek-chat, gpt-4o, etc.
 ```
 
 ### Project Configuration

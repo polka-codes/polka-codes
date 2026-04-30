@@ -8,7 +8,7 @@ Core AI services and agent implementations for Polka Codes framework.
 
 ## Features
 
-- Multiple AI provider support (Anthropic, DeepSeek, GoogleVertex, OpenAI, and OpenRouter)
+- Multiple AI provider support (Anthropic, DeepSeek, GoogleVertex, OpenAI, OpenRouter, and Ollama)
 - Extensible agent architecture
 - Tool integration system with safety enhancements
 - Type-safe API
