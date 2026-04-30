@@ -20,11 +20,13 @@ export const toolInfo = {
         .describe('The maximum number of files to list. Default to 2000')
         .meta({ usageValue: 'Maximum number of files to list (optional)' }),
       recursive: z
-        .preprocess(preprocessBoolean, z.boolean().optional().default(true))
+        .preprocess(preprocessBoolean, z.boolean())
+        .default(true)
         .describe('Whether to list files recursively. Use true for recursive listing, false or omit for top-level only.')
         .meta({ usageValue: 'true or false (optional)' }),
       includeIgnored: z
-        .preprocess(preprocessBoolean, z.boolean().optional().default(false))
+        .preprocess(preprocessBoolean, z.boolean())
+        .default(false)
         .describe('Whether to include ignored files. Use true to include files ignored by .gitignore.')
         .meta({ usageValue: 'true or false (optional)' }),
     })

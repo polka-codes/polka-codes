@@ -55,7 +55,7 @@ export function createPolkaCodesMcpServer(tools: McpServerTool[], logger?: Logge
           description: tool.description,
           inputSchema: tool.inputSchema,
         },
-        async (args) => {
+        async (args: unknown) => {
           try {
             // Call polka-codes tool handler with context
             const result = await tool.handler(args as Record<string, unknown>, context)

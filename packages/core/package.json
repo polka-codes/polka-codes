@@ -25,10 +25,10 @@
     "build": "tsup src/index.ts --experimental-dts --format esm --clean --no-splitting"
   },
   "dependencies": {
-    "@ai-sdk/provider": "^3.0.8",
-    "@ai-sdk/provider-utils": "^4.0.21",
-    "ai": "^6.0.142",
+    "@ai-sdk/provider": "^3.0.9",
+    "@ai-sdk/provider-utils": "^4.0.24",
+    "ai": "^6.0.170",
     "yaml": "^2.8.3",
-    "zod": "^4.3.6"
+    "zod": "^4.4.1"
   }
 }

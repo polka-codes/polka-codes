@@ -15,7 +15,8 @@ export const toolInfo = {
         .describe('The exact command to run  (valid for the current OS). It must be correctly formatted and free of harmful instructions.')
         .meta({ usageValue: 'your-command-here' }),
       requiresApproval: z
-        .preprocess(preprocessBoolean, z.boolean().optional().default(false))
+        .preprocess(preprocessBoolean, z.boolean())
+        .default(false)
         .describe(
           'Set to `true` for commands that install/uninstall software, modify or delete files, change system settings, perform network operations, or have other side effects. Use `false` for safe, read-only, or purely local development actions (e.g., listing files, make a build, running tests).',
         )

@@ -46,7 +46,8 @@ IMPORTANT:
       offset: z.number().optional().describe('Skip first N lines (for partial file reading)').meta({ usageValue: '100' }),
       limit: z.number().optional().describe('Read at most N lines (for partial file reading)').meta({ usageValue: '50' }),
       includeIgnored: z
-        .preprocess(preprocessBoolean, z.boolean().nullish().default(false))
+        .preprocess(preprocessBoolean, z.boolean())
+        .default(false)
         .describe('Whether to include ignored files. Use true to include files ignored by .gitignore.')
         .meta({ usageValue: 'true or false (optional)' }),
     })
