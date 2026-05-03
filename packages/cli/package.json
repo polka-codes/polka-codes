@@ -31,7 +31,7 @@
     "@ai-sdk/google": "^3.0.65",
     "@ai-sdk/google-vertex": "^4.0.113",
     "@ai-sdk/openai": "^3.0.54",
-    "@ai-sdk/openai-compatible": "^2.0.42",
+    "@ai-sdk/openai-compatible": "^2.0.45",
     "@ai-sdk/provider": "^3.0.9",
     "@ai-sdk/provider-utils": "^4.0.24",
     "@inquirer/prompts": "^8.4.2",
