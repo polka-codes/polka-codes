@@ -197,12 +197,23 @@ export interface CodeOptions extends BaseOptions {
    * Execution mode
    * @default 'interactive'
    */
-  mode?: 'interactive' | 'noninteractive'
+  mode?: 'interactive' | 'noninteractive' | 'direct'
 
   /**
    * Additional instructions for the AI agent
    */
   additionalInstructions?: string
+
+  /**
+   * Skip the post-implementation fix/check workflow
+   * @default false
+   */
+  skipFix?: boolean
+
+  /**
+   * Restrict filesystem write tools to these files or directories
+   */
+  allowedWritePaths?: string[]
 
   /**
    * Whether to prompt for confirmations
@@ -232,7 +243,7 @@ export interface CodeOptions extends BaseOptions {
  * ```
  */
 export async function code(options: CodeOptions): Promise<{ success: boolean; summaries?: string[]; reason?: string } | undefined> {
-  const { task, files, mode, additionalInstructions, interactive, onUsage, ...context } = options
+  const { task, files, mode, additionalInstructions, skipFix, allowedWritePaths, interactive, onUsage, ...context } = options
 
   const verbose = context.silent ? -1 : (context.verbose ?? 0)
   const logger = createLogger({ verbose })
@@ -242,6 +253,8 @@ export async function code(options: CodeOptions): Promise<{ success: boolean; su
     files,
     mode,
     additionalInstructions,
+    skipFix,
+    allowedWritePaths,
   }
 
   return runWorkflow(codeWorkflow, workflowInput, {

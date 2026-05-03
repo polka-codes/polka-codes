@@ -22,7 +22,7 @@ import { z } from 'zod'
 import type { CliToolRegistry } from '../workflow-tools'
 import { fixWorkflow } from './fix.workflow'
 import { planWorkflow } from './plan.workflow'
-import { getCoderSystemPrompt, getImplementPrompt } from './prompts'
+import { getCoderSystemPrompt, getDirectCoderSystemPrompt, getDirectImplementPrompt, getImplementPrompt } from './prompts'
 import { type BaseWorkflowInput, getDefaultContext } from './workflow.utils'
 
 export type JsonImagePart = {
@@ -50,9 +50,11 @@ const ImplementOutputSchema = z
 export type CodeWorkflowInput = {
   task: string
   files?: (JsonFilePart | JsonImagePart)[]
-  mode?: 'interactive' | 'noninteractive'
+  mode?: 'interactive' | 'noninteractive' | 'direct'
   customTools?: FullToolInfo[]
   additionalInstructions?: string
+  skipFix?: boolean
+  allowedWritePaths?: string[]
 }
 
 export const codeWorkflow: WorkflowFn<
@@ -62,34 +64,49 @@ export const codeWorkflow: WorkflowFn<
   BaseWorkflowContext<CliToolRegistry>
 > = async (input, context) => {
   const { logger, step, tools } = context
-  const { task, files, mode: inputMode, customTools, additionalInstructions, interactive, additionalTools } = input
-  const mode = interactive === false ? 'noninteractive' : (inputMode ?? 'interactive')
+  const { task, files, mode: inputMode, customTools, additionalInstructions, interactive, additionalTools, skipFix = false } = input
+  const mode = inputMode ?? (interactive === false ? 'noninteractive' : 'interactive')
+  const canAskFollowupQuestions = interactive !== false && mode !== 'noninteractive'
+  const isDirectMode = mode === 'direct'
   const summaries: string[] = []
 
-  // Planning phase
-  logger.info('\nPhase 1: Creating implementation plan...\n')
-  const planResult = await step('plan', async () => {
-    return await planWorkflow(
-      { task, files, mode: mode === 'interactive' ? 'confirm' : 'noninteractive', interactive, additionalTools },
-      context,
-    )
-  })
+  let implementPrompt: string
+  if (isDirectMode) {
+    logger.info('\nPhase 1: Implementing task directly...\n')
+    implementPrompt = getDirectImplementPrompt(task)
+  } else {
+    // Planning phase
+    logger.info('\nPhase 1: Creating implementation plan...\n')
+    const planResult = await step('plan', async () => {
+      return await planWorkflow(
+        {
+          task,
+          files,
+          mode: canAskFollowupQuestions ? 'confirm' : 'noninteractive',
+          interactive: canAskFollowupQuestions,
+          additionalTools,
+        },
+        context,
+      )
+    })
 
-  if (!planResult) {
-    logger.info('Plan not approved. Exiting.')
-    return { success: false, reason: 'Plan not approved', summaries }
+    if (!planResult) {
+      logger.info('Plan not approved. Exiting.')
+      return { success: false, reason: 'Plan not approved', summaries }
+    }
+
+    const { plan, files: planFiles } = planResult
+
+    // Implementation phase
+    logger.info('\nPhase 2: Implementing the plan...\n')
+
+    implementPrompt = getImplementPrompt(plan)
+    if (planFiles && planFiles.length > 0) {
+      const fileContentString = planFiles.map((f) => `<file path="${f.path}">${f.content}</file>`).join('\n')
+      implementPrompt += `\n\nHere are the files related to the plan:\n${fileContentString}`
+    }
   }
 
-  const { plan, files: planFiles } = planResult
-
-  // Implementation phase
-  logger.info('\nPhase 2: Implementing the plan...\n')
-
-  let implementPrompt = getImplementPrompt(plan)
-  if (planFiles && planFiles.length > 0) {
-    const fileContentString = planFiles.map((f) => `<file path="${f.path}">${f.content}</file>`).join('\n')
-    implementPrompt += `\n\nHere are the files related to the plan:\n${fileContentString}`
-  }
   const userContent: JsonUserContent = [{ type: 'text', text: implementPrompt }]
   if (files) {
     for (const file of files) {
@@ -122,7 +139,7 @@ export const codeWorkflow: WorkflowFn<
     removeFile,
     renameFile,
   ]
-  if (mode === 'interactive') {
+  if (canAskFollowupQuestions) {
     agentTools.push(askFollowupQuestion)
   }
   if (customTools) {
@@ -147,7 +164,7 @@ export const codeWorkflow: WorkflowFn<
         text: `${defaultContext}\n${memoryContext}`,
       })
     }
-    const baseSystemPrompt = getCoderSystemPrompt(loadRules)
+    const baseSystemPrompt = isDirectMode ? getDirectCoderSystemPrompt(loadRules) : getCoderSystemPrompt(loadRules)
     const systemPrompt = additionalInstructions ? `${baseSystemPrompt}\n\n${additionalInstructions}` : baseSystemPrompt
     return await agentWorkflow(
       {
@@ -186,10 +203,23 @@ export const codeWorkflow: WorkflowFn<
     logger.info('\nImplementation complete!\n')
   } else {
     logger.warn('\nWarning: Implementation failed. Please check the output for errors.\n', res)
+    if (skipFix) {
+      const reason =
+        res.type === 'UsageExceeded'
+          ? 'Implementation failed because usage limits were exceeded.'
+          : res.type === 'Error'
+            ? (res.error?.message ?? 'Implementation failed.')
+            : 'Implementation failed.'
+      return { success: false, reason, summaries }
+    }
+  }
+
+  if (skipFix) {
+    return { success: true, summaries }
   }
 
   // Fixing phase
-  logger.info('\nPhase 3: Checking for errors...\n')
+  logger.info(isDirectMode ? '\nPhase 2: Checking for errors...\n' : '\nPhase 3: Checking for errors...\n')
   const fixResult = await step('fix', async () => {
     return await fixWorkflow({ interactive: false, task: input.task, additionalTools: input.additionalTools }, context)
   })

@@ -46,6 +46,7 @@ import {
   toolHandlers,
 } from './tool-implementations'
 import type { BaseWorkflowInput } from './workflows'
+import { createWritePathGuardedProvider } from './write-path-guard'
 
 /**
  * Execution context for running workflows.
@@ -204,7 +205,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
     logger.warn(`Failed to initialize persistent memory store: ${error instanceof Error ? error.message : String(error)}`)
   }
 
-  const toolProvider = (options.getProvider ?? getProvider)({
+  let toolProvider = (options.getProvider ?? getProvider)({
     excludeFiles,
     yes: context.yes,
     getModel: (tool) => {
@@ -228,6 +229,10 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
       return getModel(baseConfig)
     },
   })
+  const allowedWritePaths = (workflowInput as { allowedWritePaths?: string[] }).allowedWritePaths
+  if (allowedWritePaths && allowedWritePaths.length > 0) {
+    toolProvider = await createWritePathGuardedProvider(toolProvider, allowedWritePaths)
+  }
 
   const providerOptions = getProviderOptions({
     provider: commandConfig.provider,

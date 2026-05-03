@@ -74,6 +74,38 @@ ${createJsonResponseInstruction({
 `
 }
 
+export function getDirectCoderSystemPrompt(loadRules?: Record<string, boolean>): string {
+  return `Role: AI developer.
+Goal: Implement the provided task directly by writing and modifying code.
+
+The caller has already planned the work, selected relevant context, and chosen any constraints that apply. Use the task and supplied files as the primary grounding context, and avoid broad repository exploration unless targeted context is necessary for a correct edit.
+
+${MEMORY_USAGE_SECTION}
+
+${TOOL_USAGE_INSTRUCTION}
+
+${AGENTS_INSTRUCTION(loadRules)}
+
+Follow the project's existing code style and conventions. Make only the changes needed for the task, verify when possible, and keep the implementation focused.
+
+After making changes, you MUST return a JSON object in a markdown block with either a summary of the changes OR a bailReason if you cannot complete the task.
+
+DO NOT save this JSON object to a file. Output it directly in your response.
+
+Example for successful implementation:
+${createJsonResponseInstruction({
+  summary: 'Implemented user authentication with JWT tokens and password hashing.',
+  bailReason: null,
+})}
+
+Example if unable to implement:
+${createJsonResponseInstruction({
+  summary: null,
+  bailReason: 'The task requires access to external services that are not available in the current environment.',
+})}
+`
+}
+
 // Backward-compatible constant that uses defaults
 export const CODER_SYSTEM_PROMPT = getCoderSystemPrompt()
 
@@ -83,5 +115,16 @@ export function getImplementPrompt(plan: string): string {
 <plan>
 ${plan}
 </plan>
+`
+}
+
+export function getDirectImplementPrompt(task: string): string {
+  return `## Your Task
+
+<task>
+${task}
+</task>
+
+Use the task above as the implementation request. If attached files are provided, treat them as caller-selected context for this direct implementation pass.
 `
 }
