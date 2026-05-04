@@ -55,6 +55,7 @@ export type CodeWorkflowInput = {
   additionalInstructions?: string
   skipFix?: boolean
   allowedWritePaths?: string[]
+  stateless?: boolean
 }
 
 export const codeWorkflow: WorkflowFn<
@@ -64,7 +65,17 @@ export const codeWorkflow: WorkflowFn<
   BaseWorkflowContext<CliToolRegistry>
 > = async (input, context) => {
   const { logger, step, tools } = context
-  const { task, files, mode: inputMode, customTools, additionalInstructions, interactive, additionalTools, skipFix = false } = input
+  const {
+    task,
+    files,
+    mode: inputMode,
+    customTools,
+    additionalInstructions,
+    interactive,
+    additionalTools,
+    skipFix = false,
+    stateless = false,
+  } = input
   const mode = inputMode ?? (interactive === false ? 'noninteractive' : 'interactive')
   const canAskFollowupQuestions = interactive !== false && mode !== 'noninteractive'
   const isDirectMode = mode === 'direct'
@@ -85,6 +96,7 @@ export const codeWorkflow: WorkflowFn<
           mode: canAskFollowupQuestions ? 'confirm' : 'noninteractive',
           interactive: canAskFollowupQuestions,
           additionalTools,
+          stateless,
         },
         context,
       )
@@ -153,18 +165,34 @@ export const codeWorkflow: WorkflowFn<
   }
 
   const res = await step('implement', async () => {
-    const { context: defaultContext, loadRules } = await getDefaultContext(input.config, 'code')
-    const memoryContext = await tools.getMemoryContext()
-    const textContent = userContent.find((c) => c.type === 'text')
-    if (textContent && textContent.type === 'text') {
-      textContent.text = `${textContent.text}\n\n${defaultContext}\n${memoryContext}`
-    } else {
-      userContent.push({
-        type: 'text',
-        text: `${defaultContext}\n${memoryContext}`,
-      })
+    let defaultContext = ''
+    let loadRules: Record<string, boolean> | undefined
+    let memoryContext = ''
+
+    if (!stateless) {
+      const contextResult = await getDefaultContext(input.config, 'code')
+      defaultContext = contextResult.context
+      loadRules = contextResult.loadRules
+      memoryContext = await tools.getMemoryContext()
     }
-    const baseSystemPrompt = isDirectMode ? getDirectCoderSystemPrompt(loadRules) : getCoderSystemPrompt(loadRules)
+
+    const contextText = [defaultContext, memoryContext].filter((part) => part.length > 0).join('\n')
+    if (contextText) {
+      const textContent = userContent.find((c) => c.type === 'text')
+      if (textContent && textContent.type === 'text') {
+        textContent.text = `${textContent.text}\n\n${contextText}`
+      } else {
+        userContent.push({
+          type: 'text',
+          text: contextText,
+        })
+      }
+    }
+
+    const promptOptions = stateless ? { includeMemory: false, includeProjectInstructions: false } : undefined
+    const baseSystemPrompt = isDirectMode
+      ? getDirectCoderSystemPrompt(loadRules, promptOptions)
+      : getCoderSystemPrompt(loadRules, promptOptions)
     const systemPrompt = additionalInstructions ? `${baseSystemPrompt}\n\n${additionalInstructions}` : baseSystemPrompt
     return await agentWorkflow(
       {
@@ -189,13 +217,15 @@ export const codeWorkflow: WorkflowFn<
       logger.info('\nImplementation complete!\n')
       summaries.push(summary)
       logger.info(`Summary: ${summary}`)
-      await step('summarize-implementation', async () => {
-        await tools.updateMemory({
-          operation: 'append',
-          topic: 'implementation-summary',
-          content: summary,
+      if (!stateless) {
+        await step('summarize-implementation', async () => {
+          await tools.updateMemory({
+            operation: 'append',
+            topic: 'implementation-summary',
+            content: summary,
+          })
         })
-      })
+      }
     } else {
       logger.info('\nImplementation complete!\n')
     }

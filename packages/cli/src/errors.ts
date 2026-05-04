@@ -164,6 +164,18 @@ export class QuotaExceededError extends ProviderError {
 }
 
 /**
+ * Error thrown when a workflow-level tool call fails before it can be
+ * represented as a recoverable ToolResponse for the agent.
+ */
+export class ToolExecutionError extends Error {
+  constructor(toolName: string, cause: unknown) {
+    const causeMessage = cause instanceof Error ? cause.message : String(cause)
+    super(`Tool '${toolName}' failed: ${causeMessage}`)
+    this.name = 'ToolExecutionError'
+  }
+}
+
+/**
  * Error when provider is repeatedly failing after multiple retries
  */
 export class MaxRetriesExceededError extends ProviderError {

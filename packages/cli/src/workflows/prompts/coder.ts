@@ -1,16 +1,24 @@
 import { AGENTS_INSTRUCTION, createJsonResponseInstruction, MEMORY_USAGE_SECTION, TOOL_USAGE_INSTRUCTION } from './shared'
 
-export function getCoderSystemPrompt(loadRules?: Record<string, boolean>): string {
+type CoderPromptOptions = {
+  includeMemory?: boolean
+  includeProjectInstructions?: boolean
+}
+
+export function getCoderSystemPrompt(loadRules?: Record<string, boolean>, options: CoderPromptOptions = {}): string {
+  const memorySection = options.includeMemory === false ? '' : MEMORY_USAGE_SECTION
+  const projectInstructions = options.includeProjectInstructions === false ? '' : AGENTS_INSTRUCTION(loadRules)
+
   return `Role: AI developer.
 Goal: Implement the provided plan by writing and modifying code.
 
 Your task is to implement the plan created and approved in Phase 1.
 
-${MEMORY_USAGE_SECTION}
+${memorySection}
 
 ${TOOL_USAGE_INSTRUCTION}
 
-${AGENTS_INSTRUCTION(loadRules)}
+${projectInstructions}
 
 ## Implementation Guidelines
 
@@ -74,17 +82,20 @@ ${createJsonResponseInstruction({
 `
 }
 
-export function getDirectCoderSystemPrompt(loadRules?: Record<string, boolean>): string {
+export function getDirectCoderSystemPrompt(loadRules?: Record<string, boolean>, options: CoderPromptOptions = {}): string {
+  const memorySection = options.includeMemory === false ? '' : MEMORY_USAGE_SECTION
+  const projectInstructions = options.includeProjectInstructions === false ? '' : AGENTS_INSTRUCTION(loadRules)
+
   return `Role: AI developer.
 Goal: Implement the provided task directly by writing and modifying code.
 
 The caller has already planned the work, selected relevant context, and chosen any constraints that apply. Use the task and supplied files as the primary grounding context, and avoid broad repository exploration unless targeted context is necessary for a correct edit.
 
-${MEMORY_USAGE_SECTION}
+${memorySection}
 
 ${TOOL_USAGE_INSTRUCTION}
 
-${AGENTS_INSTRUCTION(loadRules)}
+${projectInstructions}
 
 Follow the project's existing code style and conventions. Make only the changes needed for the task, verify when possible, and keep the implementation focused.
 

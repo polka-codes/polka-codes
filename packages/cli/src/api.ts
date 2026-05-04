@@ -18,7 +18,7 @@
 
 import type { ExitReason, UsageMeter } from '@polka-codes/core'
 import { createLogger } from './logger'
-import type { ExecutionContext } from './runWorkflow'
+import type { ExecutionContext, StructuredWorkflowFailure } from './runWorkflow'
 import { runWorkflow } from './runWorkflow'
 import type { ScriptContext } from './script/runner'
 import {
@@ -216,11 +216,22 @@ export interface CodeOptions extends BaseOptions {
   allowedWritePaths?: string[]
 
   /**
+   * Run without persistent memory or broad default project context.
+   * Intended for deterministic non-interactive automation clients.
+   * @default false
+   */
+  stateless?: boolean
+
+  /**
    * Whether to prompt for confirmations
    * @default true
    */
   interactive?: boolean
 }
+
+export type CodeResult =
+  | { success: true; summaries: string[] }
+  | { success: false; reason: string; summaries: string[]; errorType?: StructuredWorkflowFailure['errorType'] }
 
 /**
  * Plans and implements a feature or task using AI agents
@@ -242,8 +253,8 @@ export interface CodeOptions extends BaseOptions {
  * })
  * ```
  */
-export async function code(options: CodeOptions): Promise<{ success: boolean; summaries?: string[]; reason?: string } | undefined> {
-  const { task, files, mode, additionalInstructions, skipFix, allowedWritePaths, interactive, onUsage, ...context } = options
+export async function code(options: CodeOptions): Promise<CodeResult> {
+  const { task, files, mode, additionalInstructions, skipFix, allowedWritePaths, stateless, interactive, onUsage, ...context } = options
 
   const verbose = context.silent ? -1 : (context.verbose ?? 0)
   const logger = createLogger({ verbose })
@@ -255,6 +266,7 @@ export async function code(options: CodeOptions): Promise<{ success: boolean; su
     additionalInstructions,
     skipFix,
     allowedWritePaths,
+    stateless,
   }
 
   return runWorkflow(codeWorkflow, workflowInput, {
@@ -263,6 +275,7 @@ export async function code(options: CodeOptions): Promise<{ success: boolean; su
     logger,
     interactive: interactive !== false,
     onUsageMeterCreated: onUsage,
+    structuredErrors: true,
   })
 }
 

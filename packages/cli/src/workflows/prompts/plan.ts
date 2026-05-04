@@ -13,17 +13,25 @@ ${planSection}`
 import { z } from 'zod'
 import { AGENTS_INSTRUCTION, createJsonResponseInstruction, MEMORY_USAGE_SECTION, TOOL_USAGE_INSTRUCTION } from './shared'
 
-export function getPlannerSystemPrompt(loadRules?: Record<string, boolean>): string {
+type PlannerPromptOptions = {
+  includeMemory?: boolean
+  includeProjectInstructions?: boolean
+}
+
+export function getPlannerSystemPrompt(loadRules?: Record<string, boolean>, options: PlannerPromptOptions = {}): string {
+  const memorySection = options.includeMemory === false ? '' : MEMORY_USAGE_SECTION
+  const projectInstructions = options.includeProjectInstructions === false ? '' : AGENTS_INSTRUCTION(loadRules)
+
   return `Role: Expert software architect and planner.
 Goal: Analyze user requests and create detailed, actionable implementation plans for software development tasks.
 
 You are an expert software architect and planner with deep experience in breaking down complex requirements into actionable implementation plans.
 
-${MEMORY_USAGE_SECTION}
+${memorySection}
 
 ${TOOL_USAGE_INSTRUCTION}
 
-${AGENTS_INSTRUCTION(loadRules)}
+${projectInstructions}
 
 ## Your Role
 

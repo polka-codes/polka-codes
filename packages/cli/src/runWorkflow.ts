@@ -16,6 +16,7 @@ import {
 import {
   type BaseWorkflowContext,
   DEFAULT_MEMORY_CONFIG,
+  type ExitReason,
   type Logger,
   makeStepFn,
   PricingService,
@@ -30,7 +31,15 @@ import {
   type WorkflowTools,
 } from '@polka-codes/core'
 import { merge } from 'lodash-es'
-import { AuthenticationError, ConfigurationError, ModelAccessError, ProviderError, QuotaExceededError, UserCancelledError } from './errors'
+import {
+  AuthenticationError,
+  ConfigurationError,
+  ModelAccessError,
+  ProviderError,
+  QuotaExceededError,
+  ToolExecutionError,
+  UserCancelledError,
+} from './errors'
 import { AiProvider, getModel } from './getModel'
 import { getProviderOptions } from './getProviderOptions'
 import { McpError } from './mcp/errors'
@@ -70,15 +79,100 @@ type RunWorkflowOptions = {
     model?: string
     parameters?: Record<string, unknown>
   }
+  structuredErrors?: boolean
 }
 
+export type WorkflowFailureType =
+  | 'user_cancelled'
+  | 'configuration'
+  | 'quota'
+  | 'authentication'
+  | 'model_access'
+  | 'provider'
+  | 'mcp'
+  | 'tool'
+  | 'workflow'
+
+export type StructuredWorkflowFailure = {
+  success: false
+  reason: string
+  summaries: []
+  errorType: WorkflowFailureType
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Unknown error'
+}
+
+function errorStack(error: unknown): string | undefined {
+  return error instanceof Error ? error.stack : undefined
+}
+
+export function toStructuredWorkflowFailure(error: unknown): StructuredWorkflowFailure {
+  if (error instanceof UserCancelledError) {
+    return { success: false, reason: error.message, summaries: [], errorType: 'user_cancelled' }
+  }
+  if (error instanceof ConfigurationError) {
+    return { success: false, reason: error.message, summaries: [], errorType: 'configuration' }
+  }
+  if (error instanceof QuotaExceededError) {
+    return { success: false, reason: error.message, summaries: [], errorType: 'quota' }
+  }
+  if (error instanceof AuthenticationError) {
+    return { success: false, reason: error.message, summaries: [], errorType: 'authentication' }
+  }
+  if (error instanceof ModelAccessError) {
+    return { success: false, reason: error.message, summaries: [], errorType: 'model_access' }
+  }
+  if (error instanceof ProviderError) {
+    return { success: false, reason: error.message, summaries: [], errorType: 'provider' }
+  }
+  if (error instanceof McpError) {
+    return { success: false, reason: error.message, summaries: [], errorType: 'mcp' }
+  }
+  if (error instanceof ToolExecutionError) {
+    return { success: false, reason: error.message, summaries: [], errorType: 'tool' }
+  }
+  return { success: false, reason: errorMessage(error), summaries: [], errorType: 'workflow' }
+}
+
+function errorExitReason(error: unknown): ExitReason {
+  return {
+    type: 'Error',
+    error: {
+      message: errorMessage(error),
+      stack: errorStack(error),
+    },
+    messages: [],
+  }
+}
+
+export function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
+  workflow: WorkflowFn<TInput & BaseWorkflowInput, TOutput, TTools>,
+  workflowInput: TInput,
+  options: RunWorkflowOptions & { structuredErrors: true },
+): Promise<TOutput | StructuredWorkflowFailure>
+export function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
+  workflow: WorkflowFn<TInput & BaseWorkflowInput, TOutput, TTools>,
+  workflowInput: TInput,
+  options: RunWorkflowOptions,
+): Promise<TOutput | undefined>
 export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
   workflow: WorkflowFn<TInput & BaseWorkflowInput, TOutput, TTools>,
   workflowInput: TInput,
   options: RunWorkflowOptions,
-): Promise<TOutput | undefined> {
+): Promise<TOutput | StructuredWorkflowFailure | undefined> {
   const { commandName, context, logger, interactive, providerOverride } = options
-  const { providerConfig, config, verbose } = await parseOptions(context, {})
+  let parsedOptions: Awaited<ReturnType<typeof parseOptions>>
+  try {
+    parsedOptions = await parseOptions(context, {})
+  } catch (error) {
+    if (options.structuredErrors) {
+      return toStructuredWorkflowFailure(error)
+    }
+    throw error
+  }
+  const { providerConfig, config, verbose } = parsedOptions
   const yes = context.yes
 
   const additionalTools: BaseWorkflowInput['additionalTools'] = {}
@@ -159,6 +253,9 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
       `No provider configured for command: ${commandName}. Please run "polka init" to configure your AI provider.`,
     )
     logger.error(`Error: ${error.message}`)
+    if (options.structuredErrors) {
+      return toStructuredWorkflowFailure(error)
+    }
     throw error
   }
 
@@ -274,14 +371,21 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
       }
       return (async (input: unknown) => {
         logger.debug(`Running tool: ${prop}`)
-        return await toolCall({ tool: prop as never, input: input as never }, {
-          parameters,
-          model,
-          agentCallback: onEvent,
-          toolProvider,
-          yes: context.yes,
-          workflowContext: workflowContext,
-        } as ToolCallContext)
+        try {
+          return await toolCall({ tool: prop as never, input: input as never }, {
+            parameters,
+            model,
+            agentCallback: onEvent,
+            toolProvider,
+            yes: context.yes,
+            workflowContext: workflowContext,
+          } as ToolCallContext)
+        } catch (error) {
+          if (error instanceof UserCancelledError || error instanceof ProviderError || error instanceof McpError) {
+            throw error
+          }
+          throw new ToolExecutionError(prop, error)
+        }
       }) as WorkflowTools<TTools>[keyof TTools]
     },
   })
@@ -378,18 +482,19 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
           messages: [],
         },
       })
-    } else {
-      // Generic error handling
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      const errorStack = error instanceof Error ? error.stack : undefined
-      logger.error(`\n❌ Error: ${errorMessage}`)
+    } else if (error instanceof ToolExecutionError) {
+      logger.error(`\n❌ Tool Error: ${error.message}`)
       onEvent({
         kind: TaskEventKind.EndTask,
-        exitReason: {
-          type: 'Error',
-          error: { message: errorMessage, stack: errorStack },
-          messages: [],
-        },
+        exitReason: errorExitReason(error),
+      })
+    } else {
+      // Generic error handling
+      const message = errorMessage(error)
+      logger.error(`\n❌ Error: ${message}`)
+      onEvent({
+        kind: TaskEventKind.EndTask,
+        exitReason: errorExitReason(error),
       })
     }
 
@@ -397,7 +502,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
     await usage.waitForPending()
 
     logger.info(usage.getUsageText())
-    return undefined
+    return options.structuredErrors ? toStructuredWorkflowFailure(error) : undefined
   } finally {
     // Close memory store
     if (memoryStore) {

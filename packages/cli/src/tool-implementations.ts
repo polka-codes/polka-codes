@@ -125,6 +125,30 @@ type ToolCallContext = {
 
 export type { ToolCallContext }
 
+export type GenerateTextInput = {
+  messages: JsonModelMessage[]
+  systemPrompt?: string
+  tools: ToolSet
+}
+
+export function prepareGenerateTextRequest(input: Pick<GenerateTextInput, 'messages' | 'systemPrompt'>, provider: string, modelId: string) {
+  const systemMessages: string[] = []
+  const nonSystemMessages: JsonModelMessage[] = []
+
+  for (const message of input.messages) {
+    if (message.role === 'system') {
+      systemMessages.push(message.content)
+    } else {
+      nonSystemMessages.push(message)
+    }
+  }
+
+  const system = [input.systemPrompt, ...systemMessages].filter((part) => part && part.length > 0).join('\n\n') || undefined
+  const messages = applyCacheControl(nonSystemMessages.map(fromJsonModelMessage), provider, modelId)
+
+  return { system, messages }
+}
+
 async function createPullRequest(input: { title: string; description: string }, _context: ToolCallContext) {
   spawnSync('gh', ['pr', 'create', '--title', input.title, '--body', input.description], {
     stdio: 'inherit',
@@ -274,7 +298,7 @@ async function executeCommand(input: { command: string; shell?: boolean; pipe?: 
   })
 }
 
-async function generateText(input: { messages: JsonModelMessage[]; tools: ToolSet }, context: ToolCallContext) {
+async function generateText(input: GenerateTextInput, context: ToolCallContext) {
   const { model, agentCallback } = context
   if (!model) {
     throw new Error('Model not found in context')
@@ -291,8 +315,7 @@ async function generateText(input: { messages: JsonModelMessage[]; tools: ToolSe
 
   const { retryCount = 5, requestTimeoutSeconds = 90 } = context.parameters
 
-  // Convert messages and apply cache control
-  const messages = applyCacheControl(input.messages.map(fromJsonModelMessage), model.provider, model.modelId)
+  const prompt = prepareGenerateTextRequest(input, model.provider, model.modelId)
 
   // Repetition detection constants
   const REPETITION_DETECTION_WINDOW = 20
@@ -314,7 +337,8 @@ async function generateText(input: { messages: JsonModelMessage[]; tools: ToolSe
       const stream = streamText({
         model,
         temperature: 0,
-        messages,
+        system: prompt.system,
+        messages: prompt.messages,
         tools: input.tools,
         async onChunk({ chunk }) {
           clearTimeout(timeout)

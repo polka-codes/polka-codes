@@ -91,6 +91,39 @@ test('should run agent workflow with a tool call and reply', async () => {
   })
 })
 
+test('should pass system prompts separately from ordinary model messages', async () => {
+  let capturedInput: AgentToolRegistry['generateText']['input'] | undefined
+
+  const tools: WorkflowTools<AgentToolRegistry> = {
+    generateText: async (input) => {
+      capturedInput = structuredClone(input) as AgentToolRegistry['generateText']['input']
+      return [{ role: 'assistant', content: 'Done.' }]
+    },
+    invokeTool: async () => {
+      throw new Error('No tools should be invoked')
+    },
+    taskEvent: async () => {},
+  }
+
+  const result = await agentWorkflow(
+    {
+      userMessage: [toJsonModelMessage({ role: 'user', content: 'Do the thing.' })] as any,
+      tools: [],
+      systemPrompt: 'Use the dedicated system channel.',
+    },
+    createContext(tools),
+  )
+
+  if (!capturedInput) {
+    throw new Error('generateText was not called')
+  }
+
+  expect(capturedInput.systemPrompt).toBe('Use the dedicated system channel.')
+  expect(capturedInput.messages.some((message) => message.role === 'system')).toBe(false)
+  expect(capturedInput.messages).toEqual([{ role: 'user', content: 'Do the thing.' }])
+  expect(result.messages[0]).toEqual({ role: 'system', content: 'Use the dedicated system channel.' })
+})
+
 test('should fail if maxToolRoundTrips is exceeded', async () => {
   const mockResponses: ModelMessage[] = Array(12).fill({
     role: 'assistant',

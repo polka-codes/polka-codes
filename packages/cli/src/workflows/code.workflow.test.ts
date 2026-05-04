@@ -126,11 +126,59 @@ describe('codeWorkflow', () => {
       harness.context,
     )
 
-    const firstInput = harness.generateTextInputs[0] as { messages: { role: string; content: string }[] }
-    expect(firstInput.messages[0].role).toBe('system')
-    expect(firstInput.messages[0].content).toContain('First edit must replace the scaffold.')
-    expect(firstInput.messages[0].content).toContain('Implement the provided task directly')
-    expect(firstInput.messages[0].content).not.toContain('approved in Phase 1')
+    const firstInput = harness.generateTextInputs[0] as { messages: { role: string; content: string }[]; systemPrompt?: string }
+    expect(firstInput.messages.some((message) => message.role === 'system')).toBe(false)
+    expect(firstInput.systemPrompt).toContain('First edit must replace the scaffold.')
+    expect(firstInput.systemPrompt).toContain('Implement the provided task directly')
+    expect(firstInput.systemPrompt).not.toContain('approved in Phase 1')
+  })
+
+  test('stateless direct mode skips memory and broad default context', async () => {
+    const harness = createHarness([jsonResponse({ summary: 'Implemented stateless task.', bailReason: null })])
+
+    const result = await codeWorkflow(
+      {
+        task: 'Implement only the requested file generation.',
+        mode: 'direct',
+        interactive: false,
+        skipFix: true,
+        stateless: true,
+        additionalTools: {},
+      },
+      harness.context,
+    )
+
+    const firstInput = harness.generateTextInputs[0] as { messages: { role: string; content: unknown }[]; systemPrompt?: string }
+
+    expect(result).toEqual({ success: true, summaries: ['Implemented stateless task.'] })
+    expect(harness.toolCalls).not.toContain('getMemoryContext')
+    expect(harness.toolCalls).not.toContain('updateMemory')
+    expect(firstInput.systemPrompt).not.toContain('Memory Usage')
+    expect(firstInput.systemPrompt).not.toContain('Project Instructions')
+    expect(textParts(firstInput).join('\n')).not.toContain('<file_list')
+  })
+
+  test('stateless planned mode skips memory across planning and implementation', async () => {
+    const harness = createHarness([
+      jsonResponse({ plan: '1. Implement the requested change.', files: [] }),
+      jsonResponse({ summary: 'Implemented stateless planned task.', bailReason: null }),
+    ])
+
+    const result = await codeWorkflow(
+      {
+        task: 'Implement through stateless planning.',
+        interactive: false,
+        skipFix: true,
+        stateless: true,
+        additionalTools: {},
+      },
+      harness.context,
+    )
+
+    expect(result).toEqual({ success: true, summaries: ['Implemented stateless planned task.'] })
+    expect(harness.generateTextInputs).toHaveLength(2)
+    expect(harness.toolCalls).not.toContain('getMemoryContext')
+    expect(harness.toolCalls).not.toContain('updateMemory')
   })
 
   test('skipFix prevents the post-implementation fix phase', async () => {

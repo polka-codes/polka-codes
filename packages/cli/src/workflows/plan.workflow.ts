@@ -30,11 +30,12 @@ type CreatePlanInput = {
   messages?: JsonModelMessage[]
   additionalTools?: { search?: FullToolInfo; mcpTools?: FullToolInfo[] }
   config?: LoadedConfig
+  stateless?: boolean
 }
 
 async function createPlan(input: CreatePlanInput, context: BaseWorkflowContext<CliToolRegistry>) {
   const { tools, step } = context
-  const { task, files, plan: inputPlan, userFeedback, interactive, messages, additionalTools } = input
+  const { task, files, plan: inputPlan, userFeedback, interactive, messages, additionalTools, stateless = false } = input
 
   const getMessages = async () => {
     if (messages) {
@@ -47,9 +48,16 @@ async function createPlan(input: CreatePlanInput, context: BaseWorkflowContext<C
     } else {
       // start a new thread
 
-      const { context: defaultContext, loadRules } = await getDefaultContext(input.config, 'plan')
-      const memoryContext = await tools.getMemoryContext()
-      const prompt = `${memoryContext}\n${getPlanPrompt(task, inputPlan)}\n\n${defaultContext}`
+      let defaultContext = ''
+      let loadRules: Record<string, boolean> | undefined
+      let memoryContext = ''
+      if (!stateless) {
+        const contextResult = await getDefaultContext(input.config, 'plan')
+        defaultContext = contextResult.context
+        loadRules = contextResult.loadRules
+        memoryContext = await tools.getMemoryContext()
+      }
+      const prompt = [memoryContext, getPlanPrompt(task, inputPlan), defaultContext].filter((part) => part.length > 0).join('\n\n')
       const userContent: JsonUserContent = [{ type: 'text', text: prompt }]
       if (files) {
         for (const file of files) {
@@ -71,7 +79,10 @@ async function createPlan(input: CreatePlanInput, context: BaseWorkflowContext<C
       }
 
       return {
-        systemPrompt: getPlannerSystemPrompt(loadRules),
+        systemPrompt: getPlannerSystemPrompt(
+          loadRules,
+          stateless ? { includeMemory: false, includeProjectInstructions: false } : undefined,
+        ),
         userMessage: [{ role: 'user', content: userContent }],
       } as const
     }
@@ -123,7 +134,7 @@ async function createPlan(input: CreatePlanInput, context: BaseWorkflowContext<C
     }
 
     // Save plan to memory for future reference
-    if (plan) {
+    if (plan && !stateless) {
       try {
         const taskSummary = task.split('\n')[0].substring(0, 100) // Get first line, max 100 chars
         const topic = `plan:${taskSummary.replace(/[^a-zA-Z0-9_-]+/g, '-').toLowerCase()}`
@@ -171,6 +182,7 @@ export type PlanWorkflowInput = {
   filePath?: string
   files?: (JsonFilePart | JsonImagePart)[]
   mode?: 'interactive' | 'confirm' | 'noninteractive'
+  stateless?: boolean
 }
 
 export type PlanWorkflowOutput = {
@@ -187,7 +199,7 @@ export const planWorkflow: WorkflowFn<
   BaseWorkflowContext<CliToolRegistry>
 > = async (input, context) => {
   const { tools, logger, step } = context
-  const { fileContent, filePath, mode: inputMode, interactive, additionalTools } = input
+  const { fileContent, filePath, mode: inputMode, interactive, additionalTools, stateless = false } = input
   const mode = interactive === false ? 'noninteractive' : (inputMode ?? 'interactive')
 
   let currentTask = input.task
@@ -225,6 +237,7 @@ export const planWorkflow: WorkflowFn<
               messages,
               additionalTools,
               config: input.config,
+              stateless,
             },
             context,
           )

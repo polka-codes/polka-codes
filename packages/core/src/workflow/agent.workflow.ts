@@ -26,7 +26,7 @@ export type AgentWorkflowInput = {
 
 export type AgentToolRegistry = {
   generateText: {
-    input: { messages: JsonModelMessage[]; tools: ToolSet; model?: string }
+    input: { messages: JsonModelMessage[]; systemPrompt?: string; tools: ToolSet; model?: string }
     output: JsonResponseMessage[]
   }
   taskEvent: {
@@ -44,9 +44,10 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
 
   const { tools: toolInfo, maxToolRoundTrips = 200 } = input
 
-  const messages: JsonModelMessage[] = 'systemPrompt' in input ? [{ role: 'system', content: input.systemPrompt }] : input.messages
+  const systemPrompt = 'systemPrompt' in input ? input.systemPrompt : undefined
+  const messages: JsonModelMessage[] = 'systemPrompt' in input ? [{ role: 'system', content: input.systemPrompt }] : [...input.messages]
 
-  await event('start-task', { kind: TaskEventKind.StartTask, systemPrompt: 'systemPrompt' in input ? input.systemPrompt : '' })
+  await event('start-task', { kind: TaskEventKind.StartTask, systemPrompt: systemPrompt ?? '' })
 
   const toolSet: ToolSet = {}
   for (const tool of toolInfo) {
@@ -63,8 +64,13 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
 
     await event(`start-round-${i}`, { kind: TaskEventKind.StartRequest, userMessage: nextMessage })
     const assistantMessage = await step(`agent-round-${i}`, { retry: 2 }, async () => {
+      const systemMessages = messages.filter((message) => message.role === 'system').map((message) => message.content)
+      const requestSystemPrompt = systemMessages.length > 0 ? systemMessages.join('\n\n') : undefined
+      const requestMessages = requestSystemPrompt ? messages.filter((message) => message.role !== 'system') : messages
+
       return await tools.generateText({
-        messages,
+        messages: requestMessages,
+        systemPrompt: requestSystemPrompt,
         tools: toolSet,
         model: input.model,
       })
