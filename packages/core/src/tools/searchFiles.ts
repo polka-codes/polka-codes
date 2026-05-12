@@ -5,7 +5,7 @@ import type { FilesystemProvider } from './provider.js'
 export const toolInfo = {
   name: 'searchFiles',
   description:
-    'Request to perform a regex search across files in a specified directory, outputting context-rich results that include surrounding lines. This tool searches for patterns or specific content across multiple files, displaying each match with encapsulating context.',
+    'Search files in a directory with a Rust regex pattern and optional file globs. Use this to find code, text, or references before reading specific files.',
   parameters: z
     .object({
       path: z

@@ -75,8 +75,7 @@ export async function readSkillFile(input: ReadSkillFileInput, context: SkillCon
  */
 export const readSkillFileToolInfo = {
   name: 'readSkillFile',
-  description:
-    'Read a supporting file from a skill. Use this to access reference documentation, examples, scripts, or templates bundled with a skill. First use loadSkill to see available files, then use this tool to read specific files.',
+  description: 'Read a supporting file bundled with a skill, such as reference documentation, examples, scripts, or templates.',
   parameters: ReadSkillFileInputSchema,
   returns: ReadSkillFileOutputSchema,
 } as const

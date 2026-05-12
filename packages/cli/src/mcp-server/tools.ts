@@ -252,21 +252,12 @@ export function createPolkaCodesServerTools(logger: Logger): McpServerTool[] {
   return [
     {
       name: 'code',
-      description: `Execute a coding task using AI with comprehensive codebase analysis and modification capabilities.
+      description: `Execute a coding task with repo-aware analysis and targeted file changes.
 
-The workflow will:
-- Analyze the current codebase structure, patterns, and dependencies
-- Understand existing conventions and architectural decisions
-- Make targeted code changes to accomplish the specified task
-- Ensure all changes compile and pass type checking
-- Run and fix any failing tests
-- Handle complex multi-file changes and refactoring
-- Provide a detailed summary of changes made
-
-Best used for implementing new features, refactoring existing code, fixing bugs across multiple files, adding tests, or code modernization.
+Best for implementing features, fixing bugs, refactoring, adding tests, or modernizing code.
 
 Parameters:
-- task (required): Detailed description of what needs to be implemented or changed
+- task (required): What to implement or change
 - provider (optional): Override the AI provider for this call
 - model (optional): Override the model for this call
 - parameters (optional): Override model parameters for this call`,
@@ -285,27 +276,9 @@ Parameters:
     },
     {
       name: 'review',
-      description: `Perform comprehensive code review with actionable, structured feedback.
+      description: `Review code changes and return structured, actionable findings with file and line references.
 
-This workflow can review:
-- Uncommitted local changes (staged and/or unstaged files) - DEFAULT BEHAVIOR when no parameters provided
-- Branch comparisons (e.g., feature branch vs main)
-- Specific git ranges (e.g., HEAD~3..HEAD, origin/main..HEAD)
-- Pull requests from GitHub/GitLab by number
-
-The review provides:
-- Code quality and style analysis
-- Bug identification and potential issues
-- Security and performance concerns
-- Improvement suggestions with examples
-- Best practices compliance feedback
-- Documentation review
-
-Output is structured with:
-- Categorized feedback (bugs, style, performance, etc.)
-- Specific file/line references
-- Severity levels (critical, major, minor, nitpick)
-- Actionable recommendations
+Can review local changes by default, a git range, selected files, or a pull request number.
 
 Parameters:
 - pr (optional): Pull request number to review
@@ -343,30 +316,12 @@ Parameters:
     },
     {
       name: 'plan',
-      description: `Create a detailed, actionable implementation plan for features or problems.
-
-The workflow will:
-- Analyze the current codebase to understand existing architecture
-- Identify key files, dependencies, and potential challenges
-- Create a step-by-step implementation roadmap
-- Consider edge cases, error handling, and validation
-- Suggest testing strategies and test cases
-- Identify potential risks and mitigation approaches
-- Recommend refactoring or preparatory work if needed
-
-The plan includes:
-- Overview with recommended approach
-- Ordered list of implementation steps
-- Files to create or modify (file paths only, no content)
-- Dependencies and prerequisites
-- Testing strategy
-- Risk assessment and mitigations
-- Rollback strategy if applicable
+      description: `Create an implementation-ready plan after inspecting the current codebase.
 
 Best used for complex features, architecture changes, large refactorings, or migration strategies.
 
 Parameters:
-- task (required): Detailed description of what needs to be planned
+- task (required): Requirements, constraints, and goals to plan
 - provider (optional): Override the AI provider for this call
 - model (optional): Override the model for this call
 - parameters (optional): Override model parameters for this call`,
@@ -459,33 +414,7 @@ Parameters:
     },
     {
       name: 'fix',
-      description: `Diagnose and resolve issues, bugs, or test failures systematically.
-
-The workflow will:
-- Analyze error messages, stack traces, and failing tests
-- Identify root causes through code examination
-- Review relevant code and dependencies
-- Implement targeted fixes with proper error handling
-- Run tests to verify the fix
-- Check for regressions in related functionality
-- Iterate if the issue persists
-
-Can handle:
-- Test failures (unit, integration, e2e)
-- Build and compilation errors
-- Type checking errors
-- Runtime errors and exceptions
-- Logic bugs
-- Performance issues
-- Security vulnerabilities
-
-Process:
-1. Thoroughly analyze the failure or error
-2. Identify and understand the root cause
-3. Implement a minimal, targeted fix
-4. Test to verify the fix works
-5. Check for regressions
-6. Iterate if needed until resolved
+      description: `Diagnose and fix a failure, bug, or test issue with targeted code changes and verification.
 
 Parameters:
 - task (required): Description of the issue - include error messages, stack traces, or describe what's not working
@@ -507,25 +436,7 @@ Parameters:
     },
     {
       name: 'commit',
-      description: `Create a git commit with an AI-generated, well-formatted commit message.
-
-The workflow will:
-- Stage specified files (all files or specific files)
-- Analyze the diff to understand what changed
-- Generate a clear, descriptive commit message following best practices
-- Create the commit with the generated message
-
-Commit message format:
-- Clear subject line (50 chars or less)
-- Detailed body explaining what changed and why
-- References to issues/PRs if applicable
-- Conventional commits format when appropriate
-
-Best practices followed:
-- Separate subject from body with blank line
-- Use imperative mood in subject line (e.g., "Add feature" not "Added feature")
-- Explain what and why, not how
-- Wrap body lines at 72 characters
+      description: `Create a git commit. Optionally stage files first; if no message is provided, generate one from the staged diff.
 
 Parameters:
 - message (optional): Custom commit message. If not provided, AI analyzes changes and generates an appropriate message following best practices
@@ -582,11 +493,7 @@ Parameters:
     },
     {
       name: 'memory_read',
-      description: `Read content from a memory topic.
-
-Use this to retrieve information stored in previous workflow steps.
-Memory persists across tool calls, allowing you to maintain context
-between different operations.
+      description: `Read content from a project-scoped memory topic.
 
 Parameters:
 - project (required): Absolute path to the project directory. This isolates memory to a specific project.
@@ -619,11 +526,7 @@ Returns the content stored in the specified topic, or a message indicating the t
     },
     {
       name: 'memory_update',
-      description: `Update content in a memory topic.
-
-Use this to store information for later retrieval in subsequent tool calls.
-Memory persists across tool calls, allowing you to maintain context
-between different operations.
+      description: `Append, replace, or remove content in project-scoped memory.
 
 Parameters:
 - project (required): Absolute path to the project directory. This isolates memory to a specific project.
@@ -771,10 +674,7 @@ Returns a message confirming the operation performed.`,
     },
     {
       name: 'memory_list',
-      description: `List all available memory topics.
-
-Use this to see what information has been stored and which topics are
-available to read from. Returns a list of topic names that have content.
+      description: `List memory topics that have content for a project.
 
 Parameters:
 - project (required): Absolute path to the project directory. This isolates memory to a specific project.
@@ -818,10 +718,7 @@ Parameters:
     },
     {
       name: 'memory_query',
-      description: `Query memory with advanced filters.
-
-Use this to search memory entries by content, metadata, or other criteria.
-Returns detailed entry information with metadata.
+      description: `Query project memory by content or metadata filters.
 
 Parameters:
 - project (required): Absolute path to the project directory. This isolates memory to a specific project.
@@ -830,9 +727,7 @@ Parameters:
 - status (optional): Filter by status (open, completed, closed, etc.)
 - priority (optional): Filter by priority (null, low, medium, high)
 - tags (optional): Filter by tags
-- operation (optional): Query operation - "select" returns entries, "count" returns count
-
-Returns matching entries with full metadata.`,
+- operation (optional): Query operation - "select" returns entries, "count" returns count`,
       inputSchema: z.object({
         project: z.string().describe('Absolute path to the project directory (e.g., "/home/user/my-project")'),
         search: z.string().optional().describe('Search text to find in content'),

@@ -4,8 +4,7 @@ import type { FilesystemProvider } from './provider.js'
 
 export const toolInfo = {
   name: 'readBinaryFile',
-  description:
-    'Read a binary file from a URL or local path. Use file:// prefix to access local files. This can be used to access non-text files such as PDFs or images.',
+  description: 'Read a non-text file, such as an image or PDF, from a URL or local file:// path.',
   parameters: z.object({
     url: z.string().describe('The URL or local path of the file to read.'),
   }),

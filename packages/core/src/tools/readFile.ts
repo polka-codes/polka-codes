@@ -5,29 +5,7 @@ import { createFileElement, createProviderError, preprocessBoolean } from './uti
 
 export const toolInfo = {
   name: 'readFile',
-  description: `Request to read the contents of one or multiple files at the specified paths.
-
-When to use:
-- Examining file contents you don't know
-- Analyzing code, reviewing text files, extracting configuration info
-- Reading multiple files at once (use comma-separated paths)
-- Understanding file structure before editing
-
-When NOT to use:
-- For file existence checks: Use listFiles instead
-- For searching within files: Use grep instead
-- For file name searches: Use searchFiles instead
-- Prefer this tool over executeCommand with cat/head/tail
-
-Features:
-- Supports comma-separated paths for multiple files
-- Line numbers included for easy reference
-- Optional offset/limit for partial file reading
-- Automatically handles different file types
-
-IMPORTANT:
-- Line numbers are included for easy reference
-- Use offset/limit for large files to read specific sections`,
+  description: `Read one or more text files. Use this to inspect known files before editing, understand code, or read configuration. Prefer searchFiles for content searches and listFiles for directory discovery. The result includes line numbers; use offset and limit for large files.`,
   parameters: z
     .object({
       path: z

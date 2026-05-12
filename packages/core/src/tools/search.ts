@@ -4,8 +4,7 @@ import type { WebProvider } from './provider.js'
 
 export const toolInfo = {
   name: 'search',
-  description:
-    'Search the web for information using Google Search. Use this tool to find current information, facts, news, documentation, or research that is not available in your training data. Returns comprehensive search results with relevant content extracted from the web.',
+  description: 'Search the web for current information, facts, news, documentation, or research that may not be available locally.',
   parameters: z
     .object({
       query: z.string().describe('The query to search for').meta({ usageValue: 'Your search query here' }),

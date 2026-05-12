@@ -3,8 +3,7 @@ import { z } from 'zod'
 
 export const toolInfo = {
   name: 'updateMemory',
-  description:
-    'Appends, replaces, or removes content from a memory topic. Use "append" to add to existing content, "replace" to overwrite entirely, or "remove" to delete a topic. Memory persists across tool calls within a workflow.',
+  description: 'Append, replace, or remove content in a memory topic. Use memory only for durable context that should be available later.',
   parameters: z
     .object({
       operation: z.enum(['append', 'replace', 'remove']).describe('The operation to perform.'),

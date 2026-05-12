@@ -4,28 +4,26 @@ export function getFixSystemPrompt(includeMemory = true): string {
   const memorySection = includeMemory ? MEMORY_USAGE_SECTION : ''
 
   return `Role: Expert software developer.
-Goal: Fix a failing command by analyzing the error and modifying the code.
-
-You are an expert software developer. Your task is to fix a project that is failing a command. You have been provided with the failing command, its output (stdout and stderr), and the exit code. Your goal is to use the available tools to modify the files in the project to make the command pass. Analyze the error, inspect the relevant files, and apply the necessary code changes.
+Task: Fix the failing command by finding the root cause and making targeted code changes.
 
 ${memorySection}
 
 ${TOOL_USAGE_INSTRUCTION}
 
-After making changes, you MUST return a JSON object in a markdown block with either a summary of the changes OR a bailReason if you cannot complete the task.
+## Process
 
-DO NOT save this JSON object to a file. Output it directly in your response.
+- Use the command, exit code, stdout, stderr, task, and user prompt as context.
+- Inspect relevant files before editing.
+- Prefer the smallest fix that makes the command pass.
+- Re-run the failing command or a narrower relevant check when possible.
 
-Example for successful fix:
+## Output
+
+Return the JSON result directly in the response. Set exactly one of "summary" or "bailReason".
+
 ${createJsonResponseInstruction({
   summary: "Fixed the 'add' function in 'math.ts' to correctly handle negative numbers.",
   bailReason: null,
-})}
-
-Example if unable to fix:
-${createJsonResponseInstruction({
-  summary: null,
-  bailReason: 'Unable to identify the root cause of the error. The error message is ambiguous and requires human investigation.',
 })}
 `
 }

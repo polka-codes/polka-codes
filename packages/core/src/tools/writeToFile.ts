@@ -5,35 +5,13 @@ import { createProviderError } from './utils.js'
 
 export const toolInfo = {
   name: 'writeToFile',
-  description: `Request to write content to a file at the specified path.
-
-When to use:
-- Creating new files
-- Completely replacing file contents
-- When you have the complete intended content
-
-When NOT to use:
-- For modifying existing files: Use replaceInFile instead
-- For appending content: Use executeCommand with echo >> instead
-- For targeted edits: Use replaceInFile instead
-
-Features:
-- Automatically creates any directories needed
-- Overwrites existing files completely
-- Must provide complete file content (no truncation)
-
-IMPORTANT CONSTRAINT:
-- Always provide COMPLETE intended content (no omissions)
-- Ensure no incorrect escape sequences (&lt;, &gt;, &amp;)
-- Ensure no unwanted CDATA tags in content`,
+  description: `Write complete content to a file, creating parent directories if needed. Use this for new files or full-file replacement. For targeted edits to existing files, prefer replaceInFile. Always provide the complete intended file content.`,
   parameters: z
     .object({
       path: z.string().describe('The path of the file to write to').meta({ usageValue: 'File path here' }),
       content: z
         .string()
-        .describe(
-          "The content to write to the file. ALWAYS provide the COMPLETE intended content of the file, without any truncation or omissions. You MUST include ALL parts of the file, even if they haven't been modified.",
-        )
+        .describe('The complete intended content of the file. Include every part of the file, including sections that have not changed.')
         .meta({ usageValue: 'Your file content here' }),
     })
     .meta({

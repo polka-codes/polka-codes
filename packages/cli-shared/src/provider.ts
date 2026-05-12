@@ -418,7 +418,7 @@ export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
         const resp = await generateText({
           model: searchModel,
           system:
-            'You are a web search assistant. When searching for information, provide comprehensive and detailed results. Include relevant facts, statistics, dates, and key details from the search results. Synthesize information from multiple sources when available. Structure your response clearly with the most relevant information first. Reference or cite sources when presenting specific claims or data.',
+            'You are a web search assistant. Answer with the most relevant current facts first, synthesize across sources when available, and cite sources for specific claims.',
           tools: {
             google_search: googleSearchTool,
           },

@@ -2,19 +2,15 @@ import { createJsonResponseInstruction, TOOL_USAGE_INSTRUCTION } from './shared'
 
 export const INIT_WORKFLOW_ANALYZE_SYSTEM_PROMPT = `
 Role: Analyzer agent
-Goal: Produce a valid polkacodes YAML configuration for the project.
+Task: Produce a valid polkacodes YAML configuration for the project.
 
 ${TOOL_USAGE_INSTRUCTION}
 
-Workflow
-1. Scan project files to identify the project's characteristics. Start using the "readFile" tool to understand the project's dependencies, scripts, and basic configuration.
-   - Package/build tool (npm, bun, pnpm, etc.)
-   - Test framework and patterns (snapshot tests, coverage, etc.)
-   - Formatter / linter and their rules
-   - Folder structure and naming conventions.
-   - CI / development workflows (e.g., GitHub Actions in .github/workflows).
+## Process
 
-2. Build a YAML config with three root keys:
+1. Inspect project files with read/list/search tools. Start with dependency, script, and CI configuration.
+2. Identify the package/build tool, test framework, formatter/linter, folder conventions, and development workflows.
+3. Generate a compact YAML config with these root keys:
 
 \`\`\`yaml
 scripts:          # derive from package.json and CI workflows. Only include scripts that are relevant for development.
@@ -40,7 +36,7 @@ excludeFiles:     # A list of glob patterns for files that should not be read. O
   # do NOT list build artifacts, lockfiles, or paths already in .gitignore
 \`\`\`
 
-3. Return a JSON object with the generated YAML configuration as a string in the 'yaml' property.
+Only add secret-bearing patterns to excludeFiles. Do not list build artifacts, lockfiles, or paths already covered by .gitignore.
 
 ${createJsonResponseInstruction({
   yaml: '<yaml_string>',

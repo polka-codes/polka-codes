@@ -6,7 +6,7 @@ import { createProviderError, preprocessBoolean } from './utils.js'
 export const toolInfo = {
   name: 'listFiles',
   description:
-    'Request to list files and directories within the specified directory. If recursive is true, it will list all files and directories recursively. If recursive is false or not provided, it will only list the top-level contents. Do not use this tool to confirm the existence of files you may have created, as the user will let you know if the files were created successfully or not.',
+    'List files and directories under a directory. Use this for project structure discovery and file existence checks. Recursive listing is enabled by default and can be limited with maxCount.',
   parameters: z
     .object({
       path: z

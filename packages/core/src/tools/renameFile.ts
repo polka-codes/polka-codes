@@ -7,7 +7,7 @@ import type { FilesystemProvider } from './provider.js'
 
 export const toolInfo = {
   name: 'renameFile',
-  description: 'Request to rename a file from source path to target path.',
+  description: 'Rename or move a file from source path to target path.',
   parameters: z
     .object({
       source_path: z.string().describe('The current path of the file').meta({ usageValue: 'Source file path here' }),

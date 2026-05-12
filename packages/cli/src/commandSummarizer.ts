@@ -4,20 +4,20 @@ import { generateText, type LanguageModel } from 'ai'
 import { z } from 'zod'
 
 const prompt = `
-You are a command output summarizer. Analyze the provided command output, which is prefixed with line numbers and the stream name (stdout/stderr). Your task is to identify the most important lines, such as errors, failures, or key results.
+You summarize command output by selecting the most important line ranges.
 
-The input is structured as follows:
+Input format:
 [line_number]: [stream]: [content]
 
-Your output must be a JSON object containing the line number ranges of the most important lines for each stream. The JSON object should be enclosed in a markdown code block.
-
-The JSON schema is as follows:
+Return a JSON object in a markdown \`json\` code block:
+\`\`\`json
 {
   "stdout": [[start_line, end_line], ...],
   "stderr": [[start_line, end_line], ...]
 }
+\`\`\`
 
-- Only include lines that are important for understanding the outcome of the command.
+- Include only lines needed to understand the command outcome: errors, failures, warnings, summaries, or key results.
 - Group consecutive lines into a single range.
 
 Example Output:
@@ -26,6 +26,7 @@ Example Output:
   "stdout": [[1, 3], [5, 7], [9, 11]],
   "stderr": [[1, 2], [4, 5]]
 }
+\`\`\`
 `
 
 const schema = z.object({
@@ -100,7 +101,7 @@ export const summarizeOutput = async (model: LanguageModel, stdout: string, stde
       return result
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error))
-      currentPrompt = `${input}\n\nYour previous output was invalid: ${lastError.message}. You MUST output a valid JSON object inside a markdown code block. Please correct it.`
+      currentPrompt = `${input}\n\nYour previous output was invalid: ${lastError.message}. Return a valid JSON object inside a markdown json code block.`
     }
   }
 

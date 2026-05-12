@@ -58,7 +58,7 @@ export async function listSkills(input: ListSkillsInput, context: SkillContext):
  */
 export const listSkillsToolInfo = {
   name: 'listSkills',
-  description: 'List all available skills with their descriptions. Use this to discover what specialized capabilities are available.',
+  description: 'List available skills and their descriptions. Use this to discover specialized capabilities for the current task.',
   parameters: ListSkillsInputSchema,
   returns: ListSkillsOutputSchema,
 } as const

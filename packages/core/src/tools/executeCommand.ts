@@ -6,14 +6,11 @@ import { createProviderError, preprocessBoolean } from './utils.js'
 export const toolInfo = {
   name: 'executeCommand',
   description:
-    'Run a single CLI command. The command is always executed in the project-root working directory (regardless of earlier commands). Prefer one-off shell commands over wrapper scripts for flexibility. **IMPORTANT**: After an `execute_command` call, you MUST stop and NOT allowed to make further tool calls in the same message.',
+    'Run one CLI command from the project-root working directory. Use for builds, tests, diagnostics, and other command-line tasks. After calling executeCommand, wait for the command result before deciding on the next action.',
 
   parameters: z
     .object({
-      command: z
-        .string()
-        .describe('The exact command to run  (valid for the current OS). It must be correctly formatted and free of harmful instructions.')
-        .meta({ usageValue: 'your-command-here' }),
+      command: z.string().describe('The exact command to run for the current OS.').meta({ usageValue: 'your-command-here' }),
       requiresApproval: z
         .preprocess(preprocessBoolean, z.boolean())
         .default(false)

@@ -5,7 +5,7 @@ import { createProviderError } from './utils.js'
 
 export const toolInfo = {
   name: 'removeFile',
-  description: 'Request to remove a file at the specified path.',
+  description: 'Remove a file at the specified path.',
   parameters: z
     .object({
       path: z.string().describe('The path of the file to remove').meta({ usageValue: 'File path here' }),

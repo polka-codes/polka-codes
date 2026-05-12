@@ -95,8 +95,7 @@ export async function loadSkill(input: LoadSkillInput, context: SkillContext): P
  */
 export const loadSkillToolInfo = {
   name: 'loadSkill',
-  description:
-    'Load a skill by name to access its instructions and resources. Use this when you need specialized knowledge or capabilities for a specific task.',
+  description: 'Load a skill by name to access its instructions and bundled resources for a specialized task.',
   parameters: LoadSkillInputSchema,
   returns: LoadSkillOutputSchema,
 } as const

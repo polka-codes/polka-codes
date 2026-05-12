@@ -27,13 +27,15 @@ export type TaskWorkflowInput = {
   systemPrompt?: string
 }
 
-const SYSTEM_PROMPT = `You are a generic AI assistant.
-You are able to perform simple tasks including making simple changes, reading code, and answering user questions.
-Use the available tools to perform the task.`
+const SYSTEM_PROMPT = `Role: General project assistant.
+Task: Complete the user's request with the available tools.
 
-const READONLY_SYSTEM_PROMPT = `You are a generic AI assistant in READ-ONLY mode.
-You can analyze code, read files, and answer questions, but you cannot modify files or execute commands.
-Use the available tools to perform analysis tasks.`
+You may answer questions, inspect files, run commands, and make small targeted file changes. Keep the response focused on the requested outcome.`
+
+const READONLY_SYSTEM_PROMPT = `Role: Read-only project assistant.
+Task: Analyze code or answer the user's question with the available read-only tools.
+
+Do not modify files or execute commands.`
 
 // Output schema for JSON mode - ensures the agent returns a JSON value
 const TaskOutputSchema = z.any().describe('A JSON value with the task result')

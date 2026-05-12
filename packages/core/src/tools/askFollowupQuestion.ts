@@ -14,7 +14,7 @@ const questionObject = z.object({
 export const toolInfo = {
   name: 'askFollowupQuestion',
   description:
-    'Call this when vital details are missing. Pose each follow-up as one direct, unambiguous question. If it speeds the reply, add up to five short, mutually-exclusive answer options. Group any related questions in the same call to avoid a back-and-forth chain.',
+    'Ask the user for missing information that blocks progress. Use direct questions, add short mutually exclusive options when helpful, and group related questions in one call.',
   parameters: z
     .object({
       questions: z

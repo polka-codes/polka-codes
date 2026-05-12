@@ -804,13 +804,13 @@ async function executeStepWithAgent<
   const systemPrompt =
     options.stepSystemPrompt?.({ workflowId, step: stepDef, input, state }) ??
     [
-      `You are an AI assistant executing a workflow step.`,
+      `Role: Workflow step executor.`,
       '',
       '# Instructions',
-      '- Execute the task defined in the user message.',
-      '- Use the provided tools to accomplish the task.',
+      '- Execute only the task defined in the user message.',
+      '- Use the provided tools when needed.',
       '- Return the step output as valid JSON in markdown.',
-      '- Do not ask for user input. If information is missing, make a reasonable assumption or fail.',
+      '- Do not ask the user for input; make a reasonable assumption or fail with an explanation.',
     ]
       .filter(Boolean)
       .join('\n')

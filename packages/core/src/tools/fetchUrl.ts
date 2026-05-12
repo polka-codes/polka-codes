@@ -6,7 +6,7 @@ import type { WebProvider } from './provider.js'
 export const toolInfo = {
   name: 'fetchUrl',
   description:
-    'Fetch the content located at one or more HTTP(S) URLs and return it in Markdown format. This works for standard web pages as well as raw files (e.g. README.md, source code) hosted on platforms like GitHub.',
+    'Fetch one or more HTTP(S) URLs and return their content as Markdown. Use for webpages and raw hosted files such as README or source files.',
   parameters: z
     .object({
       url: z

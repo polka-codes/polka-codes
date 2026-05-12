@@ -7,7 +7,7 @@ import { annotateDiffWithLineNumbers } from './utils/diffLineNumbers'
 export const toolInfo = {
   name: 'git_diff',
   description:
-    'Get the git diff for the current repository. Can be used to get staged changes, unstaged changes, or changes between commits. By default, it returns unstaged changes.',
+    'Get a git diff for a specific file in the current repository. Supports staged, unstaged, or commit-range diffs. By default, returns unstaged changes.',
   parameters: z.object({
     staged: z
       .preprocess((val) => {

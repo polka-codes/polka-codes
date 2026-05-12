@@ -21,7 +21,7 @@ export function generateSkillsSystemPrompt(skills: SkillReference[]): string {
   }
 
   let prompt = '\n## Available Skills\n\n'
-  prompt += 'You have access to the following Agent Skills that provide specialized capabilities:\n\n'
+  prompt += 'Use these skills when they match the task:\n\n'
 
   for (const skill of skills) {
     const icon = SOURCE_ICONS[skill.source]
@@ -35,10 +35,9 @@ export function generateSkillsSystemPrompt(skills: SkillReference[]): string {
   }
 
   prompt += `**Using Skills:**
-- Use the \`loadSkill\` tool to access a skill's detailed instructions and supporting files
-- When a skill is loaded, follow its instructions carefully to complete specialized tasks
-- Skills provide domain-specific guidance for tasks like testing, deployment, or framework-specific operations
-- Use the \`listSkills\` tool to discover available skills matching your current task
+- Use \`listSkills\` to discover relevant skills.
+- Use \`loadSkill\` before following a skill's detailed instructions or supporting files.
+- Follow loaded skill instructions for the specialized part of the task.
 
 `
 
