@@ -17,13 +17,14 @@ import {
 import { z } from 'zod'
 import { createWorkflowProgressEmitter } from '../workflow-events'
 import type { CliToolRegistry } from '../workflow-tools'
-import { FIX_SYSTEM_PROMPT, getFixUserPrompt } from './prompts'
+import { getFixSystemPrompt, getFixUserPrompt } from './prompts'
 import { type BaseWorkflowInput, getDefaultContext } from './workflow.utils'
 
 export type FixWorkflowInput = {
   command?: string
   task?: string
   prompt?: string
+  stateless?: boolean
 }
 
 const FixIterationSummarySchema = z
@@ -41,7 +42,7 @@ export const fixWorkflow: WorkflowFn<
   CliToolRegistry
 > = async (input, context) => {
   const { tools, logger, step } = context
-  const { command: inputCommand, task, prompt, interactive = true, additionalTools } = input
+  const { command: inputCommand, task, prompt, interactive = true, additionalTools, stateless = false } = input
   let command = inputCommand
   const summaries: string[] = []
   let formatCommand: string | undefined
@@ -150,9 +151,15 @@ export const fixWorkflow: WorkflowFn<
     logger.info(`Command failed with exit code ${exitCode}. Asking agent to fix it...`)
 
     const result = await step(`fix-${i}`, async () => {
-      const { context: defaultContext } = await getDefaultContext(input.config, 'fix')
-      const memoryContext = await tools.getMemoryContext()
+      let defaultContext = ''
+      let memoryContext = ''
+      if (!stateless) {
+        const contextResult = await getDefaultContext(input.config, 'fix')
+        defaultContext = contextResult.context
+        memoryContext = await tools.getMemoryContext()
+      }
       const userPrompt = getFixUserPrompt(command, exitCode, stdout, stderr, task, prompt)
+      const userContent = [userPrompt, defaultContext, memoryContext].filter((part) => part.length > 0).join('\n\n')
 
       const agentTools: FullToolInfo[] = [
         readFile,
@@ -176,11 +183,11 @@ export const fixWorkflow: WorkflowFn<
 
       return await agentWorkflow(
         {
-          systemPrompt: FIX_SYSTEM_PROMPT,
+          systemPrompt: getFixSystemPrompt(!stateless),
           userMessage: [
             {
               role: 'user',
-              content: `${userPrompt}\n\n${defaultContext}\n${memoryContext}`,
+              content: userContent,
             },
           ],
           tools: agentTools,
@@ -201,7 +208,9 @@ export const fixWorkflow: WorkflowFn<
 
         if (summary) {
           summaries.push(summary)
-          await tools.updateMemory({ operation: 'append', content: `Summary of changes for fix attempt ${i + 1}: ${summary}` })
+          if (!stateless) {
+            await tools.updateMemory({ operation: 'append', content: `Summary of changes for fix attempt ${i + 1}: ${summary}` })
+          }
           logger.info(`Summary of changes: ${summary}`)
         }
       }

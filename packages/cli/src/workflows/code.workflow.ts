@@ -261,6 +261,7 @@ export const codeWorkflow: WorkflowFn<
         additionalTools: input.additionalTools,
         config: input.config,
         onWorkflowProgress: input.onWorkflowProgress,
+        stateless,
       },
       context,
     )

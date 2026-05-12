@@ -133,6 +133,72 @@ describe('runWorkflow progress events', () => {
     expect(events).toContainEqual({ kind: 'workflow-finished', success: false })
   })
 
+  test('marks workflow lifecycle as failed for failed ExitReason results', async () => {
+    const events: WorkflowProgressEvent[] = []
+    const logger = {
+      debug: mock(() => {}),
+      info: mock(() => {}),
+      warn: mock(() => {}),
+      error: mock(() => {}),
+    }
+
+    const result = await runWorkflow(
+      async () => {
+        return { type: 'UsageExceeded' as const, messages: [] }
+      },
+      {},
+      {
+        commandName: 'task',
+        context: {
+          apiProvider: 'deepseek',
+          model: 'deepseek-chat',
+          apiKey: 'test-key',
+          silent: true,
+        },
+        logger,
+        onEvent: (event) => {
+          events.push(event)
+        },
+      },
+    )
+
+    expect(result).toEqual({ type: 'UsageExceeded', messages: [] })
+    expect(events).toContainEqual({ kind: 'workflow-finished', success: false })
+  })
+
+  test('does not classify unrelated type fields as failed ExitReason results', async () => {
+    const events: WorkflowProgressEvent[] = []
+    const logger = {
+      debug: mock(() => {}),
+      info: mock(() => {}),
+      warn: mock(() => {}),
+      error: mock(() => {}),
+    }
+
+    const result = await runWorkflow(
+      async () => {
+        return { type: 'summary', value: 'ok' }
+      },
+      {},
+      {
+        commandName: 'task',
+        context: {
+          apiProvider: 'deepseek',
+          model: 'deepseek-chat',
+          apiKey: 'test-key',
+          silent: true,
+        },
+        logger,
+        onEvent: (event) => {
+          events.push(event)
+        },
+      },
+    )
+
+    expect(result).toEqual({ type: 'summary', value: 'ok' })
+    expect(events).toContainEqual({ kind: 'workflow-finished', success: true })
+  })
+
   test('does not let usage meter observer failures alter workflow results', async () => {
     const logger = {
       debug: mock(() => {}),

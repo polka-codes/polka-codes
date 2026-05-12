@@ -1,11 +1,14 @@
 import { createJsonResponseInstruction, MEMORY_USAGE_SECTION, TOOL_USAGE_INSTRUCTION } from './shared'
 
-export const FIX_SYSTEM_PROMPT = `Role: Expert software developer.
+export function getFixSystemPrompt(includeMemory = true): string {
+  const memorySection = includeMemory ? MEMORY_USAGE_SECTION : ''
+
+  return `Role: Expert software developer.
 Goal: Fix a failing command by analyzing the error and modifying the code.
 
 You are an expert software developer. Your task is to fix a project that is failing a command. You have been provided with the failing command, its output (stdout and stderr), and the exit code. Your goal is to use the available tools to modify the files in the project to make the command pass. Analyze the error, inspect the relevant files, and apply the necessary code changes.
 
-${MEMORY_USAGE_SECTION}
+${memorySection}
 
 ${TOOL_USAGE_INSTRUCTION}
 
@@ -25,6 +28,7 @@ ${createJsonResponseInstruction({
   bailReason: 'Unable to identify the root cause of the error. The error message is ambiguous and requires human investigation.',
 })}
 `
+}
 
 export function getFixUserPrompt(
   command: string,

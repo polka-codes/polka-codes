@@ -144,6 +144,28 @@ describe('fixWorkflow', () => {
     expect(result).toStrictEqual({ success: true, summaries: ['I did a fix'] })
   })
 
+  test('stateless mode skips memory in the fix agent pass', async () => {
+    const { context, tools } = createWorkflowTestContext()
+
+    mockCommandAttempts(tools, [1, 0])
+    mockAgentResponse(tools, 'Fixed without memory')
+    tools.getMemoryContext.mockResolvedValue('memory content that should not be loaded')
+
+    const result = await fixWorkflow({ ...defaultInput, command: 'bun test', stateless: true }, context)
+
+    expect(result).toStrictEqual({ success: true, summaries: ['Fixed without memory'] })
+    expect(tools.getMemoryContext).not.toHaveBeenCalled()
+    expect(tools.updateMemory).not.toHaveBeenCalled()
+
+    const generateTextCall = tools.generateText.mock.calls[0][0] as {
+      systemPrompt?: string
+      messages: { role: string; content: string }[]
+    }
+    const userMessage = generateTextCall.messages.find((message) => message.role === 'user')
+    expect(generateTextCall.systemPrompt).not.toContain('Memory Usage')
+    expect(userMessage?.content).not.toContain('memory content that should not be loaded')
+  })
+
   test('should fail after exhausting all retries', async () => {
     const { context, tools } = createWorkflowTestContext()
 

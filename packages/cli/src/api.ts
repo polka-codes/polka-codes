@@ -227,7 +227,9 @@ export interface CodeOptions extends BaseOptions {
   fixCommand?: string
 
   /**
-   * Restrict filesystem write tools to these files or directories
+   * Best-effort guardrail for filesystem write tools. This restricts direct file
+   * write/delete/rename tools, but it is not a security sandbox for shell
+   * commands or custom tools.
    */
   allowedWritePaths?: string[]
 

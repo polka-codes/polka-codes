@@ -154,9 +154,21 @@ function errorExitReason(error: unknown): ExitReason {
   }
 }
 
+function isExitReason(output: unknown): output is ExitReason {
+  return (
+    output !== null &&
+    typeof output === 'object' &&
+    'type' in output &&
+    (output.type === 'Exit' || output.type === 'Error' || output.type === 'UsageExceeded')
+  )
+}
+
 function isSuccessfulWorkflowOutput(output: unknown): boolean {
   if (output && typeof output === 'object' && 'success' in output) {
     return output.success !== false
+  }
+  if (isExitReason(output)) {
+    return output.type === 'Exit'
   }
   return true
 }
