@@ -5,6 +5,24 @@ import WebSocket from 'ws'
 
 import { type WsIncomingMessage, type WsOutgoingMessage, wsIncomingMessageSchema } from './types'
 
+export function normalizeRunnerApiUrl(apiUrl: string): string {
+  const url = new URL(apiUrl)
+
+  if (url.protocol === 'http:' || url.protocol === 'https:') {
+    url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
+    url.pathname = '/api/ws/runner'
+    url.search = ''
+    url.hash = ''
+    return url.toString()
+  }
+
+  if (url.protocol === 'ws:' || url.protocol === 'wss:') {
+    return apiUrl
+  }
+
+  throw new Error(`Unsupported runner API URL protocol: ${url.protocol}`)
+}
+
 export interface WebSocketManagerOptions {
   taskId: string
   sessionToken: string
@@ -30,10 +48,12 @@ export class WebSocketManager {
    * Connects to the WebSocket server and sets up event handlers
    */
   public connect(): void {
-    console.log(`Attempting to connect to WebSocket: ${this.options.apiUrl}/${this.options.taskId} (Attempt ${this.reconnectAttempts + 1})`)
+    const apiUrl = normalizeRunnerApiUrl(this.options.apiUrl)
+
+    console.log(`Attempting to connect to WebSocket: ${apiUrl}/${this.options.taskId} (Attempt ${this.reconnectAttempts + 1})`)
 
     this.isClosingExpected = false // Reset flag on new connection attempt
-    this.ws = new WebSocket(`${this.options.apiUrl}/${this.options.taskId}`, {
+    this.ws = new WebSocket(`${apiUrl}/${this.options.taskId}`, {
       headers: {
         'x-session-token': this.options.sessionToken,
         'x-github-token': this.options.githubToken,
@@ -98,6 +118,8 @@ export class WebSocketManager {
     console.log('WebSocket connection established successfully.')
     this.initialConnectionEstablished = true
     this.reconnectAttempts = 0 // Reset attempts on successful connection
+
+    this.sendMessage({ type: 'connected' })
 
     if (this.options.onOpen) {
       this.options.onOpen()

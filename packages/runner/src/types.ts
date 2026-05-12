@@ -65,6 +65,7 @@ export const userContentSchema = z.union([
 export type UserContent = z.infer<typeof userContentSchema>
 
 export const wsOutgoingMessageSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('connected') }),
   z.object({
     type: z.literal('pending_tools_response'),
     step: z.number(),

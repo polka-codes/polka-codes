@@ -2,7 +2,7 @@ name: Polka Codes Remote Runner
 
 on:
   repository_dispatch:
-    types: [trigger_remote_runner]
+    types: [remote-runner-session]
 
 permissions:
   id-token: write
@@ -31,4 +31,3 @@ jobs:
         uses: polka-codes/action@master
         with:
           runner_payload: ${{ toJson(github.event.client_payload) }}
-
