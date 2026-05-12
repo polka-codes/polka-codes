@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test'
+import type { LoadedConfig } from '@polka-codes/cli-shared'
 import { createContext, type JsonResponseMessage, type WorkflowTools } from '@polka-codes/core'
 import type { CliToolRegistry } from '../workflow-tools'
 import { codeWorkflow } from './code.workflow'
@@ -36,6 +37,7 @@ function textParts(input: unknown): string[] {
 function createHarness(responses: JsonResponseMessage[]) {
   const remainingResponses = [...responses]
   const generateTextInputs: unknown[] = []
+  const executeCommandInputs: unknown[] = []
   const toolCalls: string[] = []
   const infoMessages: string[] = []
 
@@ -63,6 +65,7 @@ function createHarness(responses: JsonResponseMessage[]) {
           case 'readFile':
             return 'file content'
           case 'executeCommand':
+            executeCommandInputs.push(input)
             return { exitCode: 0, stdout: '', stderr: '' }
           default:
             throw new Error(`Unexpected tool call: ${toolName}`)
@@ -83,6 +86,7 @@ function createHarness(responses: JsonResponseMessage[]) {
   return {
     context: createContext<CliToolRegistry>(tools, undefined, logger),
     generateTextInputs,
+    executeCommandInputs,
     infoMessages,
     toolCalls,
   }
@@ -190,6 +194,7 @@ describe('codeWorkflow', () => {
         mode: 'direct',
         interactive: false,
         skipFix: true,
+        fixCommand: 'cargo check --tests -p pallet-example',
         additionalTools: {},
       },
       harness.context,
@@ -197,6 +202,56 @@ describe('codeWorkflow', () => {
 
     expect(harness.infoMessages.join('\n')).not.toContain('Checking for errors')
     expect(harness.toolCalls).not.toContain('executeCommand')
+  })
+
+  test('direct mode passes fixCommand to the fix phase', async () => {
+    const harness = createHarness([jsonResponse({ summary: 'Implemented with fix command.', bailReason: null })])
+
+    const result = await codeWorkflow(
+      {
+        task: 'Generate a Rust test.',
+        mode: 'direct',
+        interactive: false,
+        stateless: true,
+        fixCommand: 'cargo check --tests -p pallet-example',
+        additionalTools: {},
+      },
+      harness.context,
+    )
+
+    expect(result).toEqual({ success: true, summaries: ['Implemented with fix command.'] })
+    expect(harness.executeCommandInputs).toContainEqual({
+      command: 'cargo check --tests -p pallet-example',
+      shell: true,
+      pipe: true,
+    })
+  })
+
+  test('falls back to configured check command when fixCommand is not provided', async () => {
+    const harness = createHarness([jsonResponse({ summary: 'Implemented with configured fix.', bailReason: null })])
+    const config: LoadedConfig = {
+      scripts: {
+        check: 'bun typecheck',
+      },
+    }
+
+    await codeWorkflow(
+      {
+        task: 'Generate a Rust test.',
+        mode: 'direct',
+        interactive: false,
+        stateless: true,
+        config,
+        additionalTools: {},
+      },
+      harness.context,
+    )
+
+    expect(harness.executeCommandInputs).toContainEqual({
+      command: 'bun typecheck',
+      shell: true,
+      pipe: true,
+    })
   })
 
   test('default mode still enters the planning path', async () => {

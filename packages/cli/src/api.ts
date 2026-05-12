@@ -21,6 +21,7 @@ import { createLogger } from './logger'
 import type { ExecutionContext, StructuredWorkflowFailure } from './runWorkflow'
 import { runWorkflow } from './runWorkflow'
 import type { ScriptContext } from './script/runner'
+import type { CodeWorkflowEvent, WorkflowProgressCallback, WorkflowProgressEvent } from './workflow-events'
 import {
   type CodeWorkflowInput,
   codeWorkflow,
@@ -51,7 +52,14 @@ export interface BaseOptions extends Partial<ExecutionContext> {
    * Callback invoked when usage meter is created, allowing tracking of API costs
    */
   onUsage?: (meter: UsageMeter) => void
+
+  /**
+   * Callback invoked with small structured workflow progress events.
+   */
+  onEvent?: WorkflowProgressCallback
 }
+
+export type { CodeWorkflowEvent, WorkflowProgressCallback, WorkflowProgressEvent }
 
 /**
  * Options for commit function
@@ -100,7 +108,7 @@ export interface CommitOptions extends BaseOptions {
  * ```
  */
 export async function commit(options: CommitOptions = {}): Promise<string | undefined> {
-  const { all, files, context: messageContext, interactive, onUsage, ...context } = options
+  const { all, files, context: messageContext, interactive, onUsage, onEvent, ...context } = options
 
   // Create logger from options
   const verbose = context.silent ? -1 : (context.verbose ?? 0)
@@ -121,6 +129,7 @@ export async function commit(options: CommitOptions = {}): Promise<string | unde
     logger,
     interactive: interactive !== false,
     onUsageMeterCreated: onUsage,
+    onEvent,
   })
 
   // Handle both string and void returns
@@ -161,7 +170,7 @@ export interface CreatePrOptions extends BaseOptions {
  * ```
  */
 export async function createPr(options: CreatePrOptions = {}): Promise<{ title: string; description: string } | undefined> {
-  const { context: prContext, interactive, onUsage, ...context } = options
+  const { context: prContext, interactive, onUsage, onEvent, ...context } = options
 
   const verbose = context.silent ? -1 : (context.verbose ?? 0)
   const logger = createLogger({ verbose })
@@ -176,6 +185,7 @@ export async function createPr(options: CreatePrOptions = {}): Promise<{ title: 
     logger,
     interactive: interactive !== false,
     onUsageMeterCreated: onUsage,
+    onEvent,
   })
 }
 
@@ -209,6 +219,12 @@ export interface CodeOptions extends BaseOptions {
    * @default false
    */
   skipFix?: boolean
+
+  /**
+   * Command to run for the post-implementation fix/check workflow.
+   * @default Uses check and test scripts from config
+   */
+  fixCommand?: string
 
   /**
    * Restrict filesystem write tools to these files or directories
@@ -254,7 +270,20 @@ export type CodeResult =
  * ```
  */
 export async function code(options: CodeOptions): Promise<CodeResult> {
-  const { task, files, mode, additionalInstructions, skipFix, allowedWritePaths, stateless, interactive, onUsage, ...context } = options
+  const {
+    task,
+    files,
+    mode,
+    additionalInstructions,
+    skipFix,
+    fixCommand,
+    allowedWritePaths,
+    stateless,
+    interactive,
+    onUsage,
+    onEvent,
+    ...context
+  } = options
 
   const verbose = context.silent ? -1 : (context.verbose ?? 0)
   const logger = createLogger({ verbose })
@@ -265,6 +294,7 @@ export async function code(options: CodeOptions): Promise<CodeResult> {
     mode,
     additionalInstructions,
     skipFix,
+    fixCommand,
     allowedWritePaths,
     stateless,
   }
@@ -275,6 +305,7 @@ export async function code(options: CodeOptions): Promise<CodeResult> {
     logger,
     interactive: interactive !== false,
     onUsageMeterCreated: onUsage,
+    onEvent,
     structuredErrors: true,
   })
 }
@@ -326,7 +357,7 @@ export interface ReviewCodeOptions extends BaseOptions {
  * ```
  */
 export async function reviewCode(options: ReviewCodeOptions = {}): Promise<ReviewResult | undefined> {
-  const { pr, range, files, context: reviewContext, interactive, onUsage, ...context } = options
+  const { pr, range, files, context: reviewContext, interactive, onUsage, onEvent, ...context } = options
 
   const verbose = context.silent ? -1 : (context.verbose ?? 0)
   const logger = createLogger({ verbose })
@@ -344,6 +375,7 @@ export async function reviewCode(options: ReviewCodeOptions = {}): Promise<Revie
     logger,
     interactive: interactive !== false,
     onUsageMeterCreated: onUsage,
+    onEvent,
   })
 }
 
@@ -393,7 +425,7 @@ export interface FixOptions extends BaseOptions {
  * ```
  */
 export async function fix(options: FixOptions = {}): Promise<{ success: boolean; summaries?: string[]; reason?: string } | undefined> {
-  const { command, task, prompt, interactive, onUsage, ...context } = options
+  const { command, task, prompt, interactive, onUsage, onEvent, ...context } = options
 
   const verbose = context.silent ? -1 : (context.verbose ?? 0)
   const logger = createLogger({ verbose })
@@ -410,6 +442,7 @@ export async function fix(options: FixOptions = {}): Promise<{ success: boolean;
     logger,
     interactive: interactive !== false,
     onUsageMeterCreated: onUsage,
+    onEvent,
   })
 }
 
@@ -468,7 +501,7 @@ export interface TaskOptions extends BaseOptions {
  * ```
  */
 export async function task(options: TaskOptions): Promise<ExitReason | undefined> {
-  const { task: taskInput, jsonMode, readonly, systemPrompt, interactive, onUsage, ...context } = options
+  const { task: taskInput, jsonMode, readonly, systemPrompt, interactive, onUsage, onEvent, ...context } = options
 
   const verbose = context.silent ? -1 : (context.verbose ?? 0)
   const logger = createLogger({ verbose })
@@ -486,6 +519,7 @@ export async function task(options: TaskOptions): Promise<ExitReason | undefined
     logger,
     interactive: interactive !== false,
     onUsageMeterCreated: onUsage,
+    onEvent,
   })
 }
 
@@ -548,7 +582,7 @@ export interface PlanOptions extends BaseOptions {
  * ```
  */
 export async function plan(options: PlanOptions = {}): Promise<PlanWorkflowOutput | undefined> {
-  const { task, fileContent, planFile, files, mode, interactive, onUsage, ...context } = options
+  const { task, fileContent, planFile, files, mode, interactive, onUsage, onEvent, ...context } = options
 
   const verbose = context.silent ? -1 : (context.verbose ?? 0)
   const logger = createLogger({ verbose })
@@ -567,6 +601,7 @@ export async function plan(options: PlanOptions = {}): Promise<PlanWorkflowOutpu
     logger,
     interactive: interactive !== false,
     onUsageMeterCreated: onUsage,
+    onEvent,
   })
 }
 

@@ -9,6 +9,7 @@ import {
   mockFailedCommand,
   mockSuccessfulCommand,
 } from '../test/workflow-fixtures'
+import type { WorkflowProgressEvent } from '../workflow-events'
 import { fixWorkflow } from './fix.workflow'
 import * as prompts from './prompts'
 
@@ -24,12 +25,45 @@ describe('fixWorkflow', () => {
 
   test('should succeed when command passes on first attempt', async () => {
     const { context, tools } = createWorkflowTestContext()
+    const events: WorkflowProgressEvent[] = []
     mockSuccessfulCommand(tools, 'All tests passed')
 
-    const result = await fixWorkflow({ ...defaultInput, command: 'bun test' }, context)
+    const result = await fixWorkflow(
+      {
+        ...defaultInput,
+        command: 'bun test',
+        onWorkflowProgress: (event) => {
+          events.push(event)
+        },
+      },
+      context,
+    )
 
     expect(tools.executeCommand).toHaveBeenCalledWith({ command: 'bun test', shell: true, pipe: true })
+    expect(events).toEqual([
+      { kind: 'fix-started', command: 'bun test' },
+      { kind: 'fix-succeeded', command: 'bun test' },
+    ])
     expect(result).toStrictEqual({ success: true, summaries: [] })
+  })
+
+  test('should not fail when progress callback throws', async () => {
+    const { context, tools, logger } = createWorkflowTestContext()
+    mockSuccessfulCommand(tools, 'All tests passed')
+
+    const result = await fixWorkflow(
+      {
+        ...defaultInput,
+        command: 'bun test',
+        onWorkflowProgress: () => {
+          throw new Error('callback failed')
+        },
+      },
+      context,
+    )
+
+    expect(result).toStrictEqual({ success: true, summaries: [] })
+    expect(logger.warn).toHaveBeenCalledWith('Workflow progress callback failed: callback failed')
   })
 
   test('should prompt for command when not provided', async () => {
@@ -59,6 +93,7 @@ describe('fixWorkflow', () => {
 
   test('should use default command when not interactive', async () => {
     const { context, tools } = createWorkflowTestContext()
+    const events: WorkflowProgressEvent[] = []
     const config = {
       scripts: {
         check: 'bun typecheck',
@@ -67,9 +102,23 @@ describe('fixWorkflow', () => {
 
     mockSuccessfulCommand(tools, '')
 
-    await fixWorkflow({ ...defaultInput, interactive: false, config }, context)
+    await fixWorkflow(
+      {
+        ...defaultInput,
+        interactive: false,
+        config,
+        onWorkflowProgress: (event) => {
+          events.push(event)
+        },
+      },
+      context,
+    )
 
     expect(tools.executeCommand).toHaveBeenCalledWith({ command: 'bun typecheck', shell: true, pipe: true })
+    expect(events).toEqual([
+      { kind: 'fix-started', command: 'bun typecheck' },
+      { kind: 'fix-succeeded', command: 'bun typecheck' },
+    ])
   })
 
   test('should throw error when no command provided and user provides empty input', async () => {
@@ -111,14 +160,28 @@ describe('fixWorkflow', () => {
 
   test('should return bailReason when agent cannot fix', async () => {
     const { context, tools } = createWorkflowTestContext()
+    const events: WorkflowProgressEvent[] = []
 
     mockFailedCommand(tools, 'FAIL', 'Mysterious error')
     mockAgentResponse(tools, null, 'Unable to identify the root cause of the error')
 
-    const result = await fixWorkflow({ ...defaultInput, command: 'bun test' }, context)
+    const result = await fixWorkflow(
+      {
+        ...defaultInput,
+        command: 'bun test',
+        onWorkflowProgress: (event) => {
+          events.push(event)
+        },
+      },
+      context,
+    )
 
     expect(tools.executeCommand).toHaveBeenCalledTimes(1)
     expect(tools.generateText).toHaveBeenCalledTimes(1)
+    expect(events).toEqual([
+      { kind: 'fix-started', command: 'bun test' },
+      { kind: 'fix-failed', command: 'bun test', exitCode: 1 },
+    ])
     expect(result).toMatchSnapshot()
   })
 

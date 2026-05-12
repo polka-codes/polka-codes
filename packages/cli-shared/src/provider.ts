@@ -50,6 +50,14 @@ export type ProviderOptions = {
   yes?: boolean
 }
 
+function notifyCommandObserver<T>(callback: ((value: T) => void) | undefined, value: T): void {
+  try {
+    callback?.(value)
+  } catch {
+    // Command observer callbacks must not change command execution.
+  }
+}
+
 /**
  * Helper function to detect if memoryStore is an IMemoryStore
  */
@@ -309,7 +317,7 @@ export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
       return new Promise((resolve, reject) => {
         // spawn a shell to execute the command
 
-        options.command?.onStarted(command)
+        notifyCommandObserver(options.command?.onStarted, command)
 
         const child = spawn(command, [], {
           shell: true,
@@ -321,18 +329,18 @@ export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
 
         child.stdout.on('data', (data) => {
           const dataStr = data.toString()
-          options.command?.onStdout(dataStr)
+          notifyCommandObserver(options.command?.onStdout, dataStr)
           stdoutText += dataStr
         })
 
         child.stderr.on('data', (data) => {
           const dataStr = data.toString()
-          options.command?.onStderr(dataStr)
+          notifyCommandObserver(options.command?.onStderr, dataStr)
           stderrText += dataStr
         })
 
         child.on('close', async (code) => {
-          options.command?.onExit(code ?? 0)
+          notifyCommandObserver(options.command?.onExit, code ?? 0)
           const totalLength = stdoutText.length + stderrText.length
           if (totalLength > (options.summaryThreshold ?? 5000) && options.summarizeOutput) {
             try {
@@ -358,7 +366,7 @@ export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
         })
 
         child.on('error', (err) => {
-          options.command?.onError(err)
+          notifyCommandObserver(options.command?.onError, err)
           reject(err)
         })
       })

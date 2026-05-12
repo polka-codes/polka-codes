@@ -1,8 +1,9 @@
-import { describe, expect, test } from 'bun:test'
+import { describe, expect, mock, test } from 'bun:test'
 import { mkdir, mkdtemp, readFile, rename, rm, unlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { replaceInFile, type ToolProvider } from '@polka-codes/core'
+import type { WorkflowProgressEvent } from './workflow-events'
 import { createWritePathGuardedProvider } from './write-path-guard'
 
 async function withTempDir(fn: (dir: string) => Promise<void>) {
@@ -41,12 +42,28 @@ describe('createWritePathGuardedProvider', () => {
     await withTempDir(async (dir) => {
       const allowedFile = path.join(dir, 'allowed.txt')
       const outsideFile = path.join(dir, 'outside.txt')
+      const events: WorkflowProgressEvent[] = []
       const provider = await createWritePathGuardedProvider(createFilesystemProvider(), [allowedFile])
+      const providerWithEvents = await createWritePathGuardedProvider(createFilesystemProvider(), [allowedFile], process.cwd(), (event) => {
+        events.push(event)
+      })
 
       await provider.writeFile?.(allowedFile, 'allowed')
       await expect(provider.writeFile?.(outsideFile, 'outside')).rejects.toThrow('outside allowedWritePaths')
+      await providerWithEvents.writeFile?.(allowedFile, 'allowed again')
+      await expect(providerWithEvents.writeFile?.(outsideFile, 'outside')).rejects.toThrow('outside allowedWritePaths')
 
-      expect(await readFile(allowedFile, 'utf8')).toBe('allowed')
+      expect(await readFile(allowedFile, 'utf8')).toBe('allowed again')
+      expect(events).toEqual([
+        { kind: 'write-attempted', path: allowedFile },
+        { kind: 'write-finished', path: allowedFile },
+        { kind: 'write-attempted', path: outsideFile },
+        {
+          kind: 'write-rejected',
+          path: outsideFile,
+          reason: `Write to "${outsideFile}" is outside allowedWritePaths: ${allowedFile}`,
+        },
+      ])
     })
   })
 
@@ -101,17 +118,26 @@ describe('createWritePathGuardedProvider', () => {
       const renamedFile = path.join(allowedDir, 'renamed.txt')
       const secondSourceFile = path.join(allowedDir, 'second-source.txt')
       const outsideFile = path.join(dir, 'outside.txt')
+      const events: WorkflowProgressEvent[] = []
       await mkdir(allowedDir, { recursive: true })
       await writeFile(sourceFile, 'source')
       await writeFile(secondSourceFile, 'second')
 
-      const provider = await createWritePathGuardedProvider(createFilesystemProvider(), [allowedDir])
+      const provider = await createWritePathGuardedProvider(createFilesystemProvider(), [allowedDir], process.cwd(), (event) => {
+        events.push(event)
+      })
 
       await provider.renameFile?.(sourceFile, renamedFile)
       await expect(provider.renameFile?.(secondSourceFile, outsideFile)).rejects.toThrow('outside allowedWritePaths')
 
       expect(await readFile(renamedFile, 'utf8')).toBe('source')
       expect(await readFile(secondSourceFile, 'utf8')).toBe('second')
+      expect(events).toContainEqual({ kind: 'write-finished', path: renamedFile })
+      expect(events).toContainEqual({
+        kind: 'write-rejected',
+        path: outsideFile,
+        reason: `Write to "${outsideFile}" is outside allowedWritePaths: ${allowedDir}`,
+      })
     })
   })
 
@@ -143,6 +169,27 @@ fn generated_test() {}
         throw new Error('Expected replaceInFile to return an error-text value')
       }
       expect(result.message.value).toContain('outside allowedWritePaths')
+    })
+  })
+
+  test('does not let progress callback failures alter guarded writes', async () => {
+    await withTempDir(async (dir) => {
+      const allowedFile = path.join(dir, 'allowed.txt')
+      const logger = { warn: mock(() => {}) }
+      const provider = await createWritePathGuardedProvider(
+        createFilesystemProvider(),
+        [allowedFile],
+        process.cwd(),
+        () => {
+          throw new Error('observer failed')
+        },
+        logger,
+      )
+
+      await provider.writeFile?.(allowedFile, 'allowed')
+
+      expect(await readFile(allowedFile, 'utf8')).toBe('allowed')
+      expect(logger.warn).toHaveBeenCalledWith('Workflow progress callback failed: observer failed')
     })
   })
 })

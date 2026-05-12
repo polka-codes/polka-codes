@@ -1,7 +1,8 @@
-import { describe, expect, test } from 'bun:test'
+import { describe, expect, mock, test } from 'bun:test'
 import { AuthenticationError, ConfigurationError, QuotaExceededError, ToolExecutionError } from './errors'
 import { McpToolError } from './mcp/errors'
-import { toStructuredWorkflowFailure } from './runWorkflow'
+import { runWorkflow, toStructuredWorkflowFailure } from './runWorkflow'
+import type { WorkflowProgressEvent } from './workflow-events'
 
 describe('toStructuredWorkflowFailure', () => {
   test('preserves provider error messages', () => {
@@ -61,5 +62,106 @@ describe('toStructuredWorkflowFailure', () => {
       summaries: [],
       errorType: 'workflow',
     })
+  })
+})
+
+describe('runWorkflow progress events', () => {
+  test('emits workflow lifecycle events for successful object results', async () => {
+    const events: WorkflowProgressEvent[] = []
+    const logger = {
+      debug: mock(() => {}),
+      info: mock(() => {}),
+      warn: mock(() => {}),
+      error: mock(() => {}),
+    }
+
+    const result = await runWorkflow(
+      async () => {
+        return { success: true, summaries: [] }
+      },
+      {},
+      {
+        commandName: 'code',
+        context: {
+          apiProvider: 'deepseek',
+          model: 'deepseek-chat',
+          apiKey: 'test-key',
+          silent: true,
+        },
+        logger,
+        onEvent: (event) => {
+          events.push(event)
+        },
+      },
+    )
+
+    expect(result).toEqual({ success: true, summaries: [] })
+    expect(events).toContainEqual({ kind: 'workflow-started' })
+    expect(events).toContainEqual({ kind: 'workflow-finished', success: true })
+  })
+
+  test('marks workflow lifecycle as failed for unsuccessful object results', async () => {
+    const events: WorkflowProgressEvent[] = []
+    const logger = {
+      debug: mock(() => {}),
+      info: mock(() => {}),
+      warn: mock(() => {}),
+      error: mock(() => {}),
+    }
+
+    const result = await runWorkflow(
+      async () => {
+        return { success: false, reason: 'no changes', summaries: [] }
+      },
+      {},
+      {
+        commandName: 'code',
+        context: {
+          apiProvider: 'deepseek',
+          model: 'deepseek-chat',
+          apiKey: 'test-key',
+          silent: true,
+        },
+        logger,
+        onEvent: (event) => {
+          events.push(event)
+        },
+      },
+    )
+
+    expect(result).toEqual({ success: false, reason: 'no changes', summaries: [] })
+    expect(events).toContainEqual({ kind: 'workflow-finished', success: false })
+  })
+
+  test('does not let usage meter observer failures alter workflow results', async () => {
+    const logger = {
+      debug: mock(() => {}),
+      info: mock(() => {}),
+      warn: mock(() => {}),
+      error: mock(() => {}),
+    }
+
+    const result = await runWorkflow(
+      async () => {
+        return { success: true, summaries: [] }
+      },
+      {},
+      {
+        commandName: 'code',
+        context: {
+          apiProvider: 'deepseek',
+          model: 'deepseek-chat',
+          apiKey: 'test-key',
+          silent: true,
+        },
+        logger,
+        onUsageMeterCreated: () => {
+          throw new Error('observer failed')
+        },
+      },
+    )
+
+    expect(result).toEqual({ success: true, summaries: [] })
+    expect(logger.warn).toHaveBeenCalledWith('Usage meter callback failed: observer failed')
   })
 })

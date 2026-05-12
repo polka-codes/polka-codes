@@ -1,12 +1,21 @@
 import { stat } from 'node:fs/promises'
 import path from 'node:path'
-import type { ToolProvider } from '@polka-codes/core'
+import type { Logger, ToolProvider } from '@polka-codes/core'
+import { createWorkflowProgressEmitter, type WorkflowProgressCallback } from './workflow-events'
 
 type WritePathConstraint = {
   rawPath: string
   resolvedPath: string
   allowDirectory: boolean
 }
+
+type WritePathRejection = {
+  kind: 'write-path-rejected'
+  path: string
+  reason: string
+}
+
+type WritePathCheckResult = { kind: 'allowed' } | WritePathRejection
 
 function hasTrailingPathSeparator(inputPath: string): boolean {
   return inputPath.endsWith('/') || inputPath.endsWith('\\')
@@ -55,16 +64,37 @@ export async function createWritePathGuardedProvider(
   provider: ToolProvider,
   allowedWritePaths: string[],
   cwd = process.cwd(),
+  onEvent?: WorkflowProgressCallback,
+  logger?: Pick<Logger, 'warn'>,
 ): Promise<ToolProvider> {
   if (allowedWritePaths.length === 0) {
     return provider
   }
 
   const constraints = await Promise.all(allowedWritePaths.map((allowedPath) => buildConstraint(allowedPath, cwd)))
+  const emitProgress = createWorkflowProgressEmitter(onEvent, logger ?? { warn: () => {} })
 
-  const assertWritablePath = (targetPath: string) => {
-    if (!isPathAllowedForWrite(targetPath, constraints, cwd)) {
-      throw new Error(`Write to "${targetPath}" is outside allowedWritePaths: ${formatAllowedPaths(constraints)}`)
+  const checkWritablePath = (targetPath: string): WritePathCheckResult => {
+    if (isPathAllowedForWrite(targetPath, constraints, cwd)) {
+      return { kind: 'allowed' }
+    }
+
+    return {
+      kind: 'write-path-rejected',
+      path: targetPath,
+      reason: `Write to "${targetPath}" is outside allowedWritePaths: ${formatAllowedPaths(constraints)}`,
+    }
+  }
+
+  const rejectWrite = async (result: WritePathRejection) => {
+    await emitProgress({ kind: 'write-rejected', path: result.path, reason: result.reason })
+    throw new Error(result.reason)
+  }
+
+  const enforceWritablePath = async (targetPath: string) => {
+    const result = checkWritablePath(targetPath)
+    if (result.kind === 'write-path-rejected') {
+      await rejectWrite(result)
     }
   }
 
@@ -76,23 +106,31 @@ export async function createWritePathGuardedProvider(
 
   if (writeFile) {
     guardedProvider.writeFile = async (targetPath, content) => {
-      assertWritablePath(targetPath)
-      return await writeFile(targetPath, content)
+      await emitProgress({ kind: 'write-attempted', path: targetPath })
+      await enforceWritablePath(targetPath)
+      await writeFile(targetPath, content)
+      await emitProgress({ kind: 'write-finished', path: targetPath })
     }
   }
 
   if (removeFile) {
     guardedProvider.removeFile = async (targetPath) => {
-      assertWritablePath(targetPath)
-      return await removeFile(targetPath)
+      await emitProgress({ kind: 'write-attempted', path: targetPath })
+      await enforceWritablePath(targetPath)
+      await removeFile(targetPath)
+      await emitProgress({ kind: 'write-finished', path: targetPath })
     }
   }
 
   if (renameFile) {
     guardedProvider.renameFile = async (sourcePath, targetPath) => {
-      assertWritablePath(sourcePath)
-      assertWritablePath(targetPath)
-      return await renameFile(sourcePath, targetPath)
+      await emitProgress({ kind: 'write-attempted', path: sourcePath })
+      await emitProgress({ kind: 'write-attempted', path: targetPath })
+      await enforceWritablePath(sourcePath)
+      await enforceWritablePath(targetPath)
+      await renameFile(sourcePath, targetPath)
+      await emitProgress({ kind: 'write-finished', path: sourcePath })
+      await emitProgress({ kind: 'write-finished', path: targetPath })
     }
   }
 

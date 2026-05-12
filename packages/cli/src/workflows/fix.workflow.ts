@@ -15,6 +15,7 @@ import {
   writeToFile,
 } from '@polka-codes/core'
 import { z } from 'zod'
+import { createWorkflowProgressEmitter } from '../workflow-events'
 import type { CliToolRegistry } from '../workflow-tools'
 import { FIX_SYSTEM_PROMPT, getFixUserPrompt } from './prompts'
 import { type BaseWorkflowInput, getDefaultContext } from './workflow.utils'
@@ -44,6 +45,8 @@ export const fixWorkflow: WorkflowFn<
   let command = inputCommand
   const summaries: string[] = []
   let formatCommand: string | undefined
+  let lastExitCode = -1
+  const emitProgress = createWorkflowProgressEmitter(input.onWorkflowProgress, logger)
 
   // Helper function to build script invocation command
   const buildScriptCommand = (scriptName: string): string => {
@@ -124,6 +127,8 @@ export const fixWorkflow: WorkflowFn<
     }
   }
 
+  await emitProgress({ kind: 'fix-started', command })
+
   for (let i = 0; i < 10; i++) {
     logger.info(`Running command (attempt ${i + 1}/10): ${command}`)
     if (formatCommand) {
@@ -134,9 +139,11 @@ export const fixWorkflow: WorkflowFn<
       shell: true,
       pipe: true,
     })
+    lastExitCode = exitCode
 
     if (exitCode === 0) {
       logger.info('Command succeeded!')
+      await emitProgress({ kind: 'fix-succeeded', command })
       return { success: true, summaries }
     }
 
@@ -201,10 +208,12 @@ export const fixWorkflow: WorkflowFn<
     })
 
     if (res?.bailReason) {
+      await emitProgress({ kind: 'fix-failed', command, exitCode })
       return { success: false, summaries, reason: res.bailReason }
     }
   }
 
   logger.error('Failed to fix the issue after maximum attempts.')
+  await emitProgress({ kind: 'fix-failed', command, exitCode: lastExitCode })
   return { success: false, summaries, reason: 'Failed to fix the issue after maximum attempts.' }
 }

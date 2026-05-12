@@ -54,6 +54,12 @@ import {
   toolCall,
   toolHandlers,
 } from './tool-implementations'
+import {
+  createWorkflowProgressEmitter,
+  type WorkflowProgressCallback,
+  type WorkflowProgressState,
+  workflowProgressEventsFromTaskEvent,
+} from './workflow-events'
 import type { BaseWorkflowInput } from './workflows'
 import { createWritePathGuardedProvider } from './write-path-guard'
 
@@ -73,6 +79,7 @@ type RunWorkflowOptions = {
   interactive?: boolean
   getProvider?: (args: ProviderOptions) => ToolProvider
   onUsageMeterCreated?: (meter: UsageMeter) => void
+  onEvent?: WorkflowProgressCallback
   /** Optional provider/model override for this workflow execution */
   providerOverride?: {
     provider?: string
@@ -147,6 +154,21 @@ function errorExitReason(error: unknown): ExitReason {
   }
 }
 
+function isSuccessfulWorkflowOutput(output: unknown): boolean {
+  if (output && typeof output === 'object' && 'success' in output) {
+    return output.success !== false
+  }
+  return true
+}
+
+function notifyUsageMeterCreated(callback: ((meter: UsageMeter) => void) | undefined, meter: UsageMeter, logger: Logger): void {
+  try {
+    callback?.(meter)
+  } catch (error) {
+    logger.warn(`Usage meter callback failed: ${errorMessage(error)}`)
+  }
+}
+
 export function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
   workflow: WorkflowFn<TInput & BaseWorkflowInput, TOutput, TTools>,
   workflowInput: TInput,
@@ -163,10 +185,23 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
   options: RunWorkflowOptions,
 ): Promise<TOutput | StructuredWorkflowFailure | undefined> {
   const { commandName, context, logger, interactive, providerOverride } = options
+  const emitProgress = createWorkflowProgressEmitter(options.onEvent, logger)
+  let workflowFinished = false
+  const finishWorkflow = async (success: boolean) => {
+    if (workflowFinished) {
+      return
+    }
+    workflowFinished = true
+    await emitProgress({ kind: 'workflow-finished', success })
+  }
+
+  await emitProgress({ kind: 'workflow-started' })
+
   let parsedOptions: Awaited<ReturnType<typeof parseOptions>>
   try {
     parsedOptions = await parseOptions(context, {})
   } catch (error) {
+    await finishWorkflow(false)
     if (options.structuredErrors) {
       return toStructuredWorkflowFailure(error)
     }
@@ -192,6 +227,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
     interactive: resolvedInteractive,
     additionalTools,
     config,
+    onWorkflowProgress: emitProgress,
   }
 
   // Initialize pricing service (always enabled)
@@ -203,10 +239,16 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
     pricingService,
   })
 
-  options.onUsageMeterCreated?.(usage)
+  notifyUsageMeterCreated(options.onUsageMeterCreated, usage, logger)
 
-  // Explicitly type onEvent as TaskEventCallback to avoid type inference issues
-  const onEvent: TaskEventCallback = printEvent(verbose, usage, process.stderr)
+  const printTaskEvent = printEvent(verbose, usage, process.stderr)
+  const progressState: WorkflowProgressState = { modelOutputStarted: false }
+  const taskEventCallback: TaskEventCallback = async (event) => {
+    printTaskEvent(event)
+    for (const progressEvent of workflowProgressEventsFromTaskEvent(event, progressState)) {
+      await emitProgress(progressEvent)
+    }
+  }
 
   // Get command config once and reuse
   let commandConfig = providerConfig.getConfigForCommand(commandName)
@@ -253,6 +295,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
       `No provider configured for command: ${commandName}. Please run "polka init" to configure your AI provider.`,
     )
     logger.error(`Error: ${error.message}`)
+    await finishWorkflow(false)
     if (options.structuredErrors) {
       return toStructuredWorkflowFailure(error)
     }
@@ -328,7 +371,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
   })
   const allowedWritePaths = (workflowInput as { allowedWritePaths?: string[] }).allowedWritePaths
   if (allowedWritePaths && allowedWritePaths.length > 0) {
-    toolProvider = await createWritePathGuardedProvider(toolProvider, allowedWritePaths)
+    toolProvider = await createWritePathGuardedProvider(toolProvider, allowedWritePaths, process.cwd(), emitProgress, logger)
   }
 
   const providerOptions = getProviderOptions({
@@ -375,7 +418,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
           return await toolCall({ tool: prop as never, input: input as never }, {
             parameters,
             model,
-            agentCallback: onEvent,
+            agentCallback: taskEventCallback,
             toolProvider,
             yes: context.yes,
             workflowContext: workflowContext,
@@ -415,6 +458,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
 
     logger.info('\n\nWorkflow completed successfully.')
     logger.info(usage.getUsageText())
+    await finishWorkflow(isSuccessfulWorkflowOutput(output))
     return output
   } catch (e) {
     const error = e as unknown
@@ -422,7 +466,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
     // Handle different error types with appropriate messaging
     if (error instanceof UserCancelledError) {
       logger.warn('Workflow cancelled by user.')
-      onEvent({
+      await taskEventCallback({
         kind: TaskEventKind.EndTask,
         exitReason: {
           type: 'Exit',
@@ -432,7 +476,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
       })
     } else if (error instanceof QuotaExceededError) {
       logger.error(`\n❌ Error: ${error.message}`)
-      onEvent({
+      await taskEventCallback({
         kind: TaskEventKind.EndTask,
         exitReason: {
           type: 'Error',
@@ -442,7 +486,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
       })
     } else if (error instanceof AuthenticationError) {
       logger.error(`\n❌ Authentication Error: ${error.message}`)
-      onEvent({
+      await taskEventCallback({
         kind: TaskEventKind.EndTask,
         exitReason: {
           type: 'Error',
@@ -452,7 +496,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
       })
     } else if (error instanceof ModelAccessError) {
       logger.error(`\n❌ Model Access Error: ${error.message}`)
-      onEvent({
+      await taskEventCallback({
         kind: TaskEventKind.EndTask,
         exitReason: {
           type: 'Error',
@@ -463,7 +507,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
     } else if (error instanceof ProviderError) {
       // Handle all other provider errors
       logger.error(`\n❌ Provider Error: ${error.message}`)
-      onEvent({
+      await taskEventCallback({
         kind: TaskEventKind.EndTask,
         exitReason: {
           type: 'Error',
@@ -474,7 +518,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
     } else if (error instanceof McpError) {
       // Handle all MCP errors
       logger.error(`\n❌ MCP Error: ${error.message}`)
-      onEvent({
+      await taskEventCallback({
         kind: TaskEventKind.EndTask,
         exitReason: {
           type: 'Error',
@@ -484,7 +528,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
       })
     } else if (error instanceof ToolExecutionError) {
       logger.error(`\n❌ Tool Error: ${error.message}`)
-      onEvent({
+      await taskEventCallback({
         kind: TaskEventKind.EndTask,
         exitReason: errorExitReason(error),
       })
@@ -492,7 +536,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
       // Generic error handling
       const message = errorMessage(error)
       logger.error(`\n❌ Error: ${message}`)
-      onEvent({
+      await taskEventCallback({
         kind: TaskEventKind.EndTask,
         exitReason: errorExitReason(error),
       })
@@ -502,6 +546,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
     await usage.waitForPending()
 
     logger.info(usage.getUsageText())
+    await finishWorkflow(false)
     return options.structuredErrors ? toStructuredWorkflowFailure(error) : undefined
   } finally {
     // Close memory store

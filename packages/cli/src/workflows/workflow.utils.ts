@@ -8,6 +8,7 @@ import type { FullToolInfo, Logger } from '@polka-codes/core'
 import { z } from 'zod'
 import { ApiProviderConfig } from '../ApiProviderConfig'
 import { MissingDependencyError } from '../errors'
+import type { WorkflowProgressCallback } from '../workflow-events'
 import type { CliToolRegistry } from '../workflow-tools'
 
 export type BaseWorkflowInput = {
@@ -17,6 +18,7 @@ export type BaseWorkflowInput = {
     mcpTools?: FullToolInfo[]
   }
   config?: LoadedConfig
+  onWorkflowProgress?: WorkflowProgressCallback
 }
 
 export type FileChange = {

@@ -54,6 +54,7 @@ export type CodeWorkflowInput = {
   customTools?: FullToolInfo[]
   additionalInstructions?: string
   skipFix?: boolean
+  fixCommand?: string
   allowedWritePaths?: string[]
   stateless?: boolean
 }
@@ -74,6 +75,7 @@ export const codeWorkflow: WorkflowFn<
     interactive,
     additionalTools,
     skipFix = false,
+    fixCommand,
     stateless = false,
   } = input
   const mode = inputMode ?? (interactive === false ? 'noninteractive' : 'interactive')
@@ -251,7 +253,17 @@ export const codeWorkflow: WorkflowFn<
   // Fixing phase
   logger.info(isDirectMode ? '\nPhase 2: Checking for errors...\n' : '\nPhase 3: Checking for errors...\n')
   const fixResult = await step('fix', async () => {
-    return await fixWorkflow({ interactive: false, task: input.task, additionalTools: input.additionalTools }, context)
+    return await fixWorkflow(
+      {
+        interactive: false,
+        command: fixCommand,
+        task: input.task,
+        additionalTools: input.additionalTools,
+        config: input.config,
+        onWorkflowProgress: input.onWorkflowProgress,
+      },
+      context,
+    )
   })
 
   if (fixResult.summaries) {
