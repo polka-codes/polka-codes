@@ -25,6 +25,9 @@ import { planWorkflow } from './plan.workflow'
 import { getCoderSystemPrompt, getDirectCoderSystemPrompt, getDirectImplementPrompt, getImplementPrompt } from './prompts'
 import { type BaseWorkflowInput, getDefaultContext } from './workflow.utils'
 
+const ImplementationFailureTypeSchema = z.enum(['needs_context', 'workflow'])
+type ImplementationFailureType = z.infer<typeof ImplementationFailureTypeSchema>
+
 export type JsonImagePart = {
   type: 'image'
   mediaType: string
@@ -42,6 +45,9 @@ const ImplementOutputSchema = z
   .object({
     summary: z.string().nullish().describe('Short summary of the changes made'),
     bailReason: z.string().nullish().describe('Reason for bailing out of the implementation loop'),
+    errorType: ImplementationFailureTypeSchema.nullish().describe(
+      'Use needs_context when missing caller context prevents a safe edit; otherwise use workflow.',
+    ),
   })
   .refine((data) => (data.summary != null) !== (data.bailReason != null), {
     message: 'Either summary or bailReason must be provided, but not both',
@@ -61,7 +67,7 @@ export type CodeWorkflowInput = {
 
 export const codeWorkflow: WorkflowFn<
   CodeWorkflowInput & BaseWorkflowInput,
-  { success: true; summaries: string[] } | { success: false; reason: string; summaries: string[] },
+  { success: true; summaries: string[] } | { success: false; reason: string; summaries: string[]; errorType?: ImplementationFailureType },
   CliToolRegistry,
   BaseWorkflowContext<CliToolRegistry>
 > = async (input, context) => {
@@ -208,11 +214,11 @@ export const codeWorkflow: WorkflowFn<
   })
 
   if (res.type === 'Exit' && res.object) {
-    const { summary, bailReason } = res.object as z.infer<typeof ImplementOutputSchema>
+    const { summary, bailReason, errorType } = res.object as z.infer<typeof ImplementOutputSchema>
 
     if (bailReason) {
       logger.error(`\nImplementation failed: ${bailReason}\n`)
-      return { success: false, reason: bailReason, summaries }
+      return { success: false, reason: bailReason, summaries, errorType: errorType ?? 'workflow' }
     }
 
     if (summary) {

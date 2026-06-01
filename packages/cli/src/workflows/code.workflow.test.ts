@@ -137,6 +137,34 @@ describe('codeWorkflow', () => {
     expect(firstInput.systemPrompt).not.toContain('approved in Phase 1')
   })
 
+  test('direct mode returns explicit needs_context failures', async () => {
+    const harness = createHarness([
+      jsonResponse({
+        summary: null,
+        bailReason: 'Need the target file path before editing.',
+        errorType: 'needs_context',
+      }),
+    ])
+
+    const result = await codeWorkflow(
+      {
+        task: 'Modify the selected generated test.',
+        mode: 'direct',
+        interactive: false,
+        skipFix: true,
+        additionalTools: {},
+      },
+      harness.context,
+    )
+
+    expect(result).toEqual({
+      success: false,
+      reason: 'Need the target file path before editing.',
+      summaries: [],
+      errorType: 'needs_context',
+    })
+  })
+
   test('stateless direct mode skips memory and broad default context', async () => {
     const harness = createHarness([jsonResponse({ summary: 'Implemented stateless task.', bailReason: null })])
 

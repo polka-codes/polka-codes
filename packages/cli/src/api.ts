@@ -247,9 +247,100 @@ export interface CodeOptions extends BaseOptions {
   interactive?: boolean
 }
 
+export type CodeWriteOutcome = 'attempted' | 'completed' | 'rejected'
+
+export type CodeWriteAttempt = {
+  path: string
+  outcome: CodeWriteOutcome
+  reason?: string
+}
+
+export type CodeFixDetails = {
+  command: string
+  status: 'started' | 'succeeded' | 'failed'
+  exitCode?: number
+  outputExcerpt?: string
+}
+
+export type CodeExecutionDetails = {
+  writeAttempts: CodeWriteAttempt[]
+  changedFiles: string[]
+  fix?: CodeFixDetails
+}
+
+export type CodeErrorType = StructuredWorkflowFailure['errorType'] | 'needs_context'
+
 export type CodeResult =
-  | { success: true; summaries: string[] }
-  | { success: false; reason: string; summaries: string[]; errorType?: StructuredWorkflowFailure['errorType'] }
+  | { success: true; summaries: string[]; details?: CodeExecutionDetails }
+  | {
+      success: false
+      reason: string
+      summaries: string[]
+      errorType?: CodeErrorType
+      details?: CodeExecutionDetails
+    }
+
+function shouldCollectCodeExecutionDetails(options: Pick<CodeOptions, 'mode' | 'interactive'>): boolean {
+  return options.mode === 'direct' && options.interactive === false
+}
+
+function findPendingWriteAttempt(details: CodeExecutionDetails, path: string): CodeWriteAttempt | undefined {
+  for (let i = details.writeAttempts.length - 1; i >= 0; i--) {
+    const attempt = details.writeAttempts[i]
+    if (attempt.path === path && attempt.outcome === 'attempted') {
+      return attempt
+    }
+  }
+  return undefined
+}
+
+function addChangedFile(details: CodeExecutionDetails, path: string): void {
+  if (!details.changedFiles.includes(path)) {
+    details.changedFiles.push(path)
+  }
+}
+
+function recordCodeExecutionEvent(details: CodeExecutionDetails, event: WorkflowProgressEvent): void {
+  switch (event.kind) {
+    case 'write-attempted':
+      details.writeAttempts.push({ path: event.path, outcome: 'attempted' })
+      break
+    case 'write-finished': {
+      const attempt = findPendingWriteAttempt(details, event.path)
+      if (attempt) {
+        attempt.outcome = 'completed'
+      } else {
+        details.writeAttempts.push({ path: event.path, outcome: 'completed' })
+      }
+      addChangedFile(details, event.path)
+      break
+    }
+    case 'write-rejected': {
+      const attempt = findPendingWriteAttempt(details, event.path)
+      if (attempt) {
+        attempt.outcome = 'rejected'
+        attempt.reason = event.reason
+      } else {
+        details.writeAttempts.push({ path: event.path, outcome: 'rejected', reason: event.reason })
+      }
+      break
+    }
+    case 'fix-started':
+      details.fix = { command: event.command, status: 'started' }
+      break
+    case 'fix-succeeded':
+      details.fix = { command: event.command, status: 'succeeded', exitCode: 0 }
+      break
+    case 'fix-failed':
+      details.fix = {
+        command: event.command,
+        status: 'failed',
+        exitCode: event.exitCode,
+        ...(event.outputExcerpt ? { outputExcerpt: event.outputExcerpt } : {}),
+      }
+      break
+  }
+}
 
 /**
  * Plans and implements a feature or task using AI agents
@@ -301,15 +392,31 @@ export async function code(options: CodeOptions): Promise<CodeResult> {
     stateless,
   }
 
-  return runWorkflow(codeWorkflow, workflowInput, {
+  const details: CodeExecutionDetails | undefined = shouldCollectCodeExecutionDetails(options)
+    ? { writeAttempts: [], changedFiles: [] }
+    : undefined
+  const progressCallback: WorkflowProgressCallback | undefined = details
+    ? async (event) => {
+        recordCodeExecutionEvent(details, event)
+        await onEvent?.(event)
+      }
+    : onEvent
+
+  const result = await runWorkflow(codeWorkflow, workflowInput, {
     commandName: 'code',
     context,
     logger,
     interactive: interactive !== false,
     onUsageMeterCreated: onUsage,
-    onEvent,
+    onEvent: progressCallback,
     structuredErrors: true,
   })
+
+  if (!details) {
+    return result
+  }
+
+  return { ...result, details }
 }
 
 /**

@@ -202,7 +202,12 @@ describe('fixWorkflow', () => {
     expect(tools.generateText).toHaveBeenCalledTimes(1)
     expect(events).toEqual([
       { kind: 'fix-started', command: 'bun test' },
-      { kind: 'fix-failed', command: 'bun test', exitCode: 1 },
+      {
+        kind: 'fix-failed',
+        command: 'bun test',
+        exitCode: 1,
+        outputExcerpt: 'stdout:\nFAIL\n\nstderr:\nMysterious error',
+      },
     ])
     expect(result).toMatchSnapshot()
   })

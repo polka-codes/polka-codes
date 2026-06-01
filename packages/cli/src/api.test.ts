@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from 'bun:test'
+import type { WorkflowProgressCallback, WorkflowProgressEvent } from './workflow-events'
 
 const structuredFailure: { success: false; reason: string; summaries: string[]; errorType: 'provider' } = {
   success: false,
@@ -7,7 +8,7 @@ const structuredFailure: { success: false; reason: string; summaries: string[]; 
   errorType: 'provider',
 }
 
-const runWorkflowMock = mock(async (..._args: unknown[]) => structuredFailure)
+const runWorkflowMock = mock(async (..._args: unknown[]): Promise<unknown> => structuredFailure)
 
 mock.module('./runWorkflow', () => ({
   runWorkflow: runWorkflowMock,
@@ -18,6 +19,7 @@ const { code, commit, createPr, fix, plan, reviewCode, task } = await import('./
 describe('code API', () => {
   beforeEach(() => {
     runWorkflowMock.mockClear()
+    runWorkflowMock.mockImplementation(async (..._args: unknown[]) => structuredFailure)
   })
 
   test('returns structured workflow failures and forwards stateless mode', async () => {
@@ -33,14 +35,21 @@ describe('code API', () => {
       onEvent,
     })
 
-    expect(result).toEqual(structuredFailure)
+    expect(result).toEqual({
+      ...structuredFailure,
+      details: {
+        writeAttempts: [],
+        changedFiles: [],
+      },
+    })
     expect(runWorkflowMock).toHaveBeenCalledTimes(1)
 
     const call = runWorkflowMock.mock.calls[0]
     if (!call) {
       throw new Error('runWorkflow was not called')
     }
-    const [, workflowInput, options] = call
+    const [, workflowInput, rawOptions] = call
+    const options = rawOptions as { onEvent?: WorkflowProgressCallback }
     expect(workflowInput).toMatchObject({
       task: 'Generate the requested file.',
       mode: 'direct',
@@ -52,8 +61,81 @@ describe('code API', () => {
     expect(options).toMatchObject({
       commandName: 'code',
       interactive: false,
-      onEvent,
       structuredErrors: true,
+    })
+    expect(options.onEvent).not.toBe(onEvent)
+  })
+
+  test('returns direct non-interactive execution details collected from progress events', async () => {
+    const forwardedEvents: WorkflowProgressEvent[] = []
+    runWorkflowMock.mockImplementation(async (...args: unknown[]) => {
+      const options = args[2] as { onEvent?: WorkflowProgressCallback }
+      await options.onEvent?.({ kind: 'write-attempted', path: 'tests/generated.rs' })
+      await options.onEvent?.({ kind: 'write-finished', path: 'tests/generated.rs' })
+      await options.onEvent?.({ kind: 'write-attempted', path: 'tests/blocked.rs' })
+      await options.onEvent?.({
+        kind: 'write-rejected',
+        path: 'tests/blocked.rs',
+        reason: 'outside allowedWritePaths',
+      })
+      await options.onEvent?.({ kind: 'fix-started', command: 'cargo test --no-run' })
+      await options.onEvent?.({
+        kind: 'fix-failed',
+        command: 'cargo test --no-run',
+        exitCode: 101,
+        outputExcerpt: 'compile error',
+      })
+      return { success: false, reason: 'compile failed', summaries: ['Generated test.'] }
+    })
+
+    const result = await code({
+      task: 'Generate the requested file.',
+      mode: 'direct',
+      interactive: false,
+      allowedWritePaths: ['tests/generated.rs'],
+      onEvent: (event) => {
+        forwardedEvents.push(event)
+      },
+    })
+
+    expect(forwardedEvents).toEqual([
+      { kind: 'write-attempted', path: 'tests/generated.rs' },
+      { kind: 'write-finished', path: 'tests/generated.rs' },
+      { kind: 'write-attempted', path: 'tests/blocked.rs' },
+      {
+        kind: 'write-rejected',
+        path: 'tests/blocked.rs',
+        reason: 'outside allowedWritePaths',
+      },
+      { kind: 'fix-started', command: 'cargo test --no-run' },
+      {
+        kind: 'fix-failed',
+        command: 'cargo test --no-run',
+        exitCode: 101,
+        outputExcerpt: 'compile error',
+      },
+    ])
+    expect(result).toEqual({
+      success: false,
+      reason: 'compile failed',
+      summaries: ['Generated test.'],
+      details: {
+        writeAttempts: [
+          { path: 'tests/generated.rs', outcome: 'completed' },
+          {
+            path: 'tests/blocked.rs',
+            outcome: 'rejected',
+            reason: 'outside allowedWritePaths',
+          },
+        ],
+        changedFiles: ['tests/generated.rs'],
+        fix: {
+          command: 'cargo test --no-run',
+          status: 'failed',
+          exitCode: 101,
+          outputExcerpt: 'compile error',
+        },
+      },
     })
   })
 

@@ -28,11 +28,12 @@ ${projectInstructions}
 
 ## Output
 
-After the work, return the JSON result directly in the response. Set exactly one of "summary" or "bailReason".
+After the work, return the JSON result directly in the response. Set exactly one of "summary" or "bailReason". When using "bailReason", also set "errorType" to "needs_context" if missing caller context prevents a safe edit; otherwise set it to "workflow". Do not set "errorType" when using "summary".
 
 ${createJsonResponseInstruction({
   summary: 'Implemented user authentication with JWT tokens and password hashing.',
   bailReason: null,
+  errorType: null,
 })}
 `
 }
@@ -54,11 +55,12 @@ ${projectInstructions}
 
 Follow the project's existing code style and conventions. Make only the changes needed for the task and verify when possible.
 
-After the work, return the JSON result directly in the response. Set exactly one of "summary" or "bailReason".
+After the work, return the JSON result directly in the response. Set exactly one of "summary" or "bailReason". When using "bailReason", also set "errorType" to "needs_context" if missing caller context prevents a safe edit; otherwise set it to "workflow". Do not set "errorType" when using "summary".
 
 ${createJsonResponseInstruction({
   summary: 'Implemented user authentication with JWT tokens and password hashing.',
   bailReason: null,
+  errorType: null,
 })}
 `
 }

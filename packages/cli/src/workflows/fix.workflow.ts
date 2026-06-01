@@ -20,6 +20,8 @@ import type { CliToolRegistry } from '../workflow-tools'
 import { getFixSystemPrompt, getFixUserPrompt } from './prompts'
 import { type BaseWorkflowInput, getDefaultContext } from './workflow.utils'
 
+const FIX_OUTPUT_EXCERPT_MAX_LENGTH = 4000
+
 export type FixWorkflowInput = {
   command?: string
   task?: string
@@ -36,6 +38,29 @@ const FixIterationSummarySchema = z
     message: 'Either summary or bailReason must be provided, but not both',
   })
 
+function buildCommandOutputExcerpt(stdout: string, stderr: string): string | undefined {
+  const outputParts: string[] = []
+  const trimmedStdout = stdout.trimEnd()
+  const trimmedStderr = stderr.trimEnd()
+
+  if (trimmedStdout.length > 0) {
+    outputParts.push(`stdout:\n${trimmedStdout}`)
+  }
+  if (trimmedStderr.length > 0) {
+    outputParts.push(`stderr:\n${trimmedStderr}`)
+  }
+
+  const output = outputParts.join('\n\n')
+  if (output.length === 0) {
+    return undefined
+  }
+  if (output.length <= FIX_OUTPUT_EXCERPT_MAX_LENGTH) {
+    return output
+  }
+  const prefix = '...'
+  return `${prefix}${output.slice(output.length - (FIX_OUTPUT_EXCERPT_MAX_LENGTH - prefix.length))}`
+}
+
 export const fixWorkflow: WorkflowFn<
   FixWorkflowInput & BaseWorkflowInput,
   { success: true; summaries: string[] } | { success: false; reason: string; summaries: string[] },
@@ -47,6 +72,7 @@ export const fixWorkflow: WorkflowFn<
   const summaries: string[] = []
   let formatCommand: string | undefined
   let lastExitCode = -1
+  let lastOutputExcerpt: string | undefined
   const emitProgress = createWorkflowProgressEmitter(input.onWorkflowProgress, logger)
 
   // Helper function to build script invocation command
@@ -141,6 +167,7 @@ export const fixWorkflow: WorkflowFn<
       pipe: true,
     })
     lastExitCode = exitCode
+    lastOutputExcerpt = buildCommandOutputExcerpt(stdout, stderr)
 
     if (exitCode === 0) {
       logger.info('Command succeeded!')
@@ -217,12 +244,20 @@ export const fixWorkflow: WorkflowFn<
     })
 
     if (res?.bailReason) {
-      await emitProgress({ kind: 'fix-failed', command, exitCode })
+      await emitProgress(
+        lastOutputExcerpt
+          ? { kind: 'fix-failed', command, exitCode, outputExcerpt: lastOutputExcerpt }
+          : { kind: 'fix-failed', command, exitCode },
+      )
       return { success: false, summaries, reason: res.bailReason }
     }
   }
 
   logger.error('Failed to fix the issue after maximum attempts.')
-  await emitProgress({ kind: 'fix-failed', command, exitCode: lastExitCode })
+  await emitProgress(
+    lastOutputExcerpt
+      ? { kind: 'fix-failed', command, exitCode: lastExitCode, outputExcerpt: lastOutputExcerpt }
+      : { kind: 'fix-failed', command, exitCode: lastExitCode },
+  )
   return { success: false, summaries, reason: 'Failed to fix the issue after maximum attempts.' }
 }

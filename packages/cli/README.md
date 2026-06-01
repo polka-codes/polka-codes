@@ -52,6 +52,16 @@ polka code --preview "Add login form"  # Show diff before applying
 - Automatic fix workflow runs after implementation
 - Optional diff preview mode
 
+### Programmatic direct mode
+
+Automation clients can call `code()` from `@polka-codes/cli` with `mode: "direct"` and `interactive: false`. In that mode, the returned result includes a `details` object with durable facts Polka observed during the run:
+
+- `writeAttempts`: file-tool write, delete, or rename attempts with `completed`, `rejected`, or still-`attempted` outcomes
+- `changedFiles`: unique paths with completed Polka file-tool write/delete/rename operations
+- `fix`: the final fix/check command state, including command, status, exit code when available, and a bounded failure output excerpt
+
+`changedFiles` is based on Polka file-tool events. It does not include side effects from shell commands or custom tools, and it does not prove file content changed when a tool wrote identical content.
+
 #### `plan`
 
 Create an implementation plan for a new feature or refactor.

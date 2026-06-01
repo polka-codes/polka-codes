@@ -9,7 +9,7 @@ export type WorkflowProgressEvent =
   | { kind: 'write-finished'; path: string }
   | { kind: 'write-rejected'; path: string; reason: string }
   | { kind: 'fix-started'; command: string }
-  | { kind: 'fix-failed'; command: string; exitCode: number }
+  | { kind: 'fix-failed'; command: string; exitCode: number; outputExcerpt?: string }
   | { kind: 'fix-succeeded'; command: string }
   | { kind: 'workflow-finished'; success: boolean }
 
