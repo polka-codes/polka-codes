@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import type { LoadedConfig } from '@polka-codes/cli-shared'
-import { createContext, type JsonResponseMessage, type WorkflowTools } from '@polka-codes/core'
+import { createContext, type JsonResponseMessage, type StepFn, type WorkflowTools } from '@polka-codes/core'
 import type { CliToolRegistry } from '../workflow-tools'
 import { codeWorkflow } from './code.workflow'
 
@@ -230,6 +230,41 @@ describe('codeWorkflow', () => {
 
     expect(harness.infoMessages.join('\n')).not.toContain('Checking for errors')
     expect(harness.toolCalls).not.toContain('executeCommand')
+  })
+
+  test('does not mask implementation errors with a passing fix phase', async () => {
+    const harness = createHarness([])
+    const implementationError = {
+      type: 'Error' as const,
+      error: { message: 'implementation crashed' },
+      messages: [],
+    }
+    const step = (async <T>(
+      name: string,
+      arg2: (() => Promise<T>) | { retry?: number },
+      arg3?: (() => Promise<T>) | { retry?: number },
+    ): Promise<T> => {
+      if (name === 'implement') {
+        return implementationError as never
+      }
+
+      const fn = typeof arg2 === 'function' ? arg2 : (arg3 as () => Promise<T>)
+      return await fn()
+    }) as StepFn
+    const context = createContext<CliToolRegistry>(harness.context.tools, step, harness.context.logger)
+
+    const result = await codeWorkflow(
+      {
+        task: 'Generate a Rust test.',
+        mode: 'direct',
+        interactive: false,
+        additionalTools: {},
+      },
+      context,
+    )
+
+    expect(result).toEqual({ success: false, reason: 'implementation crashed', summaries: [] })
+    expect(harness.executeCommandInputs).toEqual([])
   })
 
   test('direct mode passes fixCommand to the fix phase', async () => {

@@ -4,6 +4,7 @@ import {
   agentWorkflow,
   askFollowupQuestion,
   type BaseWorkflowContext,
+  type ExitReason,
   executeCommand,
   type FullToolInfo,
   fetchUrl,
@@ -27,6 +28,14 @@ import { type BaseWorkflowInput, getDefaultContext } from './workflow.utils'
 
 const ImplementationFailureTypeSchema = z.enum(['needs_context', 'workflow'])
 type ImplementationFailureType = z.infer<typeof ImplementationFailureTypeSchema>
+type ImplementationFailureExitReason = Extract<ExitReason, { type: 'UsageExceeded' | 'Error' }>
+
+function getImplementationFailureReason(result: ImplementationFailureExitReason): string {
+  if (result.type === 'UsageExceeded') {
+    return 'Implementation failed because usage limits were exceeded.'
+  }
+  return result.error.message
+}
 
 export type JsonImagePart = {
   type: 'image'
@@ -241,15 +250,7 @@ export const codeWorkflow: WorkflowFn<
     logger.info('\nImplementation complete!\n')
   } else {
     logger.warn('\nWarning: Implementation failed. Please check the output for errors.\n', res)
-    if (skipFix) {
-      const reason =
-        res.type === 'UsageExceeded'
-          ? 'Implementation failed because usage limits were exceeded.'
-          : res.type === 'Error'
-            ? (res.error?.message ?? 'Implementation failed.')
-            : 'Implementation failed.'
-      return { success: false, reason, summaries }
-    }
+    return { success: false, reason: getImplementationFailureReason(res), summaries }
   }
 
   if (skipFix) {
