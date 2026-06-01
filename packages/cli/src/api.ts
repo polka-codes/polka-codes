@@ -42,6 +42,12 @@ import {
   taskWorkflow,
 } from './workflows'
 
+type WorkflowRunner = typeof runWorkflow
+
+export type ScriptingApiDependencies = {
+  runWorkflow?: WorkflowRunner
+}
+
 /**
  * Reusable execution context for CLI options.
  * This interface extends the ExecutionContext from runWorkflow.ts
@@ -107,7 +113,7 @@ export interface CommitOptions extends BaseOptions {
  * await commit({ all: true, interactive: false })
  * ```
  */
-export async function commit(options: CommitOptions = {}): Promise<string | undefined> {
+async function commitWithRunner(options: CommitOptions = {}, executeWorkflow: WorkflowRunner): Promise<string | undefined> {
   const { all, files, context: messageContext, interactive, onUsage, onEvent, ...context } = options
 
   // Create logger from options
@@ -123,7 +129,7 @@ export async function commit(options: CommitOptions = {}): Promise<string | unde
   }
 
   // Execute workflow
-  const result = await runWorkflow(commitWorkflow, workflowInput, {
+  const result = await executeWorkflow(commitWorkflow, workflowInput, {
     commandName: 'commit',
     context,
     logger,
@@ -134,6 +140,10 @@ export async function commit(options: CommitOptions = {}): Promise<string | unde
 
   // Handle both string and void returns
   return result ?? undefined
+}
+
+export async function commit(options: CommitOptions = {}): Promise<string | undefined> {
+  return commitWithRunner(options, runWorkflow)
 }
 
 /**
@@ -169,7 +179,10 @@ export interface CreatePrOptions extends BaseOptions {
  * await createPr({ interactive: false })
  * ```
  */
-export async function createPr(options: CreatePrOptions = {}): Promise<{ title: string; description: string } | undefined> {
+async function createPrWithRunner(
+  options: CreatePrOptions = {},
+  executeWorkflow: WorkflowRunner,
+): Promise<{ title: string; description: string } | undefined> {
   const { context: prContext, interactive, onUsage, onEvent, ...context } = options
 
   const verbose = context.silent ? -1 : (context.verbose ?? 0)
@@ -179,7 +192,7 @@ export async function createPr(options: CreatePrOptions = {}): Promise<{ title: 
     ...(prContext && { context: prContext }),
   }
 
-  return runWorkflow(prWorkflow, workflowInput, {
+  return executeWorkflow(prWorkflow, workflowInput, {
     commandName: 'pr',
     context,
     logger,
@@ -187,6 +200,10 @@ export async function createPr(options: CreatePrOptions = {}): Promise<{ title: 
     onUsageMeterCreated: onUsage,
     onEvent,
   })
+}
+
+export async function createPr(options: CreatePrOptions = {}): Promise<{ title: string; description: string } | undefined> {
+  return createPrWithRunner(options, runWorkflow)
 }
 
 /**
@@ -362,7 +379,7 @@ function recordCodeExecutionEvent(details: CodeExecutionDetails, event: Workflow
  * })
  * ```
  */
-export async function code(options: CodeOptions): Promise<CodeResult> {
+async function codeWithRunner(options: CodeOptions, executeWorkflow: WorkflowRunner): Promise<CodeResult> {
   const {
     task,
     files,
@@ -402,7 +419,7 @@ export async function code(options: CodeOptions): Promise<CodeResult> {
       }
     : onEvent
 
-  const result = await runWorkflow(codeWorkflow, workflowInput, {
+  const result = await executeWorkflow(codeWorkflow, workflowInput, {
     commandName: 'code',
     context,
     logger,
@@ -417,6 +434,10 @@ export async function code(options: CodeOptions): Promise<CodeResult> {
   }
 
   return { ...result, details }
+}
+
+export async function code(options: CodeOptions): Promise<CodeResult> {
+  return codeWithRunner(options, runWorkflow)
 }
 
 /**
@@ -465,7 +486,7 @@ export interface ReviewCodeOptions extends BaseOptions {
  * const review = await reviewCode({ pr: 123 })
  * ```
  */
-export async function reviewCode(options: ReviewCodeOptions = {}): Promise<ReviewResult | undefined> {
+async function reviewCodeWithRunner(options: ReviewCodeOptions = {}, executeWorkflow: WorkflowRunner): Promise<ReviewResult | undefined> {
   const { pr, range, files, context: reviewContext, interactive, onUsage, onEvent, ...context } = options
 
   const verbose = context.silent ? -1 : (context.verbose ?? 0)
@@ -478,7 +499,7 @@ export async function reviewCode(options: ReviewCodeOptions = {}): Promise<Revie
     context: reviewContext,
   }
 
-  return runWorkflow(reviewWorkflow, workflowInput, {
+  return executeWorkflow(reviewWorkflow, workflowInput, {
     commandName: 'review',
     context,
     logger,
@@ -486,6 +507,10 @@ export async function reviewCode(options: ReviewCodeOptions = {}): Promise<Revie
     onUsageMeterCreated: onUsage,
     onEvent,
   })
+}
+
+export async function reviewCode(options: ReviewCodeOptions = {}): Promise<ReviewResult | undefined> {
+  return reviewCodeWithRunner(options, runWorkflow)
 }
 
 /**
@@ -533,7 +558,10 @@ export interface FixOptions extends BaseOptions {
  * await fix({})
  * ```
  */
-export async function fix(options: FixOptions = {}): Promise<{ success: boolean; summaries?: string[]; reason?: string } | undefined> {
+async function fixWithRunner(
+  options: FixOptions = {},
+  executeWorkflow: WorkflowRunner,
+): Promise<{ success: boolean; summaries?: string[]; reason?: string } | undefined> {
   const { command, task, prompt, interactive, onUsage, onEvent, ...context } = options
 
   const verbose = context.silent ? -1 : (context.verbose ?? 0)
@@ -545,7 +573,7 @@ export async function fix(options: FixOptions = {}): Promise<{ success: boolean;
     prompt,
   }
 
-  return runWorkflow(fixWorkflow, workflowInput, {
+  return executeWorkflow(fixWorkflow, workflowInput, {
     commandName: 'fix',
     context,
     logger,
@@ -553,6 +581,10 @@ export async function fix(options: FixOptions = {}): Promise<{ success: boolean;
     onUsageMeterCreated: onUsage,
     onEvent,
   })
+}
+
+export async function fix(options: FixOptions = {}): Promise<{ success: boolean; summaries?: string[]; reason?: string } | undefined> {
+  return fixWithRunner(options, runWorkflow)
 }
 
 /**
@@ -609,7 +641,7 @@ export interface TaskOptions extends BaseOptions {
  * })
  * ```
  */
-export async function task(options: TaskOptions): Promise<ExitReason | undefined> {
+async function taskWithRunner(options: TaskOptions, executeWorkflow: WorkflowRunner): Promise<ExitReason | undefined> {
   const { task: taskInput, jsonMode, readonly, systemPrompt, interactive, onUsage, onEvent, ...context } = options
 
   const verbose = context.silent ? -1 : (context.verbose ?? 0)
@@ -622,7 +654,7 @@ export async function task(options: TaskOptions): Promise<ExitReason | undefined
     systemPrompt,
   }
 
-  return runWorkflow(taskWorkflow, workflowInput, {
+  return executeWorkflow(taskWorkflow, workflowInput, {
     commandName: 'task',
     context,
     logger,
@@ -630,6 +662,10 @@ export async function task(options: TaskOptions): Promise<ExitReason | undefined
     onUsageMeterCreated: onUsage,
     onEvent,
   })
+}
+
+export async function task(options: TaskOptions): Promise<ExitReason | undefined> {
+  return taskWithRunner(options, runWorkflow)
 }
 
 /**
@@ -690,7 +726,7 @@ export interface PlanOptions extends BaseOptions {
  * })
  * ```
  */
-export async function plan(options: PlanOptions = {}): Promise<PlanWorkflowOutput | undefined> {
+async function planWithRunner(options: PlanOptions = {}, executeWorkflow: WorkflowRunner): Promise<PlanWorkflowOutput | undefined> {
   const { task, fileContent, planFile, files, mode, interactive, onUsage, onEvent, ...context } = options
 
   const verbose = context.silent ? -1 : (context.verbose ?? 0)
@@ -704,7 +740,7 @@ export async function plan(options: PlanOptions = {}): Promise<PlanWorkflowOutpu
     mode,
   }
 
-  return runWorkflow(planWorkflow, workflowInput, {
+  return executeWorkflow(planWorkflow, workflowInput, {
     commandName: 'plan',
     context,
     logger,
@@ -712,6 +748,34 @@ export async function plan(options: PlanOptions = {}): Promise<PlanWorkflowOutpu
     onUsageMeterCreated: onUsage,
     onEvent,
   })
+}
+
+export async function plan(options: PlanOptions = {}): Promise<PlanWorkflowOutput | undefined> {
+  return planWithRunner(options, runWorkflow)
+}
+
+export type ScriptingApi = {
+  commit(options?: CommitOptions): Promise<string | undefined>
+  createPr(options?: CreatePrOptions): Promise<{ title: string; description: string } | undefined>
+  code(options: CodeOptions): Promise<CodeResult>
+  reviewCode(options?: ReviewCodeOptions): Promise<ReviewResult | undefined>
+  fix(options?: FixOptions): Promise<{ success: boolean; summaries?: string[]; reason?: string } | undefined>
+  task(options: TaskOptions): Promise<ExitReason | undefined>
+  plan(options?: PlanOptions): Promise<PlanWorkflowOutput | undefined>
+}
+
+export function createScriptingApi(dependencies: ScriptingApiDependencies = {}): ScriptingApi {
+  const executeWorkflow = dependencies.runWorkflow ?? runWorkflow
+
+  return {
+    commit: (options) => commitWithRunner(options, executeWorkflow),
+    createPr: (options) => createPrWithRunner(options, executeWorkflow),
+    code: (options) => codeWithRunner(options, executeWorkflow),
+    reviewCode: (options) => reviewCodeWithRunner(options, executeWorkflow),
+    fix: (options) => fixWithRunner(options, executeWorkflow),
+    task: (options) => taskWithRunner(options, executeWorkflow),
+    plan: (options) => planWithRunner(options, executeWorkflow),
+  }
 }
 
 /**
