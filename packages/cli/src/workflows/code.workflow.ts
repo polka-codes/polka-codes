@@ -104,6 +104,7 @@ export const codeWorkflow: WorkflowFn<
           mode: canAskFollowupQuestions ? 'confirm' : 'noninteractive',
           interactive: canAskFollowupQuestions,
           additionalTools,
+          config: input.config,
           stateless,
         },
         context,

@@ -248,6 +248,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
   // Determine interactive mode: respect explicit values in input, then options, then default based on yes flag
   // Safely access interactive property with optional chaining in case workflowInput doesn't extend BaseWorkflowInput
   const resolvedInteractive = (workflowInput as BaseWorkflowInput | undefined)?.interactive ?? interactive ?? yes !== true
+  const stateless = (workflowInput as { stateless?: boolean } | undefined)?.stateless === true
 
   const finalWorkflowInput: TInput & BaseWorkflowInput = {
     ...workflowInput,
@@ -358,7 +359,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
     // Use same default configuration from core for consistency
     const memoryConfig = globalConfig?.memory || DEFAULT_MEMORY_CONFIG
 
-    if (memoryConfig.enabled && memoryConfig.type === 'sqlite') {
+    if (!stateless && memoryConfig.enabled && memoryConfig.type === 'sqlite') {
       // Determine project scope using shared utility
       const cwd = process.cwd()
       const scope = detectProjectScope(cwd)

@@ -338,4 +338,32 @@ describe('codeWorkflow', () => {
     expect(harness.infoMessages.join('\n')).toContain('Phase 1: Creating implementation plan')
     expect(textParts(harness.generateTextInputs[1]).join('\n')).toContain('## Your Plan')
   })
+
+  test('planned mode preserves configured rules in the planning context', async () => {
+    const harness = createHarness([
+      jsonResponse({ plan: '1. Follow the configured rule.', files: [] }),
+      jsonResponse({ summary: 'Implemented with configured context.', bailReason: null }),
+    ])
+    const config: LoadedConfig = {
+      rules: 'Keep the planner-specific contract.',
+      loadRules: {
+        'AGENTS.md': false,
+        'CLAUDE.md': false,
+      },
+    }
+
+    const result = await codeWorkflow(
+      {
+        task: 'Implement through the configured planned workflow.',
+        interactive: false,
+        skipFix: true,
+        config,
+        additionalTools: {},
+      },
+      harness.context,
+    )
+
+    expect(result).toEqual({ success: true, summaries: ['Implemented with configured context.'] })
+    expect(textParts(harness.generateTextInputs[0]).join('\n')).toContain('<rules>\nKeep the planner-specific contract.\n</rules>')
+  })
 })
