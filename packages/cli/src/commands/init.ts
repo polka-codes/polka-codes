@@ -497,9 +497,18 @@ export const initCommand = new Command('init')
         case 'local':
           break
         case 'global': {
-          // Validate or create global config
-          const globalValidation = await validateConfig(globalConfigPath, { includeGlobal: false })
-          const globalConfig = globalValidation.valid ? globalValidation.config : {}
+          let globalConfig: Config = {}
+          if (existsSync(globalConfigPath)) {
+            const validation = await validateConfig(globalConfigPath, { includeGlobal: false })
+            if (!validation.valid) {
+              logger.error(`Config validation failed for ${globalConfigPath}:`)
+              for (const error of validation.errors) {
+                logger.error(`  ${error.code}: ${error.message}`)
+              }
+              throw new Error(`Invalid config file: ${globalConfigPath}`)
+            }
+            globalConfig = validation.config
+          }
           set(globalConfig, ['providers', provider, 'apiKey'], apiKey)
           writeFileSync(globalConfigPath, stringify(globalConfig))
           logger.info(`API key saved to global config file: ${globalConfigPath}`)
