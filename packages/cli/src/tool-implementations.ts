@@ -326,10 +326,18 @@ async function generateText(input: GenerateTextInput, context: ToolCallContext) 
 
   for (let i = 0; i < retryCount; i++) {
     const abortController = new AbortController()
-    let timeout = setTimeout(() => abortController.abort(), requestTimeoutSeconds * 1000)
+    let timeoutError: ProviderTimeoutError | undefined
+    const abortForTimeout = () => {
+      if (abortController.signal.aborted) {
+        return
+      }
+      timeoutError = new ProviderTimeoutError(model.provider, model.modelId, requestTimeoutSeconds)
+      abortController.abort(timeoutError)
+    }
+    let timeout = setTimeout(abortForTimeout, requestTimeoutSeconds * 1000)
 
     const lastOutputs: string[] = []
-    let repetitionDetected = false
+    let repetitionError: Error | undefined
 
     const usageMeterOnFinishHandler = context.parameters.usageMeter.onFinishHandler(model)
 
@@ -342,7 +350,7 @@ async function generateText(input: GenerateTextInput, context: ToolCallContext) 
         tools: input.tools,
         async onChunk({ chunk }) {
           clearTimeout(timeout)
-          timeout = setTimeout(() => abortController.abort(), requestTimeoutSeconds * 1000)
+          timeout = setTimeout(abortForTimeout, requestTimeoutSeconds * 1000)
           switch (chunk.type) {
             case 'text-delta':
               lastOutputs.push(chunk.text)
@@ -354,8 +362,10 @@ async function generateText(input: GenerateTextInput, context: ToolCallContext) 
                 const secondHalf = lastOutputs.slice(REPETITION_CHECK_HALF).join('')
                 if (firstHalf === secondHalf) {
                   if (firstHalf.length > REPETITION_MIN_LENGTH) {
-                    repetitionDetected = true
-                    abortController.abort()
+                    if (!abortController.signal.aborted) {
+                      repetitionError = new Error('Repetition detected in model output')
+                      abortController.abort(repetitionError)
+                    }
                   }
                 }
               }
@@ -389,16 +399,15 @@ async function generateText(input: GenerateTextInput, context: ToolCallContext) 
       const resp = await stream.response
       return resp.messages.map(toJsonModelMessage)
     } catch (error: unknown) {
-      // Handle AbortError (timeouts and repetition)
-      if (error instanceof Error && error.name === 'AbortError') {
-        if (repetitionDetected) {
-          context.workflowContext.logger.warn('Repetition detected, retrying...')
-          lastError = new Error('Repetition detected in model output')
-          continue
-        }
-        // This is a timeout
+      if (repetitionError) {
+        context.workflowContext.logger.warn('Repetition detected, retrying...')
+        lastError = repetitionError
+        continue
+      }
+
+      if (timeoutError) {
         context.workflowContext.logger.warn(`Request timed out after ${requestTimeoutSeconds} seconds, retrying...`)
-        lastError = new ProviderTimeoutError(model.provider, model.modelId, requestTimeoutSeconds)
+        lastError = timeoutError
         continue
       }
 
