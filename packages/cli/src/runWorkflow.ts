@@ -351,6 +351,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
 
   // Initialize SQLiteMemoryStore for persistent memory storage
   let memoryStore: { close(): void } | undefined
+  let sqliteMemoryStore: SQLiteMemoryStore | undefined
   try {
     const globalConfigPath = getGlobalConfigPath()
     const globalConfig = (await loadConfigAtPath(globalConfigPath)) as { memory?: { enabled: boolean; type: string; path?: string } } | null
@@ -372,114 +373,116 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
 
       // Create SQLiteMemoryStore instance
       const sqliteStore = new SQLiteMemoryStore({ enabled: true, type: 'sqlite', path: dbPath }, scope)
+      sqliteMemoryStore = sqliteStore
 
       // Wrap with MemoryManager for safety limits and consistent behavior
       const memoryManager = new MemoryManager(sqliteStore)
       memoryStore = memoryManager
-
-      // Update options to pass the memory store to getProvider
-      options.getProvider = (opts: ProviderOptions) => getProvider({ ...opts, memoryStore: sqliteStore })
     }
   } catch (error) {
     // If memory store initialization fails, log warning but continue with in-memory store
     logger.warn(`Failed to initialize persistent memory store: ${error instanceof Error ? error.message : String(error)}`)
   }
 
-  let toolProvider = (options.getProvider ?? getProvider)({
-    excludeFiles,
-    yes: context.yes,
-    getModel: (tool) => {
-      const toolConfig = config.tools?.[tool as keyof typeof config.tools]
-      if (toolConfig === false) {
-        return undefined
-      }
-      // Inherit from the main command config
-      const baseConfig = commandConfig
-
-      if (typeof toolConfig === 'object') {
-        // Merge to allow partial overrides (e.g. just model)
-        const mergedConfig = { ...baseConfig, ...toolConfig }
-        const resolvedConfig = providerConfig.resolveModelConfig(mergedConfig)
-        if (resolvedConfig) {
-          return getModel(resolvedConfig)
-        }
-      }
-
-      // Fallback for true or undefined
-      return getModel(baseConfig)
-    },
-  })
-  const allowedWritePaths = (workflowInput as { allowedWritePaths?: string[] }).allowedWritePaths
-  if (allowedWritePaths && allowedWritePaths.length > 0) {
-    toolProvider = await createWritePathGuardedProvider(toolProvider, allowedWritePaths, process.cwd(), emitProgress, logger)
-  }
-
-  const providerOptions = getProviderOptions({
-    provider: commandConfig.provider,
-    modelId: commandConfig.model,
-    parameters: commandConfig.parameters,
-  })
-
-  // Initialize skill context for Agent Skills support
-  const skillContext = await initializeSkillContext()
-
-  const parameters: AgentContextParameters = {
-    providerOptions,
-    scripts: config.scripts,
-    retryCount: config.retryCount,
-    requestTimeoutSeconds: config.requestTimeoutSeconds,
-    usageMeter: usage,
-    skillContext,
-    mcpManager,
-  }
-
-  let workflowContext: BaseWorkflowContext<TTools>
-
-  // Create a tools proxy with dynamic dispatch.
-  // Note: We cast to WorkflowTools<TTools> even though the actual return type is Promise<ToolResponse>.
-  // This is safe because ToolResponse is a union of all TTools[K]['output'] types, so at runtime
-  // the returned value is always compatible with the expected type for the called tool.
-  const tools = new Proxy({} as WorkflowTools<TTools>, {
-    get: (_target, prop) => {
-      // Return undefined for non-string properties (symbols, etc.)
-      // and standard properties like 'then', 'toJSON' to avoid interfering
-      // with JavaScript operations like Promise.then or JSON.stringify
-      if (typeof prop !== 'string' || prop === 'then' || prop === 'toJSON') {
-        return undefined
-      }
-      // Return undefined for unknown tools to support existence checks
-      // Only return a function for known tools (including local tools and MCP tools)
-      if (!toolHandlers.has(prop) && !localToolNames.includes(prop)) {
-        return undefined
-      }
-      return (async (input: unknown) => {
-        logger.debug(`Running tool: ${prop}`)
-        try {
-          return await toolCall({ tool: prop as never, input: input as never }, {
-            parameters,
-            model,
-            agentCallback: taskEventCallback,
-            toolProvider,
-            yes: context.yes,
-            workflowContext: workflowContext,
-          } as ToolCallContext)
-        } catch (error) {
-          if (error instanceof UserCancelledError || error instanceof ProviderError || error instanceof McpError) {
-            throw error
-          }
-          throw new ToolExecutionError(prop, error)
-        }
-      }) as WorkflowTools<TTools>[keyof TTools]
-    },
-  })
-
-  workflowContext = {
-    step: makeStepFn(),
-    logger,
-    tools,
-  }
-
   try {
+    const providerFactory =
+      options.getProvider ??
+      ((providerOptions: ProviderOptions) =>
+        getProvider(sqliteMemoryStore ? { ...providerOptions, memoryStore: sqliteMemoryStore } : providerOptions))
+    let toolProvider = providerFactory({
+      excludeFiles,
+      yes: context.yes,
+      getModel: (tool) => {
+        const toolConfig = config.tools?.[tool as keyof typeof config.tools]
+        if (toolConfig === false) {
+          return undefined
+        }
+        // Inherit from the main command config
+        const baseConfig = commandConfig
+
+        if (typeof toolConfig === 'object') {
+          // Merge to allow partial overrides (e.g. just model)
+          const mergedConfig = { ...baseConfig, ...toolConfig }
+          const resolvedConfig = providerConfig.resolveModelConfig(mergedConfig)
+          if (resolvedConfig) {
+            return getModel(resolvedConfig)
+          }
+        }
+
+        // Fallback for true or undefined
+        return getModel(baseConfig)
+      },
+    })
+    const allowedWritePaths = (workflowInput as { allowedWritePaths?: string[] }).allowedWritePaths
+    if (allowedWritePaths && allowedWritePaths.length > 0) {
+      toolProvider = await createWritePathGuardedProvider(toolProvider, allowedWritePaths, process.cwd(), emitProgress, logger)
+    }
+
+    const providerOptions = getProviderOptions({
+      provider: commandConfig.provider,
+      modelId: commandConfig.model,
+      parameters: commandConfig.parameters,
+    })
+
+    // Initialize skill context for Agent Skills support
+    const skillContext = await initializeSkillContext()
+
+    const parameters: AgentContextParameters = {
+      providerOptions,
+      scripts: config.scripts,
+      retryCount: config.retryCount,
+      requestTimeoutSeconds: config.requestTimeoutSeconds,
+      usageMeter: usage,
+      skillContext,
+      mcpManager,
+    }
+
+    let workflowContext: BaseWorkflowContext<TTools>
+
+    // Create a tools proxy with dynamic dispatch.
+    // Note: We cast to WorkflowTools<TTools> even though the actual return type is Promise<ToolResponse>.
+    // This is safe because ToolResponse is a union of all TTools[K]['output'] types, so at runtime
+    // the returned value is always compatible with the expected type for the called tool.
+    const tools = new Proxy({} as WorkflowTools<TTools>, {
+      get: (_target, prop) => {
+        // Return undefined for non-string properties (symbols, etc.)
+        // and standard properties like 'then', 'toJSON' to avoid interfering
+        // with JavaScript operations like Promise.then or JSON.stringify
+        if (typeof prop !== 'string' || prop === 'then' || prop === 'toJSON') {
+          return undefined
+        }
+        // Return undefined for unknown tools to support existence checks
+        // Only return a function for known tools (including local tools and MCP tools)
+        if (!toolHandlers.has(prop) && !localToolNames.includes(prop)) {
+          return undefined
+        }
+        return (async (input: unknown) => {
+          logger.debug(`Running tool: ${prop}`)
+          try {
+            return await toolCall({ tool: prop as never, input: input as never }, {
+              parameters,
+              model,
+              agentCallback: taskEventCallback,
+              toolProvider,
+              yes: context.yes,
+              workflowContext: workflowContext,
+            } as ToolCallContext)
+          } catch (error) {
+            if (error instanceof UserCancelledError || error instanceof ProviderError || error instanceof McpError) {
+              throw error
+            }
+            throw new ToolExecutionError(prop, error)
+          }
+        }) as WorkflowTools<TTools>[keyof TTools]
+      },
+    })
+
+    workflowContext = {
+      step: makeStepFn(),
+      logger,
+      tools,
+    }
+
     // Connect to MCP servers inside the try block to ensure cleanup
     if (config.mcpServers && Object.keys(config.mcpServers).length > 0) {
       await mcpManager.connectToServers(config.mcpServers)

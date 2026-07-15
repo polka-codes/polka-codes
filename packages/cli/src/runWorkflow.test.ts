@@ -226,6 +226,47 @@ describe('runWorkflow progress events', () => {
     expect(result).toEqual({ success: true, summaries: [] })
     expect(logger.warn).toHaveBeenCalledWith('Usage meter callback failed: observer failed')
   })
+
+  test('preserves custom provider setup and reports setup failures', async () => {
+    const events: WorkflowProgressEvent[] = []
+    const logger = createTestLogger()
+    const setupError = new Error('custom provider setup failed')
+    const getProvider = mock(() => {
+      throw setupError
+    })
+    const options = {
+      commandName: 'code',
+      context: {
+        apiProvider: 'deepseek',
+        model: 'deepseek-chat',
+        apiKey: 'test-key',
+        silent: true,
+      },
+      logger,
+      getProvider,
+      onEvent: (event: WorkflowProgressEvent) => {
+        events.push(event)
+      },
+      errorResult: 'exitReason' as const,
+    }
+
+    const result = await runWorkflow(
+      async () => {
+        throw new Error('workflow should not run')
+      },
+      {},
+      options,
+    )
+
+    expect(getProvider).toHaveBeenCalledTimes(1)
+    expect(options.getProvider).toBe(getProvider)
+    expect(result).toEqual({
+      type: 'Error',
+      error: { message: setupError.message, stack: setupError.stack },
+      messages: [],
+    })
+    expect(events).toContainEqual({ kind: 'workflow-finished', success: false })
+  })
 })
 
 describe('runWorkflow terminal error results', () => {
