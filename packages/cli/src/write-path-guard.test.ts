@@ -1,5 +1,5 @@
 import { describe, expect, mock, test } from 'bun:test'
-import { mkdir, mkdtemp, readFile, rename, rm, unlink, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rename, rm, symlink, unlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { replaceInFile, type ToolProvider } from '@polka-codes/core'
@@ -80,6 +80,23 @@ describe('createWritePathGuardedProvider', () => {
       await expect(provider.writeFile?.(siblingFile, 'sibling')).rejects.toThrow('outside allowedWritePaths')
 
       expect(await readFile(nestedFile, 'utf8')).toBe('nested')
+    })
+  })
+
+  test('rejects writes redirected outside an allowed directory by a symlink', async () => {
+    await withTempDir(async (dir) => {
+      const allowedDir = path.join(dir, 'allowed')
+      const outsideDir = path.join(dir, 'outside')
+      const linkPath = path.join(allowedDir, 'escape')
+      const escapedFile = path.join(linkPath, 'escaped.txt')
+      await mkdir(allowedDir, { recursive: true })
+      await mkdir(outsideDir, { recursive: true })
+      await symlink(outsideDir, linkPath, 'dir')
+
+      const provider = await createWritePathGuardedProvider(createFilesystemProvider(), [allowedDir])
+
+      await expect(provider.writeFile?.(escapedFile, 'escaped')).rejects.toThrow('outside allowedWritePaths')
+      await expect(readFile(path.join(outsideDir, 'escaped.txt'), 'utf8')).rejects.toThrow()
     })
   })
 

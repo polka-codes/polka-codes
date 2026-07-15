@@ -1,4 +1,4 @@
-import { stat } from 'node:fs/promises'
+import { realpath, stat } from 'node:fs/promises'
 import path from 'node:path'
 import type { Logger, ToolProvider } from '@polka-codes/core'
 import { createWorkflowProgressEmitter, type WorkflowProgressCallback } from './workflow-events'
@@ -25,14 +25,45 @@ function resolveWritePath(inputPath: string, cwd: string): string {
   return path.normalize(path.resolve(cwd, inputPath))
 }
 
+function isMissingPathError(error: unknown): boolean {
+  return error instanceof Error && 'code' in error && (error.code === 'ENOENT' || error.code === 'ENOTDIR')
+}
+
+async function resolvePhysicalPath(inputPath: string, cwd: string): Promise<string> {
+  let existingPath = resolveWritePath(inputPath, cwd)
+  const missingSegments: string[] = []
+
+  while (true) {
+    try {
+      const resolvedExistingPath = await realpath(existingPath)
+      return path.join(resolvedExistingPath, ...missingSegments.reverse())
+    } catch (error) {
+      if (!isMissingPathError(error)) {
+        throw error
+      }
+
+      const parentPath = path.dirname(existingPath)
+      if (parentPath === existingPath) {
+        throw error
+      }
+
+      missingSegments.push(path.basename(existingPath))
+      existingPath = parentPath
+    }
+  }
+}
+
 async function buildConstraint(rawPath: string, cwd: string): Promise<WritePathConstraint> {
-  const resolvedPath = resolveWritePath(rawPath, cwd)
+  const resolvedPath = await resolvePhysicalPath(rawPath, cwd)
   let allowDirectory = hasTrailingPathSeparator(rawPath)
 
   if (!allowDirectory) {
     try {
       allowDirectory = (await stat(resolvedPath)).isDirectory()
-    } catch {
+    } catch (error) {
+      if (!isMissingPathError(error)) {
+        throw error
+      }
       allowDirectory = false
     }
   }
@@ -45,8 +76,8 @@ function isWithinDirectory(candidatePath: string, directoryPath: string): boolea
   return relativePath === '' || (relativePath !== '' && !relativePath.startsWith('..') && !path.isAbsolute(relativePath))
 }
 
-function isPathAllowedForWrite(candidatePath: string, constraints: WritePathConstraint[], cwd = process.cwd()): boolean {
-  const resolvedCandidatePath = resolveWritePath(candidatePath, cwd)
+async function isPathAllowedForWrite(candidatePath: string, constraints: WritePathConstraint[], cwd = process.cwd()): Promise<boolean> {
+  const resolvedCandidatePath = await resolvePhysicalPath(candidatePath, cwd)
 
   return constraints.some((constraint) => {
     if (constraint.allowDirectory) {
@@ -74,8 +105,8 @@ export async function createWritePathGuardedProvider(
   const constraints = await Promise.all(allowedWritePaths.map((allowedPath) => buildConstraint(allowedPath, cwd)))
   const emitProgress = createWorkflowProgressEmitter(onEvent, logger ?? { warn: () => {} })
 
-  const checkWritablePath = (targetPath: string): WritePathCheckResult => {
-    if (isPathAllowedForWrite(targetPath, constraints, cwd)) {
+  const checkWritablePath = async (targetPath: string): Promise<WritePathCheckResult> => {
+    if (await isPathAllowedForWrite(targetPath, constraints, cwd)) {
       return { kind: 'allowed' }
     }
 
@@ -92,7 +123,7 @@ export async function createWritePathGuardedProvider(
   }
 
   const enforceWritablePath = async (targetPath: string) => {
-    const result = checkWritablePath(targetPath)
+    const result = await checkWritablePath(targetPath)
     if (result.kind === 'write-path-rejected') {
       await rejectWrite(result)
     }
