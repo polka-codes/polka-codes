@@ -22,7 +22,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "rm -rf dist && tsc --build --force && bun run ../../scripts/fix-declaration-imports.ts dist && bun build src/index.ts --outdir dist --target node --format esm --packages external && bun run build:copy-wasm",
+    "build": "rm -rf dist && tsc --build --force && bun run ../../scripts/fix-declaration-imports.ts dist && bun build src/index.ts --outdir dist --target node --format esm --packages external --tsconfig-override=../../tsconfig.bundle.json --external=@polka-codes/core && bun run build:copy-wasm",
     "build:copy-wasm": "mkdir -p dist && cp node_modules/sql.js/dist/sql-wasm.wasm dist/"
   },
   "dependencies": {

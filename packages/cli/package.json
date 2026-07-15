@@ -22,7 +22,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "rm -rf dist && tsc --build --force && bun run ../../scripts/fix-declaration-imports.ts dist && bun build src/index.ts --outfile dist/index.js --target node --format esm --packages external && bun build src/bin.ts --outfile dist/bin.cjs --target node --format cjs --banner '#!/usr/bin/env node' && bun run build:copy-wasm",
+    "build": "rm -rf dist && tsc --build --force && bun run ../../scripts/fix-declaration-imports.ts dist && bun build src/index.ts --outfile dist/index.js --target node --format esm --packages external --tsconfig-override=../../tsconfig.bundle.json --external=@polka-codes/core --external=@polka-codes/cli-shared && bun build src/bin.ts --outfile dist/bin.cjs --target node --format cjs --banner '#!/usr/bin/env node' && bun run build:copy-wasm",
     "build:copy-wasm": "mkdir -p dist && cp ../cli-shared/node_modules/sql.js/dist/sql-wasm.wasm dist/"
   },
   "dependencies": {
@@ -33,7 +33,6 @@
     "@ai-sdk/openai": "^4.0.14",
     "@ai-sdk/openai-compatible": "^3.0.10",
     "@ai-sdk/provider": "^4.0.3",
-    "@ai-sdk/provider-utils": "^5.0.10",
     "@inquirer/prompts": "^8.5.2",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@openrouter/ai-sdk-provider": "^3.0.0",

@@ -22,7 +22,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "rm -rf dist && tsc --build --force && bun run ../../scripts/fix-declaration-imports.ts dist && bun build src/index.ts src/cli.ts --outdir dist --target node --format esm --packages external"
+    "build": "rm -rf dist && tsc --build --force && bun run ../../scripts/fix-declaration-imports.ts dist && bun build src/index.ts src/cli.ts --outdir dist --target node --format esm --packages external --tsconfig-override=../../tsconfig.bundle.json --external=@polka-codes/core --external=@polka-codes/cli-shared"
   },
   "dependencies": {
     "@polka-codes/cli-shared": "^0.11.0",
