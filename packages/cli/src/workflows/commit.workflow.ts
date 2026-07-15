@@ -6,7 +6,7 @@ import { UserCancelledError } from '../errors'
 import { gitDiff } from '../tools'
 import type { CliToolRegistry } from '../workflow-tools'
 import { COMMIT_MESSAGE_SYSTEM_PROMPT } from './prompts'
-import { type BaseWorkflowInput, parseGitDiffNameStatus } from './workflow.utils'
+import { type BaseWorkflowInput, getAgentWorkflowFailureMessage, parseGitDiffNameStatus } from './workflow.utils'
 
 export type CommitWorkflowInput = {
   all?: boolean
@@ -133,5 +133,9 @@ export const commitWorkflow: WorkflowFn<CommitWorkflowInput & BaseWorkflowInput,
     }
   }
 
-  context.logger.warn('Failed to generate commit message.', result)
+  if (result.type !== 'Exit') {
+    throw new Error(`Failed to generate commit message: ${getAgentWorkflowFailureMessage(result)}`)
+  }
+
+  throw new Error('Failed to generate commit message: the agent returned no commit message.')
 }

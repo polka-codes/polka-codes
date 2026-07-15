@@ -18,7 +18,7 @@ import { z } from 'zod'
 import { createWorkflowProgressEmitter } from '../workflow-events'
 import type { CliToolRegistry } from '../workflow-tools'
 import { getFixSystemPrompt, getFixUserPrompt } from './prompts'
-import { type BaseWorkflowInput, getDefaultContext } from './workflow.utils'
+import { type BaseWorkflowInput, getAgentWorkflowFailureMessage, getDefaultContext } from './workflow.utils'
 
 const FIX_OUTPUT_EXCERPT_MAX_LENGTH = 4000
 
@@ -156,6 +156,14 @@ export const fixWorkflow: WorkflowFn<
 
   await emitProgress({ kind: 'fix-started', command })
 
+  const reportFixFailure = async (exitCode: number) => {
+    await emitProgress(
+      lastOutputExcerpt
+        ? { kind: 'fix-failed', command, exitCode, outputExcerpt: lastOutputExcerpt }
+        : { kind: 'fix-failed', command, exitCode },
+    )
+  }
+
   for (let i = 0; i < 10; i++) {
     logger.info(`Running command (attempt ${i + 1}/10): ${command}`)
     if (formatCommand) {
@@ -224,8 +232,15 @@ export const fixWorkflow: WorkflowFn<
       )
     })
 
+    if (result.type !== 'Exit') {
+      const reason = `Fix agent failed: ${getAgentWorkflowFailureMessage(result)}`
+      logger.error(reason)
+      await reportFixFailure(exitCode)
+      return { success: false, summaries, reason }
+    }
+
     const res = await step(`fix-summary-${i}`, async () => {
-      if (result.type === 'Exit' && result.object) {
+      if (result.object) {
         const { summary, bailReason } = result.object as z.infer<typeof FixIterationSummarySchema>
 
         if (bailReason) {
@@ -244,20 +259,12 @@ export const fixWorkflow: WorkflowFn<
     })
 
     if (res?.bailReason) {
-      await emitProgress(
-        lastOutputExcerpt
-          ? { kind: 'fix-failed', command, exitCode, outputExcerpt: lastOutputExcerpt }
-          : { kind: 'fix-failed', command, exitCode },
-      )
+      await reportFixFailure(exitCode)
       return { success: false, summaries, reason: res.bailReason }
     }
   }
 
   logger.error('Failed to fix the issue after maximum attempts.')
-  await emitProgress(
-    lastOutputExcerpt
-      ? { kind: 'fix-failed', command, exitCode: lastExitCode, outputExcerpt: lastOutputExcerpt }
-      : { kind: 'fix-failed', command, exitCode: lastExitCode },
-  )
+  await reportFixFailure(lastExitCode)
   return { success: false, summaries, reason: 'Failed to fix the issue after maximum attempts.' }
 }

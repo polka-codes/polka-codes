@@ -5,7 +5,7 @@ import { parse, stringify } from 'yaml'
 import { z } from 'zod'
 import type { CliToolRegistry } from '../workflow-tools'
 import { INIT_WORKFLOW_ANALYZE_SYSTEM_PROMPT } from './prompts'
-import type { BaseWorkflowInput } from './workflow.utils'
+import { type BaseWorkflowInput, getAgentWorkflowFailureMessage } from './workflow.utils'
 
 export type InitWorkflowInput = {
   configPath: string
@@ -41,9 +41,13 @@ export const initWorkflow: WorkflowFn<InitWorkflowInput & BaseWorkflowInput, Ini
     )
   })
 
+  if (result.type !== 'Exit') {
+    throw new Error(`Failed to analyze project: ${getAgentWorkflowFailureMessage(result)}`)
+  }
+
   // Parse YAML output - this will be a partial config object
   let generatedConfig: Partial<Config> = {}
-  if (result.type === 'Exit' && result.object) {
+  if (result.object) {
     const yamlConfig = result.object.yaml
     generatedConfig = yamlConfig ? parse(yamlConfig) : {}
   }

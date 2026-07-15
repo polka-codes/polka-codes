@@ -4,7 +4,7 @@ import { agentWorkflow, type WorkflowFn } from '@polka-codes/core'
 import { z } from 'zod'
 import type { CliToolRegistry } from '../workflow-tools'
 import { GET_PR_DETAILS_SYSTEM_PROMPT } from './prompts'
-import { type BaseWorkflowInput, checkGhInstalled, getDefaultBranch } from './workflow.utils'
+import { type BaseWorkflowInput, checkGhInstalled, getAgentWorkflowFailureMessage, getDefaultBranch } from './workflow.utils'
 
 const prDetailsSchema = z.object({
   title: z.string(),
@@ -62,7 +62,7 @@ export const prWorkflow: WorkflowFn<PrWorkflowInput & BaseWorkflowInput, { title
   )
 
   if (agentResult.type !== 'Exit') {
-    throw new Error(`Workflow exited unexpectedly with type: ${agentResult.type}`)
+    throw new Error(`Failed to generate pull request details: ${getAgentWorkflowFailureMessage(agentResult)}`)
   }
 
   const prDetails = agentResult.object as z.infer<typeof prDetailsSchema>

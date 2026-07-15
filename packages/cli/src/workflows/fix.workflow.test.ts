@@ -212,6 +212,38 @@ describe('fixWorkflow', () => {
     expect(result).toMatchSnapshot()
   })
 
+  test('should stop when the fix agent fails', async () => {
+    const { context, tools } = createWorkflowTestContext()
+    const events: WorkflowProgressEvent[] = []
+
+    mockFailedCommand(tools, 'FAIL', 'Mysterious error')
+    tools.generateText.mockRejectedValue(new Error('provider unavailable'))
+
+    const result = await fixWorkflow(
+      {
+        ...defaultInput,
+        command: 'bun test',
+        onWorkflowProgress: (event) => {
+          events.push(event)
+        },
+      },
+      context,
+    )
+
+    expect(tools.executeCommand).toHaveBeenCalledTimes(1)
+    expect(tools.generateText).toHaveBeenCalledTimes(1)
+    expect(events).toEqual([
+      { kind: 'fix-started', command: 'bun test' },
+      {
+        kind: 'fix-failed',
+        command: 'bun test',
+        exitCode: 1,
+        outputExcerpt: 'stdout:\nFAIL\n\nstderr:\nMysterious error',
+      },
+    ])
+    expect(result).toEqual({ success: false, summaries: [], reason: 'Fix agent failed: provider unavailable' })
+  })
+
   test('should pass task to agent prompt', async () => {
     const { context, tools } = createWorkflowTestContext()
     const getFixUserPromptSpy = spyOn(prompts, 'getFixUserPrompt')

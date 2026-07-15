@@ -19,7 +19,7 @@ import { UserCancelledError } from '../errors'
 import type { CliToolRegistry } from '../workflow-tools'
 import type { JsonFilePart, JsonImagePart } from './code.workflow'
 import { getPlannerSystemPrompt, getPlanPrompt, PlanSchema } from './prompts'
-import { type BaseWorkflowInput, getDefaultContext } from './workflow.utils'
+import { type BaseWorkflowInput, getAgentWorkflowFailureMessage, getDefaultContext } from './workflow.utils'
 
 type CreatePlanInput = {
   task: string
@@ -139,23 +139,6 @@ async function createPlan(input: CreatePlanInput, context: BaseWorkflowContext<C
         const taskSummary = task.split('\n')[0].substring(0, 100) // Get first line, max 100 chars
         const topic = `plan:${taskSummary.replace(/[^a-zA-Z0-9_-]+/g, '-').toLowerCase()}`
 
-        // Extract keywords for tags
-        const keywords = task
-          .toLowerCase()
-          .match(/(?:implement|create|add|fix|refactor|update|improve|optimize|test|document)(?:\s+(\w+))?/g)
-        const _tags = keywords
-          ? keywords
-              .map((k) => {
-                // Convert "fix bug" to "fix-bug" for consistency
-                const parts = k.split(' ')
-                if (parts.length > 1) {
-                  return parts.join('-')
-                }
-                return k
-              })
-              .join(',')
-          : undefined
-
         await tools.updateMemory({
           operation: 'replace',
           topic,
@@ -172,8 +155,11 @@ async function createPlan(input: CreatePlanInput, context: BaseWorkflowContext<C
     return { plan: plan || undefined, files: outputFiles, messages: result.messages }
   }
 
-  context.logger.warn('Failed to generate plan.', result)
-  throw new Error('Failed to generate plan.')
+  if (result.type !== 'Exit') {
+    throw new Error(`Failed to generate plan: ${getAgentWorkflowFailureMessage(result)}`)
+  }
+
+  throw new Error('Failed to generate plan: the agent returned no plan.')
 }
 
 export type PlanWorkflowInput = {

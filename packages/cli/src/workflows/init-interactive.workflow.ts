@@ -6,7 +6,7 @@ import { parse, stringify } from 'yaml'
 import { z } from 'zod'
 import type { CliToolRegistry } from '../workflow-tools'
 import { INIT_WORKFLOW_ANALYZE_SYSTEM_PROMPT } from './prompts'
-import type { BaseWorkflowInput } from './workflow.utils'
+import { type BaseWorkflowInput, getAgentWorkflowFailureMessage } from './workflow.utils'
 
 export type InitInteractiveWorkflowInput = {
   configPath: string
@@ -111,7 +111,11 @@ export const initInteractiveWorkflow: WorkflowFn<
       )
     })
 
-    if (analyzeResult.type === 'Exit' && analyzeResult.object) {
+    if (analyzeResult.type !== 'Exit') {
+      throw new Error(`Failed to analyze project: ${getAgentWorkflowFailureMessage(analyzeResult)}`)
+    }
+
+    if (analyzeResult.object) {
       const yamlConfig = analyzeResult.object.yaml
       generatedConfig = yamlConfig ? parse(yamlConfig) : {}
     }
@@ -188,7 +192,11 @@ Please:
       )
     })
 
-    if (scriptResult.type === 'Exit' && scriptResult.object) {
+    if (scriptResult.type !== 'Exit') {
+      throw new Error(`Failed to generate script: ${getAgentWorkflowFailureMessage(scriptResult)}`)
+    }
+
+    if (scriptResult.object) {
       const { plan, script, config: scriptConfig } = scriptResult.object
 
       // Show plan if not skipped

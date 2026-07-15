@@ -496,9 +496,10 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
     // Wait for any pending usage updates to complete
     await usage.waitForPending()
 
-    logger.info('\n\nWorkflow completed successfully.')
+    const successful = isSuccessfulWorkflowOutput(output)
+    logger.info(successful ? '\n\nWorkflow completed successfully.' : '\n\nWorkflow failed.')
     logger.info(usage.getUsageText())
-    await finishWorkflow(isSuccessfulWorkflowOutput(output))
+    await finishWorkflow(successful)
     return output
   } catch (e) {
     const error = e as unknown

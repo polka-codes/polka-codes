@@ -168,6 +168,8 @@ describe('runWorkflow progress events', () => {
 
     expect(result).toEqual({ type: 'UsageExceeded', messages: [] })
     expect(events).toContainEqual({ kind: 'workflow-finished', success: false })
+    expect(logger.info).toHaveBeenCalledWith('\n\nWorkflow failed.')
+    expect(logger.info).not.toHaveBeenCalledWith('\n\nWorkflow completed successfully.')
   })
 
   test('does not classify unrelated type fields as failed ExitReason results', async () => {

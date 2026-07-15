@@ -4,7 +4,7 @@ import { execSync } from 'node:child_process'
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import { type LoadedConfig, listFiles, resolveRules } from '@polka-codes/cli-shared'
-import type { FullToolInfo, Logger } from '@polka-codes/core'
+import type { ExitReason, FullToolInfo, Logger } from '@polka-codes/core'
 import { z } from 'zod'
 import { ApiProviderConfig } from '../ApiProviderConfig'
 import { MissingDependencyError } from '../errors'
@@ -19,6 +19,10 @@ export type BaseWorkflowInput = {
   }
   config?: LoadedConfig
   onWorkflowProgress?: WorkflowProgressCallback
+}
+
+export function getAgentWorkflowFailureMessage(result: Exclude<ExitReason, { type: 'Exit' }>): string {
+  return result.type === 'Error' ? result.error.message : 'Usage limits were exceeded.'
 }
 
 export type FileChange = {

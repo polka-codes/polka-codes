@@ -1,5 +1,21 @@
 import { describe, expect, test } from 'bun:test'
-import { parseGitDiffNumStat } from './workflow.utils'
+import { getAgentWorkflowFailureMessage, parseGitDiffNumStat } from './workflow.utils'
+
+describe('getAgentWorkflowFailureMessage', () => {
+  test('preserves agent error messages', () => {
+    expect(
+      getAgentWorkflowFailureMessage({
+        type: 'Error',
+        error: { message: 'provider unavailable' },
+        messages: [],
+      }),
+    ).toBe('provider unavailable')
+  })
+
+  test('describes usage exhaustion', () => {
+    expect(getAgentWorkflowFailureMessage({ type: 'UsageExceeded', messages: [] })).toBe('Usage limits were exceeded.')
+  })
+})
 
 describe('parseGitDiffNumStat', () => {
   test('parses standard changes', () => {

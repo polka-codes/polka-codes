@@ -163,4 +163,18 @@ describe.skipIf(!gitAvailable)('commitWorkflow', () => {
 
     await expect(commitWorkflow({ ...defaultInput }, context)).rejects.toThrow('No files to commit. Aborting.')
   })
+
+  test('should surface commit message generation failures', async () => {
+    const { context, tools } = createWorkflowTestContext()
+
+    tools.printChangeFile.mockResolvedValue({
+      stagedFiles: [{ path: 'src/file.ts', status: 'M' }],
+      unstagedFiles: [],
+    })
+    tools.executeCommand.mockResolvedValue({ exitCode: 0, stdout: 'M\tsrc/file.ts', stderr: '' })
+    tools.generateText.mockRejectedValue(new Error('provider unavailable'))
+
+    await expect(commitWorkflow({ ...defaultInput }, context)).rejects.toThrow('Failed to generate commit message: provider unavailable')
+    expect(tools.createCommit).not.toHaveBeenCalled()
+  })
 })

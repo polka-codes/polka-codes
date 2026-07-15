@@ -10,6 +10,7 @@ import { CODE_REVIEW_SYSTEM_PROMPT, formatReviewToolInput, type ReviewToolInput 
 import {
   type BaseWorkflowInput,
   type FileChange,
+  getAgentWorkflowFailureMessage,
   getDefaultContext,
   parseGitDiffNameStatus,
   parseGitDiffNumStat,
@@ -436,5 +437,5 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput,
     return reviewResult
   }
 
-  return { overview: `Agent workflow exited with an unexpected status: ${result.type}`, specificReviews: [] }
+  throw new Error(`Failed to generate review: ${getAgentWorkflowFailureMessage(result)}`)
 }
