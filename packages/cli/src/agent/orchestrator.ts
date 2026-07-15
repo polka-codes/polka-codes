@@ -413,11 +413,14 @@ export class AutonomousAgent<TTools extends ToolRegistry = CliToolRegistry> {
         }
 
         // Execute task
+        this.#metrics.recordTaskStart(task.id)
         const success = await this.executeTask(task)
 
         if (success) {
+          this.#metrics.recordTaskComplete(task.id)
           completedTasks++
         } else {
+          this.#metrics.recordTaskFailure(task.id)
           failedTasks++
           // Stop execution on task failure to prevent cascading errors
           const error = new Error(`Task "${task.title}" failed, stopping execution to prevent cascading errors`)

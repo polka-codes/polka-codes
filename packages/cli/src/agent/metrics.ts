@@ -20,6 +20,7 @@ export class MetricsCollector {
   #metrics: AgentMetrics
   #startTime: number
   #taskStartTimes: Map<string, number> = new Map()
+  #totalTaskTime = 0
   #logger: Logger
 
   constructor(logger: Logger = createDefaultLogger()) {
@@ -41,14 +42,14 @@ export class MetricsCollector {
    */
   recordTaskComplete(taskId: string): void {
     const startTime = this.#taskStartTimes.get(taskId)
-    if (!startTime) {
+    if (startTime === undefined) {
       this.#logger.warn(`[Metrics] No start time for task ${taskId}`)
       return
     }
 
     const duration = Date.now() - startTime
     this.#metrics.tasksCompleted++
-    this.#metrics.totalExecutionTime += duration
+    this.#totalTaskTime += duration
     this.#taskStartTimes.delete(taskId)
 
     this.updateSuccessRate()
@@ -59,9 +60,14 @@ export class MetricsCollector {
    * Record task failure
    */
   recordTaskFailure(taskId: string): void {
+    const startTime = this.#taskStartTimes.get(taskId)
+    if (startTime !== undefined) {
+      this.#totalTaskTime += Date.now() - startTime
+    }
     this.#taskStartTimes.delete(taskId)
     this.#metrics.tasksFailed++
     this.updateSuccessRate()
+    this.updateAverageTaskTime()
   }
 
   /**
@@ -121,6 +127,7 @@ export class MetricsCollector {
   reset(): void {
     this.#metrics = this.emptyMetrics()
     this.#taskStartTimes.clear()
+    this.#totalTaskTime = 0
     this.#startTime = Date.now()
   }
 
@@ -142,7 +149,7 @@ export class MetricsCollector {
       return
     }
 
-    this.#metrics.averageTaskTime = this.#metrics.totalExecutionTime / 60000 / total // Convert ms to minutes
+    this.#metrics.averageTaskTime = this.#totalTaskTime / 60000 / total
   }
 
   /**

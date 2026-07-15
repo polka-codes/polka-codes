@@ -156,6 +156,15 @@ describe('MetricsCollector', () => {
       expect(metrics.successRate).toBe(0)
     })
 
+    it('should include failed task duration in the average', async () => {
+      collector.recordTaskStart('task-1')
+      await new Promise((resolve) => setTimeout(resolve, 10))
+      collector.recordTaskFailure('task-1')
+
+      const metrics = collector.getMetrics()
+      expect(metrics.averageTaskTime).toBeGreaterThan(0)
+    })
+
     it('should handle failure without start', () => {
       collector.recordTaskFailure('task-1')
 
