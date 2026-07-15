@@ -278,5 +278,7 @@ export const getModel = (config: ModelConfig, debugLogging = false): LanguageMod
       })
       return google(config.model)
     }
+    default:
+      throw new ConfigurationError(`Unsupported AI provider: ${String(config.provider)}`)
   }
 }

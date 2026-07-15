@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
+import type { ExitReason } from '@polka-codes/core'
 import { createScriptingApi, type ScriptingApi, type ScriptingApiDependencies } from './api'
 import type { WorkflowProgressCallback, WorkflowProgressEvent } from './workflow-events'
 
@@ -13,8 +14,8 @@ type WorkflowRunner = NonNullable<ScriptingApiDependencies['runWorkflow']>
 
 type ObservedWorkflowOptions = {
   commandName?: string
+  errorResult?: 'structured' | 'exitReason'
   interactive?: boolean
-  structuredErrors?: boolean
   onEvent?: WorkflowProgressCallback
 }
 
@@ -52,7 +53,7 @@ function createRecordingWorkflowRunner() {
 let api: ScriptingApi
 let workflowRunner: ReturnType<typeof createRecordingWorkflowRunner>
 
-describe('code API', () => {
+describe('scripting API', () => {
   beforeEach(() => {
     workflowRunner = createRecordingWorkflowRunner()
     api = createScriptingApi({ runWorkflow: workflowRunner.runWorkflow })
@@ -94,8 +95,8 @@ describe('code API', () => {
     })
     expect(call.options).toMatchObject({
       commandName: 'code',
+      errorResult: 'structured',
       interactive: false,
-      structuredErrors: true,
     })
     expect(call.options.onEvent).not.toBe(onEvent)
   })
@@ -171,6 +172,32 @@ describe('code API', () => {
         },
       },
     })
+  })
+
+  test('task returns terminal errors without requiring an event callback', async () => {
+    const terminalError: ExitReason = {
+      type: 'Error',
+      error: {
+        message: 'provider exploded',
+        stack: 'ProviderError: provider exploded',
+      },
+      messages: [],
+    }
+    workflowRunner.respondWith(async () => terminalError)
+
+    const result: ExitReason = await api.task({
+      task: 'Do the task.',
+      interactive: false,
+    })
+
+    expect(result).toEqual(terminalError)
+    expect(workflowRunner.calls).toHaveLength(1)
+    expect(workflowRunner.calls[0]?.options).toMatchObject({
+      commandName: 'task',
+      errorResult: 'exitReason',
+      interactive: false,
+    })
+    expect(workflowRunner.calls[0]?.options.onEvent).toBeUndefined()
   })
 
   test('forwards progress callback for all public workflow APIs', async () => {

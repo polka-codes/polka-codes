@@ -77,4 +77,13 @@ describe('getModel', () => {
     expect(model).toBeDefined()
     expect(model.modelId).toBe('gpt-4o')
   })
+
+  it('should reject unsupported providers', () => {
+    expect(() =>
+      getModel({
+        provider: 'unsupported' as AiProvider,
+        model: 'test-model',
+      }),
+    ).toThrow('Unsupported AI provider: unsupported')
+  })
 })

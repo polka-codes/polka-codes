@@ -18,14 +18,12 @@ export async function runTask(taskInput: string | undefined, options: { json?: b
 
   // Output JSON if requested
   if (options.json) {
-    if (result) {
-      // If the agent returned an object (structured JSON), output that
-      if (result.type === 'Exit' && result.object) {
-        console.log(JSON.stringify(result.object, null, 2))
-      } else {
-        // Otherwise output the ExitReason structure
-        console.log(JSON.stringify(result, null, 2))
-      }
+    // If the agent returned structured JSON, output it even when it is falsy.
+    if (result.type === 'Exit' && result.object !== undefined) {
+      console.log(JSON.stringify(result.object, null, 2))
+    } else {
+      // Otherwise output the ExitReason structure
+      console.log(JSON.stringify(result, null, 2))
     }
   }
 }

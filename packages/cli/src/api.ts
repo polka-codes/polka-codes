@@ -426,7 +426,7 @@ async function codeWithRunner(options: CodeOptions, executeWorkflow: WorkflowRun
     interactive: interactive !== false,
     onUsageMeterCreated: onUsage,
     onEvent: progressCallback,
-    structuredErrors: true,
+    errorResult: 'structured',
   })
 
   if (!details) {
@@ -641,7 +641,7 @@ export interface TaskOptions extends BaseOptions {
  * })
  * ```
  */
-async function taskWithRunner(options: TaskOptions, executeWorkflow: WorkflowRunner): Promise<ExitReason | undefined> {
+async function taskWithRunner(options: TaskOptions, executeWorkflow: WorkflowRunner): Promise<ExitReason> {
   const { task: taskInput, jsonMode, readonly, systemPrompt, interactive, onUsage, onEvent, ...context } = options
 
   const verbose = context.silent ? -1 : (context.verbose ?? 0)
@@ -661,10 +661,11 @@ async function taskWithRunner(options: TaskOptions, executeWorkflow: WorkflowRun
     interactive: interactive !== false,
     onUsageMeterCreated: onUsage,
     onEvent,
+    errorResult: 'exitReason',
   })
 }
 
-export async function task(options: TaskOptions): Promise<ExitReason | undefined> {
+export async function task(options: TaskOptions): Promise<ExitReason> {
   return taskWithRunner(options, runWorkflow)
 }
 
@@ -760,7 +761,7 @@ export type ScriptingApi = {
   code(options: CodeOptions): Promise<CodeResult>
   reviewCode(options?: ReviewCodeOptions): Promise<ReviewResult | undefined>
   fix(options?: FixOptions): Promise<{ success: boolean; summaries?: string[]; reason?: string } | undefined>
-  task(options: TaskOptions): Promise<ExitReason | undefined>
+  task(options: TaskOptions): Promise<ExitReason>
   plan(options?: PlanOptions): Promise<PlanWorkflowOutput | undefined>
 }
 
