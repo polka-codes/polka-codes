@@ -2,7 +2,7 @@ import type { Config } from '@polka-codes/cli-shared'
 import type { ConfigRule, ProviderConfig } from '@polka-codes/core'
 import { AiProvider } from './getModel'
 
-const defaultModels = {
+export const DEFAULT_MODELS = {
   [AiProvider.Anthropic]: 'claude-sonnet-4-20250514',
   [AiProvider.DeepSeek]: 'deepseek-chat',
   [AiProvider.OpenRouter]: 'google/gemini-2.5-pro',
@@ -10,7 +10,7 @@ const defaultModels = {
   [AiProvider.OpenAICompatible]: 'gpt-4o',
   [AiProvider.GoogleVertex]: 'gemini-2.5-pro',
   [AiProvider.Google]: 'gemini-2.5-pro',
-}
+} as const satisfies Record<AiProvider, string>
 
 export class ApiProviderConfig {
   readonly defaultProvider?: AiProvider
@@ -46,7 +46,7 @@ export class ApiProviderConfig {
       return undefined
     }
     const { apiKey, defaultModel, defaultParameters, location, project, keyFile, baseUrl, name } = this.providers[finalProvider] ?? {}
-    const finalModel = model ?? defaultModel ?? defaultModels[finalProvider]
+    const finalModel = model ?? defaultModel ?? DEFAULT_MODELS[finalProvider]
     const finalParameters = {
       ...this.defaultParameters,
       ...(defaultParameters ?? {}),

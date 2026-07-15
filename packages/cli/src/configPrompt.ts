@@ -1,4 +1,5 @@
 import { input, password, select } from '@inquirer/prompts'
+import { DEFAULT_MODELS } from './ApiProviderConfig'
 import { AiProvider } from './getModel'
 import prices from './prices'
 
@@ -6,7 +7,6 @@ export type ProviderConfig = {
   provider: AiProvider
   model: string
   apiKey?: string
-  baseURL?: string
 }
 
 export async function configPrompt(existingConfig?: Partial<ProviderConfig>): Promise<ProviderConfig> {
@@ -17,36 +17,18 @@ export async function configPrompt(existingConfig?: Partial<ProviderConfig>): Pr
     default: existingConfig?.provider,
   })
 
-  let model = existingConfig?.model
-
-  switch (provider) {
-    case AiProvider.Anthropic:
-      model = await select({
-        message: 'Choose Model ID:',
-        choices: Object.keys(prices[AiProvider.Anthropic]).map((key) => ({ name: key, value: key })),
-        default: existingConfig?.model ?? 'claude-opus-4-20250514',
-      })
-      break
-    case AiProvider.DeepSeek: {
-      const deepSeekModels = ['deepseek-chat', 'deepseek-reasoner'] as const
-      const defaultModel = deepSeekModels.find((candidate) => candidate === existingConfig?.model) ?? 'deepseek-chat'
-
-      model = await select({
-        message: 'Choose Model ID:',
-        choices: deepSeekModels.map((value) => ({ name: value, value })),
-        default: defaultModel,
-      })
-      break
-    }
-    case AiProvider.OpenRouter:
-      // TODO: search for models
-      model = await input({ message: 'Enter Model ID (Visit https://openrouter.ai/models for available models):' })
-      break
-  }
+  const modelChoices = Object.keys(prices[provider])
+  const defaultModel = existingConfig?.model ?? DEFAULT_MODELS[provider]
+  const model =
+    modelChoices.length > 0
+      ? await select({
+          message: 'Choose Model ID:',
+          choices: modelChoices.map((value) => ({ name: value, value })),
+          default: modelChoices.includes(defaultModel) ? defaultModel : modelChoices[0],
+        })
+      : await input({ message: 'Enter Model ID:', default: defaultModel })
 
   const apiKey = await password({ message: 'Enter API Key:', mask: '*' })
 
-  let baseURL: string | undefined
-
-  return { provider, model: model as string, apiKey, baseURL }
+  return { provider, model, apiKey }
 }
