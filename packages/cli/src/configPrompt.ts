@@ -27,16 +27,17 @@ export async function configPrompt(existingConfig?: Partial<ProviderConfig>): Pr
         default: existingConfig?.model ?? 'claude-opus-4-20250514',
       })
       break
-    case AiProvider.DeepSeek:
+    case AiProvider.DeepSeek: {
+      const deepSeekModels = ['deepseek-chat', 'deepseek-reasoner'] as const
+      const defaultModel = deepSeekModels.find((candidate) => candidate === existingConfig?.model) ?? 'deepseek-chat'
+
       model = await select({
         message: 'Choose Model ID:',
-        choices: [
-          { name: 'deepseek-chat', value: 'deepseek-chat' },
-          { name: 'deepseek-reasoner', value: 'deepseek-reasoner' },
-        ],
-        default: existingConfig?.model ?? 'deepseek-chat',
+        choices: deepSeekModels.map((value) => ({ name: value, value })),
+        default: defaultModel,
       })
       break
+    }
     case AiProvider.OpenRouter:
       // TODO: search for models
       model = await input({ message: 'Enter Model ID (Visit https://openrouter.ai/models for available models):' })

@@ -1,293 +1,295 @@
-// JSON friendly type for ai-sdk types
+// JSON-friendly counterparts for AI SDK message types.
 
 import type { JSONValue } from '@ai-sdk/provider'
-import type {
-  AssistantContent,
-  DataContent,
-  ModelMessage,
-  ProviderOptions,
-  ReasoningPart,
-  SystemModelMessage,
-  TextPart,
-  ToolApprovalRequest,
-  ToolModelMessage,
-  ToolResultPart,
-  UserContent,
+import {
+  type AssistantContent,
+  type CustomPart,
+  type DataContent,
+  type FileData,
+  type FilePart,
+  type ImagePart,
+  isProviderReference,
+  type ModelMessage,
+  type ProviderOptions,
+  type ProviderReference,
+  type ReasoningFilePart,
+  type ReasoningPart,
+  type SystemModelMessage,
+  type TextPart,
+  type ToolApprovalRequest,
+  type ToolApprovalResponse,
+  type ToolResultOutput,
+  type ToolResultPart,
+  type UserContent,
 } from '@ai-sdk/provider-utils'
 
-type JsonDataContent = {
-  type: 'base64' | 'url'
-  value: string
+type JsonBinaryContent =
+  | { type: 'base64'; value: string }
+  | { type: 'url'; value: string }
+  | { type: 'reference'; value: ProviderReference }
+
+type JsonFileDataContent = JsonBinaryContent | { type: 'text'; value: string }
+
+export interface JsonImagePart extends Omit<ImagePart, 'image'> {
+  image: JsonBinaryContent
 }
 
-export interface JsonImagePart {
-  type: 'image'
-  /**
-  Image data. Can either be:
-
-  - data: a base64-encoded string, a Uint8Array, an ArrayBuffer, or a Buffer
-  - URL: a URL that points to the image
-     */
-  image: JsonDataContent
-  /**
-  Optional IANA media type of the image.
-
-  @see https://www.iana.org/assignments/media-types/media-types.xhtml
-     */
-  mediaType?: string
-  /**
-  Additional provider-specific metadata. They are passed through
-  to the provider from the AI SDK and enable provider-specific
-  functionality that can be fully encapsulated in the provider.
-   */
-  providerOptions?: ProviderOptions
+export interface JsonFilePart extends Omit<FilePart, 'data'> {
+  data: JsonFileDataContent
 }
 
-/**
-File content part of a prompt. It contains a file.
- */
-export interface JsonFilePart {
-  type: 'file'
-  /**
-  File data. Can either be:
-
-  - data: a base64-encoded string, a Uint8Array, an ArrayBuffer, or a Buffer
-  - URL: a URL that points to the image
-     */
-  data: JsonDataContent
-  /**
-  Optional filename of the file.
-     */
-  filename?: string
-  /**
-  IANA media type of the file.
-
-  @see https://www.iana.org/assignments/media-types/media-types.xhtml
-     */
-  mediaType: string
-  /**
-  Additional provider-specific metadata. They are passed through
-  to the provider from the AI SDK and enable provider-specific
-  functionality that can be fully encapsulated in the provider.
-   */
-  providerOptions?: ProviderOptions
+interface JsonReasoningFilePart extends Omit<ReasoningFilePart, 'data'> {
+  data: Exclude<JsonBinaryContent, { type: 'reference' }>
 }
 
-/**
-A user message. It can contain text or a combination of text and images.
- */
 export type JsonUserModelMessage = {
   role: 'user'
   content: JsonUserContent
-  /**
-      Additional provider-specific metadata. They are passed through
-      to the provider from the AI SDK and enable provider-specific
-      functionality that can be fully encapsulated in the provider.
-       */
   providerOptions?: ProviderOptions
 }
 
-/**
-  Content of a user message. It can be a string or an array of text and image parts.
-   */
 export type JsonUserContent = string | Array<TextPart | JsonImagePart | JsonFilePart>
 
-/**
-An assistant message. It can contain text, tool calls, or a combination of text and tool calls.
- */
 type JsonAssistantModelMessage = {
   role: 'assistant'
   content: JsonAssistantContent
-  /**
-    Additional provider-specific metadata. They are passed through
-    to the provider from the AI SDK and enable provider-specific
-    functionality that can be fully encapsulated in the provider.
-     */
   providerOptions?: ProviderOptions
 }
 
 interface JsonToolCallPart {
   type: 'tool-call'
-  /**
-  ID of the tool call. This ID is used to match the tool call with the tool result.
-   */
   toolCallId: string
-  /**
-  Name of the tool that is being called.
-   */
   toolName: string
-  /**
-  Arguments of the tool call. This is a JSON-serializable object that matches the tool's input schema.
-     */
   input: JSONValue
-  /**
-  Additional provider-specific metadata. They are passed through
-  to the provider from the AI SDK and enable provider-specific
-  functionality that can be fully encapsulated in the provider.
-   */
   providerOptions?: ProviderOptions
-  /**
-  Whether the tool call was executed by the provider.
-   */
   providerExecuted?: boolean
 }
 
-/**
-Content of an assistant message.
-It can be a string or an array of text, image, reasoning, redacted reasoning, and tool call parts.
- */
+type ToolResultContentPart = Extract<ToolResultOutput, { type: 'content' }>['value'][number]
+type JsonToolResultContentPart =
+  | Exclude<ToolResultContentPart, { type: 'file' }>
+  | (Omit<Extract<ToolResultContentPart, { type: 'file' }>, 'data'> & { data: JsonFileDataContent })
+type JsonToolResultOutput =
+  | Exclude<ToolResultOutput, { type: 'content' }>
+  | (Omit<Extract<ToolResultOutput, { type: 'content' }>, 'value'> & { value: JsonToolResultContentPart[] })
+
+interface JsonToolResultPart extends Omit<ToolResultPart, 'output'> {
+  output: JsonToolResultOutput
+}
+
+type JsonToolModelMessage = {
+  role: 'tool'
+  content: Array<JsonToolResultPart | ToolApprovalResponse>
+  providerOptions?: ProviderOptions
+}
+
 type JsonAssistantContent =
   | string
-  | Array<TextPart | JsonFilePart | ReasoningPart | JsonToolCallPart | ToolResultPart | ToolApprovalRequest>
+  | Array<
+      | TextPart
+      | CustomPart
+      | JsonFilePart
+      | ReasoningPart
+      | JsonReasoningFilePart
+      | JsonToolCallPart
+      | JsonToolResultPart
+      | ToolApprovalRequest
+    >
 
-export type JsonModelMessage = SystemModelMessage | JsonUserModelMessage | JsonAssistantModelMessage | ToolModelMessage
+export type JsonModelMessage = SystemModelMessage | JsonUserModelMessage | JsonAssistantModelMessage | JsonToolModelMessage
 
-export type JsonResponseMessage = JsonAssistantModelMessage | ToolModelMessage
+export type JsonResponseMessage = JsonAssistantModelMessage | JsonToolModelMessage
 
-const toJsonDataContent = (data: DataContent | URL): JsonDataContent => {
-  if (data instanceof URL) {
-    return {
-      type: 'url',
-      value: data.toString(),
-    }
+const toBase64 = (data: DataContent): string => {
+  if (typeof data === 'string') return data
+  if (data instanceof Uint8Array) return Buffer.from(data).toString('base64')
+  return Buffer.from(data).toString('base64')
+}
+
+const toJsonImageContent = (data: ImagePart['image']): JsonBinaryContent => {
+  if (data instanceof URL) return { type: 'url', value: data.toString() }
+  if (typeof data === 'string' || data instanceof Uint8Array || data instanceof ArrayBuffer) {
+    return { type: 'base64', value: toBase64(data) }
   }
-  if (typeof data === 'string') {
-    // Assume it's base64 encoded
-    return {
-      type: 'base64',
-      value: data,
-    }
+  return { type: 'reference', value: data }
+}
+
+const toJsonReasoningFileContent = (data: ReasoningFilePart['data']): Exclude<JsonBinaryContent, { type: 'reference' }> => {
+  if (data instanceof URL) return { type: 'url', value: data.toString() }
+  if (typeof data === 'string' || data instanceof Uint8Array || data instanceof ArrayBuffer) {
+    return { type: 'base64', value: toBase64(data) }
   }
-  let buffer: Buffer
-  if (data instanceof Uint8Array) {
-    buffer = Buffer.from(data)
-  } else if (data instanceof Buffer) {
-    buffer = data
-  } else {
-    buffer = Buffer.from(data)
-  }
-  return {
-    type: 'base64',
-    value: buffer.toString('base64'),
+  switch (data.type) {
+    case 'data':
+      return { type: 'base64', value: toBase64(data.data) }
+    case 'url':
+      return { type: 'url', value: data.url.toString() }
   }
 }
 
-const toJsonUserContent = (content: UserContent): JsonUserContent => {
-  if (typeof content === 'string') {
-    return content
+const toJsonFileDataContent = (data: FilePart['data']): JsonFileDataContent => {
+  if (data instanceof URL) return { type: 'url', value: data.toString() }
+  if (typeof data === 'string' || data instanceof Uint8Array || data instanceof ArrayBuffer) {
+    return { type: 'base64', value: toBase64(data) }
   }
+  if (isProviderReference(data)) return { type: 'reference', value: data }
+  switch (data.type) {
+    case 'data':
+      return { type: 'base64', value: toBase64(data.data) }
+    case 'url':
+      return { type: 'url', value: data.url.toString() }
+    case 'reference':
+      return { type: 'reference', value: data.reference }
+    case 'text':
+      return { type: 'text', value: data.text }
+  }
+}
+
+const toJsonToolResultOutput = (output: ToolResultOutput): JsonToolResultOutput => {
+  if (output.type !== 'content') return output
+  return {
+    ...output,
+    value: output.value.map((part) => (part.type === 'file' ? { ...part, data: toJsonFileDataContent(part.data) } : part)),
+  }
+}
+
+const toJsonToolResultPart = (part: ToolResultPart): JsonToolResultPart => ({
+  ...part,
+  output: toJsonToolResultOutput(part.output),
+})
+
+const toJsonUserContent = (content: UserContent): JsonUserContent => {
+  if (typeof content === 'string') return content
   return content.map((part) => {
     switch (part.type) {
       case 'image':
-        return {
-          ...part,
-          image: toJsonDataContent(part.image),
-        }
+        return { ...part, image: toJsonImageContent(part.image) }
       case 'file':
-        return {
-          ...part,
-          data: toJsonDataContent(part.data),
-        }
+        return { ...part, data: toJsonFileDataContent(part.data) }
+      default:
+        return part
     }
-    return part
   })
 }
 
 const toJsonAssistantContent = (content: AssistantContent): JsonAssistantContent => {
-  if (typeof content === 'string') {
-    return content
-  }
+  if (typeof content === 'string') return content
   return content.map((part) => {
     switch (part.type) {
       case 'file':
-        return {
-          ...part,
-          data: toJsonDataContent(part.data),
-        }
+        return { ...part, data: toJsonFileDataContent(part.data) }
+      case 'reasoning-file':
+        return { ...part, data: toJsonReasoningFileContent(part.data) }
       case 'tool-call':
-        return {
-          ...part,
-          input: part.input as JSONValue,
-        }
+        return { ...part, input: part.input as JSONValue }
+      case 'tool-result':
+        return toJsonToolResultPart(part)
+      default:
+        return part
     }
-    return part
   })
 }
 
 export const toJsonModelMessage = (msg: ModelMessage): JsonModelMessage => {
   switch (msg.role) {
     case 'user':
-      return {
-        ...msg,
-        content: toJsonUserContent(msg.content),
-      }
+      return { ...msg, content: toJsonUserContent(msg.content) }
     case 'assistant':
+      return { ...msg, content: toJsonAssistantContent(msg.content) }
+    case 'tool':
       return {
         ...msg,
-        content: toJsonAssistantContent(msg.content),
+        content: msg.content.map((part) => (part.type === 'tool-result' ? toJsonToolResultPart(part) : part)),
       }
+    default:
+      return msg
   }
-  return msg
 }
 
-const fromJsonDataContent = (data: JsonDataContent): DataContent | URL => {
-  if (data.type === 'url') {
-    return new URL(data.value)
+const fromJsonBinaryContent = (data: JsonBinaryContent): DataContent | URL | ProviderReference => {
+  switch (data.type) {
+    case 'base64':
+      return Buffer.from(data.value, 'base64')
+    case 'url':
+      return new URL(data.value)
+    case 'reference':
+      return data.value
   }
-  return Buffer.from(data.value, 'base64')
 }
+
+const fromJsonTaggedFileData = (data: JsonFileDataContent): FileData => {
+  switch (data.type) {
+    case 'base64':
+      return { type: 'data', data: Buffer.from(data.value, 'base64') }
+    case 'url':
+      return { type: 'url', url: new URL(data.value) }
+    case 'reference':
+      return { type: 'reference', reference: data.value }
+    case 'text':
+      return { type: 'text', text: data.value }
+  }
+}
+
+const fromJsonFileDataContent = (data: JsonFileDataContent): FilePart['data'] => fromJsonTaggedFileData(data)
+
+const fromJsonReasoningFileData = (data: Exclude<JsonBinaryContent, { type: 'reference' }>): ReasoningFilePart['data'] =>
+  data.type === 'base64' ? { type: 'data', data: Buffer.from(data.value, 'base64') } : { type: 'url', url: new URL(data.value) }
+
+const fromJsonToolResultOutput = (output: JsonToolResultOutput): ToolResultOutput => {
+  if (output.type !== 'content') return output
+  return {
+    ...output,
+    value: output.value.map((part) => (part.type === 'file' ? { ...part, data: fromJsonTaggedFileData(part.data) } : part)),
+  }
+}
+
+const fromJsonToolResultPart = (part: JsonToolResultPart): ToolResultPart => ({
+  ...part,
+  output: fromJsonToolResultOutput(part.output),
+})
 
 const fromJsonUserContent = (content: JsonUserContent): UserContent => {
-  if (typeof content === 'string') {
-    return content
-  }
+  if (typeof content === 'string') return content
   return content.map((part) => {
     switch (part.type) {
       case 'image':
-        return {
-          ...part,
-          image: fromJsonDataContent(part.image),
-        }
+        return { ...part, image: fromJsonBinaryContent(part.image) }
       case 'file':
-        return {
-          ...part,
-          data: fromJsonDataContent(part.data),
-        }
+        return { ...part, data: fromJsonFileDataContent(part.data) }
+      default:
+        return part
     }
-    return part
   })
 }
 
 const fromJsonAssistantContent = (content: JsonAssistantContent): AssistantContent => {
-  if (typeof content === 'string') {
-    return content
-  }
+  if (typeof content === 'string') return content
   return content.map((part) => {
     switch (part.type) {
       case 'file':
-        return {
-          ...part,
-          data: fromJsonDataContent(part.data),
-        }
+        return { ...part, data: fromJsonFileDataContent(part.data) }
+      case 'reasoning-file':
+        return { ...part, data: fromJsonReasoningFileData(part.data) }
+      case 'tool-result':
+        return fromJsonToolResultPart(part)
+      default:
+        return part
     }
-    return part
   })
 }
 
 export const fromJsonModelMessage = (msg: JsonModelMessage): ModelMessage => {
   switch (msg.role) {
-    case 'system':
-      return msg
     case 'user':
-      return {
-        ...msg,
-        content: fromJsonUserContent(msg.content),
-      }
+      return { ...msg, content: fromJsonUserContent(msg.content) }
     case 'assistant':
+      return { ...msg, content: fromJsonAssistantContent(msg.content) }
+    case 'tool':
       return {
         ...msg,
-        content: fromJsonAssistantContent(msg.content),
+        content: msg.content.map((part) => (part.type === 'tool-result' ? fromJsonToolResultPart(part) : part)),
       }
+    default:
+      return msg
   }
-  return msg
 }

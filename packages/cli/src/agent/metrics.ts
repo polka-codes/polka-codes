@@ -106,8 +106,13 @@ export class MetricsCollector {
    * Get current metrics
    */
   getMetrics(): AgentMetrics {
-    this.#metrics.totalExecutionTime = Date.now() - this.#startTime
-    return { ...this.#metrics }
+    return {
+      ...this.#metrics,
+      totalExecutionTime: Date.now() - this.#startTime,
+      git: { ...this.#metrics.git },
+      tests: { ...this.#metrics.tests },
+      improvements: { ...this.#metrics.improvements },
+    }
   }
 
   /**

@@ -14,26 +14,23 @@
   },
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     }
   },
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "build": "bun build src/index.ts --outdir dist --target node"
+    "build": "rm -rf dist && tsc --build --force && bun run ../../scripts/fix-declaration-imports.ts dist && bun build src/index.ts src/cli.ts --outdir dist --target node --format esm --packages external"
   },
   "dependencies": {
-    "@ai-sdk/provider": "^3.0.9",
     "@polka-codes/cli-shared": "^0.10.32",
     "@polka-codes/core": "^0.10.32",
-    "commander": "^14.0.2",
+    "commander": "^15.0.0",
     "dotenv": "^17.4.2",
-    "ignore": "^7.0.5",
-    "ws": "^8.18.3",
-    "yaml": "^2.8.3",
-    "zod": "^4.4.1"
+    "ws": "^8.21.1",
+    "zod": "^4.4.3"
   },
   "files": [
     "dist",

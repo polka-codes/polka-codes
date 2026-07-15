@@ -1,5 +1,5 @@
-import type { LanguageModelV3ToolResultOutput } from '@ai-sdk/provider'
 import type { FilePart, ImagePart, TextPart } from 'ai'
+import type { ToolResponseResult, ToolResponseResultContentPart } from '../tool.js'
 
 const NO_REASON_PROVIDED = 'No reason provided'
 
@@ -14,7 +14,7 @@ Avoid unnecessary escape characters or special characters.
 `,
   requireUseToolNative: `Error: No tool use detected. You MUST use a tool before proceeding.
 `,
-  toolResults: (tool: string, result: LanguageModelV3ToolResultOutput): Array<TextPart | ImagePart | FilePart> => {
+  toolResults: (tool: string, result: ToolResponseResult): Array<TextPart | ImagePart | FilePart> => {
     switch (result.type) {
       case 'text':
         return [
@@ -50,33 +50,7 @@ Avoid unnecessary escape characters or special characters.
             type: 'text',
             text: `<tool_response name=${tool}>`,
           },
-          ...result.value.map((part) => {
-            // Handle text parts directly
-            if (part.type === 'text') {
-              return part
-            }
-            // Handle image-data parts
-            if ('mediaType' in part && 'data' in part && part.mediaType.startsWith('image/')) {
-              return {
-                type: 'image',
-                mediaType: part.mediaType,
-                image: part.data,
-              } as const
-            }
-            // Handle file-data parts
-            if ('mediaType' in part && 'data' in part) {
-              return {
-                type: 'file',
-                mediaType: part.mediaType,
-                data: part.data,
-              } as const
-            }
-            // Fallback for URL-based and other part types
-            return {
-              type: 'text',
-              text: JSON.stringify(part),
-            } satisfies TextPart
-          }),
+          ...result.value.map(toPromptPart),
           {
             type: 'text',
             text: '</tool_response>',
@@ -108,3 +82,56 @@ ${stdout}
 ${stderr}
 </command_stderr>`,
 } as const
+
+const toPromptPart = (part: ToolResponseResultContentPart): TextPart | ImagePart | FilePart => {
+  switch (part.type) {
+    case 'text':
+      return part
+    case 'file': {
+      const isImage = part.mediaType === 'image' || part.mediaType.startsWith('image/')
+      if (isImage && part.data.type !== 'text') {
+        const image = part.data.type === 'data' ? part.data.data : part.data.type === 'url' ? part.data.url : part.data.reference
+        return {
+          type: 'image',
+          mediaType: part.mediaType === 'image' ? undefined : part.mediaType,
+          image,
+          providerOptions: part.providerOptions,
+        }
+      }
+      return part
+    }
+    case 'image-data':
+      return { type: 'image', mediaType: part.mediaType, image: part.data, providerOptions: part.providerOptions }
+    case 'image-url':
+      return { type: 'image', image: new URL(part.url), providerOptions: part.providerOptions }
+    case 'image-file-reference':
+      return { type: 'image', image: part.providerReference, providerOptions: part.providerOptions }
+    case 'file-data':
+      return {
+        type: 'file',
+        mediaType: part.mediaType,
+        filename: part.filename,
+        data: { type: 'data', data: part.data },
+        providerOptions: part.providerOptions,
+      }
+    case 'file-url':
+      return {
+        type: 'file',
+        mediaType: part.mediaType ?? 'application/octet-stream',
+        data: { type: 'url', url: new URL(part.url) },
+        providerOptions: part.providerOptions,
+      }
+    case 'file-reference':
+      return {
+        type: 'file',
+        mediaType: 'application/octet-stream',
+        data: { type: 'reference', reference: part.providerReference },
+        providerOptions: part.providerOptions,
+      }
+    default:
+      return {
+        type: 'text',
+        text: JSON.stringify(part),
+      }
+  }
+}

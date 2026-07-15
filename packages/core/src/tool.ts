@@ -25,7 +25,7 @@ export type FullToolInfo = ToolInfo & {
 export type ToolResponseResult = ToolResultOutput
 
 export type ToolResponseResultContentPart = Extract<ToolResponseResult, { type: 'content' }>['value'][number]
-export type ToolResponseResultMedia = Extract<ToolResponseResultContentPart, { type: 'media' | 'image-data' | 'file-data' }>
+export type ToolResponseResultMedia = Extract<ToolResponseResultContentPart, { type: 'file' | 'image-data' | 'file-data' }>
 
 export type ToolResponse = {
   success: boolean

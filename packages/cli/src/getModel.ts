@@ -6,7 +6,7 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createVertex } from '@ai-sdk/google-vertex'
 import { createOpenAI } from '@ai-sdk/openai'
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
-import type { LanguageModelV3 } from '@ai-sdk/provider'
+import type { LanguageModelV4 } from '@ai-sdk/provider'
 import { createOpenRouter } from '@openrouter/ai-sdk-provider'
 import { getEnv } from './env'
 import { ConfigurationError } from './errors'
@@ -60,7 +60,7 @@ export type ModelConfig = {
   name?: string // For OpenAI-compatible providers
 }
 
-export const getModel = (config: ModelConfig, debugLogging = false): LanguageModelV3 => {
+export const getModel = (config: ModelConfig, debugLogging = false): LanguageModelV4 => {
   const { TRACING_FILE } = getEnv()
 
   const fetchOverride: typeof fetch | undefined =

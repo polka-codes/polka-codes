@@ -299,9 +299,15 @@ describe('MetricsCollector', () => {
     it('should return copy of metrics', () => {
       const metrics1 = collector.getMetrics()
       const metrics2 = collector.getMetrics()
+      const { totalExecutionTime: executionTime1, ...snapshot1 } = metrics1
+      const { totalExecutionTime: executionTime2, ...snapshot2 } = metrics2
 
-      expect(metrics1).toEqual(metrics2)
+      expect(snapshot1).toEqual(snapshot2)
+      expect(executionTime2).toBeGreaterThanOrEqual(executionTime1)
       expect(metrics1).not.toBe(metrics2)
+      expect(metrics1.git).not.toBe(metrics2.git)
+      expect(metrics1.tests).not.toBe(metrics2.tests)
+      expect(metrics1.improvements).not.toBe(metrics2.improvements)
     })
 
     it('should include current execution time', async () => {

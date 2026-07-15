@@ -43,13 +43,13 @@ function createRunnerWithToolResponse(message: unknown) {
 }
 
 describe('Runner tool response normalization', () => {
-  test('preserves image-data content as structured image output', async () => {
+  test('preserves tagged image content as structured image output', async () => {
     const { runner, sentMessages } = createRunnerWithToolResponse({
       type: 'content',
       value: [
         {
-          type: 'image-data',
-          data: 'aGVsbG8=',
+          type: 'file',
+          data: { type: 'data', data: 'aGVsbG8=' },
           mediaType: 'image/png',
         },
       ],
@@ -101,13 +101,13 @@ describe('Runner tool response normalization', () => {
     ])
   })
 
-  test('preserves file-data content as structured file output', async () => {
+  test('preserves tagged file content as structured file output', async () => {
     const { runner, sentMessages } = createRunnerWithToolResponse({
       type: 'content',
       value: [
         {
-          type: 'file-data',
-          data: 'ZmlsZQ==',
+          type: 'file',
+          data: { type: 'data', data: 'ZmlsZQ==' },
           mediaType: 'application/pdf',
         },
       ],

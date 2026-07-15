@@ -5,7 +5,7 @@ import { jsonSchema, type ToolCallPart, type ToolSet } from 'ai'
 import { toJSONSchema, z } from 'zod'
 import { parseJsonFromMarkdown } from '../Agent/parseJsonFromMarkdown.js'
 import type { FullToolInfo, ToolResponse } from '../tool.js'
-import type { JsonModelMessage, JsonResponseMessage, JsonUserModelMessage } from './json-ai-types.js'
+import { type JsonModelMessage, type JsonResponseMessage, type JsonUserModelMessage, toJsonModelMessage } from './json-ai-types.js'
 import { type ExitReason, type TaskEvent, TaskEventKind } from './types.js'
 import type { WorkflowFn } from './workflow.js'
 
@@ -200,13 +200,13 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
     }
 
     nextMessage = [
-      {
+      toJsonModelMessage({
         role: 'tool',
         content: toolResults.map((r) => ({
           type: 'tool-result',
           ...r,
         })),
-      },
+      }),
     ]
   }
 

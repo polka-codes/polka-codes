@@ -505,8 +505,8 @@ test('should accept SDK-compatible content tool results without a url field', as
       type: 'content',
       value: [
         {
-          type: 'media',
-          data: 'aGVsbG8=',
+          type: 'file',
+          data: { type: 'data', data: 'aGVsbG8=' },
           mediaType: 'image/png',
         },
       ],
@@ -574,8 +574,8 @@ test('should accept SDK-compatible content tool results without a url field', as
         type: 'content',
         value: [
           {
-            type: 'media',
-            data: 'aGVsbG8=',
+            type: 'file',
+            data: { type: 'base64', value: 'aGVsbG8=' },
             mediaType: 'image/png',
           },
         ],

@@ -60,6 +60,9 @@ jobs:
       - name: Build packages
         run: bun run build
 
+      - name: Validate npm packages
+        run: bun run validate:publish
+
       - name: Publish packages
         run: bun run scripts/publish.ts
         env:

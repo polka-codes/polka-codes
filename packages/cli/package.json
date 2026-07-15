@@ -14,41 +14,40 @@
   },
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     }
   },
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "build": "rm -rf dist && tsc --build --force && tsup --config tsup.config.ts && bun run build:copy-wasm",
-    "build:copy-wasm": "mkdir -p dist && cp ../../node_modules/sql.js/dist/sql-wasm.wasm dist/"
+    "build": "rm -rf dist && tsc --build --force && bun run ../../scripts/fix-declaration-imports.ts dist && bun build src/index.ts --outfile dist/index.js --target node --format esm --packages external && bun build src/bin.ts --outfile dist/bin.cjs --target node --format cjs --banner '#!/usr/bin/env node' && bun run build:copy-wasm",
+    "build:copy-wasm": "mkdir -p dist && cp ../cli-shared/node_modules/sql.js/dist/sql-wasm.wasm dist/"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^3.0.72",
-    "@ai-sdk/deepseek": "^2.0.30",
-    "@ai-sdk/google": "^3.0.65",
-    "@ai-sdk/google-vertex": "^4.0.113",
-    "@ai-sdk/openai": "^3.0.54",
-    "@ai-sdk/openai-compatible": "^2.0.42",
-    "@ai-sdk/provider": "^3.0.9",
-    "@ai-sdk/provider-utils": "^4.0.24",
-    "@inquirer/prompts": "^8.4.2",
+    "@ai-sdk/anthropic": "^4.0.15",
+    "@ai-sdk/deepseek": "^3.0.11",
+    "@ai-sdk/google": "^4.0.16",
+    "@ai-sdk/google-vertex": "^5.0.20",
+    "@ai-sdk/openai": "^4.0.14",
+    "@ai-sdk/openai-compatible": "^3.0.10",
+    "@ai-sdk/provider": "^4.0.3",
+    "@inquirer/prompts": "^8.5.2",
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "@openrouter/ai-sdk-provider": "^2.9.0",
+    "@openrouter/ai-sdk-provider": "^3.0.0",
     "@polka-codes/cli-shared": "^0.10.32",
     "@polka-codes/core": "^0.10.32",
-    "ai": "^6.0.170",
+    "ai": "^7.0.28",
     "chalk": "^5.6.2",
-    "commander": "^14.0.2",
+    "commander": "^15.0.0",
     "dotenv": "^17.4.2",
     "lodash-es": "^4.18.1",
     "mime-types": "^3.0.2",
-    "ora": "^9.4.0",
+    "ora": "^9.4.1",
     "ulid": "^3.0.2",
-    "yaml": "^2.8.3",
-    "zod": "^4.4.1"
+    "yaml": "^2.9.0",
+    "zod": "^4.4.3"
   },
   "files": [
     "dist"

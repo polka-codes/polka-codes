@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process'
 import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises'
 import { dirname, normalize, resolve } from 'node:path'
 import { vertex } from '@ai-sdk/google-vertex'
-import type { LanguageModelV3 } from '@ai-sdk/provider'
+import type { LanguageModelV4 } from '@ai-sdk/provider'
 import { input, select } from '@inquirer/prompts'
 import type { IMemoryStore, TodoItem, ToolProvider } from '@polka-codes/core'
 import { generateText, stepCountIs } from 'ai'
@@ -46,7 +46,7 @@ export type ProviderOptions = {
   summaryThreshold?: number
   memoryStore?: ProviderDataStore<Record<string, string>> | IMemoryStore
   todoItemStore?: ProviderDataStore<TodoItem[]>
-  getModel?: (command: string) => LanguageModelV3 | undefined
+  getModel?: (command: string) => LanguageModelV4 | undefined
   yes?: boolean
 }
 

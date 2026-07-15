@@ -11,8 +11,8 @@
   "type": "module",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     }
   },
   "files": [
@@ -22,23 +22,22 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsc --build && tsup src/index.ts --format esm --no-splitting && bun run build:copy-wasm",
-    "build:copy-wasm": "mkdir -p dist && cp ../../node_modules/sql.js/dist/sql-wasm.wasm dist/"
+    "build": "rm -rf dist && tsc --build --force && bun run ../../scripts/fix-declaration-imports.ts dist && bun build src/index.ts --outdir dist --target node --format esm --packages external && bun run build:copy-wasm",
+    "build:copy-wasm": "mkdir -p dist && cp node_modules/sql.js/dist/sql-wasm.wasm dist/"
   },
   "dependencies": {
-    "@ai-sdk/google-vertex": "^4.0.113",
-    "@ai-sdk/provider": "^3.0.9",
-    "@ai-sdk/provider-utils": "^4.0.24",
-    "@inquirer/prompts": "^8.4.2",
+    "@ai-sdk/google-vertex": "^5.0.20",
+    "@ai-sdk/provider": "^4.0.3",
+    "@inquirer/prompts": "^8.5.2",
     "@polka-codes/core": "^0.10.32",
-    "ai": "^6.0.170",
+    "ai": "^7.0.28",
     "chalk": "^5.6.2",
-    "ignore": "^7.0.5",
+    "ignore": "^7.0.6",
     "lodash-es": "^4.18.1",
     "mime-types": "^3.0.2",
     "sql.js": "^1.14.1",
-    "yaml": "^2.8.3",
-    "zod": "^4.4.1"
+    "yaml": "^2.9.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/lodash-es": "^4.17.12",

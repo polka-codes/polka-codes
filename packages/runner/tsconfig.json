@@ -2,10 +2,11 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "composite": true,
+    "emitDeclarationOnly": true,
     "outDir": "dist",
-    "rootDir": "src",
-    "declarationMap": true
+    "rootDir": "src"
   },
   "include": ["src"],
+  "exclude": ["src/**/*.test.ts"],
   "references": [{ "path": "../core" }, { "path": "../cli-shared" }]
 }

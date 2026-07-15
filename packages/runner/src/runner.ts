@@ -168,12 +168,6 @@ export class Runner {
                 return {
                   type: 'content' as const,
                   value: resp.value.map((part) => {
-                    if (part.type === 'media') {
-                      return {
-                        type: 'text' as const,
-                        text: `<media media-type="${part.mediaType}" />`,
-                      }
-                    }
                     if (part.type === 'image-url' || part.type === 'file-url') {
                       return {
                         type: 'text' as const,
@@ -221,7 +215,7 @@ export class Runner {
           tool: request.tool,
           // biome-ignore lint/suspicious/useIterableCallbackReturn: exhaustive switch case
           response: respMsg.map((part) => {
-            const toSource = (data: string | Uint8Array | ArrayBuffer | Buffer | URL) => {
+            const toSource = (data: unknown) => {
               if (typeof data === 'string') {
                 return { type: 'base64', data } as const
               }
@@ -234,7 +228,17 @@ export class Runner {
               if (data instanceof Uint8Array) {
                 return { type: 'base64', data: Buffer.from(data).toString('base64') } as const
               }
-              return { type: 'base64', data: Buffer.from(data).toString('base64') } as const
+              if (data instanceof ArrayBuffer) {
+                return { type: 'base64', data: Buffer.from(data).toString('base64') } as const
+              }
+              if (data && typeof data === 'object' && 'type' in data) {
+                if (data.type === 'data' && 'data' in data) return toSource(data.data)
+                if (data.type === 'url' && 'url' in data) return toSource(data.url)
+                if (data.type === 'text' && 'text' in data && typeof data.text === 'string') {
+                  return { type: 'base64', data: Buffer.from(data.text).toString('base64') } as const
+                }
+              }
+              return undefined
             }
 
             switch (part.type) {
@@ -243,20 +247,29 @@ export class Runner {
                   type: 'text',
                   text: part.text,
                 }
-              case 'image':
-                part.image
+              case 'image': {
+                const source = toSource(part.image)
+                if (!source) {
+                  return { type: 'text', text: `<media media-type="${part.mediaType ?? 'image'}" />` }
+                }
                 return {
                   type: 'image',
                   mediaType: part.mediaType,
-                  source: toSource(part.image),
+                  source,
                 }
-              case 'file':
+              }
+              case 'file': {
+                const source = toSource(part.data)
+                if (!source) {
+                  return { type: 'text', text: `<media media-type="${part.mediaType}" />` }
+                }
                 return {
                   type: 'file',
                   mediaType: part.mediaType,
                   filename: part.filename,
-                  source: toSource(part.data),
+                  source,
                 }
+              }
             }
           }),
         })

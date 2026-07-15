@@ -11,8 +11,8 @@
   "type": "module",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     }
   },
   "files": [
@@ -22,13 +22,13 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsup src/index.ts --experimental-dts --format esm --clean --no-splitting"
+    "build": "rm -rf dist && tsc --build --force && bun run ../../scripts/fix-declaration-imports.ts dist && bun build src/index.ts --outdir dist --target node --format esm --packages external"
   },
   "dependencies": {
-    "@ai-sdk/provider": "^3.0.9",
-    "@ai-sdk/provider-utils": "^4.0.24",
-    "ai": "^6.0.170",
-    "yaml": "^2.8.3",
-    "zod": "^4.4.1"
+    "@ai-sdk/provider": "^4.0.3",
+    "@ai-sdk/provider-utils": "^5.0.10",
+    "ai": "^7.0.28",
+    "yaml": "^2.9.0",
+    "zod": "^4.4.3"
   }
 }

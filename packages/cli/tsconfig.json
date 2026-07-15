@@ -4,9 +4,9 @@
     "composite": true,
     "outDir": "dist",
     "rootDir": "src",
-    "declarationMap": true,
     "emitDeclarationOnly": true
   },
   "include": ["src"],
+  "exclude": ["src/**/*.test.ts", "src/**/__tests__/**", "src/test/**", "src/agent/test-fixtures.ts", "src/workflows/testing/**"],
   "references": [{ "path": "../core" }, { "path": "../cli-shared" }]
 }

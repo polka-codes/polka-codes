@@ -5,14 +5,14 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { UsageMeter } from './UsageMeter'
 
-// Mock LanguageModelV3 for testing
+// Minimal LanguageModelV4 identity for testing
 const createMockModel = (provider: string, modelId: string) => ({
   provider,
   modelId,
-  specificationVersion: 'v3' as const,
+  specificationVersion: 'v4' as const,
 })
 
-// Helper to create mock usage objects (V3 format)
+// Helper to create provider usage objects
 const createMockUsage = (inputTokens: number, outputTokens: number, cachedInputTokens: number = 0) => ({
   inputTokens: {
     total: inputTokens + cachedInputTokens,
