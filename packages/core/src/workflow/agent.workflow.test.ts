@@ -6,8 +6,12 @@ import { z } from 'zod'
 import type { FullToolInfo, ToolResponse } from '../'
 import { type AgentToolRegistry, agentWorkflow } from './agent.workflow'
 import { type JsonResponseMessage, toJsonModelMessage } from './json-ai-types'
-import { TaskEventKind } from './types'
+import { type TaskEvent, type TaskEventEndTask, TaskEventKind } from './types'
 import { createContext, type WorkflowTools } from './workflow'
+
+function endTaskEvents(events: TaskEvent[]): TaskEventEndTask[] {
+  return events.filter((event): event is TaskEventEndTask => event.kind === TaskEventKind.EndTask)
+}
 
 const createMockTool = (name: string, description: string, handler: (args: any) => Promise<ToolResponse>): FullToolInfo => ({
   name,
@@ -582,4 +586,132 @@ test('should accept SDK-compatible content tool results without a url field', as
       },
     },
   ])
+})
+
+test('should return and emit the same terminal error when model generation fails', async () => {
+  const failure = Object.assign(new Error('Provider unavailable'), {
+    name: 'ProviderUnavailableError',
+    code: 'provider_unavailable',
+    type: 'provider',
+  })
+  const events: TaskEvent[] = []
+  const tools: WorkflowTools<AgentToolRegistry> = {
+    generateText: async () => {
+      throw failure
+    },
+    invokeTool: async () => {
+      throw new Error('No tools should be invoked')
+    },
+    taskEvent: async (event) => {
+      events.push(event)
+    },
+  }
+
+  const result = await agentWorkflow(
+    {
+      userMessage: [toJsonModelMessage({ role: 'user', content: 'Complete the task.' })] as any,
+      tools: [],
+      systemPrompt: 'You are a helpful assistant.',
+    },
+    createContext(tools),
+  )
+
+  expect(result).toMatchObject({
+    type: 'Error',
+    error: {
+      message: failure.message,
+      stack: failure.stack,
+      name: 'ProviderUnavailableError',
+      code: 'provider_unavailable',
+      type: 'provider',
+    },
+  })
+  const terminalEvents = endTaskEvents(events)
+  expect(terminalEvents).toHaveLength(1)
+  expect(terminalEvents[0].exitReason).toBe(result)
+})
+
+test('should return and emit the same terminal error when tool execution throws', async () => {
+  const failure = Object.assign(new Error('Tool process crashed'), {
+    name: 'ToolExecutionError',
+    code: 17,
+    type: 'tool',
+  })
+  const events: TaskEvent[] = []
+  const tools: WorkflowTools<AgentToolRegistry> = {
+    generateText: async () => [
+      {
+        role: 'assistant',
+        content: [
+          {
+            type: 'tool-call',
+            toolCallId: 'failing-tool-call',
+            toolName: 'listFiles',
+            input: { path: './src' },
+          },
+        ],
+      },
+    ],
+    invokeTool: async () => {
+      throw failure
+    },
+    taskEvent: async (event) => {
+      events.push(event)
+    },
+  }
+
+  const result = await agentWorkflow(
+    {
+      userMessage: [toJsonModelMessage({ role: 'user', content: 'List the files.' })] as any,
+      tools: [listFilesTool],
+      systemPrompt: 'You are a helpful assistant.',
+    },
+    createContext(tools),
+  )
+
+  expect(result).toMatchObject({
+    type: 'Error',
+    error: {
+      message: failure.message,
+      stack: failure.stack,
+      name: 'ToolExecutionError',
+      code: 17,
+      type: 'tool',
+    },
+  })
+  const terminalEvents = endTaskEvents(events)
+  expect(terminalEvents).toHaveLength(1)
+  expect(terminalEvents[0].exitReason).toBe(result)
+})
+
+test('should throw an EndTask event sink failure without recursively reporting it', async () => {
+  const operationFailure = new Error('Provider unavailable')
+  const eventSinkFailure = new Error('Event sink unavailable')
+  let endTaskAttempts = 0
+  const tools: WorkflowTools<AgentToolRegistry> = {
+    generateText: async () => {
+      throw operationFailure
+    },
+    invokeTool: async () => {
+      throw new Error('No tools should be invoked')
+    },
+    taskEvent: async (event) => {
+      if (event.kind === TaskEventKind.EndTask) {
+        endTaskAttempts++
+        throw eventSinkFailure
+      }
+    },
+  }
+
+  const result = agentWorkflow(
+    {
+      userMessage: [toJsonModelMessage({ role: 'user', content: 'Complete the task.' })] as any,
+      tools: [],
+      systemPrompt: 'You are a helpful assistant.',
+    },
+    createContext(tools),
+  )
+
+  await expect(result).rejects.toThrow(eventSinkFailure.message)
+  expect(endTaskAttempts).toBe(1)
 })

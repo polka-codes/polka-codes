@@ -6,7 +6,7 @@ import { toJSONSchema, z } from 'zod'
 import { parseJsonFromMarkdown } from '../Agent/parseJsonFromMarkdown.js'
 import type { FullToolInfo, ToolResponse } from '../tool.js'
 import { type JsonModelMessage, type JsonResponseMessage, type JsonUserModelMessage, toJsonModelMessage } from './json-ai-types.js'
-import { type ExitReason, type TaskEvent, TaskEventKind } from './types.js'
+import { type ExitReason, type ExitReasonErrorDetails, type TaskEvent, TaskEventKind } from './types.js'
 import type { WorkflowFn } from './workflow.js'
 
 export type AgentWorkflowInput = {
@@ -39,6 +39,25 @@ export type AgentToolRegistry = {
   }
 }
 
+function toErrorDetails(error: unknown): ExitReasonErrorDetails {
+  if (!(error instanceof Error)) {
+    return { message: String(error) }
+  }
+
+  const details: ExitReasonErrorDetails = {
+    message: error.message,
+    stack: error.stack,
+    name: error.name,
+  }
+  if ('code' in error && (typeof error.code === 'string' || typeof error.code === 'number')) {
+    details.code = error.code
+  }
+  if ('type' in error && typeof error.type === 'string') {
+    details.type = error.type
+  }
+  return details
+}
+
 export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentToolRegistry> = async (input, { step, tools, logger }) => {
   const event = (name: string, event: TaskEvent) => step(name, () => tools.taskEvent(event))
 
@@ -48,6 +67,16 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
   const messages: JsonModelMessage[] = 'systemPrompt' in input ? [{ role: 'system', content: input.systemPrompt }] : [...input.messages]
 
   await event('start-task', { kind: TaskEventKind.StartTask, systemPrompt: systemPrompt ?? '' })
+
+  const endWithError = async (error: unknown): Promise<ExitReason> => {
+    const exitReason: ExitReason = {
+      type: 'Error',
+      error: toErrorDetails(error),
+      messages,
+    }
+    await event('end-task', { kind: TaskEventKind.EndTask, exitReason })
+    return exitReason
+  }
 
   const toolSet: ToolSet = {}
   for (const tool of toolInfo) {
@@ -63,18 +92,23 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
     messages.push(...nextMessage)
 
     await event(`start-round-${i}`, { kind: TaskEventKind.StartRequest, userMessage: nextMessage })
-    const assistantMessage = await step(`agent-round-${i}`, { retry: 2 }, async () => {
-      const systemMessages = messages.filter((message) => message.role === 'system').map((message) => message.content)
-      const requestSystemPrompt = systemMessages.length > 0 ? systemMessages.join('\n\n') : undefined
-      const requestMessages = requestSystemPrompt ? messages.filter((message) => message.role !== 'system') : messages
+    let assistantMessage: JsonResponseMessage[]
+    try {
+      assistantMessage = await step(`agent-round-${i}`, { retry: 2 }, async () => {
+        const systemMessages = messages.filter((message) => message.role === 'system').map((message) => message.content)
+        const requestSystemPrompt = systemMessages.length > 0 ? systemMessages.join('\n\n') : undefined
+        const requestMessages = requestSystemPrompt ? messages.filter((message) => message.role !== 'system') : messages
 
-      return await tools.generateText({
-        messages: requestMessages,
-        systemPrompt: requestSystemPrompt,
-        tools: toolSet,
-        model: input.model,
+        return await tools.generateText({
+          messages: requestMessages,
+          systemPrompt: requestSystemPrompt,
+          tools: toolSet,
+          model: input.model,
+        })
       })
-    })
+    } catch (error) {
+      return await endWithError(error)
+    }
 
     messages.push(...assistantMessage)
 
@@ -165,12 +199,17 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
         tool: toolCall.toolName,
         params: toolCall.input as Record<string, any>,
       })
-      const toolResponse: ToolResponse = await step(`invoke-tool-${toolCall.toolName}-${toolCall.toolCallId}`, async () => {
-        return await tools.invokeTool({
-          toolName: toolCall.toolName,
-          input: toolCall.input,
+      let toolResponse: ToolResponse
+      try {
+        toolResponse = await step(`invoke-tool-${toolCall.toolName}-${toolCall.toolCallId}`, async () => {
+          return await tools.invokeTool({
+            toolName: toolCall.toolName,
+            input: toolCall.input,
+          })
         })
-      })
+      } catch (error) {
+        return await endWithError(error)
+      }
 
       if (toolResponse.success) {
         await event(`event-tool-reply-${toolCall.toolName}-${toolCall.toolCallId}`, {

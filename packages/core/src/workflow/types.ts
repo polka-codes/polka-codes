@@ -108,11 +108,19 @@ export type TaskEvent =
 
 export type TaskEventCallback = (event: TaskEvent) => void | Promise<void>
 
+export type ExitReasonErrorDetails = {
+  message: string
+  stack?: string
+  name?: string
+  code?: string | number
+  type?: string
+}
+
 export type ExitReason =
   | { type: 'UsageExceeded'; messages: JsonModelMessage[] }
   | { type: 'Exit'; message: string; object?: any; messages: JsonModelMessage[] }
   | {
       type: 'Error'
-      error: { message: string; stack?: string }
+      error: ExitReasonErrorDetails
       messages: JsonModelMessage[]
     }
