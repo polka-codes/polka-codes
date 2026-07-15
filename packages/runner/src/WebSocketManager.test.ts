@@ -60,6 +60,11 @@ describe('normalizeRunnerApiUrl', () => {
     expect(normalizeRunnerApiUrl('wss://polka.codes/api/ws/runner')).toBe('wss://polka.codes/api/ws/runner')
     expect(normalizeRunnerApiUrl('ws://localhost:5173/api/ws/runner')).toBe('ws://localhost:5173/api/ws/runner')
   })
+
+  test('removes suffixes that would corrupt the appended task path', () => {
+    expect(normalizeRunnerApiUrl('wss://polka.codes/api/ws/runner/?ignored=true#fragment')).toBe('wss://polka.codes/api/ws/runner')
+    expect(normalizeRunnerApiUrl('ws://localhost:5173/')).toBe('ws://localhost:5173')
+  })
 })
 
 describe('WebSocketManager protocol handshake', () => {
@@ -115,6 +120,41 @@ describe('WebSocketManager protocol handshake', () => {
       manager.connect()
 
       await expect(receivedMessages).resolves.toEqual([{ type: 'connected' }, queuedMessage])
+    } finally {
+      manager?.close(true)
+      await closeServer(server)
+    }
+  })
+
+  test('encodes task IDs as one path segment', async () => {
+    const server = new WebSocketServer({ port: 0 })
+    let manager: WebSocketManager | undefined
+
+    try {
+      const port = await waitForServerPort(server)
+      const connected = new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error('Timed out waiting for runner websocket connection')), 2000)
+
+        server.once('connection', (_socket, request) => {
+          clearTimeout(timeout)
+          try {
+            expect(request.url).toBe('/api/ws/runner/task%2Fwith%20spaces')
+            resolve()
+          } catch (error) {
+            reject(error)
+          }
+        })
+      })
+
+      manager = new WebSocketManager({
+        taskId: 'task/with spaces',
+        sessionToken: 'session-token',
+        apiUrl: `ws://127.0.0.1:${port}/api/ws/runner/`,
+        onMessage: async () => {},
+      })
+      manager.connect()
+
+      await connected
     } finally {
       manager?.close(true)
       await closeServer(server)

@@ -17,7 +17,10 @@ export function normalizeRunnerApiUrl(apiUrl: string): string {
   }
 
   if (url.protocol === 'ws:' || url.protocol === 'wss:') {
-    return apiUrl
+    url.pathname = url.pathname.replace(/\/+$/, '')
+    url.search = ''
+    url.hash = ''
+    return url.toString().replace(/\/$/, '')
   }
 
   throw new Error(`Unsupported runner API URL protocol: ${url.protocol}`)
@@ -49,11 +52,12 @@ export class WebSocketManager {
    */
   public connect(): void {
     const apiUrl = normalizeRunnerApiUrl(this.options.apiUrl)
+    const taskId = encodeURIComponent(this.options.taskId)
 
-    console.log(`Attempting to connect to WebSocket: ${apiUrl}/${this.options.taskId} (Attempt ${this.reconnectAttempts + 1})`)
+    console.log(`Attempting to connect to WebSocket: ${apiUrl}/${taskId} (Attempt ${this.reconnectAttempts + 1})`)
 
     this.isClosingExpected = false // Reset flag on new connection attempt
-    this.ws = new WebSocket(`${apiUrl}/${this.options.taskId}`, {
+    this.ws = new WebSocket(`${apiUrl}/${taskId}`, {
       headers: {
         'x-session-token': this.options.sessionToken,
         'x-github-token': this.options.githubToken,
