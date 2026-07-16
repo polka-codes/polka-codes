@@ -1,4 +1,4 @@
-import { existsSync, readdirSync } from 'node:fs'
+import { existsSync, mkdtempSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -22,6 +22,11 @@ type PackFile = {
 
 type PackResult = {
   files: PackFile[]
+}
+
+type RunNodeOptions = {
+  cwd?: string
+  env?: NodeJS.ProcessEnv
 }
 
 const projectRoot = resolve(import.meta.dir, '..')
@@ -93,10 +98,11 @@ function npmPackDryRun(packageDirectory: string): PackResult {
   return packResult as PackResult
 }
 
-function runNode(packageName: string, args: string[], failureDescription: string): void {
+function runNode(packageName: string, args: string[], failureDescription: string, options: RunNodeOptions = {}): void {
   const result = Bun.spawnSync({
     cmd: ['node', ...args],
-    cwd: projectRoot,
+    cwd: options.cwd ?? projectRoot,
+    env: options.env,
     stderr: 'pipe',
     stdout: 'pipe',
   })
@@ -104,6 +110,50 @@ function runNode(packageName: string, args: string[], failureDescription: string
   if (result.exitCode !== 0) {
     const output = result.stderr.toString().trim() || result.stdout.toString().trim()
     throw new Error(`${packageName} ${failureDescription}${output ? `: ${output}` : ''}`)
+  }
+}
+
+function expectedRuntimeAssets(packageName: string): string[] {
+  if (packageName === '@polka-codes/cli' || packageName === '@polka-codes/cli-shared') {
+    return ['dist/sql-wasm.wasm']
+  }
+
+  return []
+}
+
+function validateCliMemory(packageDirectory: string, packageJson: PackageJson): void {
+  if (packageJson.name !== '@polka-codes/cli') {
+    return
+  }
+
+  const binPath = packageJson.bin?.polka
+  assert(binPath !== undefined, `${packageJson.name} is missing the polka binary`)
+
+  const absoluteBinPath = join(packageDirectory, binPath)
+  const distDirectory = dirname(absoluteBinPath)
+  const isolatedHome = realpathSync(mkdtempSync(join(tmpdir(), 'polka-codes-publish-')))
+
+  try {
+    writeFileSync(join(isolatedHome, 'package.json'), '{}')
+    runNode(
+      packageJson.name,
+      [
+        '--permission',
+        `--allow-fs-read=${distDirectory}`,
+        `--allow-fs-read=${isolatedHome}`,
+        `--allow-fs-write=${isolatedHome}`,
+        absoluteBinPath,
+        'memory',
+        'list',
+      ],
+      'binary polka memory list failed in an isolated filesystem',
+      {
+        cwd: isolatedHome,
+        env: { ...process.env, HOME: isolatedHome, USERPROFILE: isolatedHome },
+      },
+    )
+  } finally {
+    rmSync(isolatedHome, { force: true, recursive: true })
   }
 }
 
@@ -125,7 +175,9 @@ async function validatePackage(packageDirectory: string): Promise<void> {
   const { import: importPath, types: typesPath } = rootExport as PackageExport
   assert(typesPath.endsWith('.d.ts'), `${packageJson.name} types export must reference a declaration file`)
 
-  const expectedFiles = [typesPath, importPath, ...Object.values(packageJson.bin ?? {})].map((path) => path.replace(/^\.\//, ''))
+  const expectedFiles = [typesPath, importPath, ...Object.values(packageJson.bin ?? {}), ...expectedRuntimeAssets(packageJson.name)].map(
+    (path) => path.replace(/^\.\//, ''),
+  )
 
   for (const expectedFile of expectedFiles) {
     assert(existsSync(join(packageDirectory, expectedFile)), `${packageJson.name} is missing ${expectedFile}`)
@@ -150,6 +202,8 @@ async function validatePackage(packageDirectory: string): Promise<void> {
     assert(!packedFile.endsWith('/test-fixtures.d.ts'), `${packageJson.name} npm tarball contains ${packedFile}`)
     assert(!packedFile.endsWith('.d.ts.map'), `${packageJson.name} npm tarball contains unusable declaration map ${packedFile}`)
   }
+
+  validateCliMemory(packageDirectory, packageJson)
 
   console.log(`Validated ${packageJson.name}: ${declarationCount} declarations, ${packedFiles.size} packed files.`)
 }

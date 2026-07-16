@@ -2,6 +2,7 @@ import { AsyncLocalStorage } from 'node:async_hooks'
 import { randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { mkdir, readdir, readFile, rename, unlink, writeFile } from 'node:fs/promises'
+import { createRequire } from 'node:module'
 import { basename, dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { DatabaseStats, IMemoryStore, MemoryConfig, MemoryEntry, MemoryOperation, MemoryQuery, QueryOptions } from '@polka-codes/core'
@@ -230,9 +231,12 @@ export type { MemoryEntry, MemoryOperation, MemoryQuery, QueryOptions }
 let SqlJs: SqlJsStatic | null = null
 let SqlJsInitPromise: Promise<SqlJsStatic> | null = null
 
-// Check for bundled WASM file once at module initialization
-const moduleDir = dirname(fileURLToPath(import.meta.url))
-const bundledWasmPath = resolve(moduleDir, 'sql-wasm.wasm')
+// Check for a WASM file beside the CommonJS entrypoint before using the module
+// directory. Bun replaces import.meta.url with a source URL in CommonJS bundles.
+const moduleWasmPath = resolve(dirname(fileURLToPath(import.meta.url)), 'sql-wasm.wasm')
+const mainModulePath = createRequire(import.meta.url).main?.filename
+const mainModuleWasmPath = mainModulePath ? resolve(dirname(mainModulePath), 'sql-wasm.wasm') : null
+const bundledWasmPath = mainModuleWasmPath && existsSync(mainModuleWasmPath) ? mainModuleWasmPath : moduleWasmPath
 const hasBundledWasm = existsSync(bundledWasmPath)
 
 /**
