@@ -1,6 +1,6 @@
 {
   "name": "@polka-codes/cli-shared",
-  "version": "0.11.1",
+  "version": "0.11.2",
   "license": "AGPL-3.0",
   "author": "github@polka.codes",
   "repository": {
@@ -29,7 +29,7 @@
     "@ai-sdk/google-vertex": "^5.0.20",
     "@ai-sdk/provider": "^4.0.3",
     "@inquirer/prompts": "^8.5.2",
-    "@polka-codes/core": "^0.11.1",
+    "@polka-codes/core": "^0.11.2",
     "ai": "^7.0.28",
     "chalk": "^5.6.2",
     "ignore": "^7.0.6",
