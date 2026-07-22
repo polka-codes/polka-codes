@@ -68,16 +68,16 @@ rule2"
 
 exports[`parseOptions merges environment variables with config 1`] = `
 {
-  "apiKey": "cli-key",
-  "baseUrl": undefined,
+  "apiKey": "env-key",
+  "baseUrl": "https://api.example.com/v1",
   "budget": undefined,
   "keyFile": undefined,
   "location": undefined,
-  "model": "deepseek-chat",
+  "model": "custom-model",
   "name": undefined,
   "parameters": {},
   "project": undefined,
-  "provider": "deepseek",
+  "provider": "openai-compatible",
   "rules": undefined,
 }
 `;

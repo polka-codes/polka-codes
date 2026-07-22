@@ -13,6 +13,8 @@ export interface Env {
   POLKA_MODEL?: string
   /** The API key for the default provider */
   POLKA_API_KEY?: string
+  /** The base URL for the default provider */
+  POLKA_BASE_URL?: string
   /** Maximum budget in dollars for AI service usage */
   POLKA_BUDGET?: string
   /** API key for Anthropic */
@@ -37,6 +39,7 @@ export function getEnv(override?: Partial<Env>): Env {
     POLKA_API_PROVIDER: process.env.POLKA_API_PROVIDER as AiProvider | undefined,
     POLKA_MODEL: process.env.POLKA_MODEL,
     POLKA_API_KEY: process.env.POLKA_API_KEY,
+    POLKA_BASE_URL: process.env.POLKA_BASE_URL,
     POLKA_BUDGET: process.env.POLKA_BUDGET,
     ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
     DEEPSEEK_API_KEY: process.env.DEEPSEEK_API_KEY,

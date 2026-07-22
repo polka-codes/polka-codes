@@ -85,8 +85,8 @@ describe('parseOptions', () => {
     writeFileSync(
       configPath,
       `
-defaultProvider: deepseek
-defaultModel: deepseek-chat
+defaultProvider: anthropic
+defaultModel: claude-3-opus
 providers:
   anthropic:
     apiKey: config-key
@@ -111,7 +111,11 @@ providers:
       ])
       .opts()
 
-    const result = await parseOptions(options, { cwdArg: testDir }, testDir, {})
+    const result = await parseOptions(options, { cwdArg: testDir }, testDir, {
+      POLKA_API_PROVIDER: AiProvider.OpenAI,
+      POLKA_MODEL: 'gpt-4o',
+      POLKA_API_KEY: 'env-key',
+    })
     expect(result.verbose).toBe(1)
     expect(result.providerConfig.getConfigForCommand('chat')).toMatchSnapshot()
   })
@@ -149,9 +153,10 @@ rules:
 
   test('merges environment variables with config', async () => {
     const env = {
-      POLKA_API_PROVIDER: AiProvider.DeepSeek,
-      POLKA_MODEL: 'deepseek-chat',
-      POLKA_API_KEY: 'cli-key',
+      POLKA_API_PROVIDER: AiProvider.OpenAICompatible,
+      POLKA_MODEL: 'custom-model',
+      POLKA_API_KEY: 'env-key',
+      POLKA_BASE_URL: 'https://api.example.com/v1',
     }
     const command = new Command()
     addSharedOptions(command)
@@ -167,6 +172,42 @@ rules:
     const options = command.parse(['node', 'test', '--api-key', 'invalid-key']).opts()
 
     expect(parseOptions(options, { cwdArg: testDir }, testDir, {})).rejects.toThrow('Must specify a provider')
+  })
+
+  test('throws error when base URL provided without provider', async () => {
+    const command = new Command()
+    addSharedOptions(command)
+    const options = command.parse(['node', 'test']).opts()
+
+    expect(parseOptions(options, { cwdArg: testDir }, testDir, { POLKA_BASE_URL: 'https://api.example.com/v1' })).rejects.toThrow(
+      'Must specify a provider',
+    )
+  })
+
+  test('environment base URL overrides provider config', async () => {
+    const configPath = join(testDir, 'test-config.yml')
+    writeFileSync(
+      configPath,
+      `
+defaultProvider: anthropic
+providers:
+  openai-compatible:
+    baseUrl: https://config.example.com/v1
+`,
+    )
+
+    const command = new Command()
+    addSharedOptions(command)
+    const options = command.parse(['node', 'test', '--config', configPath]).opts()
+
+    const result = await parseOptions(options, { cwdArg: testDir }, testDir, {
+      POLKA_API_PROVIDER: AiProvider.OpenAICompatible,
+      POLKA_BASE_URL: 'https://env.example.com/v1',
+    })
+    expect(result.providerConfig.getConfigForCommand('chat')).toMatchObject({
+      provider: AiProvider.OpenAICompatible,
+      baseUrl: 'https://env.example.com/v1',
+    })
   })
 
   test('handles provider-specific environment variables', async () => {

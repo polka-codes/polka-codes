@@ -426,6 +426,7 @@ The following environment variables can be used to configure Polka Codes. Note t
 | `POLKA_API_PROVIDER` | Specify the default AI service provider. |
 | `POLKA_MODEL` | Specify the default AI model to use. |
 | `POLKA_API_KEY` | Default API key for the selected provider. |
+| `POLKA_BASE_URL` | Base URL for the selected provider, including OpenAI-compatible APIs. |
 | `POLKA_BUDGET` | Set the budget limit for AI service usage (defaults to 1000). |
 | `ANTHROPIC_API_KEY` | API key for Anthropic Claude service. |
 | `OPENROUTER_API_KEY` | API key for OpenRouter service. |

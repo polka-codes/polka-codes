@@ -287,8 +287,9 @@ Configure your provider in `.env`:
 POLKA_API_KEY=your_api_key_here
 
 # Optional - override defaults
-POLKA_API_PROVIDER=deepseek  # or anthropic, openrouter, openai
+POLKA_API_PROVIDER=deepseek  # or anthropic, openrouter, openai, openai-compatible
 POLKA_MODEL=deepseek-chat  # or claude-3-7-sonnet-20250219
+POLKA_BASE_URL=https://api.example.com/v1  # override the selected provider's base URL
 ```
 
 ### Project Configuration

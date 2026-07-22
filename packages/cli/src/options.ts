@@ -80,6 +80,13 @@ export async function parseOptions(
     set(config, ['providers', defaultProvider, 'apiKey'], apiKey)
   }
 
+  if (env.POLKA_BASE_URL) {
+    if (!defaultProvider) {
+      throw new ConfigurationError('Must specify a provider if providing a base URL')
+    }
+    set(config, ['providers', defaultProvider, 'baseUrl'], env.POLKA_BASE_URL)
+  }
+
   // Set provider-specific API keys
   if (env.ANTHROPIC_API_KEY) {
     set(config, ['providers', AiProvider.Anthropic, 'apiKey'], env.ANTHROPIC_API_KEY)
@@ -98,8 +105,8 @@ export async function parseOptions(
   }
 
   const providerConfig = new ApiProviderConfig({
-    defaultProvider,
     ...config,
+    defaultProvider,
   })
 
   const commandConfig = commandName ? providerConfig.getConfigForCommand(commandName) : undefined
