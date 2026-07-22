@@ -2,7 +2,7 @@
 
 import os from 'node:os'
 import { loadConfig } from '@polka-codes/cli-shared'
-import type { Command } from 'commander'
+import { type Command, InvalidOptionArgumentError } from 'commander'
 import { set } from 'lodash-es'
 import { ApiProviderConfig } from './ApiProviderConfig'
 import { type Env, getEnv } from './env'
@@ -14,6 +14,8 @@ export interface CliOptions {
   apiProvider?: string
   model?: string
   apiKey?: string
+  maxMessages?: number
+  /** @deprecated Use maxMessages. */
   maxMessageCount?: number
   budget?: number
   verbose?: number
@@ -35,7 +37,13 @@ export function addSharedOptions(command: Command) {
     .option('--api-provider <provider>', 'API provider')
     .option('--model <model>', 'Model ID')
     .option('--api-key <key>', 'API key')
-    .option('--max-messages <iterations>', 'Maximum number of messages to send.', Number.parseInt)
+    .option('--max-messages <count>', 'Maximum number of messages to send (0 disables the limit).', (value: string) => {
+      const count = Number(value)
+      if (!Number.isSafeInteger(count) || count < 0) {
+        throw new InvalidOptionArgumentError('Must be a non-negative integer.')
+      }
+      return count
+    })
     .option('--budget <budget>', 'Budget for the AI service.', Number.parseFloat)
     .option(
       '-v --verbose',
@@ -116,9 +124,14 @@ export async function parseOptions(
   const commandSpecificConfig = commandName ? config.commands?.[commandName] : undefined
   const defaultCommandConfig = config.commands?.default
   const mergedCommandConfig = { ...defaultCommandConfig, ...commandSpecificConfig }
+  const maxMessageCount = options.maxMessages ?? options.maxMessageCount ?? config.maxMessageCount ?? 100
+
+  if (!Number.isSafeInteger(maxMessageCount) || maxMessageCount < 0) {
+    throw new ConfigurationError('Maximum message count must be a non-negative integer')
+  }
 
   return {
-    maxMessageCount: options.maxMessageCount ?? config.maxMessageCount ?? 100,
+    maxMessageCount,
     budget:
       options.budget ??
       mergedCommandConfig.budget ??

@@ -2,9 +2,11 @@ import { describe, expect, mock, test } from 'bun:test'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import type { UsageMeter } from '@polka-codes/core'
 import {
   AuthenticationError,
   ConfigurationError,
+  MessageLimitExceededError,
   ModelAccessError,
   ProviderUnavailableError,
   QuotaExceededError,
@@ -41,6 +43,17 @@ describe('toStructuredWorkflowFailure', () => {
       errorType: 'quota',
     })
     expect(failure.reason).toContain('quota exceeded')
+  })
+
+  test('classifies message-limit failures separately', () => {
+    const failure = toStructuredWorkflowFailure(new MessageLimitExceededError('openai', 'gpt-test', 3, 3))
+
+    expect(failure).toMatchObject({
+      success: false,
+      summaries: [],
+      errorType: 'usage',
+    })
+    expect(failure.reason).toContain('Message count: 3/3')
   })
 
   test('classifies configuration failures separately', () => {
@@ -225,6 +238,48 @@ describe('runWorkflow progress events', () => {
 
     expect(result).toEqual({ success: true, summaries: [] })
     expect(logger.warn).toHaveBeenCalledWith('Usage meter callback failed: observer failed')
+  })
+
+  test('configures usage limits from resolved CLI and command options', async () => {
+    const logger = createTestLogger()
+    const testDir = await mkdtemp(join(tmpdir(), 'polka-run-workflow-'))
+    const configPath = join(testDir, '.polkacodes.yml')
+    await writeFile(
+      configPath,
+      `budget: 10
+commands:
+  code:
+    budget: 4
+`,
+    )
+
+    try {
+      let limits: ReturnType<UsageMeter['isLimitExceeded']> | undefined
+      const result = await runWorkflow(
+        async () => ({ success: true, summaries: [] }),
+        {},
+        {
+          commandName: 'code',
+          context: {
+            apiProvider: 'deepseek',
+            model: 'deepseek-chat',
+            apiKey: 'test-key',
+            config: configPath,
+            maxMessages: 3,
+            silent: true,
+          },
+          logger,
+          onUsageMeterCreated: (meter) => {
+            limits = meter.isLimitExceeded()
+          },
+        },
+      )
+
+      expect(result).toEqual({ success: true, summaries: [] })
+      expect(limits).toMatchObject({ maxMessages: 3, maxCost: 4 })
+    } finally {
+      await rm(testDir, { recursive: true, force: true })
+    }
   })
 
   test('preserves custom provider setup and reports setup failures', async () => {

@@ -6,7 +6,7 @@ import type {
   LanguageModelV4StreamResult,
 } from '@ai-sdk/provider'
 import { UsageMeter } from '@polka-codes/core'
-import { MaxRetriesExceededError, ProviderTimeoutError } from './errors'
+import { MaxRetriesExceededError, MessageLimitExceededError, ProviderTimeoutError } from './errors'
 import { prepareGenerateTextRequest, toolCall } from './tool-implementations'
 
 class TimeoutLanguageModel implements LanguageModelV4 {
@@ -115,5 +115,43 @@ describe('generateText', () => {
     for (const reason of model.abortReasons) {
       expect(reason).toBeInstanceOf(ProviderTimeoutError)
     }
+  })
+
+  test('does not start more provider requests than max-messages allows', async () => {
+    const model = new TimeoutLanguageModel()
+    const usageMeter = new UsageMeter({}, { maxMessages: 2 })
+    const request = toolCall(
+      {
+        tool: 'generateText',
+        input: {
+          messages: [{ role: 'user', content: 'Wait forever.' }],
+          tools: {},
+        },
+      },
+      {
+        model,
+        parameters: {
+          retryCount: 5,
+          requestTimeoutSeconds: 0.01,
+          usageMeter,
+        },
+        toolProvider: {},
+        workflowContext: {
+          logger: {
+            debug() {},
+            error() {},
+            info() {},
+            warn() {},
+          },
+        },
+      },
+    )
+
+    await expect(request).rejects.toMatchObject({
+      name: MessageLimitExceededError.name,
+      message: expect.stringContaining('Message count: 2/2'),
+    })
+    expect(model.attempts).toBe(2)
+    expect(usageMeter.usage.messageCount).toBe(2)
   })
 })

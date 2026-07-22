@@ -144,10 +144,12 @@ export class MalformedResponseError extends ProviderError {
   }
 }
 
+export abstract class UsageLimitExceededError extends ProviderError {}
+
 /**
- * Error when quota/budget limits are exceeded
+ * Error when the configured cost budget is exceeded
  */
-export class QuotaExceededError extends ProviderError {
+export class QuotaExceededError extends UsageLimitExceededError {
   public readonly currentCost: number
   public readonly maxCost: number
 
@@ -160,6 +162,25 @@ export class QuotaExceededError extends ProviderError {
     )
     this.currentCost = currentCost
     this.maxCost = maxCost
+  }
+}
+
+/**
+ * Error when the configured provider-request limit is reached
+ */
+export class MessageLimitExceededError extends UsageLimitExceededError {
+  public readonly messageCount: number
+  public readonly maxMessages: number
+
+  constructor(provider: string, model: string, messageCount: number, maxMessages: number) {
+    super(
+      provider,
+      model,
+      `${provider} usage limit exceeded for model '${model}'. Message count: ${messageCount}/${maxMessages}. Increase --max-messages or reduce usage.`,
+      false,
+    )
+    this.messageCount = messageCount
+    this.maxMessages = maxMessages
   }
 }
 

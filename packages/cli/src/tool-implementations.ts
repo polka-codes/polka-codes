@@ -47,6 +47,7 @@ import { streamText, type ToolSet } from 'ai'
 import {
   createProviderErrorFromStatus,
   MaxRetriesExceededError,
+  MessageLimitExceededError,
   ProviderTimeoutError,
   QuotaExceededError,
   UserCancelledError,
@@ -304,18 +305,10 @@ async function generateText(input: GenerateTextInput, context: ToolCallContext) 
     throw new Error('Model not found in context')
   }
 
-  // Check usage limits
-  const limitResult = context.parameters.usageMeter.isLimitExceeded()
-  if (limitResult.result) {
-    agentCallback?.({
-      kind: TaskEventKind.UsageExceeded,
-    })
-    throw new QuotaExceededError(model.provider, model.modelId, context.parameters.usageMeter.usage.cost, limitResult.maxCost)
-  }
-
   const { retryCount = 5, requestTimeoutSeconds = 90 } = context.parameters
 
   const prompt = prepareGenerateTextRequest(input, model.provider, model.modelId)
+  const usageMeter = context.parameters.usageMeter
 
   // Repetition detection constants
   const REPETITION_DETECTION_WINDOW = 20
@@ -325,6 +318,21 @@ async function generateText(input: GenerateTextInput, context: ToolCallContext) 
   let lastError: Error | undefined
 
   for (let i = 0; i < retryCount; i++) {
+    await usageMeter.waitForPending()
+    const limitResult = usageMeter.isLimitExceeded()
+    if (limitResult.cost) {
+      agentCallback?.({
+        kind: TaskEventKind.UsageExceeded,
+      })
+      throw new QuotaExceededError(model.provider, model.modelId, usageMeter.usage.cost, limitResult.maxCost)
+    }
+    if (!usageMeter.tryReserveMessage()) {
+      agentCallback?.({
+        kind: TaskEventKind.UsageExceeded,
+      })
+      throw new MessageLimitExceededError(model.provider, model.modelId, usageMeter.usage.messageCount, limitResult.maxMessages)
+    }
+
     const abortController = new AbortController()
     let timeoutError: ProviderTimeoutError | undefined
     const abortForTimeout = () => {
@@ -339,7 +347,7 @@ async function generateText(input: GenerateTextInput, context: ToolCallContext) 
     const lastOutputs: string[] = []
     let repetitionError: Error | undefined
 
-    const usageMeterOnFinishHandler = context.parameters.usageMeter.onFinishHandler(model)
+    const usageMeterOnFinishHandler = usageMeter.onFinishHandler(model, { messageAlreadyCounted: true })
 
     try {
       const stream = streamText({

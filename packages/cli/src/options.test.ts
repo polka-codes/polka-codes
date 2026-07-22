@@ -238,6 +238,37 @@ providers:
     expect(result.budget).toBe(500)
   })
 
+  test('maps the max-messages CLI option to the usage limit', async () => {
+    const command = new Command()
+    addSharedOptions(command)
+    const options = command.parse(['node', 'test', '--max-messages', '3']).opts()
+
+    const result = await parseOptions(options, { cwdArg: testDir }, testDir, {})
+
+    expect(result.maxMessageCount).toBe(3)
+  })
+
+  test('supports the legacy programmatic maxMessageCount option', async () => {
+    const result = await parseOptions({ maxMessageCount: 4 }, { cwdArg: testDir }, testDir, {})
+    const preferredResult = await parseOptions({ maxMessages: 2, maxMessageCount: 4 }, { cwdArg: testDir }, testDir, {})
+
+    expect(result.maxMessageCount).toBe(4)
+    expect(preferredResult.maxMessageCount).toBe(2)
+  })
+
+  test.each([-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY])('rejects invalid programmatic maxMessages value %s', async (value) => {
+    await expect(parseOptions({ maxMessages: value }, { cwdArg: testDir }, testDir, {})).rejects.toThrow(
+      'Maximum message count must be a non-negative integer',
+    )
+  })
+
+  test.each(['nope', '-1', '3foo', '1.5'])('rejects invalid max-messages value %s', (value) => {
+    const command = new Command().exitOverride()
+    addSharedOptions(command)
+
+    expect(() => command.parse(['node', 'test', '--max-messages', value])).toThrow('Must be a non-negative integer.')
+  })
+
   test('prioritizes command-specific budget', async () => {
     const configPath = join(testDir, 'test-config.yml')
     writeFileSync(

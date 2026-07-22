@@ -595,8 +595,10 @@ test('should return and emit the same terminal error when model generation fails
     type: 'provider',
   })
   const events: TaskEvent[] = []
+  let generateAttempts = 0
   const tools: WorkflowTools<AgentToolRegistry> = {
     generateText: async () => {
+      generateAttempts++
       throw failure
     },
     invokeTool: async () => {
@@ -629,6 +631,7 @@ test('should return and emit the same terminal error when model generation fails
   const terminalEvents = endTaskEvents(events)
   expect(terminalEvents).toHaveLength(1)
   expect(terminalEvents[0].exitReason).toBe(result)
+  expect(generateAttempts).toBe(1)
 })
 
 test('should return and emit the same terminal error when tool execution throws', async () => {

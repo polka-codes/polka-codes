@@ -94,7 +94,7 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
     await event(`start-round-${i}`, { kind: TaskEventKind.StartRequest, userMessage: nextMessage })
     let assistantMessage: JsonResponseMessage[]
     try {
-      assistantMessage = await step(`agent-round-${i}`, { retry: 2 }, async () => {
+      assistantMessage = await step(`agent-round-${i}`, async () => {
         const systemMessages = messages.filter((message) => message.role === 'system').map((message) => message.content)
         const requestSystemPrompt = systemMessages.length > 0 ? systemMessages.join('\n\n') : undefined
         const requestMessages = requestSystemPrompt ? messages.filter((message) => message.role !== 'system') : messages

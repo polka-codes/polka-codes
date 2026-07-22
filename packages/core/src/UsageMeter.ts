@@ -178,7 +178,7 @@ export class UsageMeter {
       | { usage: LanguageModelV4Usage; providerMetadata?: Record<string, unknown> }
       | { totalUsage: LanguageModelV4Usage; providerMetadata?: Record<string, unknown> }
       | { totalUsage: LanguageModelUsage; providerMetadata?: Record<string, unknown> },
-    options: { modelInfo?: ModelInfo } = {},
+    options: { modelInfo?: ModelInfo; messageAlreadyCounted?: boolean } = {},
   ): Promise<void> {
     const provider = llm.provider.split('.')[0]
     const normalizedModel = llm.modelId.replace(/[.-]/g, '')
@@ -215,7 +215,9 @@ export class UsageMeter {
       this.#totals.output += result.output
       this.#totals.cachedRead += result.cachedRead
       this.#totals.cost += result.cost
-      this.#totals.messageCount += 1
+      if (options.messageAlreadyCounted !== true) {
+        this.#totals.messageCount += 1
+      }
 
       // Store provider metadata for analytics
       if (resp.providerMetadata && Object.keys(resp.providerMetadata).length > 0) {
@@ -264,6 +266,15 @@ export class UsageMeter {
     this.#totals.messageCount += n
   }
 
+  /** Reserve one provider request without exceeding the configured message cap. */
+  tryReserveMessage() {
+    if (this.#maxMessages > 0 && this.#totals.messageCount >= this.#maxMessages) {
+      return false
+    }
+    this.#totals.messageCount += 1
+    return true
+  }
+
   /** Reset the running totals. */
   resetUsage() {
     this.#totals = { input: 0, output: 0, cachedRead: 0, cost: 0, messageCount: 0 }
@@ -289,7 +300,7 @@ export class UsageMeter {
     const result = this.isLimitExceeded()
     if (result.result) {
       throw new Error(
-        `Usage limit exceeded. Message count: ${result.messageCount}/${result.maxMessages}, cost: ${result.cost}/${result.maxCost}`,
+        `Usage limit exceeded. Message count: ${this.#totals.messageCount}/${result.maxMessages}, cost: ${this.#totals.cost}/${result.maxCost}`,
       )
     }
   }
@@ -372,7 +383,7 @@ export class UsageMeter {
     return `Usage - messages: ${u.messageCount}, input: ${u.input}, cached: ${u.cachedRead}, output: ${u.output}, cost: $${u.cost.toFixed(4)}`
   }
 
-  onFinishHandler(llm: LanguageModelV4) {
+  onFinishHandler(llm: LanguageModelV4, options: { messageAlreadyCounted?: boolean } = {}) {
     // Returns an async function that updates usage tracking.
     // Note: The AI SDK's onFinish callback is fire-and-forget and doesn't await
     // the result, so this is safe even though addUsage is async.
@@ -381,7 +392,7 @@ export class UsageMeter {
         | { totalUsage: LanguageModelUsage; providerMetadata?: Record<string, unknown> }
         | { totalUsage: LanguageModelV4Usage; providerMetadata?: Record<string, unknown> },
     ) => {
-      await this.addUsage(llm, evt)
+      await this.addUsage(llm, evt, options)
     }
   }
 }

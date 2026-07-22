@@ -34,10 +34,12 @@ import { merge } from 'lodash-es'
 import {
   AuthenticationError,
   ConfigurationError,
+  MessageLimitExceededError,
   ModelAccessError,
   ProviderError,
   QuotaExceededError,
   ToolExecutionError,
+  UsageLimitExceededError,
   UserCancelledError,
 } from './errors'
 import { AiProvider, getModel } from './getModel'
@@ -96,6 +98,7 @@ export type WorkflowFailureType =
   | 'authentication'
   | 'model_access'
   | 'provider'
+  | 'usage'
   | 'mcp'
   | 'tool'
   | 'workflow'
@@ -124,6 +127,9 @@ export function toStructuredWorkflowFailure(error: unknown): StructuredWorkflowF
   }
   if (error instanceof QuotaExceededError) {
     return { success: false, reason: error.message, summaries: [], errorType: 'quota' }
+  }
+  if (error instanceof MessageLimitExceededError) {
+    return { success: false, reason: error.message, summaries: [], errorType: 'usage' }
   }
   if (error instanceof AuthenticationError) {
     return { success: false, reason: error.message, summaries: [], errorType: 'authentication' }
@@ -223,7 +229,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
 
   let parsedOptions: Awaited<ReturnType<typeof parseOptions>>
   try {
-    parsedOptions = await parseOptions(context, {})
+    parsedOptions = await parseOptions(context, { commandName })
   } catch (error) {
     await finishWorkflow(false)
     if (options.errorResult === 'exitReason') {
@@ -234,7 +240,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
     }
     throw error
   }
-  const { providerConfig, config, verbose } = parsedOptions
+  const { providerConfig, config, verbose, maxMessageCount, budget } = parsedOptions
   const yes = context.yes
 
   const additionalTools: BaseWorkflowInput['additionalTools'] = {}
@@ -262,8 +268,8 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
   const pricingService = new PricingService(merge({}, prices, config.prices ?? {}))
 
   const usage = new UsageMeter(merge({}, prices, config.prices ?? {}), {
-    maxMessages: config.maxMessageCount,
-    maxCost: config.budget,
+    maxMessages: maxMessageCount,
+    maxCost: budget,
     pricingService,
   })
 
@@ -512,7 +518,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
     // Handle different error types with appropriate messaging
     if (error instanceof UserCancelledError) {
       logger.warn('Workflow cancelled by user.')
-    } else if (error instanceof QuotaExceededError) {
+    } else if (error instanceof UsageLimitExceededError) {
       logger.error(`\n❌ Error: ${error.message}`)
     } else if (error instanceof AuthenticationError) {
       logger.error(`\n❌ Authentication Error: ${error.message}`)

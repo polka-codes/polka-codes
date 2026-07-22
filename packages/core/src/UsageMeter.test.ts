@@ -231,7 +231,7 @@ describe('UsageMeter', () => {
 
       meter.addUsage(model as any, { usage: createMockUsage(100, 50) })
 
-      expect(() => meter.checkLimit()).toThrow('Usage limit exceeded')
+      expect(() => meter.checkLimit()).toThrow('Usage limit exceeded. Message count: 1/1, cost: 0/100')
     })
 
     test('does not throw when limits not exceeded', () => {
@@ -260,6 +260,15 @@ describe('UsageMeter', () => {
       meter.incrementMessageCount(3)
 
       expect(meter.usage.messageCount).toBe(4)
+    })
+
+    test('reserves messages up to the configured limit', () => {
+      const limitedMeter = new UsageMeter({}, { maxMessages: 2 })
+
+      expect(limitedMeter.tryReserveMessage()).toBe(true)
+      expect(limitedMeter.tryReserveMessage()).toBe(true)
+      expect(limitedMeter.tryReserveMessage()).toBe(false)
+      expect(limitedMeter.usage.messageCount).toBe(2)
     })
   })
 
@@ -322,6 +331,16 @@ describe('UsageMeter', () => {
 
       expect(meter.providerMetadata).toHaveLength(1)
       expect(meter.providerMetadata[0].provider).toBe('openai')
+    })
+
+    test('can add token usage without double-counting a reserved message', async () => {
+      const model = createMockModel('openai', 'gpt-4')
+      meter.tryReserveMessage()
+      const handler = meter.onFinishHandler(model as any, { messageAlreadyCounted: true })
+
+      await handler({ totalUsage: createMockUsage(100, 50) })
+
+      expect(meter.usage).toMatchObject({ input: 100, output: 50, messageCount: 1 })
     })
   })
 
