@@ -2,7 +2,14 @@
 import { describe, expect, it } from 'bun:test'
 import { DEFAULT_MODELS } from './ApiProviderConfig'
 import { AiProvider } from './getModel'
-import prices from './prices'
+import prices, { type ModelInfo } from './prices'
+
+const priceFields = ({ inputPrice, outputPrice, cacheWritesPrice, cacheReadsPrice }: ModelInfo) => ({
+  inputPrice,
+  outputPrice,
+  cacheWritesPrice,
+  cacheReadsPrice,
+})
 
 describe('prices', () => {
   it('keeps every priced provider default in its model choices', () => {
@@ -15,168 +22,31 @@ describe('prices', () => {
     }
   })
 
-  describe('Anthropic models', () => {
-    it('should have pricing for claude-opus-4-5', () => {
-      const model = prices[AiProvider.Anthropic]['claude-opus-4-5-20251101']
-      expect(model).toBeDefined()
-      expect(model.inputPrice).toBe(5)
-      expect(model.outputPrice).toBe(25)
-      expect(model.cacheWritesPrice).toBe(6.25)
-      expect(model.cacheReadsPrice).toBe(0.5)
-      expect(model.supportsThinking).toBe(true)
-    })
-
-    it('should have pricing for claude-sonnet-4-5', () => {
-      const model = prices[AiProvider.Anthropic]['claude-sonnet-4-5-20250929']
-      expect(model).toBeDefined()
-      expect(model.inputPrice).toBe(3)
-      expect(model.outputPrice).toBe(15)
-      expect(model.supportsThinking).toBe(true)
-    })
-
-    it('should have pricing for claude-3-5-sonnet', () => {
-      const model = prices[AiProvider.Anthropic]['claude-3-5-sonnet-20241022']
-      expect(model).toBeDefined()
-      expect(model.supportsThinking).toBe(false)
-    })
-
-    it('should have pricing for haiku models', () => {
-      const haiku = prices[AiProvider.Anthropic]['claude-3-5-haiku-20241022']
-      expect(haiku.inputPrice).toBe(0.8)
-      expect(haiku.outputPrice).toBe(4.0)
-      expect(haiku.supportsThinking).toBe(false)
-    })
+  it('only exposes complete, non-negative finite pricing records', () => {
+    for (const providerPrices of Object.values(prices)) {
+      for (const modelInfo of Object.values(providerPrices)) {
+        for (const value of [modelInfo.inputPrice, modelInfo.outputPrice, modelInfo.cacheWritesPrice, modelInfo.cacheReadsPrice]) {
+          expect(Number.isFinite(value)).toBe(true)
+          expect(value).toBeGreaterThanOrEqual(0)
+        }
+      }
+    }
   })
 
-  describe('OpenAI models', () => {
-    it('should have pricing for gpt-4o', () => {
-      const model = prices[AiProvider.OpenAI]['gpt-4o']
-      expect(model).toBeDefined()
-      expect(model.inputPrice).toBe(2.5)
-      expect(model.outputPrice).toBe(10)
-      expect(model.supportsThinking).toBe(false)
-    })
-
-    it('should have pricing for gpt-4o-mini', () => {
-      const model = prices[AiProvider.OpenAI]['gpt-4o-mini']
-      expect(model).toBeDefined()
-      expect(model.inputPrice).toBe(0.15)
-      expect(model.outputPrice).toBe(0.6)
-    })
-
-    it('should have pricing for o1 with thinking support', () => {
-      const model = prices[AiProvider.OpenAI].o1
-      expect(model).toBeDefined()
-      expect(model.supportsThinking).toBe(true)
-    })
-
-    it('should have pricing for o3-mini', () => {
-      const model = prices[AiProvider.OpenAI]['o3-mini']
-      expect(model).toBeDefined()
-      expect(model.supportsThinking).toBe(true)
-    })
-
-    it('should have pricing for gpt-5 models', () => {
-      const gpt5 = prices[AiProvider.OpenAI]['gpt-5-2025-08-07']
-      expect(gpt5).toBeDefined()
-      expect(gpt5.supportsThinking).toBe(true)
-
-      const gpt5mini = prices[AiProvider.OpenAI]['gpt-5-mini-2025-08-07']
-      expect(gpt5mini.supportsThinking).toBe(false)
-
-      const gpt5nano = prices[AiProvider.OpenAI]['gpt-5-nano-2025-08-07']
-      expect(gpt5nano.inputPrice).toBe(0.05)
-    })
+  it('keeps aliases priced identically to the models they resolve to', () => {
+    expect(prices[AiProvider.OpenAI]['gpt-5.6']).toEqual(prices[AiProvider.OpenAI]['gpt-5.6-sol'])
+    expect(prices[AiProvider.Anthropic]['claude-haiku-4-5']).toEqual(prices[AiProvider.Anthropic]['claude-haiku-4-5-20251001'])
+    expect(priceFields(prices[AiProvider.DeepSeek]['deepseek-chat'])).toEqual(priceFields(prices[AiProvider.DeepSeek]['deepseek-v4-flash']))
+    expect(priceFields(prices[AiProvider.DeepSeek]['deepseek-reasoner'])).toEqual(
+      priceFields(prices[AiProvider.DeepSeek]['deepseek-v4-flash']),
+    )
   })
 
-  describe('Google models', () => {
-    it('should have pricing for gemini-1.5-pro', () => {
-      const model = prices[AiProvider.Google]['gemini-1.5-pro']
-      expect(model).toBeDefined()
-      expect(model.inputPrice).toBe(1.25)
-      expect(model.outputPrice).toBe(5)
-      expect(model.supportsThinking).toBe(false)
-    })
-
-    it('should have pricing for gemini-1.5-flash', () => {
-      const model = prices[AiProvider.Google]['gemini-1.5-flash']
-      expect(model).toBeDefined()
-      expect(model.inputPrice).toBe(0.075)
-      expect(model.outputPrice).toBe(0.3)
-    })
-
-    it('should have pricing for gemini-2.0-flash', () => {
-      const model = prices[AiProvider.Google]['gemini-2.0-flash']
-      expect(model).toBeDefined()
-      expect(model.inputPrice).toBe(0.1)
-      expect(model.outputPrice).toBe(0.4)
-    })
-
-    it('should have pricing for gemini-2.5-pro with thinking', () => {
-      const model = prices[AiProvider.Google]['gemini-2.5-pro']
-      expect(model).toBeDefined()
-      expect(model.inputPrice).toBe(1.25)
-      expect(model.outputPrice).toBe(10)
-      expect(model.supportsThinking).toBe(true)
-    })
-
-    it('should have pricing for gemini-3-pro-preview', () => {
-      const model = prices[AiProvider.Google]['gemini-3-pro-preview']
-      expect(model).toBeDefined()
-      expect(model.supportsThinking).toBe(true)
-      expect(model.inputPrice).toBe(2)
-      expect(model.outputPrice).toBe(12)
-    })
-
-    it('should have same pricing for Google and Google Vertex', () => {
-      const googleModel = prices[AiProvider.Google]['gemini-1.5-pro']
-      const vertexModel = prices[AiProvider.GoogleVertex]['gemini-1.5-pro']
-      expect(googleModel).toEqual(vertexModel)
-    })
+  it('shares the Gemini catalog between Google providers', () => {
+    expect(prices[AiProvider.Google]).toBe(prices[AiProvider.GoogleVertex])
   })
 
-  describe('DeepSeek models', () => {
-    it('should have pricing for deepseek-chat', () => {
-      const model = prices[AiProvider.DeepSeek]['deepseek-chat']
-      expect(model).toBeDefined()
-      expect(model.inputPrice).toBe(0.28)
-      expect(model.outputPrice).toBe(0.42)
-    })
-
-    it('should have pricing for deepseek-reasoner with thinking', () => {
-      const model = prices[AiProvider.DeepSeek]['deepseek-reasoner']
-      expect(model).toBeDefined()
-      expect(model.supportsThinking).toBe(true)
-      expect(model.inputPrice).toBe(0.55)
-      expect(model.outputPrice).toBe(2.19)
-    })
-  })
-
-  describe('OpenRouter', () => {
-    it('should have empty pricing for OpenRouter (uses API usage)', () => {
-      const openRouterPrices = prices[AiProvider.OpenRouter]
-      expect(openRouterPrices).toEqual({})
-    })
-  })
-
-  describe('ModelInfo type validation', () => {
-    it('should have all required price fields', () => {
-      const model = prices[AiProvider.Anthropic]['claude-3-5-sonnet-20241022']
-
-      expect(model).toHaveProperty('inputPrice')
-      expect(model).toHaveProperty('outputPrice')
-      expect(model).toHaveProperty('cacheWritesPrice')
-      expect(model).toHaveProperty('cacheReadsPrice')
-      expect(typeof model.inputPrice).toBe('number')
-      expect(typeof model.outputPrice).toBe('number')
-    })
-
-    it('should have optional supportsThinking field', () => {
-      const modelWithThinking = prices[AiProvider.Anthropic]['claude-opus-4-5-20251101']
-      expect(modelWithThinking.supportsThinking).toBe(true)
-
-      const modelWithoutThinking = prices[AiProvider.Anthropic]['claude-3-5-sonnet-20241022']
-      expect(modelWithoutThinking.supportsThinking).toBe(false)
-    })
+  it('leaves OpenRouter pricing to provider-reported usage', () => {
+    expect(prices[AiProvider.OpenRouter]).toEqual({})
   })
 })

@@ -318,54 +318,64 @@ agent:
 prices:
   # Anthropic Claude models
   anthropic:
-    # Claude Sonnet 4.5 (latest)
-    "claude-sonnet-4-5-20250929":
-      inputPrice: 3.0
-      outputPrice: 15.0
-      cacheWritesPrice: 3.75
-      cacheReadsPrice: 0.3
+    "claude-fable-5":
+      inputPrice: 10.0
+      outputPrice: 50.0
+      cacheWritesPrice: 12.5
+      cacheReadsPrice: 1.0
 
-    # Claude Haiku 4.5 (fastest)
-    "claude-haiku-4.5-20250929":
-      inputPrice: 0.8
-      outputPrice: 4.0
-      cacheWritesPrice: 1.0
-      cacheReadsPrice: 0.08
+    "claude-opus-4-8":
+      inputPrice: 5.0
+      outputPrice: 25.0
+      cacheWritesPrice: 6.25
+      cacheReadsPrice: 0.5
 
-    # Claude Opus 4.5 (most capable)
-    "claude-opus-4-5-20251101":
-      inputPrice: 15.0
-      outputPrice: 75.0
-      cacheWritesPrice: 18.75
-      cacheReadsPrice: 1.5
+    # Introductory pricing through August 31, 2026
+    "claude-sonnet-5":
+      inputPrice: 2.0
+      outputPrice: 10.0
+      cacheWritesPrice: 2.5
+      cacheReadsPrice: 0.2
+
+    "claude-haiku-4-5-20251001":
+      inputPrice: 1.0
+      outputPrice: 5.0
+      cacheWritesPrice: 1.25
+      cacheReadsPrice: 0.1
 
   # DeepSeek models (cost-effective)
   deepseek:
-    "deepseek-chat":
-      inputPrice: 0.0
-      outputPrice: 1.1
-      cacheWritesPrice: 0.27
-      cacheReadsPrice: 0.07
+    "deepseek-v4-flash":
+      inputPrice: 0.14
+      outputPrice: 0.28
+      cacheWritesPrice: 0
+      cacheReadsPrice: 0.0028
 
-    "deepseek-reasoner":
-      inputPrice: 0.0
-      outputPrice: 2.19
-      cacheWritesPrice: 0.55
-      cacheReadsPrice: 0.14
+    "deepseek-v4-pro":
+      inputPrice: 0.435
+      outputPrice: 0.87
+      cacheWritesPrice: 0
+      cacheReadsPrice: 0.003625
 
   # OpenAI models
   openai:
-    "gpt-4o":
-      inputPrice: 2.5
-      outputPrice: 10.0
-      cacheWritesPrice: 1.25
-      cacheReadsPrice: 0.31
+    "gpt-5.6-sol":
+      inputPrice: 5.0
+      outputPrice: 30.0
+      cacheWritesPrice: 6.25
+      cacheReadsPrice: 0.5
 
-    "gpt-4o-mini":
-      inputPrice: 0.15
-      outputPrice: 0.6
-      cacheWritesPrice: 0.075
-      cacheReadsPrice: 0.019
+    "gpt-5.6-terra":
+      inputPrice: 2.5
+      outputPrice: 15.0
+      cacheWritesPrice: 3.125
+      cacheReadsPrice: 0.25
+
+    "gpt-5.6-luna":
+      inputPrice: 1.0
+      outputPrice: 6.0
+      cacheWritesPrice: 1.25
+      cacheReadsPrice: 0.1
 
   # OpenAI-compatible providers
   # Pricing varies by provider - check your provider's pricing
@@ -394,17 +404,23 @@ prices:
 
   # Google Gemini models
   google-vertex:
-    "gemini-2.5-pro":
-      inputPrice: 3.0
-      outputPrice: 9.0
-      cacheWritesPrice: 2.25
-      cacheReadsPrice: 0.3
+    "gemini-3.6-flash":
+      inputPrice: 1.5
+      outputPrice: 7.5
+      cacheWritesPrice: 0
+      cacheReadsPrice: 0.15
 
-    "gemini-2.5-flash":
-      inputPrice: 0.075
-      outputPrice: 0.3
-      cacheWritesPrice: 0.056
-      cacheReadsPrice: 0.007
+    "gemini-3.5-flash-lite":
+      inputPrice: 0.3
+      outputPrice: 2.5
+      cacheWritesPrice: 0
+      cacheReadsPrice: 0.03
+
+    "gemini-3.1-pro-preview":
+      inputPrice: 2.0
+      outputPrice: 12.0
+      cacheWritesPrice: 0
+      cacheReadsPrice: 0.2
 
 #============================================================================
 # File Exclusions
