@@ -6,10 +6,7 @@ import models from './prices'
 export type GetProviderOptionsArgs = {
   provider: AiProvider
   modelId: string
-  parameters?: {
-    thinkingBudgetTokens?: number
-    [key: string]: any
-  }
+  parameters?: Record<string, unknown>
   supportThinking?: boolean
 }
 
@@ -19,11 +16,23 @@ export type GetProviderOptionsArgs = {
  * @param options The options for generating provider options.
  * @returns A provider options object for the `streamText` call.
  */
-export function getProviderOptions(options: GetProviderOptionsArgs): Record<string, any> {
+export function getProviderOptions(options: GetProviderOptionsArgs): Record<string, Record<string, unknown>> {
   const { provider, modelId, parameters, supportThinking } = options
-  const thinkingBudgetTokens = parameters?.thinkingBudgetTokens ?? 0
 
-  if (thinkingBudgetTokens <= 0 || !provider || !modelId) {
+  if (!provider || !modelId) {
+    return {}
+  }
+
+  const reasoningEffort = parameters?.reasoningEffort
+  if (provider === AiProvider.OpenAICompatible && typeof reasoningEffort === 'string') {
+    return {
+      openaiCompatible: { reasoningEffort },
+    }
+  }
+
+  const thinkingBudgetTokens = typeof parameters?.thinkingBudgetTokens === 'number' ? parameters.thinkingBudgetTokens : 0
+
+  if (thinkingBudgetTokens <= 0) {
     return {}
   }
 
@@ -35,7 +44,7 @@ export function getProviderOptions(options: GetProviderOptionsArgs): Record<stri
     return {}
   }
 
-  const providerOptions: any = {}
+  const providerOptions: Record<string, Record<string, unknown>> = {}
 
   switch (provider) {
     case AiProvider.Anthropic:
@@ -68,6 +77,7 @@ export function getProviderOptions(options: GetProviderOptionsArgs): Record<stri
     case AiProvider.DeepSeek:
       break
     case AiProvider.OpenAI:
+    case AiProvider.OpenAICompatible:
       break
   }
 

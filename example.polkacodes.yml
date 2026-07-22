@@ -37,6 +37,9 @@ providers:
     defaultModel: "gpt-4o"
     name: "Together AI"  # Optional: Custom name for the provider
     baseUrl: "https://api.together.xyz/v1"  # Replace with your provider's base URL
+    # For reasoning models supported by your provider:
+    # defaultParameters:
+    #   reasoningEffort: "high"
     # Other examples:
     # name: "Anyscale"
     # baseUrl: "https://api.anyscale.com/v1"
