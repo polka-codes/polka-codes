@@ -18,6 +18,61 @@ import {
 import type { UserContent, WsIncomingMessage } from './types'
 import { WebSocketManager } from './WebSocketManager'
 
+type RunnerMediaSource = { type: 'base64'; data: string } | { type: 'url'; url: string }
+
+function toRunnerMediaSource(data: unknown): RunnerMediaSource | undefined {
+  if (typeof data === 'string') return { type: 'base64', data }
+  if (data instanceof URL) return { type: 'url', url: data.toString() }
+  if (data instanceof Uint8Array) {
+    return { type: 'base64', data: Buffer.from(data).toString('base64') }
+  }
+  if (data instanceof ArrayBuffer) {
+    return { type: 'base64', data: Buffer.from(new Uint8Array(data)).toString('base64') }
+  }
+  if (!data || typeof data !== 'object' || !('type' in data)) return undefined
+  if (data.type === 'data' && 'data' in data) return toRunnerMediaSource(data.data)
+  if (data.type === 'url' && 'url' in data) {
+    return typeof data.url === 'string' ? { type: 'url', url: data.url } : toRunnerMediaSource(data.url)
+  }
+  if (data.type === 'text' && 'text' in data && typeof data.text === 'string') {
+    return { type: 'base64', data: Buffer.from(data.text).toString('base64') }
+  }
+  return undefined
+}
+
+export function formatRunnerToolResponse(tool: string, result: ToolResponseResult): Exclude<UserContent, string> {
+  const compatibleResult: ToolResponseResult =
+    result.type === 'content'
+      ? {
+          ...result,
+          value: result.value.map((part) =>
+            part.type === 'image-url' || part.type === 'file-url' ? { type: 'text' as const, text: `<media url="${part.url}" />` } : part,
+          ),
+        }
+      : result
+
+  return responsePrompts.toolResults(tool, compatibleResult).map((part) => {
+    switch (part.type) {
+      case 'text':
+        return part
+      case 'image': {
+        const source = toRunnerMediaSource(part.image)
+        return source
+          ? { type: 'image', mediaType: part.mediaType, source }
+          : { type: 'text', text: `<media media-type="${part.mediaType ?? 'image'}" />` }
+      }
+      case 'file': {
+        const source = toRunnerMediaSource(part.data)
+        return source
+          ? { type: 'file', mediaType: part.mediaType, filename: part.filename, source }
+          : { type: 'text', text: `<media media-type="${part.mediaType}" />` }
+      }
+      default:
+        return { type: 'text', text: JSON.stringify(part) }
+    }
+  })
+}
+
 export interface RunnerOptions {
   taskId: string
   sessionToken: string
@@ -126,7 +181,9 @@ export class Runner {
 
           // onBeforeInvokeTool handler override for coder agent
           if (request.params.overridenAgent === 'coder' && this.provider.executeCommand) {
-            const { format, check, test } = request.params
+            const format = typeof request.params.format === 'string' ? request.params.format : undefined
+            const check = typeof request.params.check === 'string' ? request.params.check : undefined
+            const test = typeof request.params.test === 'string' ? request.params.test : undefined
             if (format) {
               try {
                 // it is ok if format failed
@@ -163,25 +220,8 @@ export class Runner {
           const tool = this.availableTools[request.tool]
           if (tool) {
             const resp = await tool.handler(this.provider, request.params)
-            const processResponse = (resp: ToolResponseResult) => {
-              if (resp.type === 'content') {
-                return {
-                  type: 'content' as const,
-                  value: resp.value.map((part) => {
-                    if (part.type === 'image-url' || part.type === 'file-url') {
-                      return {
-                        type: 'text' as const,
-                        text: `<media url="${part.url}" />`,
-                      }
-                    }
-                    return part
-                  }),
-                }
-              }
-              return resp
-            }
             if (resp.success) {
-              return responsePrompts.toolResults(request.tool, processResponse(resp.message))
+              return formatRunnerToolResponse(request.tool, resp.message)
             }
             return {
               type: 'error',
@@ -213,65 +253,7 @@ export class Runner {
         responses.push({
           index: request.index,
           tool: request.tool,
-          // biome-ignore lint/suspicious/useIterableCallbackReturn: exhaustive switch case
-          response: respMsg.map((part) => {
-            const toSource = (data: unknown) => {
-              if (typeof data === 'string') {
-                return { type: 'base64', data } as const
-              }
-              if (data instanceof URL) {
-                return { type: 'url', url: data.toString() } as const
-              }
-              if (data instanceof Buffer) {
-                return { type: 'base64', data: data.toString('base64') } as const
-              }
-              if (data instanceof Uint8Array) {
-                return { type: 'base64', data: Buffer.from(data).toString('base64') } as const
-              }
-              if (data instanceof ArrayBuffer) {
-                return { type: 'base64', data: Buffer.from(data).toString('base64') } as const
-              }
-              if (data && typeof data === 'object' && 'type' in data) {
-                if (data.type === 'data' && 'data' in data) return toSource(data.data)
-                if (data.type === 'url' && 'url' in data) return toSource(data.url)
-                if (data.type === 'text' && 'text' in data && typeof data.text === 'string') {
-                  return { type: 'base64', data: Buffer.from(data.text).toString('base64') } as const
-                }
-              }
-              return undefined
-            }
-
-            switch (part.type) {
-              case 'text':
-                return {
-                  type: 'text',
-                  text: part.text,
-                }
-              case 'image': {
-                const source = toSource(part.image)
-                if (!source) {
-                  return { type: 'text', text: `<media media-type="${part.mediaType ?? 'image'}" />` }
-                }
-                return {
-                  type: 'image',
-                  mediaType: part.mediaType,
-                  source,
-                }
-              }
-              case 'file': {
-                const source = toSource(part.data)
-                if (!source) {
-                  return { type: 'text', text: `<media media-type="${part.mediaType}" />` }
-                }
-                return {
-                  type: 'file',
-                  mediaType: part.mediaType,
-                  filename: part.filename,
-                  source,
-                }
-              }
-            }
-          }),
+          response: respMsg,
         })
       } else if (respMsg.type === 'exit') {
         this.wsManager.sendMessage({
