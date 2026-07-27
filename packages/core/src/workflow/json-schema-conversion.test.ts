@@ -1,110 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { z } from 'zod'
-
-/**
- * Test the JSON Schema to Zod conversion logic
- * This is extracted from dynamic.ts for testing
- */
-
-type JsonSchemaType = 'string' | 'number' | 'integer' | 'boolean' | 'object' | 'array' | 'null'
-
-interface JsonSchema {
-  type?: JsonSchemaType | JsonSchemaType[]
-  enum?: any[]
-  properties?: Record<string, JsonSchema>
-  required?: string[]
-  items?: JsonSchema
-  additionalProperties?: boolean | JsonSchema
-  description?: string
-  [key: string]: any
-}
-
-function convertJsonSchemaToZod(schema: JsonSchema): z.ZodTypeAny {
-  // Handle enum types
-  if (schema.enum) {
-    return z.enum(schema.enum.map((v: any) => String(v)))
-  }
-
-  // Handle union types (type: ["string", "null"])
-  if (Array.isArray(schema.type)) {
-    const types = schema.type
-    if (types.includes('null') && types.length === 2) {
-      const nonNullType = types.find((t) => t !== 'null')
-      if (nonNullType === 'string') return z.string().nullable()
-      if (nonNullType === 'number') return z.number().nullable()
-      if (nonNullType === 'integer')
-        return z
-          .number()
-          .refine((val) => Number.isInteger(val))
-          .nullable()
-      if (nonNullType === 'boolean') return z.boolean().nullable()
-      if (nonNullType === 'object') {
-        // Handle object with nullable - need to preserve properties
-        const shape: Record<string, z.ZodTypeAny> = {}
-        if (schema.properties) {
-          for (const [propName, propSchema] of Object.entries(schema.properties)) {
-            const propZod = convertJsonSchemaToZod(propSchema as JsonSchema)
-            const isRequired = schema.required?.includes(propName)
-            shape[propName] = isRequired ? propZod : propZod.optional()
-          }
-        }
-        return z.object(shape).nullable()
-      }
-      if (nonNullType === 'array') return z.array(z.any()).nullable()
-    }
-    // Fallback for complex unions
-    return z.any()
-  }
-
-  const type = schema.type as JsonSchemaType
-
-  switch (type) {
-    case 'string':
-      return z.string()
-    case 'number':
-      return z.number()
-    case 'integer':
-      return z.number().refine((val) => Number.isInteger(val), { message: 'Expected an integer' })
-    case 'boolean':
-      return z.boolean()
-    case 'null':
-      return z.null()
-    case 'object': {
-      const shape: Record<string, z.ZodTypeAny> = {}
-
-      // Convert properties
-      if (schema.properties) {
-        for (const [propName, propSchema] of Object.entries(schema.properties)) {
-          const propZod = convertJsonSchemaToZod(propSchema as JsonSchema)
-          // Check if property is required
-          const isRequired = schema.required?.includes(propName)
-          shape[propName] = isRequired ? propZod : propZod.optional()
-        }
-      }
-
-      let objectSchema: z.ZodTypeAny = z.object(shape)
-
-      // Handle additionalProperties
-      if (schema.additionalProperties === true) {
-        objectSchema = objectSchema.and(z.any())
-      } else if (typeof schema.additionalProperties === 'object') {
-        const additionalSchema = convertJsonSchemaToZod(schema.additionalProperties as JsonSchema)
-        objectSchema = objectSchema.and(z.record(z.string(), additionalSchema))
-      }
-
-      return objectSchema
-    }
-    case 'array': {
-      if (!schema.items) {
-        return z.array(z.any())
-      }
-      const itemSchema = convertJsonSchemaToZod(schema.items as JsonSchema)
-      return z.array(itemSchema)
-    }
-    default:
-      return z.any()
-  }
-}
+import { convertJsonSchemaToZod, type JsonSchema } from './dynamic'
 
 describe('JSON Schema to Zod Conversion', () => {
   describe('primitive types', () => {
@@ -148,6 +43,12 @@ describe('JSON Schema to Zod Conversion', () => {
 
       expect(zodSchema.parse(null)).toBe(null)
       expect(() => zodSchema.parse(undefined)).toThrow()
+    })
+
+    it('should preserve descriptions', () => {
+      const zodSchema = convertJsonSchemaToZod({ type: 'string', description: 'A user-facing value' })
+
+      expect(zodSchema.description).toBe('A user-facing value')
     })
   })
 
@@ -196,19 +97,19 @@ describe('JSON Schema to Zod Conversion', () => {
       }
       const zodSchema = convertJsonSchemaToZod(schema)
 
-      const result = zodSchema.parse([
+      expect(
+        zodSchema.parse([
+          { id: 'test', value: 42 },
+          { id: 'another', value: 100 },
+        ]),
+      ).toEqual([
         { id: 'test', value: 42 },
         { id: 'another', value: 100 },
       ])
-      // Define expected schema type for assertion
-      type ArrayItem = { id: string; value: number }
-      const items = result as ArrayItem[]
-      expect(items).toHaveLength(2)
-      expect(items[0].id).toBe('test')
       expect(() => zodSchema.parse([{ id: 'test' }])).toThrow()
     })
 
-    it('should convert array without items (fallback to any)', () => {
+    it('should convert array without items', () => {
       const schema: JsonSchema = { type: 'array' }
       const zodSchema = convertJsonSchemaToZod(schema)
 
@@ -228,9 +129,7 @@ describe('JSON Schema to Zod Conversion', () => {
       }
       const zodSchema = convertJsonSchemaToZod(schema)
 
-      const result = zodSchema.parse({ name: 'Alice', age: 30 })
-      expect((result as any).name).toBe('Alice')
-      expect((result as any).age).toBe(30)
+      expect(zodSchema.parse({ name: 'Alice', age: 30 })).toEqual({ name: 'Alice', age: 30 })
 
       // Missing required field should fail
       expect(() => zodSchema.parse({ name: 'Alice' })).toThrow()
@@ -247,13 +146,10 @@ describe('JSON Schema to Zod Conversion', () => {
       }
       const zodSchema = convertJsonSchemaToZod(schema)
 
-      const result = zodSchema.parse({ name: 'Bob' })
-      expect((result as any).name).toBe('Bob')
-      expect((result as any).age).toBeUndefined()
+      expect(zodSchema.parse({ name: 'Bob' })).toEqual({ name: 'Bob' })
 
       // Can still provide optional field
-      const result2 = zodSchema.parse({ name: 'Bob', age: 25 })
-      expect((result2 as any).age).toBe(25)
+      expect(zodSchema.parse({ name: 'Bob', age: 25 })).toEqual({ name: 'Bob', age: 25 })
     })
 
     it('should convert nested object', () => {
@@ -273,11 +169,11 @@ describe('JSON Schema to Zod Conversion', () => {
       }
       const zodSchema = convertJsonSchemaToZod(schema)
 
-      const result = zodSchema.parse({
-        user: { id: '123', name: 'Alice' },
-      })
-      expect((result as any).user.id).toBe('123')
-      expect((result as any).user.name).toBe('Alice')
+      expect(
+        zodSchema.parse({
+          user: { id: '123', name: 'Alice' },
+        }),
+      ).toEqual({ user: { id: '123', name: 'Alice' } })
     })
 
     it('should convert object with additionalProperties', () => {
@@ -291,9 +187,27 @@ describe('JSON Schema to Zod Conversion', () => {
       }
       const zodSchema = convertJsonSchemaToZod(schema)
 
-      const result = zodSchema.parse({ name: 'test', extra: 'allowed' })
-      expect((result as any).name).toBe('test')
-      expect((result as any).extra).toBe('allowed')
+      expect(zodSchema.parse({ name: 'test', extra: 'allowed' })).toEqual({ name: 'test', extra: 'allowed' })
+    })
+
+    it('should validate typed additional properties', () => {
+      const zodSchema = convertJsonSchemaToZod({
+        type: 'object',
+        additionalProperties: { type: 'number' },
+      })
+
+      expect(zodSchema.parse({ count: 2 })).toEqual({ count: 2 })
+      expect(() => zodSchema.parse({ count: 'two' })).toThrow()
+    })
+
+    it('should reject additional properties when disabled', () => {
+      const zodSchema = convertJsonSchemaToZod({
+        type: 'object',
+        properties: { name: { type: 'string' } },
+        additionalProperties: false,
+      })
+
+      expect(() => zodSchema.parse({ name: 'test', extra: true })).toThrow()
     })
   })
 
@@ -315,9 +229,9 @@ describe('JSON Schema to Zod Conversion', () => {
       }
       const zodSchema = convertJsonSchemaToZod(schema)
 
-      expect(zodSchema.parse('1')).toBe('1')
-      expect(zodSchema.parse('2')).toBe('2')
-      expect(() => zodSchema.parse('4')).toThrow()
+      expect(zodSchema.parse(1)).toBe(1)
+      expect(zodSchema.parse(2)).toBe(2)
+      expect(() => zodSchema.parse('1')).toThrow()
     })
   })
 
@@ -354,11 +268,7 @@ describe('JSON Schema to Zod Conversion', () => {
         },
       }
 
-      const result = zodSchema.parse(validInput)
-      expect((result as any).success).toBe(true)
-      expect((result as any).message).toBe('Done')
-      expect((result as any).data.count).toBe(5)
-      expect((result as any).data.items).toHaveLength(5)
+      expect(zodSchema.parse(validInput)).toEqual(validInput)
     })
 
     it('should handle nullable complex types', () => {
@@ -378,16 +288,15 @@ describe('JSON Schema to Zod Conversion', () => {
       const zodSchema = convertJsonSchemaToZod(schema)
 
       // Can be object
-      const result1 = zodSchema.parse({ metadata: { timestamp: '2024-01-01' } })
-      expect((result1 as any).metadata).toEqual({ timestamp: '2024-01-01' })
+      expect(zodSchema.parse({ metadata: { timestamp: '2024-01-01' } })).toEqual({
+        metadata: { timestamp: '2024-01-01' },
+      })
 
       // Can be null
-      const result2 = zodSchema.parse({ metadata: null })
-      expect((result2 as any).metadata).toBeNull()
+      expect(zodSchema.parse({ metadata: null })).toEqual({ metadata: null })
 
       // Can be undefined (optional)
-      const result3 = zodSchema.parse({})
-      expect((result3 as any).metadata).toBeUndefined()
+      expect(zodSchema.parse({})).toEqual({})
     })
   })
 
@@ -405,10 +314,10 @@ describe('JSON Schema to Zod Conversion', () => {
 
       const result = zodSchema.safeParse({ name: 'Alice' })
 
-      expect((result as any).success).toBe(false)
+      expect(result.success).toBe(false)
       if (!result.success) {
-        expect((result as any).error.issues).toBeDefined()
-        expect((result as any).error.issues.length).toBeGreaterThan(0)
+        expect(result.error.issues).toBeDefined()
+        expect(result.error.issues.length).toBeGreaterThan(0)
         const errorDetails = result.error.issues.map((e) => `  - ${e.path.join('.') || 'root'}: ${e.message}`).join('\n')
 
         expect(errorDetails).toContain('age')
@@ -432,11 +341,11 @@ describe('JSON Schema to Zod Conversion', () => {
         data: [1, 2, 'three', 4],
       })
 
-      expect((result as any).success).toBe(false)
+      expect(result.success).toBe(false)
       if (!result.success) {
-        expect((result as any).error.issues).toBeDefined()
-        expect((result as any).error.issues.length).toBeGreaterThan(0)
-        expect((result as any).error.issues[0].path).toEqual(['data', 2])
+        expect(result.error.issues).toBeDefined()
+        expect(result.error.issues.length).toBeGreaterThan(0)
+        expect(result.error.issues[0].path).toEqual(['data', 2])
       }
     })
   })

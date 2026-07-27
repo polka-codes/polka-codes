@@ -33,7 +33,7 @@ type JsonSchemaType = 'string' | 'number' | 'integer' | 'boolean' | 'object' | '
  */
 type JsonSchemaEnum = (string | number | boolean)[]
 
-interface JsonSchema {
+export interface JsonSchema {
   type?: JsonSchemaType | JsonSchemaType[]
   enum?: JsonSchemaEnum
   properties?: Record<string, JsonSchema>
@@ -52,6 +52,11 @@ interface JsonSchema {
  * convert JSON schemas to Zod schemas (e.g., MCP server tool schema conversion).
  */
 export function convertJsonSchemaToZod(schema: JsonSchema): z.ZodTypeAny {
+  const converted = convertJsonSchema(schema)
+  return schema.description ? converted.describe(schema.description) : converted
+}
+
+function convertJsonSchema(schema: JsonSchema): z.ZodTypeAny {
   // Handle enum types
   if (schema.enum) {
     // JSON Schema enums can contain strings, numbers, or booleans
@@ -70,47 +75,26 @@ export function convertJsonSchemaToZod(schema: JsonSchema): z.ZodTypeAny {
     }
 
     // Mixed or non-string enums: use z.union with z.literal
-    const literals = enumValues.map((v) => z.literal(v as any))
+    const literals = enumValues.map((value) => z.literal(value))
     if (literals.length === 1) {
       return literals[0]
     }
-    // z.union can take an array of schemas
-    // Cast to any because Zod's union type inference is complex
-    return z.union([literals[0], literals[1], ...literals.slice(2)]) as any
+    return z.union([literals[0], literals[1], ...literals.slice(2)])
   }
 
-  // Handle union types (type: ["string", "null"])
+  // Handle union types (for example, type: ["string", "null"])
   if (Array.isArray(schema.type)) {
-    const types = schema.type
-    if (types.includes('null') && types.length === 2) {
-      const nonNullType = types.find((t) => t !== 'null')
-      if (nonNullType === 'string') return z.string().nullable()
-      if (nonNullType === 'number') return z.number().nullable()
-      if (nonNullType === 'integer')
-        return z
-          .number()
-          .refine((val) => Number.isInteger(val))
-          .nullable()
-      if (nonNullType === 'boolean') return z.boolean().nullable()
-      if (nonNullType === 'object') {
-        // Handle object with nullable - need to preserve properties
-        const shape: Record<string, z.ZodTypeAny> = {}
-        if (schema.properties) {
-          for (const [propName, propSchema] of Object.entries(schema.properties)) {
-            const propZod = convertJsonSchemaToZod(propSchema as JsonSchema)
-            const isRequired = schema.required?.includes(propName)
-            shape[propName] = isRequired ? propZod : propZod.optional()
-          }
-        }
-        return z.object(shape).nullable()
-      }
-      if (nonNullType === 'array') return z.array(z.any()).nullable()
+    const variants = schema.type.map((type) => convertJsonSchemaToZod({ ...schema, type }))
+    if (variants.length === 0) {
+      return z.never()
     }
-    // Fallback for complex unions
-    return z.any()
+    if (variants.length === 1) {
+      return variants[0]
+    }
+    return z.union([variants[0], variants[1], ...variants.slice(2)])
   }
 
-  const type = schema.type as JsonSchemaType
+  const type = schema.type ?? (schema.properties ? 'object' : undefined)
 
   switch (type) {
     case 'string':
@@ -130,7 +114,7 @@ export function convertJsonSchemaToZod(schema: JsonSchema): z.ZodTypeAny {
       // Convert properties
       if (schema.properties) {
         for (const [propName, propSchema] of Object.entries(schema.properties)) {
-          const propZod = convertJsonSchemaToZod(propSchema as JsonSchema)
+          const propZod = convertJsonSchemaToZod(propSchema)
           // Check if property is required
           const isRequired = schema.required?.includes(propName)
           shape[propName] = isRequired ? propZod : propZod.optional()
@@ -138,33 +122,26 @@ export function convertJsonSchemaToZod(schema: JsonSchema): z.ZodTypeAny {
       }
 
       // Handle additionalProperties
-      if (schema.additionalProperties === true) {
-        // Use passthrough to allow additional properties without validation
-        return z.object(shape).passthrough()
-      }
-
       if (typeof schema.additionalProperties === 'object') {
-        const additionalSchema = convertJsonSchemaToZod(schema.additionalProperties as JsonSchema)
-        // Use explicit intersection for additional properties
-        // Note: We use z.intersection() instead of .and() for better readability
-        // The cast to z.ZodTypeAny is necessary because Zod's intersection types
-        // have complex type inference that TypeScript cannot always resolve correctly.
-        // This is a known limitation of Zod's type system.
-        return z.intersection(z.object(shape), z.record(z.string(), additionalSchema)) as z.ZodTypeAny
+        return z.object(shape).catchall(convertJsonSchemaToZod(schema.additionalProperties))
       }
 
-      // No additionalProperties (defaults to false) - strict object
-      return z.object(shape)
+      if (schema.additionalProperties === false) {
+        return z.object(shape).strict()
+      }
+
+      // JSON Schema allows additional properties by default.
+      return z.object(shape).passthrough()
     }
     case 'array': {
       if (!schema.items) {
-        return z.array(z.any())
+        return z.array(z.unknown())
       }
-      const itemSchema = convertJsonSchemaToZod(schema.items as JsonSchema)
+      const itemSchema = convertJsonSchemaToZod(schema.items)
       return z.array(itemSchema)
     }
     default:
-      return z.any()
+      return z.unknown()
   }
 }
 
