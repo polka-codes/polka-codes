@@ -37,6 +37,8 @@ type ProviderMetadataEntry = {
   timestamp: number
 }
 
+type LanguageModelIdentity = Pick<LanguageModelV4, 'provider' | 'modelId'>
+
 /**
  * Tracks token / cost usage across any mix of LLM models.
  * Supports optional caps on total messages and total cost.
@@ -173,7 +175,7 @@ export class UsageMeter {
   }
 
   addUsage(
-    llm: LanguageModelV4,
+    llm: LanguageModelIdentity,
     resp:
       | { usage: LanguageModelV4Usage; providerMetadata?: Record<string, unknown> }
       | { totalUsage: LanguageModelV4Usage; providerMetadata?: Record<string, unknown> }
@@ -242,9 +244,10 @@ export class UsageMeter {
 
     // Track pending update
     this.#pendingUpdates.add(updatePromise)
-    updatePromise.finally(() => {
-      this.#pendingUpdates.delete(updatePromise)
-    })
+    void updatePromise.then(
+      () => this.#pendingUpdates.delete(updatePromise),
+      () => this.#pendingUpdates.delete(updatePromise),
+    )
 
     return updatePromise
   }
@@ -383,7 +386,7 @@ export class UsageMeter {
     return `Usage - messages: ${u.messageCount}, input: ${u.input}, cached: ${u.cachedRead}, output: ${u.output}, cost: $${u.cost.toFixed(4)}`
   }
 
-  onFinishHandler(llm: LanguageModelV4, options: { messageAlreadyCounted?: boolean } = {}) {
+  onFinishHandler(llm: LanguageModelIdentity, options: { messageAlreadyCounted?: boolean } = {}) {
     // Returns an async function that updates usage tracking.
     // Note: The AI SDK's onFinish callback is fire-and-forget and doesn't await
     // the result, so this is safe even though addUsage is async.

@@ -58,7 +58,7 @@ describe('UsageMeter', () => {
 
       // Should normalize 'google-vertex' to 'google' and remove dots/dashes from model
       const model1 = createMockModel('google', 'claude35sonnet')
-      meter.addUsage(model1 as any, {
+      meter.addUsage(model1, {
         usage: createMockUsage(1000, 500),
         providerMetadata: { google: {} },
       })
@@ -81,8 +81,8 @@ describe('UsageMeter', () => {
     test('accumulates usage across multiple calls', () => {
       const model = createMockModel('openai', 'gpt-4')
 
-      meter.addUsage(model as any, { usage: createMockUsage(100, 50) })
-      meter.addUsage(model as any, { usage: createMockUsage(200, 100) })
+      meter.addUsage(model, { usage: createMockUsage(100, 50) })
+      meter.addUsage(model, { usage: createMockUsage(200, 100) })
 
       expect(meter.usage.input).toBe(300)
       expect(meter.usage.output).toBe(150)
@@ -92,7 +92,7 @@ describe('UsageMeter', () => {
     test('handles zero token usage', () => {
       const model = createMockModel('openai', 'gpt-4')
 
-      meter.addUsage(model as any, { usage: createMockUsage(0, 0) })
+      meter.addUsage(model, { usage: createMockUsage(0, 0) })
 
       expect(meter.usage.input).toBe(0)
       expect(meter.usage.output).toBe(0)
@@ -104,7 +104,7 @@ describe('UsageMeter', () => {
     test('calculates cost for default provider', () => {
       const model = createMockModel('openai', 'gpt-4')
 
-      meter.addUsage(model as any, {
+      meter.addUsage(model, {
         usage: createMockUsage(1000, 500),
         providerMetadata: { openai: {} },
       })
@@ -126,7 +126,7 @@ describe('UsageMeter', () => {
       })
 
       const model = createMockModel('anthropic', 'claude')
-      meter.addUsage(model as any, {
+      meter.addUsage(model, {
         usage: createMockUsage(700, 500, 200),
         providerMetadata: {
           anthropic: {
@@ -151,7 +151,7 @@ describe('UsageMeter', () => {
       })
 
       const model = createMockModel('openrouter', 'model')
-      meter.addUsage(model as any, {
+      meter.addUsage(model, {
         usage: createMockUsage(1000, 500),
         providerMetadata: {
           openrouter: {
@@ -178,8 +178,8 @@ describe('UsageMeter', () => {
       const meter = new UsageMeter({}, { maxMessages: 2, maxCost: 100 })
       const model = createMockModel('openai', 'gpt-4')
 
-      meter.addUsage(model as any, { usage: createMockUsage(100, 50) })
-      meter.addUsage(model as any, { usage: createMockUsage(100, 50) })
+      meter.addUsage(model, { usage: createMockUsage(100, 50) })
+      meter.addUsage(model, { usage: createMockUsage(100, 50) })
 
       const result = meter.isLimitExceeded()
       expect(result.result).toBe(true)
@@ -203,7 +203,7 @@ describe('UsageMeter', () => {
       )
 
       const model = createMockModel('openai', 'gpt-4')
-      meter.addUsage(model as any, {
+      meter.addUsage(model, {
         usage: createMockUsage(3000, 2000),
         providerMetadata: { openai: {} },
       })
@@ -217,7 +217,7 @@ describe('UsageMeter', () => {
       const meter = new UsageMeter({}, { maxMessages: 0, maxCost: 0 })
       const model = createMockModel('openai', 'gpt-4')
 
-      meter.addUsage(model as any, { usage: createMockUsage(100, 50) })
+      meter.addUsage(model, { usage: createMockUsage(100, 50) })
 
       const result = meter.isLimitExceeded()
       expect(result.result).toBe(false)
@@ -229,7 +229,7 @@ describe('UsageMeter', () => {
       const meter = new UsageMeter({}, { maxMessages: 1, maxCost: 100 })
       const model = createMockModel('openai', 'gpt-4')
 
-      meter.addUsage(model as any, { usage: createMockUsage(100, 50) })
+      meter.addUsage(model, { usage: createMockUsage(100, 50) })
 
       expect(() => meter.checkLimit()).toThrow('Usage limit exceeded. Message count: 1/1, cost: 0/100')
     })
@@ -256,7 +256,7 @@ describe('UsageMeter', () => {
 
     test('accumulates with regular usage tracking', () => {
       const model = createMockModel('openai', 'gpt-4')
-      meter.addUsage(model as any, { usage: createMockUsage(100, 50) })
+      meter.addUsage(model, { usage: createMockUsage(100, 50) })
       meter.incrementMessageCount(3)
 
       expect(meter.usage.messageCount).toBe(4)
@@ -275,7 +275,7 @@ describe('UsageMeter', () => {
   describe('getUsageText', () => {
     test('formats usage text correctly', () => {
       const model = createMockModel('openai', 'gpt-4')
-      meter.addUsage(model as any, { usage: createMockUsage(1000, 500, 200) })
+      meter.addUsage(model, { usage: createMockUsage(1000, 500, 200) })
 
       const text = meter.getUsageText()
       expect(text).toBe('Usage - messages: 1, input: 1000, cached: 200, output: 500, cost: $0.0000')
@@ -294,7 +294,7 @@ describe('UsageMeter', () => {
       })
 
       const model = createMockModel('openai', 'gpt4')
-      meter.addUsage(model as any, {
+      meter.addUsage(model, {
         usage: createMockUsage(1000, 500),
         providerMetadata: { openai: {} },
       })
@@ -307,7 +307,7 @@ describe('UsageMeter', () => {
   describe('onFinishHandler', () => {
     test('creates handler that records usage', () => {
       const model = createMockModel('openai', 'gpt-4')
-      const handler = meter.onFinishHandler(model as any)
+      const handler = meter.onFinishHandler(model)
 
       handler({
         totalUsage: createMockUsage(100, 50, 25),
@@ -322,7 +322,7 @@ describe('UsageMeter', () => {
 
     test('handler stores metadata from events', () => {
       const model = createMockModel('openai', 'gpt-4')
-      const handler = meter.onFinishHandler(model as any)
+      const handler = meter.onFinishHandler(model)
 
       handler({
         totalUsage: createMockUsage(100, 50),
@@ -336,7 +336,7 @@ describe('UsageMeter', () => {
     test('can add token usage without double-counting a reserved message', async () => {
       const model = createMockModel('openai', 'gpt-4')
       meter.tryReserveMessage()
-      const handler = meter.onFinishHandler(model as any, { messageAlreadyCounted: true })
+      const handler = meter.onFinishHandler(model, { messageAlreadyCounted: true })
 
       await handler({ totalUsage: createMockUsage(100, 50) })
 
@@ -356,7 +356,7 @@ describe('UsageMeter', () => {
         },
       }
 
-      meter.addUsage(mockModel as any, mockResponse)
+      meter.addUsage(mockModel, mockResponse)
 
       const metadata = meter.providerMetadata
       expect(metadata).toHaveLength(1)
@@ -378,7 +378,7 @@ describe('UsageMeter', () => {
         },
       }
 
-      meter.addUsage(mockModel as any, mockResponse)
+      meter.addUsage(mockModel, mockResponse)
 
       const metadata = meter.providerMetadata
       expect(metadata).toHaveLength(1)
@@ -398,7 +398,7 @@ describe('UsageMeter', () => {
         },
       }
 
-      meter.addUsage(mockModel as any, mockResponse)
+      meter.addUsage(mockModel, mockResponse)
 
       const metadata = meter.providerMetadata
       expect(metadata).toHaveLength(1)
@@ -410,12 +410,12 @@ describe('UsageMeter', () => {
       const mockModel1 = createMockModel('openai', 'gpt-4')
       const mockModel2 = createMockModel('anthropic', 'claude-3-5-sonnet-20241022')
 
-      meter.addUsage(mockModel1 as any, {
+      meter.addUsage(mockModel1, {
         usage: createMockUsage(100, 50, 25),
         providerMetadata: { openai: { cachedPromptTokens: 25 } },
       })
 
-      meter.addUsage(mockModel2 as any, {
+      meter.addUsage(mockModel2, {
         usage: createMockUsage(200, 100, 50),
         providerMetadata: { anthropic: { cacheReadTokens: 50 } },
       })
@@ -432,7 +432,7 @@ describe('UsageMeter', () => {
         usage: createMockUsage(100, 50, 0),
       }
 
-      meter.addUsage(mockModel as any, mockResponse)
+      meter.addUsage(mockModel, mockResponse)
 
       expect(meter.providerMetadata).toHaveLength(0)
     })
@@ -444,7 +444,7 @@ describe('UsageMeter', () => {
         providerMetadata: {},
       }
 
-      meter.addUsage(mockModel as any, mockResponse)
+      meter.addUsage(mockModel, mockResponse)
 
       expect(meter.providerMetadata).toHaveLength(0)
     })
@@ -454,7 +454,7 @@ describe('UsageMeter', () => {
     test('calculates statistics for OpenAI cached tokens', () => {
       const mockModel = createMockModel('openai', 'gpt-4')
 
-      meter.addUsage(mockModel as any, {
+      meter.addUsage(mockModel, {
         usage: createMockUsage(100, 50, 0),
         providerMetadata: { openai: { cachedPromptTokens: 25 } },
       })
@@ -469,7 +469,7 @@ describe('UsageMeter', () => {
     test('calculates statistics for Anthropic cache tokens', () => {
       const mockModel = createMockModel('anthropic', 'claude-3-5-sonnet-20241022')
 
-      meter.addUsage(mockModel as any, {
+      meter.addUsage(mockModel, {
         usage: createMockUsage(200, 100, 50),
         providerMetadata: {
           anthropic: { cacheReadTokens: 50, promptCacheMissTokens: 30 },
@@ -486,7 +486,7 @@ describe('UsageMeter', () => {
     test('calculates statistics for DeepSeek cache tokens', () => {
       const mockModel = createMockModel('deepseek', 'deepseek-chat')
 
-      meter.addUsage(mockModel as any, {
+      meter.addUsage(mockModel, {
         usage: createMockUsage(150, 75, 40),
         providerMetadata: { deepseek: { prompt_cache_hit_tokens: 20 } },
       })
@@ -500,7 +500,7 @@ describe('UsageMeter', () => {
     test('does not count cache misses as cached tokens', () => {
       const mockModel = createMockModel('deepseek', 'deepseek-chat')
 
-      meter.addUsage(mockModel as any, {
+      meter.addUsage(mockModel, {
         usage: createMockUsage(150, 75, 40),
         providerMetadata: { deepseek: { promptCacheMissTokens: 20 } },
       })
@@ -515,17 +515,17 @@ describe('UsageMeter', () => {
     test('aggregates statistics across multiple requests', () => {
       const mockModel = createMockModel('openai', 'gpt-4')
 
-      meter.addUsage(mockModel as any, {
+      meter.addUsage(mockModel, {
         usage: createMockUsage(100, 50, 0),
         providerMetadata: { openai: { cachedPromptTokens: 25 } },
       })
 
-      meter.addUsage(mockModel as any, {
+      meter.addUsage(mockModel, {
         usage: createMockUsage(200, 100, 0),
         providerMetadata: { openai: { cachedPromptTokens: 50 } },
       })
 
-      meter.addUsage(mockModel as any, {
+      meter.addUsage(mockModel, {
         usage: createMockUsage(100, 50, 0),
         // No cache in this request
         providerMetadata: { openai: {} },
@@ -552,7 +552,7 @@ describe('UsageMeter', () => {
     test('clears all stored metadata entries', () => {
       const mockModel = createMockModel('openai', 'gpt-4')
 
-      meter.addUsage(mockModel as any, {
+      meter.addUsage(mockModel, {
         usage: createMockUsage(100, 50, 0),
         providerMetadata: { openai: { cachedPromptTokens: 25 } },
       })
@@ -568,7 +568,7 @@ describe('UsageMeter', () => {
     test('does not affect usage totals', () => {
       const mockModel = createMockModel('openai', 'gpt-4')
 
-      meter.addUsage(mockModel as any, {
+      meter.addUsage(mockModel, {
         usage: createMockUsage(100, 50, 0),
         providerMetadata: { openai: { cachedPromptTokens: 25 } },
       })
@@ -585,7 +585,7 @@ describe('UsageMeter', () => {
     test('clears metadata entries', () => {
       const mockModel = createMockModel('openai', 'gpt-4')
 
-      meter.addUsage(mockModel as any, {
+      meter.addUsage(mockModel, {
         usage: createMockUsage(100, 50, 0),
         providerMetadata: { openai: { cachedPromptTokens: 25 } },
       })
@@ -604,13 +604,13 @@ describe('UsageMeter', () => {
       const mockModel1 = createMockModel('openai', 'gpt-4')
       const mockModel2 = createMockModel('anthropic', 'claude-3-5-sonnet-20241022')
 
-      meter.addUsage(mockModel1 as any, {
+      meter.addUsage(mockModel1, {
         usage: createMockUsage(100, 50, 0),
         providerMetadata: { openai: { cachedPromptTokens: 25 } },
       })
 
       const otherMeter = new UsageMeter()
-      otherMeter.addUsage(mockModel2 as any, {
+      otherMeter.addUsage(mockModel2, {
         usage: createMockUsage(200, 100, 0),
         providerMetadata: { anthropic: { cacheReadTokens: 50 } },
       })
@@ -626,13 +626,13 @@ describe('UsageMeter', () => {
     test('merges usage totals along with metadata', () => {
       const mockModel = createMockModel('openai', 'gpt-4')
 
-      meter.addUsage(mockModel as any, {
+      meter.addUsage(mockModel, {
         usage: createMockUsage(100, 50, 0),
         providerMetadata: { openai: { cachedPromptTokens: 25 } },
       })
 
       const otherMeter = new UsageMeter()
-      otherMeter.addUsage(mockModel as any, {
+      otherMeter.addUsage(mockModel, {
         usage: createMockUsage(200, 100, 0),
         providerMetadata: { openai: { cachedPromptTokens: 50 } },
       })
@@ -650,7 +650,7 @@ describe('UsageMeter', () => {
     test('clears metadata when clearMetadata option is true', () => {
       const mockModel = createMockModel('openai', 'gpt-4')
 
-      meter.addUsage(mockModel as any, {
+      meter.addUsage(mockModel, {
         usage: createMockUsage(100, 50, 0),
         providerMetadata: { openai: { cachedPromptTokens: 25 } },
       })
@@ -665,7 +665,7 @@ describe('UsageMeter', () => {
     test('does not clear metadata by default', () => {
       const mockModel = createMockModel('openai', 'gpt-4')
 
-      meter.addUsage(mockModel as any, {
+      meter.addUsage(mockModel, {
         usage: createMockUsage(100, 50, 0),
         providerMetadata: { openai: { cachedPromptTokens: 25 } },
       })
@@ -681,7 +681,7 @@ describe('UsageMeter', () => {
     test('providerMetadata returns a copy', () => {
       const mockModel = createMockModel('openai', 'gpt-4')
 
-      meter.addUsage(mockModel as any, {
+      meter.addUsage(mockModel, {
         usage: createMockUsage(100, 50, 0),
         providerMetadata: { openai: { cachedPromptTokens: 25 } },
       })
@@ -696,7 +696,7 @@ describe('UsageMeter', () => {
     test('cacheStats.entries returns a copy', () => {
       const mockModel = createMockModel('openai', 'gpt-4')
 
-      meter.addUsage(mockModel as any, {
+      meter.addUsage(mockModel, {
         usage: createMockUsage(100, 50, 0),
         providerMetadata: { openai: { cachedPromptTokens: 25 } },
       })
