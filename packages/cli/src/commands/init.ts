@@ -13,7 +13,7 @@ import { set } from 'lodash-es'
 import { parseDocument, stringify } from 'yaml'
 import { BUILT_IN_COMMANDS, type BuiltInCommand } from '../builtin-commands'
 import { validateConfig } from '../config-validation'
-import { configPrompt } from '../configPrompt'
+import { configPrompt, getApiKeyEnvironmentVariable, isAiProvider } from '../configPrompt'
 import { createLogger } from '../logger'
 import { runWorkflow } from '../runWorkflow'
 import { getBaseWorkflowOptions } from '../utils/command'
@@ -424,8 +424,15 @@ export const initCommand = new Command('init')
       existingConfig = validation.config
     }
 
-    const providerConfig = await configPrompt({})
-    const { provider, model, apiKey } = providerConfig
+    const existingProvider = isAiProvider(existingConfig.defaultProvider) ? existingConfig.defaultProvider : undefined
+    const promptedConfig = await configPrompt({
+      provider: existingProvider,
+      model: existingConfig.defaultModel ?? (existingProvider ? existingConfig.providers?.[existingProvider]?.defaultModel : undefined),
+      settings: existingProvider ? existingConfig.providers?.[existingProvider] : undefined,
+    })
+    const { provider, model } = promptedConfig
+    const providerSettings = { ...promptedConfig.settings }
+    const apiKey = providerSettings.apiKey
 
     if (apiKey && !isGlobal) {
       let option = 'local'
@@ -459,20 +466,24 @@ export const initCommand = new Command('init')
           set(globalConfig, ['providers', provider, 'apiKey'], apiKey)
           writeFileSync(globalConfigPath, stringify(globalConfig))
           logger.info(`API key saved to global config file: ${globalConfigPath}`)
-          providerConfig.apiKey = undefined
+          providerSettings.apiKey = undefined
           break
         }
         case 'env': {
+          const environmentVariable = getApiKeyEnvironmentVariable(provider)
+          if (!environmentVariable) {
+            throw new Error(`Provider '${provider}' does not support API key authentication`)
+          }
           let envFileContent = ''
           const envExists = existsSync('.env')
           if (envExists) {
             envFileContent = readFileSync('.env', 'utf-8')
             if (!envFileContent.endsWith('\n')) envFileContent += '\n'
           }
-          envFileContent += `${provider.toUpperCase()}_API_KEY=${apiKey}\n`
+          envFileContent += `${environmentVariable}=${apiKey}\n`
           writeFileSync('.env', envFileContent)
           logger.info('API key saved to .env file')
-          providerConfig.apiKey = undefined
+          providerSettings.apiKey = undefined
           break
         }
       }
@@ -482,14 +493,13 @@ export const initCommand = new Command('init')
       ...existingConfig,
       defaultProvider: provider,
       defaultModel: model,
-    }
-
-    if (!finalConfig.providers) {
-      finalConfig.providers = {}
-    }
-
-    if (providerConfig.apiKey) {
-      set(finalConfig, ['providers', provider, 'apiKey'], providerConfig.apiKey)
+      providers: {
+        ...existingConfig.providers,
+        [provider]: {
+          ...existingConfig.providers?.[provider],
+          ...providerSettings,
+        },
+      },
     }
 
     writeFileSync(configPath, stringify(finalConfig))
