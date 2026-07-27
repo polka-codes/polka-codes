@@ -2,31 +2,39 @@ import { z } from 'zod'
 import type { CliToolRegistry } from '../workflow-tools'
 import { runAgentWithSchema } from '../workflows/agent-builder'
 import { WORKFLOW_MAPPING } from './constants'
-import type { CliWorkflowContext, GoalDecompositionResult, Task, TaskComplexity, ToolRegistry } from './types'
+import type { CliWorkflowContext, GoalDecompositionResult, Task, TaskComplexity, ToolRegistry, WorkflowInput } from './types'
 import { Priority } from './types'
 
 /**
  * Schema for goal decomposition result
  */
+const GoalTaskSchema = z.object({
+  title: z.string().min(5),
+  description: z.string().min(10),
+  type: z.enum(['feature', 'bugfix', 'refactor', 'test', 'docs', 'other']),
+  priority: z.enum(['critical', 'high', 'medium', 'low', 'trivial']),
+  complexity: z.enum(['low', 'medium', 'high']),
+  estimatedTime: z.number().min(1),
+  files: z.array(z.string()).optional(),
+  dependencies: z.array(z.string()).optional(),
+})
+
 const GoalDecompositionSchema = z.object({
   requirements: z.array(z.string()).min(1),
   highLevelPlan: z.string().min(10),
-  tasks: z
-    .array(
-      z.object({
-        title: z.string().min(5),
-        description: z.string().min(10),
-        type: z.enum(['feature', 'bugfix', 'refactor', 'test', 'docs', 'other']),
-        priority: z.enum(['critical', 'high', 'medium', 'low', 'trivial']),
-        complexity: z.enum(['low', 'medium', 'high']),
-        estimatedTime: z.number().min(1),
-        files: z.array(z.string()).optional(),
-        dependencies: z.array(z.string()).optional(),
-      }),
-    )
-    .min(1),
+  tasks: z.array(GoalTaskSchema).min(1),
   risks: z.array(z.string()),
 })
+
+type GoalTask = z.infer<typeof GoalTaskSchema>
+
+const PRIORITIES: Record<GoalTask['priority'], Priority> = {
+  critical: Priority.CRITICAL,
+  high: Priority.HIGH,
+  medium: Priority.MEDIUM,
+  low: Priority.LOW,
+  trivial: Priority.TRIVIAL,
+}
 
 /**
  * Decomposes a high-level goal into actionable tasks
@@ -57,7 +65,6 @@ export class GoalDecomposer<TTools extends ToolRegistry = CliToolRegistry> {
 
     // Convert to tasks with Priority enum and proper types
     const tasks = result.tasks.map((t, i) => {
-      const priority = this.mapPriority(t.priority)
       const workflow = WORKFLOW_MAPPING[t.type]
 
       return {
@@ -65,12 +72,12 @@ export class GoalDecomposer<TTools extends ToolRegistry = CliToolRegistry> {
         type: t.type,
         title: t.title,
         description: t.description,
-        priority,
+        priority: PRIORITIES[t.priority],
         complexity: t.complexity,
-        dependencies: t.dependencies || [],
+        dependencies: t.dependencies ?? [],
         estimatedTime: t.estimatedTime,
         status: 'pending' as const,
-        files: t.files || [],
+        files: t.files ?? [],
         workflow,
         workflowInput: this.buildWorkflowInput(t),
         retryCount: 0,
@@ -94,26 +101,6 @@ export class GoalDecomposer<TTools extends ToolRegistry = CliToolRegistry> {
       estimatedComplexity,
       dependencies,
       risks: result.risks,
-    }
-  }
-
-  /**
-   * Map string priority to enum
-   */
-  private mapPriority(priority: string): Priority {
-    switch (priority) {
-      case 'critical':
-        return Priority.CRITICAL
-      case 'high':
-        return Priority.HIGH
-      case 'medium':
-        return Priority.MEDIUM
-      case 'low':
-        return Priority.LOW
-      case 'trivial':
-        return Priority.TRIVIAL
-      default:
-        return Priority.MEDIUM
     }
   }
 
@@ -148,41 +135,16 @@ ${codebaseContext}
   /**
    * Build workflow input for task
    */
-  private buildWorkflowInput(task: any): any {
-    switch (task.type) {
-      case 'feature':
-        return {
-          task: task.description,
-          files: task.files || [],
-        }
-
-      case 'bugfix':
-        return {
-          error: task.description,
-        }
-
-      case 'refactor':
-        return {
-          task: task.description,
-          files: task.files || [],
-        }
-
-      case 'test':
-        return {
-          task: `Add tests for: ${task.description}`,
-          files: task.files || [],
-        }
-
-      case 'docs':
-        return {
-          task: task.description,
-          files: task.files || [],
-        }
-
-      default:
-        return {
-          task: task.description,
-        }
+  private buildWorkflowInput(task: GoalTask): WorkflowInput {
+    if (task.type === 'bugfix') {
+      return { error: task.description }
+    }
+    if (task.type === 'other') {
+      return { task: task.description }
+    }
+    return {
+      task: task.type === 'test' ? `Add tests for: ${task.description}` : task.description,
+      files: task.files ?? [],
     }
   }
 
