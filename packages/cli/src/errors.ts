@@ -207,7 +207,7 @@ export class MaxRetriesExceededError extends ProviderError {
     super(
       provider,
       model,
-      `${provider} failed after ${attempts} retry attempts for model '${model}'. Last error: ${lastError.message}. Please check your network connection and verify the service is operational.`,
+      `${provider} failed after ${attempts} attempts for model '${model}'. Last error: ${lastError.message}. Please check your network connection and verify the service is operational.`,
       false,
       lastError,
     )

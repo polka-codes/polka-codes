@@ -73,7 +73,7 @@ async function buildConstraint(rawPath: string, cwd: string): Promise<WritePathC
 
 function isWithinDirectory(candidatePath: string, directoryPath: string): boolean {
   const relativePath = path.relative(directoryPath, candidatePath)
-  return relativePath === '' || (relativePath !== '' && !relativePath.startsWith('..') && !path.isAbsolute(relativePath))
+  return relativePath === '' || (!path.isAbsolute(relativePath) && relativePath !== '..' && !relativePath.startsWith(`..${path.sep}`))
 }
 
 async function isPathAllowedForWrite(candidatePath: string, constraints: WritePathConstraint[], cwd = process.cwd()): Promise<boolean> {

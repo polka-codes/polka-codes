@@ -228,69 +228,32 @@ async function select(input: { message: string; choices: { name: string; value: 
   return await inquirerSelect({ message: input.message, choices: input.choices })
 }
 
-async function executeCommand(input: { command: string; shell?: boolean; pipe?: boolean; args?: string[] }) {
-  return new Promise((resolve, reject) => {
-    // SECURITY: When shell: true, use args as separate parameters to prevent command injection
-    // If args are provided, we use them as separate spawn arguments even with shell: true
-    // This is safer than concatenating command + args into a single string
+async function executeCommand(input: CliToolRegistry['executeCommand']['input']) {
+  return new Promise<{ exitCode: number; stdout: string; stderr: string }>((resolve, reject) => {
     const child =
       input.shell === true
-        ? input.args && input.args.length > 0
-          ? // Use shell: true with command and args as separate parameters for safety
-            spawn(input.command, input.args, { shell: true, stdio: 'pipe' })
-          : // No args, just the command
-            spawn(input.command, { shell: true, stdio: 'pipe' })
-        : // shell: false or not specified - always use separate args
-          spawn(input.command, input.args, {
-            shell: false,
-            stdio: 'pipe',
-          })
+        ? spawn(input.command, { shell: true, stdio: 'pipe' })
+        : spawn(input.command, input.args, { shell: false, stdio: 'pipe' })
 
     let stdout = ''
     let stderr = ''
-    let stdoutEnded = !child.stdout
-    let stderrEnded = !child.stderr
-    let closeEventFired = false
-    let exitCode: number | null = null
-
-    const checkAndResolve = () => {
-      if (stdoutEnded && stderrEnded && closeEventFired) {
-        resolve({ exitCode: exitCode ?? -1, stdout, stderr })
+    child.stdout.setEncoding('utf8')
+    child.stdout.on('data', (data: string) => {
+      if (input.pipe) {
+        process.stdout.write(data)
       }
-    }
-
-    if (child.stdout) {
-      child.stdout.setEncoding('utf8')
-      child.stdout.on('data', (data: string) => {
-        if (input.pipe) {
-          process.stdout.write(data)
-        }
-        stdout += data
-      })
-      child.stdout.on('end', () => {
-        stdoutEnded = true
-        checkAndResolve()
-      })
-    }
-
-    if (child.stderr) {
-      child.stderr.setEncoding('utf8')
-      child.stderr.on('data', (data: string) => {
-        if (input.pipe) {
-          process.stderr.write(data)
-        }
-        stderr += data
-      })
-      child.stderr.on('end', () => {
-        stderrEnded = true
-        checkAndResolve()
-      })
-    }
+      stdout += data
+    })
+    child.stderr.setEncoding('utf8')
+    child.stderr.on('data', (data: string) => {
+      if (input.pipe) {
+        process.stderr.write(data)
+      }
+      stderr += data
+    })
 
     child.on('close', (code: number | null) => {
-      exitCode = code
-      closeEventFired = true
-      checkAndResolve()
+      resolve({ exitCode: code ?? -1, stdout, stderr })
     })
 
     child.on('error', (err: Error) => {
@@ -306,6 +269,7 @@ async function generateText(input: GenerateTextInput, context: ToolCallContext) 
   }
 
   const { retryCount = 5, requestTimeoutSeconds = 90 } = context.parameters
+  const maxAttempts = retryCount + 1
 
   const prompt = prepareGenerateTextRequest(input, model.provider, model.modelId)
   const usageMeter = context.parameters.usageMeter
@@ -317,7 +281,7 @@ async function generateText(input: GenerateTextInput, context: ToolCallContext) 
 
   let lastError: Error | undefined
 
-  for (let i = 0; i < retryCount; i++) {
+  for (let i = 0; i < maxAttempts; i++) {
     await usageMeter.waitForPending()
     const limitResult = usageMeter.isLimitExceeded()
     if (limitResult.cost) {
@@ -435,7 +399,7 @@ async function generateText(input: GenerateTextInput, context: ToolCallContext) 
 
         // Only retry if error is retryable
         if (providerError.retryable && (statusCode === 429 || statusCode >= 500)) {
-          context.workflowContext.logger.warn(`${providerError.message} (attempt ${i + 1}/${retryCount})`)
+          context.workflowContext.logger.warn(`${providerError.message} (attempt ${i + 1}/${maxAttempts})`)
           lastError = providerError
 
           const backoff = computeRateLimitBackoffSeconds(i)
@@ -471,7 +435,7 @@ async function generateText(input: GenerateTextInput, context: ToolCallContext) 
   }
 
   // All retries exhausted
-  throw new MaxRetriesExceededError(model.provider, model.modelId, retryCount, lastError || new Error('Unknown error'))
+  throw new MaxRetriesExceededError(model.provider, model.modelId, maxAttempts, lastError || new Error('Unknown error'))
 }
 
 async function invokeTool(input: { toolName: string; input: any }, context: ToolCallContext): Promise<ToolResponse> {

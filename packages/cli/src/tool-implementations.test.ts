@@ -104,17 +104,53 @@ describe('generateText', () => {
 
     await expect(request).rejects.toMatchObject({
       name: MaxRetriesExceededError.name,
-      attempts: 2,
+      attempts: 3,
       lastError: {
         name: ProviderTimeoutError.name,
         timeoutSeconds: 0.01,
       },
     })
-    expect(model.attempts).toBe(2)
-    expect(model.abortReasons).toHaveLength(2)
+    expect(model.attempts).toBe(3)
+    expect(model.abortReasons).toHaveLength(3)
     for (const reason of model.abortReasons) {
       expect(reason).toBeInstanceOf(ProviderTimeoutError)
     }
+  })
+
+  test('makes one provider attempt when retries are disabled', async () => {
+    const model = new TimeoutLanguageModel()
+    const request = toolCall(
+      {
+        tool: 'generateText',
+        input: {
+          messages: [{ role: 'user', content: 'Wait forever.' }],
+          tools: {},
+        },
+      },
+      {
+        model,
+        parameters: {
+          retryCount: 0,
+          requestTimeoutSeconds: 0.01,
+          usageMeter: new UsageMeter(),
+        },
+        toolProvider: {},
+        workflowContext: {
+          logger: {
+            debug() {},
+            error() {},
+            info() {},
+            warn() {},
+          },
+        },
+      },
+    )
+
+    await expect(request).rejects.toMatchObject({
+      name: MaxRetriesExceededError.name,
+      attempts: 1,
+    })
+    expect(model.attempts).toBe(1)
   })
 
   test('does not start more provider requests than max-messages allows', async () => {

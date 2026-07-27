@@ -83,6 +83,20 @@ describe('createWritePathGuardedProvider', () => {
     })
   })
 
+  test('allows nested paths whose names start with two dots', async () => {
+    await withTempDir(async (dir) => {
+      const allowedDir = path.join(dir, 'src')
+      const nestedFile = path.join(allowedDir, '..generated.ts')
+      await mkdir(allowedDir, { recursive: true })
+
+      const provider = await createWritePathGuardedProvider(createFilesystemProvider(), [allowedDir])
+
+      await provider.writeFile?.(nestedFile, 'generated')
+
+      expect(await readFile(nestedFile, 'utf8')).toBe('generated')
+    })
+  })
+
   test('rejects writes redirected outside an allowed directory by a symlink', async () => {
     await withTempDir(async (dir) => {
       const allowedDir = path.join(dir, 'allowed')
