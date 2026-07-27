@@ -79,7 +79,7 @@ export async function parseOptions(
     set(config, ['providers', defaultProvider, 'defaultModel'], defaultModel)
   }
 
-  const apiKey = options.apiKey || env.POLKA_API_KEY
+  const apiKey = env.POLKA_API_KEY
 
   if (apiKey) {
     if (!defaultProvider) {
@@ -110,6 +110,14 @@ export async function parseOptions(
   }
   if (env.GOOGLE_API_KEY) {
     set(config, ['providers', AiProvider.Google, 'apiKey'], env.GOOGLE_API_KEY)
+  }
+
+  // CLI flags have higher precedence than all environment variables.
+  if (options.apiKey) {
+    if (!defaultProvider) {
+      throw new ConfigurationError('Must specify a provider if providing an API key')
+    }
+    set(config, ['providers', defaultProvider, 'apiKey'], options.apiKey)
   }
 
   const providerConfig = new ApiProviderConfig({

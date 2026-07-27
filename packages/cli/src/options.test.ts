@@ -120,6 +120,14 @@ providers:
     expect(result.providerConfig.getConfigForCommand('chat')).toMatchSnapshot()
   })
 
+  test('prioritizes a CLI API key over provider-specific environment variables', async () => {
+    const result = await parseOptions({ apiProvider: AiProvider.OpenAI, apiKey: 'cli-key' }, { cwdArg: testDir }, testDir, {
+      OPENAI_API_KEY: 'provider-env-key',
+    })
+
+    expect(result.providerConfig.providers[AiProvider.OpenAI]?.apiKey).toBe('cli-key')
+  })
+
   test('handles multiple config files', async () => {
     const configPath1 = join(testDir, 'config1.yml')
     const configPath2 = join(testDir, 'config2.yml')

@@ -171,6 +171,7 @@ export type PlanWorkflowInput = {
 export type PlanWorkflowOutput = {
   plan: string
   files: { path: string; content: string }[]
+  reason?: string
 }
 
 type State = 'Generating' | 'Reviewing' | 'Done'
@@ -188,6 +189,7 @@ export const planWorkflow: WorkflowFn<
   let currentTask = input.task
   let plan = fileContent || ''
   let files: { path: string; content: string }[] = []
+  let reason: string | undefined
   let userFeedback: string | undefined
   let messages: JsonModelMessage[] | undefined
   let state: State = 'Generating'
@@ -227,6 +229,7 @@ export const planWorkflow: WorkflowFn<
           messages = planResult.messages
 
           if (planResult.reason) {
+            reason = planResult.reason
             logger.info(planResult.reason)
             return 'Done'
           }
@@ -345,5 +348,5 @@ export const planWorkflow: WorkflowFn<
     })
   }
 
-  return { plan, files }
+  return { plan, files, ...(reason ? { reason } : {}) }
 }

@@ -121,6 +121,37 @@ function createExecutionContext(_logger: Logger) {
   }
 }
 
+export function formatPlanResult(result: unknown): string {
+  if (!result || typeof result !== 'object') {
+    return 'Error: Plan workflow returned no result'
+  }
+
+  if ('success' in result && result.success === false) {
+    const reason = 'reason' in result && typeof result.reason === 'string' ? result.reason : 'Plan workflow failed'
+    return `Error: ${reason}`
+  }
+
+  const planResult = result as {
+    plan?: string
+    reason?: string
+    files?: Array<{ path: string }>
+  }
+
+  if (planResult.reason) {
+    return `No plan needed: ${planResult.reason}`
+  }
+
+  const sections: string[] = []
+  if (planResult.plan) {
+    sections.push(planResult.plan)
+  }
+  if (planResult.files?.length) {
+    sections.push(`Files to modify:\n${planResult.files.map(({ path }) => `  - ${path}`).join('\n')}`)
+  }
+
+  return sections.join('\n\n') || 'Plan created successfully'
+}
+
 /**
  * Helper to run a workflow and format the result for MCP response
  *
@@ -180,6 +211,7 @@ async function executeWorkflow<TInput>(
         model: finalModel,
         parameters: finalParameters,
       },
+      errorResult: 'structured',
     })
 
     if (!result) {
@@ -345,44 +377,10 @@ export function createPolkaCodesServerTools(logger: Logger): McpServerTool[] {
                 model: finalModel,
                 parameters: finalParameters,
               },
+              errorResult: 'structured',
             },
           )
-
-          // Format plan result for MCP response
-          if (result && typeof result === 'object') {
-            const planResult = result as {
-              plan?: string
-              question?: unknown
-              reason?: string
-              files?: Array<{ path: string; content: string }>
-            }
-
-            // If there's a question, return it
-            if (planResult.question) {
-              return JSON.stringify({ question: planResult.question }, null, 2)
-            }
-
-            // If there's a reason (no plan needed), return it
-            if (planResult.reason) {
-              return `No plan needed: ${planResult.reason}`
-            }
-
-            // Format the plan result with file paths only (no content)
-            let output = ''
-            if (planResult.plan) {
-              output += planResult.plan
-            }
-
-            if (planResult.files && planResult.files.length > 0) {
-              output += '\n\nFiles to modify:\n'
-              // Extract only the file paths, not the content
-              output += planResult.files.map((f) => `  - ${f.path}`).join('\n')
-            }
-
-            return output || 'Plan created successfully'
-          }
-
-          return 'Plan created successfully'
+          return formatPlanResult(result)
         } catch (error) {
           logger.error(`Error executing plan workflow:`, error)
           return `Error: ${error instanceof Error ? error.message : String(error)}`

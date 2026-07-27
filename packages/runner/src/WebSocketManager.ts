@@ -44,6 +44,7 @@ export class WebSocketManager {
   private readonly INITIAL_RECONNECT_DELAY_MS = 1000 // 1 second
 
   #queuedMessages: WsOutgoingMessage[] = []
+  #reconnectTimer?: ReturnType<typeof setTimeout>
 
   constructor(private options: WebSocketManagerOptions) {}
 
@@ -51,6 +52,10 @@ export class WebSocketManager {
    * Connects to the WebSocket server and sets up event handlers
    */
   public connect(): void {
+    if (this.#reconnectTimer) {
+      clearTimeout(this.#reconnectTimer)
+      this.#reconnectTimer = undefined
+    }
     const apiUrl = normalizeRunnerApiUrl(this.options.apiUrl)
     const taskId = encodeURIComponent(this.options.taskId)
 
@@ -103,6 +108,10 @@ export class WebSocketManager {
    */
   public close(expected = true): void {
     this.isClosingExpected = expected
+    if (this.#reconnectTimer) {
+      clearTimeout(this.#reconnectTimer)
+      this.#reconnectTimer = undefined
+    }
     if (this.ws) {
       this.ws.close()
       this.ws = null
@@ -129,11 +138,12 @@ export class WebSocketManager {
       this.options.onOpen()
     }
 
-    // Process queued messages
-    for (const message of this.#queuedMessages) {
+    // Clear first so messages are safely re-queued if the connection closes while flushing.
+    const queuedMessages = this.#queuedMessages
+    this.#queuedMessages = []
+    for (const message of queuedMessages) {
       this.sendMessage(message)
     }
-    this.#queuedMessages = []
   }
 
   private async handleMessage(data: WebSocket.Data): Promise<void> {
@@ -186,7 +196,10 @@ export class WebSocketManager {
         )} seconds... (Attempt ${this.reconnectAttempts}/${this.MAX_RECONNECT_ATTEMPTS})`,
       )
 
-      setTimeout(() => this.connect(), delay)
+      this.#reconnectTimer = setTimeout(() => {
+        this.#reconnectTimer = undefined
+        this.connect()
+      }, delay)
     } else {
       console.error(`Maximum reconnection attempts (${this.MAX_RECONNECT_ATTEMPTS}) reached. Exiting.`)
       process.exit(1)

@@ -221,6 +221,30 @@ ${JSON.stringify({ plan: generatedPlan })}
     expect(result.plan).toBe(generatedPlan)
   })
 
+  test('returns the reason when no plan is needed', async () => {
+    const reason = 'The requested change is already implemented.'
+    const { context, assert: proxyAssert } = createTestProxy([
+      {
+        toolName: 'generateText',
+        args: expect.anything(),
+        returnValue: [
+          {
+            role: 'assistant',
+            content: JSON.stringify({ reason }),
+          },
+        ],
+      },
+    ])
+    assert = proxyAssert
+
+    const result = await planWorkflow(
+      { task: 'Plan an already completed change', mode: 'noninteractive', interactive: false, additionalTools: {} },
+      context,
+    )
+
+    expect(result).toEqual({ plan: '', files: [], reason })
+  })
+
   test('should run in confirm mode and be accepted', async () => {
     const task = 'Create a new component'
     const generatedPlan = '1. Create the component file.'
