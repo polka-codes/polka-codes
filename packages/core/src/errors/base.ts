@@ -43,7 +43,7 @@ export class BaseError extends Error {
  * // NOT: "at new createErrorClass" or "at new BaseError"
  * ```
  */
-export function createErrorClass<T extends any[]>(name: string, template: (args: T) => string): new (...args: T) => BaseError {
+export function createErrorClass<T extends unknown[]>(name: string, template: (args: T) => string): new (...args: T) => BaseError {
   // Create a named class for proper stack traces
   class NamedError extends BaseError {
     constructor(...args: T) {
@@ -61,5 +61,5 @@ export function createErrorClass<T extends any[]>(name: string, template: (args:
   // Set the name property explicitly for stack traces
   Object.defineProperty(NamedError, 'name', { value: name })
 
-  return NamedError as any
+  return NamedError
 }
