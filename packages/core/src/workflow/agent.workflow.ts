@@ -58,6 +58,10 @@ function toErrorDetails(error: unknown): ExitReasonErrorDetails {
   return details
 }
 
+function isToolInput(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
 export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentToolRegistry> = async (input, { step, tools, logger }) => {
   const event = (name: string, event: TaskEvent) => step(name, () => tools.taskEvent(event))
 
@@ -205,7 +209,7 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
       await event(`event-tool-use-${toolCall.toolName}-${toolCall.toolCallId}`, {
         kind: TaskEventKind.ToolUse,
         tool: toolCall.toolName,
-        params: toolCall.input as Record<string, any>,
+        params: isToolInput(toolCall.input) ? toolCall.input : {},
       })
       let toolResponse: ToolResponse
       try {

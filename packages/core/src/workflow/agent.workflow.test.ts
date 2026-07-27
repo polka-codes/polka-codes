@@ -434,6 +434,11 @@ test('should continue after a recoverable error-text tool failure', async () => 
     message: 'The search failed because the regex is invalid.',
   })
   expect(events).toContainEqual({
+    kind: TaskEventKind.ToolUse,
+    tool: 'searchFiles',
+    params: { path: './src' },
+  })
+  expect(events).toContainEqual({
     kind: TaskEventKind.ToolError,
     tool: 'searchFiles',
     error: {

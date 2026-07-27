@@ -62,7 +62,7 @@ export interface TaskEventText extends TaskEventBase {
 export interface TaskEventToolUse extends TaskEventBase {
   kind: TaskEventKind.ToolUse
   tool: string
-  params: Record<string, any>
+  params: Record<string, unknown>
 }
 
 export interface TaskEventToolResult extends TaskEventBase {
