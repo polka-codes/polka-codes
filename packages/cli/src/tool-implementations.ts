@@ -5,6 +5,7 @@ import { confirm as inquirerConfirm, select as inquirerSelect } from '@inquirer/
 import type {
   AgentToolRegistry,
   AgentWorkflowInput,
+  BaseWorkflowContext,
   ScriptConfig,
   SkillContext,
   TodoItem,
@@ -110,18 +111,17 @@ type ToolCall<TTools extends ToolRegistry> = {
   }
 }[keyof TTools]
 
+type ToolCallWorkflowContext = Partial<BaseWorkflowContext<AgentToolRegistry>> & {
+  logger: BaseWorkflowContext<AgentToolRegistry>['logger']
+}
+
 type ToolCallContext = {
   parameters: AgentContextParameters
   model: LanguageModelV4
   agentCallback?: TaskEventCallback
-  // ToolProvider and WorkflowContext use `any` here because:
-  // 1. ToolProvider has optional properties that MemoryProvider/TodoProvider require
-  // 2. WorkflowContext generic causes complex type constraints with CliToolRegistry
-  // 3. These are internal implementation details validated at runtime
-  // TODO: Refactor to use proper discriminated unions for provider types
   toolProvider: ToolProvider
   yes?: boolean
-  workflowContext: any // WorkflowContext<CliToolRegistry> with proper generic constraints
+  workflowContext: ToolCallWorkflowContext
 }
 
 export type { ToolCallContext }
@@ -521,7 +521,11 @@ async function updateTodoItem(input: UpdateTodoItemInput, context: ToolCallConte
 }
 
 async function runAgent(input: AgentWorkflowInput, context: ToolCallContext) {
-  return await agentWorkflow(input, context.workflowContext)
+  const { logger, step, tools } = context.workflowContext
+  if (!step || !tools) {
+    throw new Error('Nested agent workflow context is not available')
+  }
+  return await agentWorkflow(input, { logger, step, tools })
 }
 
 /**
