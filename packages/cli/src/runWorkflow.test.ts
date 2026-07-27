@@ -2,7 +2,7 @@ import { describe, expect, mock, test } from 'bun:test'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import type { UsageMeter } from '@polka-codes/core'
+import type { ToolResponse, ToolSignature, UsageMeter } from '@polka-codes/core'
 import {
   AuthenticationError,
   ConfigurationError,
@@ -98,6 +98,64 @@ describe('toStructuredWorkflowFailure', () => {
 })
 
 describe('runWorkflow progress events', () => {
+  test('exposes connected MCP tools through the workflow context', async () => {
+    const logger = createTestLogger()
+    const testDir = await mkdtemp(join(tmpdir(), 'polka-run-workflow-mcp-'))
+    const configPath = join(testDir, '.polkacodes.yml')
+    const serverScript = `
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
+import { z } from 'zod'
+
+const server = new McpServer({ name: 'workflow-test', version: '1.0.0' })
+server.registerTool(
+  'echo',
+  { description: 'Echo text', inputSchema: { text: z.string() } },
+  async ({ text }) => ({ content: [{ type: 'text', text }] }),
+)
+await server.connect(new StdioServerTransport())
+`
+
+    await writeFile(
+      configPath,
+      `mcpServers:
+  fixture:
+    command: ${JSON.stringify(process.execPath)}
+    args:
+      - --cwd
+      - ${JSON.stringify(join(process.cwd(), 'packages/cli'))}
+      - -e
+      - ${JSON.stringify(serverScript)}
+`,
+    )
+
+    type FixtureTools = {
+      'fixture/echo': ToolSignature<{ text: string }, ToolResponse>
+    }
+
+    try {
+      const result = await runWorkflow<Record<never, never>, ToolResponse, FixtureTools>(
+        async (_input, { tools }) => tools['fixture/echo']({ text: 'hello from MCP' }),
+        {},
+        {
+          commandName: 'code',
+          context: {
+            apiProvider: 'deepseek',
+            model: 'deepseek-chat',
+            apiKey: 'test-key',
+            config: configPath,
+            silent: true,
+          },
+          logger,
+        },
+      )
+
+      expect(result).toEqual({ success: true, message: { type: 'text', value: 'hello from MCP' } })
+    } finally {
+      await rm(testDir, { recursive: true, force: true })
+    }
+  })
+
   test('emits workflow lifecycle events for successful object results', async () => {
     const events: WorkflowProgressEvent[] = []
     const logger = createTestLogger()

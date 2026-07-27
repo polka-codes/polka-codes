@@ -460,7 +460,7 @@ export async function runWorkflow<TInput, TOutput, TTools extends ToolRegistry>(
         }
         // Return undefined for unknown tools to support existence checks
         // Only return a function for known tools (including local tools and MCP tools)
-        if (!toolHandlers.has(prop) && !localToolNames.includes(prop)) {
+        if (!toolHandlers.has(prop) && !localToolNames.includes(prop) && !mcpManager.hasTool(prop)) {
           return undefined
         }
         return (async (input: unknown) => {
