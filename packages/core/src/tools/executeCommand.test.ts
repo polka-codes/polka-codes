@@ -13,7 +13,7 @@ describe('executeCommand', () => {
 
     const result = await executeCommand.handler(mockProvider, {
       command: 'echo test',
-      requiresApproval: 'false',
+      requiresApproval: false,
     })
 
     expect(result).toMatchSnapshot()
@@ -26,7 +26,7 @@ describe('executeCommand', () => {
 
     const result = executeCommand.handler(mockProvider, {
       command: 'invalid-command',
-      requiresApproval: 'false',
+      requiresApproval: false,
     })
 
     // The handler now catches the error and returns a ToolResponseError
@@ -45,7 +45,7 @@ describe('executeCommand', () => {
 
     const result = await executeCommand.handler(mockProvider, {
       command: 'invalid-command',
-      requiresApproval: 'false',
+      requiresApproval: false,
     })
 
     expect(result).toMatchSnapshot()
@@ -62,10 +62,24 @@ describe('executeCommand', () => {
 
     const result = await executeCommand.handler(mockProvider, {
       command: 'rm -rf /',
-      requiresApproval: 'true',
+      requiresApproval: true,
     })
 
     expect(result).toMatchSnapshot()
     expect(mockProvider.executeCommand).toHaveBeenCalledWith('rm -rf /', true)
+  })
+
+  it('should default approval requests to false', async () => {
+    let approvalRequested: boolean | undefined
+    const provider = {
+      executeCommand: async (_command: string, requiresApproval: boolean) => {
+        approvalRequested = requiresApproval
+        return { stdout: '', stderr: '', exitCode: 0 }
+      },
+    }
+
+    await executeCommand.handler(provider, { command: 'pwd' })
+
+    expect(approvalRequested).toBe(false)
   })
 })

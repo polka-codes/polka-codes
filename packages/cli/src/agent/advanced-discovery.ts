@@ -141,7 +141,7 @@ export class AdvancedDiscoveryStrategies {
               files: [file],
               workflow: 'code',
               workflowInput: {
-                prompt: `Refactor the long function in ${path.relative(context.workingDir, file)} to improve readability and maintainability. Break it down into smaller, well-named functions.`,
+                prompt: `Inspect the long function in ${path.relative(context.workingDir, file)}. Confirm that its length causes a concrete readability or maintenance problem. If so, make the smallest behavior-preserving refactor and verify it; otherwise explain why no change is needed.`,
                 files: [file],
               },
               retryCount: 0,
@@ -171,7 +171,7 @@ export class AdvancedDiscoveryStrategies {
               files: [file],
               workflow: 'code',
               workflowInput: {
-                prompt: `Reduce nesting complexity in ${path.relative(context.workingDir, file)} at line ${i + 1}. Extract complex conditions into well-named functions or use guard clauses.`,
+                prompt: `Inspect the nesting in ${path.relative(context.workingDir, file)} near line ${i + 1}. Confirm that it obscures behavior or creates a maintenance risk. If so, simplify it without changing behavior and verify the result; otherwise explain why no change is needed.`,
                 files: [file],
               },
               retryCount: 0,
@@ -227,10 +227,7 @@ export class AdvancedDiscoveryStrategies {
               files: [],
               workflow: 'code',
               workflowInput: {
-                prompt: `Create a README.md file for the ${path.relative(context.workingDir, dir)} directory. Include:
-1. Purpose of this module
-2. Key exports and their usage
-3. Important patterns or conventions`,
+                prompt: `Check whether ${path.relative(context.workingDir, dir)} has a real audience-facing documentation gap not covered elsewhere. If it does, add concise documentation for the module purpose, public entry points, and non-obvious conventions; otherwise explain why no new README is needed.`,
                 files: [],
               },
               retryCount: 0,
@@ -263,11 +260,7 @@ export class AdvancedDiscoveryStrategies {
               files: [file],
               workflow: 'code',
               workflowInput: {
-                prompt: `Add comprehensive JSDoc documentation for "${exportName}" in ${relativePath}. Include:
-1. Description of what it does
-2. @param tags for parameters with types and descriptions
-3. @returns tag with type and description
-4. @example tag if appropriate`,
+                prompt: `Check whether the public export "${exportName}" in ${relativePath} needs documentation under this repository's conventions. If useful, document only behavior, constraints, and non-obvious usage that types do not already express; otherwise explain why no change is needed.`,
                 files: [file],
               },
               retryCount: 0,
@@ -355,8 +348,8 @@ export class AdvancedDiscoveryStrategies {
             tasks.push({
               id: AdvancedDiscoveryStrategies.generateId('security'),
               type: 'security',
-              title: `Fix security issue: ${pattern.type} in ${relativePath}:${lineNumber}`,
-              description: `${pattern.type} detected at line ${lineNumber}. This could be a security vulnerability.`,
+              title: `Verify ${pattern.type} in ${relativePath}:${lineNumber}`,
+              description: `A heuristic matched ${pattern.type} at line ${lineNumber}; inspect its context and reachability before changing code.`,
               priority: pattern.severity,
               complexity: 'medium',
               dependencies: [],
@@ -365,7 +358,7 @@ export class AdvancedDiscoveryStrategies {
               files: [file],
               workflow: 'code',
               workflowInput: {
-                prompt: `Fix the security issue "${pattern.type}" in ${relativePath} at line ${lineNumber}. Use secure alternatives and ensure secrets are stored in environment variables.`,
+                prompt: `Investigate the potential ${pattern.type} in ${relativePath} at line ${lineNumber}. Confirm whether it is exploitable or exposes a real credential. If confirmed, make the smallest secure change and add focused verification; otherwise explain why no change is needed. Do not print credential values.`,
                 files: [file],
               },
               retryCount: 0,
@@ -388,8 +381,8 @@ export class AdvancedDiscoveryStrategies {
             tasks.push({
               id: AdvancedDiscoveryStrategies.generateId('security-env'),
               type: 'security',
-              title: `Remove .env file from git: ${envFile}`,
-              description: `.env file is tracked in git. This may expose sensitive credentials. Add to .gitignore and use .env.example instead.`,
+              title: `Review tracked environment file: ${envFile}`,
+              description: `The environment file is tracked. Verify whether it contains secrets or is an intentional safe template.`,
               priority: Priority.CRITICAL,
               complexity: 'low',
               dependencies: [],
@@ -398,10 +391,7 @@ export class AdvancedDiscoveryStrategies {
               files: [envFile],
               workflow: 'code',
               workflowInput: {
-                prompt: `Remove ${envFile} from git tracking:
-1. Add ${envFile} to .gitignore
-2. Create ${envFile}.example with placeholder values
-3. Run 'git rm --cached ${envFile}'`,
+                prompt: `Inspect ${envFile} without exposing its values. If it contains secrets, replace tracked content with a safe template, prevent future secret commits, and report any credential rotation or history cleanup that requires external action. If it is already a safe template, explain why no change is needed.`,
                 files: ['.gitignore'],
               },
               retryCount: 0,
@@ -479,11 +469,7 @@ export class AdvancedDiscoveryStrategies {
               files: [file],
               workflow: 'code',
               workflowInput: {
-                prompt: `Create comprehensive tests for ${relativePath}. Include:
-1. Unit tests for exported functions
-2. Edge case testing
-3. Error handling tests
-4. Integration tests if appropriate`,
+                prompt: `Check whether ${relativePath} is already covered indirectly or by differently named tests. If a meaningful behavior gap remains, add focused tests for its public behavior and relevant failure cases, following existing test conventions.`,
                 files: [file],
               },
               retryCount: 0,
@@ -540,7 +526,7 @@ export class AdvancedDiscoveryStrategies {
               files: [file],
               workflow: 'code',
               workflowInput: {
-                prompt: `Optimize the loop in ${relativePath} at line ${lineNumber}. Use batch operations, eager loading, or parallel execution to avoid N+1 performance issues.`,
+                prompt: `Investigate the possible N+1 behavior in ${relativePath} at line ${lineNumber}. Confirm the calls occur per iteration and are performance-relevant. If confirmed, make the smallest behavior-preserving improvement and verify it; otherwise explain why no change is needed.`,
                 files: [file],
               },
               retryCount: 0,

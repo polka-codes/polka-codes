@@ -82,31 +82,25 @@ export function extractTargetCommit(range?: string, pr?: number): string | null 
 export function createGitReadFile(commit: string): FullToolInfo {
   const toolInfo = {
     name: 'readFile',
-    description: `Read file contents from git commit ${commit}. Use this to examine files at the specific commit being reviewed.`,
-    parameters: z
-      .object({
-        path: z
-          .preprocess((val) => {
+    description: `Read one or more text files as they existed at git commit ${commit}.`,
+    parameters: z.object({
+      path: z
+        .preprocess(
+          (val) => {
             if (!val) return []
             const values = Array.isArray(val) ? val : [val]
             // NOTE: Comma-splitting matches standard readFile tool behavior
             // This prevents reading files with commas in their names, but allows
             // reading multiple files in a single call (e.g., "file1.ts,file2.ts")
-            return values.flatMap((i) => (typeof i === 'string' ? i.split(',') : [])).filter((s) => s.length > 0)
-          }, z.array(z.string()))
-          .describe('The path of the file to read (relative to git root)')
-          .meta({ usageValue: 'Comma separated paths here' }),
-      })
-      .meta({
-        examples: [
-          {
-            description: 'Read the contents of a file at the commit',
-            input: {
-              path: 'src/main.ts',
-            },
+            return values
+              .flatMap((i) => (typeof i === 'string' ? i.split(',') : []))
+              .map((value) => value.trim())
+              .filter((value) => value.length > 0)
           },
-        ],
-      }),
+          z.array(z.string().min(1)).min(1),
+        )
+        .describe('Repository-relative path or comma-separated paths.'),
+    }),
   } as const satisfies ToolInfo
 
   const handler: ToolHandler<typeof toolInfo, CommandProvider> = async (provider, args) => {
@@ -159,19 +153,10 @@ export function createGitReadFile(commit: string): FullToolInfo {
 export function createGitListFiles(commit: string): FullToolInfo {
   const toolInfo = {
     name: 'listFiles',
-    description: `List files and directories at git commit ${commit}. Shows the file tree as it existed at that commit.`,
+    description: `List repository-relative files as they existed at git commit ${commit}.`,
     parameters: z.object({
-      path: z
-        .string()
-        .optional()
-        .describe('The path of the directory to list (relative to git root). Default is root.')
-        .meta({ usageValue: 'Directory path here (optional)' }),
-      maxCount: z.coerce
-        .number()
-        .optional()
-        .default(2000)
-        .describe('The maximum number of files to list. Default to 2000')
-        .meta({ usageValue: 'Maximum number of files to list (optional)' }),
+      path: z.string().trim().min(1).optional().describe('Repository-relative directory. Defaults to the repository root.'),
+      maxCount: z.coerce.number().int().positive().default(2000).describe('Maximum number of paths to return.'),
     }),
   } as const satisfies ToolInfo
 
@@ -239,9 +224,9 @@ ${displayFiles.join('\n')}
 export function createGitReadBinaryFile(commit: string): FullToolInfo {
   const toolInfo = {
     name: 'readBinaryFile',
-    description: `Read binary file contents from git commit ${commit} and return as base64 encoded data. Use for images, fonts, and other binary files.`,
+    description: `Read one binary file as it existed at git commit ${commit}.`,
     parameters: z.object({
-      url: z.string().describe('The URL or path of the binary file to read (relative to git root)'),
+      url: z.string().trim().min(1).describe('Repository-relative file path; URLs are not supported.'),
     }),
   } as const satisfies ToolInfo
 
@@ -274,15 +259,9 @@ export function createGitReadBinaryFile(commit: string): FullToolInfo {
       }
     }
 
-    // File exists, read it and encode as base64
-    // Use git show piped to base64 for cross-platform binary file handling
-    // Windows: requires Git Bash or Unix tools in PATH (base64 command)
-    // Unix: always available
-    // Note: On Windows without Git Bash, this will fail with a clear error
+    // File exists, read it and encode as base64.
     const isWindows = process.platform === 'win32'
-    const command = isWindows
-      ? `cmd /c "git show ${quotedCommit}:${quotedUrl} | base64 -w 0"`
-      : `sh -c "git show ${quotedCommit}:${quotedUrl} | base64"`
+    const command = isWindows ? `git show ${quotedCommit}:${quotedUrl} | base64 -w 0` : `git show ${quotedCommit}:${quotedUrl} | base64`
 
     const result = await provider.executeCommand(command, false)
 
@@ -357,20 +336,10 @@ export function createGitAwareTools(commit: string): {
 export function createGitAwareDiff(commit: string): FullToolInfo {
   const toolInfo = {
     name: 'git_diff',
-    description: `Get the git diff for commit ${commit}. Shows the exact changes introduced by this specific commit. Use this to inspect what changed in each file. Always specify a file path.`,
+    description: `Show changes to one file introduced by git commit ${commit}.`,
     parameters: z.object({
-      file: z
-        .string()
-        .describe('Get the diff for a specific file within the commit. This parameter is required.')
-        .meta({ usageValue: 'File path here (required)' }),
-      contextLines: z.coerce
-        .number()
-        .int()
-        .min(0)
-        .optional()
-        .default(5)
-        .describe('Number of context lines to include around changes.')
-        .meta({ usageValue: 'Context lines count (optional)' }),
+      file: z.string().trim().min(1).describe('Repository-relative file path.'),
+      contextLines: z.coerce.number().int().min(0).default(5).describe('Context lines around each change.'),
       includeLineNumbers: z
         .preprocess((val) => {
           if (typeof val === 'string') {
@@ -379,9 +348,8 @@ export function createGitAwareDiff(commit: string): FullToolInfo {
             if (lower === 'true') return true
           }
           return val
-        }, z.boolean().optional().default(true))
-        .describe('Annotate the diff with line numbers for additions and deletions.')
-        .meta({ usageValue: 'true or false (optional)' }),
+        }, z.boolean().default(true))
+        .describe('Annotate additions and deletions with line numbers.'),
     }),
   } as const satisfies ToolInfo
 
@@ -401,15 +369,8 @@ export function createGitAwareDiff(commit: string): FullToolInfo {
     // SECURITY: Use quoteForShell to prevent command injection
     const quotedCommit = quoteForShell(commit)
 
-    // Build git show command to display commit diff
-    // Use --no-color and -U for context lines
-    let command = `git show --no-color --format= -U${contextLines} ${quotedCommit}`
-
-    // If a specific file is requested, filter the output
-    if (file) {
-      const quotedFile = quoteForShell(file)
-      command = `git show --no-color --format= -U${contextLines} ${quotedCommit} -- ${quotedFile}`
-    }
+    const quotedFile = quoteForShell(file)
+    const command = `git show --no-color --format= -U${contextLines} ${quotedCommit} -- ${quotedFile}`
 
     try {
       const result = await provider.executeCommand(command, false)
@@ -434,7 +395,7 @@ export function createGitAwareDiff(commit: string): FullToolInfo {
           success: true,
           message: {
             type: 'text',
-            value: `<diff file="${file ?? 'all'}">\n${diffOutput}\n</diff>`,
+            value: `<diff file="${file}">\n${diffOutput}\n</diff>`,
           },
         }
       }

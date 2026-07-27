@@ -13,12 +13,12 @@ export type TodoItem = z.infer<typeof TodoItemSchema>
 
 export const UpdateTodoItemInputSchema = z
   .object({
-    operation: z.enum(['add', 'update']),
-    id: z.string().nullish(),
-    parentId: z.string().nullish(),
-    title: z.string().nullish(),
-    description: z.string().nullish(),
-    status: TodoStatus.nullish(),
+    operation: z.enum(['add', 'update']).describe('Add a new item or update an existing item.'),
+    id: z.string().min(1).nullish().describe('Item id. Required for update.'),
+    parentId: z.string().min(1).nullish().describe('Parent id for a child item.'),
+    title: z.string().min(1).nullish().describe('Item title. Required for add.'),
+    description: z.string().nullish().describe('Item details.'),
+    status: TodoStatus.nullish().describe('Item status.'),
   })
   .superRefine((data, ctx) => {
     if (data.operation === 'add') {

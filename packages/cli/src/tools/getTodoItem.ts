@@ -3,9 +3,9 @@ import { z } from 'zod'
 
 export const toolInfo = {
   name: 'getTodoItem',
-  description: 'Get a to-do item by its ID.',
+  description: 'Get one to-do item and its direct children by id.',
   parameters: z.object({
-    id: z.string().describe('The ID of the to-do item.'),
+    id: z.string().min(1).describe('To-do item id.'),
   }),
 } as const satisfies ToolInfo
 

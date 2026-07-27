@@ -54,7 +54,7 @@ import {
 } from './errors'
 import { McpError } from './mcp/errors'
 import type { McpManager } from './mcp/manager'
-import { createSkillContext, generateSkillsSystemPrompt } from './skillIntegration'
+import { createSkillContext } from './skillIntegration'
 
 export type AgentContextParameters = {
   providerOptions?: Record<string, any>
@@ -708,16 +708,4 @@ export async function toolCall(toolCall: ToolCall<CliToolRegistry>, context: Too
  */
 export async function initializeSkillContext(cwd?: string): Promise<SkillContext> {
   return await createSkillContext(cwd)
-}
-
-/**
- * Generate system prompt with available skills
- */
-export function generateSystemPromptWithSkills(basePrompt: string, skillContext?: SkillContext): string {
-  if (!skillContext || skillContext.availableSkills.length === 0) {
-    return basePrompt
-  }
-
-  const skillsPrompt = generateSkillsSystemPrompt(skillContext.availableSkills)
-  return basePrompt + skillsPrompt
 }

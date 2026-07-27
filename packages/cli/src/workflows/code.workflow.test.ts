@@ -336,7 +336,7 @@ describe('codeWorkflow', () => {
     expect(result).toEqual({ success: true, summaries: ['Implemented planned task.'] })
     expect(harness.generateTextInputs).toHaveLength(2)
     expect(harness.infoMessages.join('\n')).toContain('Phase 1: Creating implementation plan')
-    expect(textParts(harness.generateTextInputs[1]).join('\n')).toContain('## Your Plan')
+    expect(textParts(harness.generateTextInputs[1]).join('\n')).toContain('<plan>')
   })
 
   test('planned mode preserves configured rules in the planning context', async () => {

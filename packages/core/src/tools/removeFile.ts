@@ -5,21 +5,10 @@ import { createProviderError } from './utils.js'
 
 export const toolInfo = {
   name: 'removeFile',
-  description: 'Remove a file at the specified path.',
-  parameters: z
-    .object({
-      path: z.string().describe('The path of the file to remove').meta({ usageValue: 'File path here' }),
-    })
-    .meta({
-      examples: [
-        {
-          description: 'Request to remove a file',
-          input: {
-            path: 'src/main.js',
-          },
-        },
-      ],
-    }),
+  description: 'Permanently delete one file or symbolic link. This does not remove directories.',
+  parameters: z.object({
+    path: z.string().min(1).describe('File path relative to the current working directory.'),
+  }),
 } as const satisfies ToolInfo
 
 export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (provider, args) => {

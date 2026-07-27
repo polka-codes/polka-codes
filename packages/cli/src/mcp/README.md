@@ -28,11 +28,7 @@ This directory contains the implementation of MCP (Model Context Protocol) suppo
    - Tool registration and routing
    - Connection lifecycle management
 
-5. **`tools.ts`** - AI SDK integration
-   - `createMcpTools()`: Converts MCP tools to AI SDK ToolSet format
-   - Tool name mapping and execution
-
-6. **`errors.ts`** - MCP-specific error classes
+5. **`errors.ts`** - MCP-specific error classes
    - `McpConnectionError`: Server connection failures
    - `McpTimeoutError`: Request timeouts
    - `McpProtocolError`: Protocol violations

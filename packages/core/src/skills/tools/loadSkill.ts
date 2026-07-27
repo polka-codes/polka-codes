@@ -7,7 +7,7 @@ import { validateSkillReferences, validateSkillSecurity } from '../validation.js
  * Tool input parameters for loading a skill
  */
 export const LoadSkillInputSchema = z.object({
-  skillName: z.string().describe('The name of the skill to load'),
+  skillName: z.string().describe('Exact skill name returned by listSkills.'),
 })
 
 export type LoadSkillInput = z.infer<typeof LoadSkillInputSchema>
@@ -95,7 +95,7 @@ export async function loadSkill(input: LoadSkillInput, context: SkillContext): P
  */
 export const loadSkillToolInfo = {
   name: 'loadSkill',
-  description: 'Load a skill by name to access its instructions and bundled resources for a specialized task.',
+  description: 'Load exact skill instructions and list its bundled files.',
   parameters: LoadSkillInputSchema,
   returns: LoadSkillOutputSchema,
 } as const

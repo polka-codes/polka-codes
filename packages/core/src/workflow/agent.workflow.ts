@@ -65,6 +65,11 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
 
   const systemPrompt = 'systemPrompt' in input ? input.systemPrompt : undefined
   const messages: JsonModelMessage[] = 'systemPrompt' in input ? [{ role: 'system', content: input.systemPrompt }] : [...input.messages]
+  const outputSchemaInstruction = input.outputSchema
+    ? `When finished, return one JSON value matching this schema:\n${JSON.stringify(
+        toJSONSchema(input.outputSchema, { io: 'input', unrepresentable: 'any' }),
+      )}`
+    : undefined
 
   await event('start-task', { kind: TaskEventKind.StartTask, systemPrompt: systemPrompt ?? '' })
 
@@ -96,6 +101,9 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
     try {
       assistantMessage = await step(`agent-round-${i}`, async () => {
         const systemMessages = messages.filter((message) => message.role === 'system').map((message) => message.content)
+        if (outputSchemaInstruction) {
+          systemMessages.push(outputSchemaInstruction)
+        }
         const requestSystemPrompt = systemMessages.length > 0 ? systemMessages.join('\n\n') : undefined
         const requestMessages = requestSystemPrompt ? messages.filter((message) => message.role !== 'system') : messages
 
@@ -155,14 +163,14 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
 
       const parsed = parseJsonFromMarkdown(textContent)
       if (!parsed.success) {
-        const errorMessage = `Failed to parse JSON from markdown. Error: ${parsed.error}. Please correct the output. It MUST be in valid JSON format.`
+        const errorMessage = `Invalid JSON: ${parsed.error}\nReturn corrected JSON only.`
         nextMessage = [{ role: 'user', content: errorMessage }]
         continue
       }
 
       const validated = input.outputSchema.safeParse(parsed.data)
       if (!validated.success) {
-        const errorMessage = `Output validation failed. Error: ${z.prettifyError(validated.error)}. Please correct the output.`
+        const errorMessage = `JSON does not match the required schema:\n${z.prettifyError(validated.error)}\nReturn corrected JSON only.`
         nextMessage = [{ role: 'user', content: errorMessage }]
         continue
       }

@@ -1,28 +1,16 @@
 scripts:
   format:
-    command: bun fix
+    command: bun run fix
     description: Format code and fix lint issues
   check:
-    command: bun check
+    command: bun run check
     description: Typecheck and lint
   test:
     command: bun test
     description: Run tests
   build:
-    command: bun build
+    command: bun run build
     description: Build packages
-commands:
-  review:
-    rules:
-      - repo: polka-codes/prompts
-        path: review/preamble.md
-        branch: master
-      - repo: polka-codes/prompts
-        path: review/javascript.md
-        branch: master
-      - repo: polka-codes/prompts
-        path: review/typescript.md
-        branch: master
 excludeFiles:
   - .env
   - .env.*

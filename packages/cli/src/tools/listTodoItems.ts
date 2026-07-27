@@ -4,10 +4,10 @@ import { z } from 'zod'
 
 export const toolInfo = {
   name: 'listTodoItems',
-  description: 'List all to-do items, sorted by id. If an id is provided, it lists all sub-items for that id. Can be filtered by status.',
+  description: 'List root to-do items, or the direct children of one item, optionally filtered by status.',
   parameters: z.object({
-    id: z.string().nullish(),
-    status: TodoStatus.nullish(),
+    id: z.string().min(1).nullish().describe('Parent item id. Omit to list root items.'),
+    status: TodoStatus.nullish().describe('Status filter.'),
   }),
 } as const satisfies ToolInfo
 

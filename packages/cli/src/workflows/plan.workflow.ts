@@ -79,10 +79,7 @@ async function createPlan(input: CreatePlanInput, context: BaseWorkflowContext<C
       }
 
       return {
-        systemPrompt: getPlannerSystemPrompt(
-          loadRules,
-          stateless ? { includeMemory: false, includeProjectInstructions: false } : undefined,
-        ),
+        systemPrompt: getPlannerSystemPrompt(loadRules, stateless ? { includeProjectInstructions: false } : undefined),
         userMessage: [{ role: 'user', content: userContent }],
       } as const
     }

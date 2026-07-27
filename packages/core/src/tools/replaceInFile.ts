@@ -6,33 +6,15 @@ import { replaceInFile } from './utils/replaceInFile.js'
 
 export const toolInfo = {
   name: 'replaceInFile',
-  description: `Make targeted edits to an existing file with SEARCH/REPLACE blocks. Use writeToFile for new files or full-file replacement. Read the file first when you do not know the exact text to replace.
-
-SEARCH/REPLACE format:
-<<<<<<< SEARCH
-[exact content to find]
-=======
-[new content to replace with]
->>>>>>> REPLACE
-
-Rules:
-1. SEARCH content must match EXACTLY (character-for-character including whitespace)
-2. Each block replaces only first occurrence
-3. Include just enough lines for uniqueness (not too many, not too few)
-4. Keep blocks concise (don't include long unchanged sections)
-5. List blocks in order they appear in file
-6. Use multiple blocks for multiple independent changes
-
-Special operations:
-- Move code: Two blocks (delete from original + insert at new location)
-- Delete code: Empty REPLACE section`,
-  parameters: z
-    .object({
-      path: z.string().describe('The path of the file to modify').meta({ usageValue: 'File path here' }),
-      diff: z
-        .string()
-        .describe(
-          `One or more SEARCH/REPLACE blocks following this format:
+  description:
+    'Apply targeted SEARCH/REPLACE edits to an existing text file. Copy unique SEARCH text from a recent read; use writeToFile to create or fully replace a file.',
+  parameters: z.object({
+    path: z.string().min(1).describe('File path relative to the current working directory.'),
+    diff: z
+      .string()
+      .min(1)
+      .describe(
+        `One or more SEARCH/REPLACE blocks:
 \`\`\`
 <<<<<<< SEARCH
 [exact content to find]
@@ -40,90 +22,9 @@ Special operations:
 [new content to replace with]
 >>>>>>> REPLACE
 \`\`\`
-SEARCH must match file content exactly, including whitespace and complete lines. Each block replaces the first matching occurrence. Use concise unique blocks, list multiple blocks in file order, and leave REPLACE empty to delete text.`,
-        )
-        .meta({ usageValue: 'Search and replace blocks here' }),
-    })
-    .meta({
-      examples: [
-        {
-          description: 'Request to replace sections of content in a file',
-          input: {
-            path: 'src/main.js',
-            diff: `<<<<<<< SEARCH
-import React from 'react';
-=======
-import React, { useState } from 'react';
->>>>>>> REPLACE
-
-<<<<<<< SEARCH
-function handleSubmit() {
-  saveData();
-  setLoading(false);
-}
-
-=======
->>>>>>> REPLACE
-
-<<<<<<< SEARCH
-return (
-  <div>
-=======
-function handleSubmit() {
-  saveData();
-  setLoading(false);
-}
-
-return (
-  <div>
->>>>>>> REPLACE`,
-          },
-        },
-        {
-          description: 'Request to perform a simple, single-line replacement',
-          input: {
-            path: 'src/config.js',
-            diff: `<<<<<<< SEARCH
-const API_URL = 'https://api.example.com';
-=======
-const API_URL = 'https://api.staging.example.com';
->>>>>>> REPLACE`,
-          },
-        },
-        {
-          description: 'Request to add a new function to a file',
-          input: {
-            path: 'src/utils.js',
-            diff: `<<<<<<< SEARCH
-function helperA() {
-  // ...
-}
-=======
-function helperA() {
-  // ...
-}
-
-function newHelper() {
-  // implementation
-}
->>>>>>> REPLACE`,
-          },
-        },
-        {
-          description: 'Request to delete a block of code from a file',
-          input: {
-            path: 'src/app.js',
-            diff: `<<<<<<< SEARCH
-function oldFeature() {
-  // This is no longer needed
-}
-
-=======
->>>>>>> REPLACE`,
-          },
-        },
-      ],
-    }),
+Each SEARCH must match exactly once, including whitespace. Blocks are applied in order; an empty REPLACE deletes text. The file is written only if every block matches.`,
+      ),
+  }),
 } as const satisfies ToolInfo
 
 export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (provider, args) => {
@@ -165,31 +66,17 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
 
     const result = replaceInFile(fileContent, diff)
 
-    if (result.status === 'no_diff_applied') {
+    if (result.status !== 'all_diff_applied') {
       return {
         success: false,
         message: {
           type: 'error-text',
-          value: `<replace_in_file_result path="${path}" status="failed" message="Unable to apply changes">
-  <file_content path="${path}">${fileContent}</file_content>
-</replace_in_file_result>`,
+          value: `<replace_in_file_result path="${path}" status="failed" message="No changes written because one or more SEARCH blocks did not match exactly once" />`,
         },
       }
     }
 
     await provider.writeFile(path, result.content)
-
-    if (result.status === 'some_diff_applied') {
-      return {
-        success: true,
-        message: {
-          type: 'text',
-          value: `<replace_in_file_result path="${path}" status="some_diff_applied" applied_count="${result.appliedCount}" total_count="${result.totalCount}">
-  <file_content path="${path}">${result.content}</file_content>
-</replace_in_file_result>`,
-        },
-      }
-    }
 
     return {
       success: true,
@@ -203,7 +90,7 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
       success: false,
       message: {
         type: 'error-text',
-        value: `Invalid arguments for replaceInFile: ${error}`,
+        value: `Unable to replace in file: ${error instanceof Error ? error.message : String(error)}`,
       },
     }
   }

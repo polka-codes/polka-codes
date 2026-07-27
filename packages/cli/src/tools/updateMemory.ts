@@ -3,12 +3,12 @@ import { z } from 'zod'
 
 export const toolInfo = {
   name: 'updateMemory',
-  description: 'Append, replace, or remove content in a memory topic. Use memory only for durable context that should be available later.',
+  description: 'Append, replace, or remove durable context in a memory topic.',
   parameters: z
     .object({
-      operation: z.enum(['append', 'replace', 'remove']).describe('The operation to perform.'),
-      topic: z.string().nullish().describe('The topic to update in memory. Defaults to ":default:".'),
-      content: z.string().nullish().describe('The content for append or replace operations. Must be omitted for remove operation.'),
+      operation: z.enum(['append', 'replace', 'remove']).describe('Memory operation.'),
+      topic: z.string().min(1).nullish().describe('Topic name. Omit for ":default:".'),
+      content: z.string().nullish().describe('Content for append or replace. Omit for remove.'),
     })
     .superRefine((data, ctx) => {
       if (data.operation === 'append' || data.operation === 'replace') {

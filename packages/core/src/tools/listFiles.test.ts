@@ -9,8 +9,8 @@ describe('listFiles', () => {
 
     const result = await listFiles.handler(mockProvider, {
       path: 'src',
-      maxCount: '10',
-      includeIgnored: 'false',
+      maxCount: 10,
+      includeIgnored: false,
     })
 
     expect(result).toMatchSnapshot()
@@ -23,8 +23,8 @@ describe('listFiles', () => {
 
     const result = await listFiles.handler(mockProvider, {
       path: 'src',
-      recursive: 'false',
-      includeIgnored: 'false',
+      recursive: false,
+      includeIgnored: false,
     })
 
     expect(result).toMatchSnapshot()
@@ -37,7 +37,7 @@ describe('listFiles', () => {
 
     const result = await listFiles.handler(mockProvider, {
       path: 'empty-dir',
-      includeIgnored: 'false',
+      includeIgnored: false,
     })
 
     expect(result).toMatchSnapshot()
@@ -50,8 +50,8 @@ describe('listFiles', () => {
 
     const result = await listFiles.handler(mockProvider, {
       path: 'src',
-      maxCount: '1',
-      includeIgnored: 'false',
+      maxCount: 1,
+      includeIgnored: false,
     })
 
     expect(result).toMatchSnapshot()
@@ -64,10 +64,24 @@ describe('listFiles', () => {
 
     const result = listFiles.handler(mockProvider, {
       path: 'invalid-path',
-      includeIgnored: 'false',
+      includeIgnored: false,
     })
 
     await expect(result).rejects.toMatchSnapshot()
     expect(mockProvider.listFiles).toHaveBeenCalledWith('invalid-path', true, 2000, false)
+  })
+
+  it('should reject invalid maximum counts before calling the provider', async () => {
+    let callCount = 0
+    const provider = {
+      listFiles: async (): Promise<[string[], boolean]> => {
+        callCount++
+        return [[], false]
+      },
+    }
+
+    await expect(listFiles.handler(provider, { path: 'src', maxCount: 0 })).rejects.toThrow()
+
+    expect(callCount).toBe(0)
   })
 })

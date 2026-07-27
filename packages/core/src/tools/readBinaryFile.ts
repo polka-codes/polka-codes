@@ -4,9 +4,9 @@ import type { FilesystemProvider } from './provider.js'
 
 export const toolInfo = {
   name: 'readBinaryFile',
-  description: 'Read a non-text file, such as an image or PDF, from a URL or local file:// path.',
+  description: 'Read an image, PDF, or other binary file from an HTTP(S) URL or project-local file:// URL and return it as an attachment.',
   parameters: z.object({
-    url: z.string().describe('The URL or local path of the file to read.'),
+    url: z.union([z.httpUrl(), z.string().regex(/^file:\/\/.+/)]).describe('HTTP(S) URL or project-local file:// URL to read.'),
   }),
 } as const satisfies ToolInfo
 
@@ -16,7 +16,7 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
       success: false,
       message: {
         type: 'error-text',
-        value: 'Not possible to fetch files. Abort.',
+        value: 'Binary file reading is not supported by the current provider.',
       },
     }
   }
@@ -45,7 +45,7 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
       success: false,
       message: {
         type: 'error-text',
-        value: `Error fetching file from ${url}: ${errorMessage}`,
+        value: `Error reading file from ${url}: ${errorMessage}`,
       },
     }
   }

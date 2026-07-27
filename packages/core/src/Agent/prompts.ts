@@ -5,15 +5,6 @@ const NO_REASON_PROVIDED = 'No reason provided'
 
 export const responsePrompts = {
   errorInvokeTool: (tool: string, error: unknown) => `An error occurred while invoking the tool "${tool}": ${error}`,
-  requireUseTool: `Error: No tool use detected. You MUST use a tool before proceeding.
-e.g. <tool_tool_name>tool_name</tool_tool_name>
-
-Ensure the opening and closing tags are correctly nested and closed, and that you are using the correct tool name.
-Avoid unnecessary text or symbols before or after the tool use.
-Avoid unnecessary escape characters or special characters.
-`,
-  requireUseToolNative: `Error: No tool use detected. You MUST use a tool before proceeding.
-`,
   toolResults: (tool: string, result: ToolResponseResult): Array<TextPart | ImagePart | FilePart> => {
     switch (result.type) {
       case 'text':

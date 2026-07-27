@@ -13,6 +13,8 @@ function endTaskEvents(events: TaskEvent[]): TaskEventEndTask[] {
   return events.filter((event): event is TaskEventEndTask => event.kind === TaskEventKind.EndTask)
 }
 
+const OUTPUT_SCHEMA_PROMPT_PREFIX = 'When finished, return one JSON value matching this schema:\n'
+
 const createMockTool = (name: string, description: string, handler: (args: any) => Promise<ToolResponse>): FullToolInfo => ({
   name,
   description,
@@ -126,6 +128,132 @@ test('should pass system prompts separately from ordinary model messages', async
   expect(capturedInput.messages.some((message) => message.role === 'system')).toBe(false)
   expect(capturedInput.messages).toEqual([{ role: 'user', content: 'Do the thing.' }])
   expect(result.messages[0]).toEqual({ role: 'system', content: 'Use the dedicated system channel.' })
+})
+
+test('should include the output schema once in every model request across tool round trips', async () => {
+  const mockResponses: ModelMessage[] = [
+    {
+      role: 'assistant',
+      content: [
+        {
+          type: 'tool-call',
+          toolCallId: 'schema-tool-call',
+          toolName: 'listFiles',
+          input: { path: './src' },
+        },
+      ],
+    },
+    {
+      role: 'assistant',
+      content: JSON.stringify({ answer: 'Done.' }),
+    },
+  ]
+  const requests: Array<Pick<AgentToolRegistry['generateText']['input'], 'messages' | 'systemPrompt'>> = []
+
+  const tools: WorkflowTools<AgentToolRegistry> = {
+    generateText: async (input) => {
+      requests.push({ messages: [...input.messages], systemPrompt: input.systemPrompt })
+      return [mockResponses.shift()!] as JsonResponseMessage[]
+    },
+    invokeTool: async ({ toolName, input }) => {
+      if (toolName !== listFilesTool.name) {
+        throw new Error(`Tool not found: ${toolName}`)
+      }
+      return await listFilesTool.handler({} as any, input as any)
+    },
+    taskEvent: async () => {},
+  }
+
+  const result = await agentWorkflow(
+    {
+      userMessage: [{ role: 'user', content: 'Inspect the project, then answer.' }],
+      tools: [listFilesTool],
+      systemPrompt: 'Use the dedicated system channel.',
+      outputSchema: z.object({ answer: z.string() }),
+    },
+    createContext(tools),
+  )
+
+  expect(result).toMatchObject({ type: 'Exit', object: { answer: 'Done.' } })
+  expect(requests).toHaveLength(2)
+  expect(requests[0].systemPrompt).toBe(requests[1].systemPrompt)
+
+  const requestSystemPrompt = requests[0].systemPrompt
+  if (!requestSystemPrompt) {
+    throw new Error('Expected a system prompt')
+  }
+  expect(requestSystemPrompt.split(OUTPUT_SCHEMA_PROMPT_PREFIX)).toHaveLength(2)
+
+  const advertisedSchema = JSON.parse(requestSystemPrompt.split(OUTPUT_SCHEMA_PROMPT_PREFIX)[1])
+  expect(advertisedSchema).toMatchObject({
+    type: 'object',
+    properties: { answer: { type: 'string' } },
+    required: ['answer'],
+  })
+  expect(requests.every((request) => request.messages.every((message) => message.role !== 'system'))).toBe(true)
+})
+
+test('should preserve JSON repair and Zod validation for transformed output schemas', async () => {
+  const outputSchema = z.object({
+    answer: z.string().transform((value) => value.length),
+    generatedAt: z.coerce.date().describe('ISO timestamp'),
+  })
+  const mockResponses: ModelMessage[] = [
+    { role: 'assistant', content: 'not JSON' },
+    { role: 'assistant', content: JSON.stringify({ answer: 42, generatedAt: '2026-07-27T00:00:00.000Z' }) },
+    { role: 'assistant', content: JSON.stringify({ answer: 'Done', generatedAt: '2026-07-27T00:00:00.000Z' }) },
+  ]
+  const requests: Array<Pick<AgentToolRegistry['generateText']['input'], 'messages' | 'systemPrompt'>> = []
+
+  const tools: WorkflowTools<AgentToolRegistry> = {
+    generateText: async (input) => {
+      requests.push({ messages: [...input.messages], systemPrompt: input.systemPrompt })
+      return [mockResponses.shift()!] as JsonResponseMessage[]
+    },
+    invokeTool: async () => {
+      throw new Error('No tools should be invoked')
+    },
+    taskEvent: async () => {},
+  }
+
+  const result = await agentWorkflow(
+    {
+      userMessage: [{ role: 'user', content: 'Return a structured result.' }],
+      tools: [],
+      systemPrompt: 'Use the dedicated system channel.',
+      outputSchema,
+    },
+    createContext(tools),
+  )
+
+  expect(requests).toHaveLength(3)
+  expect(requests[1].messages.at(-1)).toMatchObject({
+    role: 'user',
+    content: expect.stringContaining('Invalid JSON:'),
+  })
+  expect(requests[2].messages.at(-1)).toMatchObject({
+    role: 'user',
+    content: expect.stringContaining('JSON does not match the required schema:'),
+  })
+  expect(requests.every((request) => request.systemPrompt === requests[0].systemPrompt)).toBe(true)
+
+  const requestSystemPrompt = requests[0].systemPrompt
+  if (!requestSystemPrompt) {
+    throw new Error('Expected a system prompt')
+  }
+  const advertisedSchema = JSON.parse(requestSystemPrompt.split(OUTPUT_SCHEMA_PROMPT_PREFIX)[1])
+  expect(advertisedSchema).toMatchObject({
+    properties: {
+      answer: { type: 'string' },
+      generatedAt: { description: 'ISO timestamp' },
+    },
+  })
+
+  if (result.type !== 'Exit') {
+    throw new Error(`Expected Exit, received ${result.type}`)
+  }
+  expect(result.object).toMatchObject({ answer: 4 })
+  expect(result.object.generatedAt).toBeInstanceOf(Date)
 })
 
 test('should fail if maxToolRoundTrips is exceeded', async () => {

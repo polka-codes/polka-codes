@@ -1,4 +1,6 @@
 import { describe, expect, it, mock } from 'bun:test'
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { pathToFileURL } from 'node:url'
 import { getProvider } from './provider'
 
 describe('getProvider', () => {
@@ -48,6 +50,23 @@ describe('getProvider', () => {
         stderr: 'err',
         exitCode: 0,
       })
+    })
+  })
+
+  describe('readBinaryFile', () => {
+    it('rejects sibling paths that share the project path prefix', async () => {
+      const outsideDirectory = await mkdtemp(`${process.cwd()}-outside-`)
+      const outsideFile = `${outsideDirectory}/image.bin`
+      await writeFile(outsideFile, 'outside')
+
+      try {
+        const provider = getProvider()
+        if (!provider.readBinaryFile) throw new Error('readBinaryFile not defined')
+
+        await expect(provider.readBinaryFile(pathToFileURL(outsideFile).href)).rejects.toThrow('is restricted')
+      } finally {
+        await rm(outsideDirectory, { recursive: true, force: true })
+      }
     })
   })
 })

@@ -5,31 +5,16 @@ import { createProviderError, preprocessBoolean } from './utils.js'
 
 export const toolInfo = {
   name: 'executeCommand',
-  description:
-    'Run one CLI command from the project-root working directory. Use for builds, tests, diagnostics, and other command-line tasks. After calling executeCommand, wait for the command result before deciding on the next action.',
+  description: 'Run a shell command in the project root and return its exit code and output. Use for builds, tests, and diagnostics.',
 
-  parameters: z
-    .object({
-      command: z.string().describe('The exact command to run for the current OS.').meta({ usageValue: 'your-command-here' }),
-      requiresApproval: z
-        .preprocess(preprocessBoolean, z.boolean())
-        .default(false)
-        .describe(
-          'Set to `true` for commands that install/uninstall software, modify or delete files, change system settings, perform network operations, or have other side effects. Use `false` for safe, read-only, or purely local development actions (e.g., listing files, make a build, running tests).',
-        )
-        .meta({ usageValue: 'true | false' }),
-    })
-    .meta({
-      examples: [
-        {
-          description: 'Make a build',
-          input: {
-            command: 'npm run build',
-            requiresApproval: 'false',
-          },
-        },
-      ],
-    }),
+  parameters: z.object({
+    command: z.string().min(1).describe('Exact command to run for the current operating system.'),
+    requiresApproval: z
+      .preprocess(preprocessBoolean, z.boolean().optional())
+      .describe(
+        'Request provider approval before execution. Use true for destructive or external side effects. Providers without approval support may ignore this request.',
+      ),
+  }),
 } as const satisfies ToolInfo
 
 export const handler: ToolHandler<typeof toolInfo, CommandProvider> = async (provider, args) => {
@@ -39,7 +24,7 @@ export const handler: ToolHandler<typeof toolInfo, CommandProvider> = async (pro
 
   const { command, requiresApproval } = toolInfo.parameters.parse(args)
   try {
-    const result = await provider.executeCommand(command, requiresApproval)
+    const result = await provider.executeCommand(command, requiresApproval ?? false)
     let message = `<command>${command}</command>
 <command_exit_code>${result.exitCode}</command_exit_code>
 `

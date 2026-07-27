@@ -41,38 +41,36 @@ export const commitWorkflow: WorkflowFn<CommitWorkflowInput & BaseWorkflowInput,
       }
     })
     hasStaged = true
-  } else if (!hasStaged) {
-    if (input.all) {
+  } else if (input.all) {
+    await step('stage-all', async () => {
+      const result = await tools.executeCommand({ command: 'git', args: ['add', '.'] })
+      if (result.exitCode !== 0) {
+        throw new Error(`Failed to stage files: ${result.stderr}`)
+      }
+    })
+    hasStaged = true
+  } else if (!hasStaged && hasUnstaged) {
+    let confirmed = false
+    if (input.interactive !== false) {
+      confirmed = await tools.confirm({
+        message: 'No staged files found. Stage all files?',
+        default: false,
+      })
+    }
+
+    if (confirmed) {
       await step('stage-all', async () => {
-        const result = await tools.executeCommand({ command: 'git', args: ['add', '.'] })
+        const result = await tools.executeCommand({
+          command: 'git',
+          args: ['add', '.'],
+        })
         if (result.exitCode !== 0) {
           throw new Error(`Failed to stage files: ${result.stderr}`)
         }
       })
       hasStaged = true
-    } else if (hasUnstaged) {
-      let confirmed = false
-      if (input.interactive !== false) {
-        confirmed = await tools.confirm({
-          message: 'No staged files found. Stage all files?',
-          default: false,
-        })
-      }
-
-      if (confirmed) {
-        await step('stage-all', async () => {
-          const result = await tools.executeCommand({
-            command: 'git',
-            args: ['add', '.'],
-          })
-          if (result.exitCode !== 0) {
-            throw new Error(`Failed to stage files: ${result.stderr}`)
-          }
-        })
-        hasStaged = true
-      } else if (input.interactive !== false) {
-        throw new UserCancelledError()
-      }
+    } else if (input.interactive !== false) {
+      throw new UserCancelledError()
     }
   }
 

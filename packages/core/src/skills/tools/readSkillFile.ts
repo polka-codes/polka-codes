@@ -6,8 +6,8 @@ import type { SkillContext } from '../types.js'
  * Tool input parameters for reading a skill file
  */
 export const ReadSkillFileInputSchema = z.object({
-  skillName: z.string().describe('The name of the skill'),
-  filename: z.string().describe('The name of the file to read (e.g., "reference.md", "scripts/helper.py")'),
+  skillName: z.string().describe('Exact skill name.'),
+  filename: z.string().describe('Exact file name listed by loadSkill.'),
 })
 
 export type ReadSkillFileInput = z.infer<typeof ReadSkillFileInputSchema>
@@ -75,7 +75,7 @@ export async function readSkillFile(input: ReadSkillFileInput, context: SkillCon
  */
 export const readSkillFileToolInfo = {
   name: 'readSkillFile',
-  description: 'Read a supporting file bundled with a skill, such as reference documentation, examples, scripts, or templates.',
+  description: 'Read a text file listed by loadSkill.',
   parameters: ReadSkillFileInputSchema,
   returns: ReadSkillFileOutputSchema,
 } as const

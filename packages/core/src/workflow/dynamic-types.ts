@@ -64,8 +64,7 @@ export const WorkflowStepDefinitionSchema = z.object({
   output: z.string().nullish(),
   expected_outcome: z.string().nullish(),
   /**
-   * Optional JSON schema or other metadata for future structured outputs.
-   * Not interpreted by core today.
+   * Optional JSON Schema used to guide and validate the step output.
    */
   outputSchema: z.unknown().nullish(),
   /**

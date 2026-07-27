@@ -75,8 +75,8 @@ async function getMemoryStore(logger: Logger, projectPath: string): Promise<{ st
  * Can be added to any tool input to allow per-call provider/model overrides
  */
 const providerOverrideSchema = z.object({
-  provider: z.string().optional().describe('Override the AI provider for this call (e.g., "anthropic", "deepseek", "openai")'),
-  model: z.string().optional().describe('Override the model for this call (e.g., "claude-sonnet-4-5", "deepseek-chat")'),
+  provider: z.string().trim().min(1).optional().describe('AI provider override for this call.'),
+  model: z.string().trim().min(1).optional().describe('Model override for this call.'),
   parameters: z.record(z.string(), z.unknown()).optional().describe('Override model parameters for this call'),
 })
 
@@ -252,17 +252,10 @@ export function createPolkaCodesServerTools(logger: Logger): McpServerTool[] {
   return [
     {
       name: 'code',
-      description: `Execute a coding task with repo-aware analysis and targeted file changes.
-
-Best for implementing features, fixing bugs, refactoring, adding tests, or modernizing code.
-
-Parameters:
-- task (required): What to implement or change
-- provider (optional): Override the AI provider for this call
-- model (optional): Override the model for this call
-- parameters (optional): Override model parameters for this call`,
+      description:
+        'Implement a requested code change with repository-aware edits and checks. Use fix instead when the primary task is to diagnose failing validation.',
       inputSchema: z.object({
-        task: z.string().describe('The coding task to execute - be specific about what needs to be done'),
+        task: z.string().trim().min(1).describe('Requested change and acceptance criteria.'),
         ...providerOverrideSchema.shape,
       }),
       handler: async (args: Record<string, unknown>, toolContext: McpServerToolContext) => {
@@ -276,28 +269,20 @@ Parameters:
     },
     {
       name: 'review',
-      description: `Review code changes and return structured, actionable findings with file and line references.
-
-Can review local changes by default, a git range, selected files, or a pull request number.
-
-Parameters:
-- pr (optional): Pull request number to review
-- range (optional): Git range to review (e.g., HEAD~3..HEAD, origin/main..HEAD). When omitted, reviews staged and unstaged local changes
-- files (optional): Specific files to review
-- context (optional): Additional context about the changes (purpose, constraints, technical background)
-- provider (optional): Override the AI provider for this call
-- model (optional): Override the model for this call
-- parameters (optional): Override model parameters for this call`,
-      inputSchema: z.object({
-        pr: z.number().optional().describe('Pull request number to review (optional)'),
-        range: z.string().optional().describe('Git range to review (e.g., HEAD~3..HEAD, origin/main..HEAD) (optional)'),
-        files: z.array(z.string()).optional().describe('Specific files to review (optional)'),
-        context: z
-          .string()
-          .optional()
-          .describe('Additional context for the review - explains the purpose of changes, constraints, or areas of focus (optional)'),
-        ...providerOverrideSchema.shape,
-      }),
+      description:
+        'Review existing changes without modifying files. Defaults to local changes; optionally target a pull request, git range, or file subset.',
+      inputSchema: z
+        .object({
+          pr: z.number().int().positive().optional().describe('Pull request number.'),
+          range: z.string().trim().min(1).optional().describe('Git range, such as "origin/main...HEAD".'),
+          files: z.array(z.string().trim().min(1)).min(1).optional().describe('Repository-relative files to review.'),
+          context: z.string().trim().min(1).optional().describe('Purpose, constraints, or requested review focus.'),
+          ...providerOverrideSchema.shape,
+        })
+        .refine((input) => input.pr === undefined || input.range === undefined, {
+          message: 'Specify either pr or range, not both.',
+          path: ['range'],
+        }),
       handler: async (args: Record<string, unknown>, toolContext: McpServerToolContext) => {
         const { pr, range, files, context } = args as { pr?: number; range?: string; files?: string[]; context?: string }
         const providerOverride = extractProviderOverride(args)
@@ -316,17 +301,9 @@ Parameters:
     },
     {
       name: 'plan',
-      description: `Create an implementation-ready plan after inspecting the current codebase.
-
-Best used for complex features, architecture changes, large refactorings, or migration strategies.
-
-Parameters:
-- task (required): Requirements, constraints, and goals to plan
-- provider (optional): Override the AI provider for this call
-- model (optional): Override the model for this call
-- parameters (optional): Override model parameters for this call`,
+      description: 'Inspect the repository and produce an implementation-ready plan without modifying files.',
       inputSchema: z.object({
-        task: z.string().describe('The task or feature to plan - provide details about requirements, constraints, and goals'),
+        task: z.string().trim().min(1).describe('Goal, requirements, and constraints to plan.'),
         ...providerOverrideSchema.shape,
       }),
       handler: async (args: Record<string, unknown>, toolContext: McpServerToolContext) => {
@@ -414,15 +391,10 @@ Parameters:
     },
     {
       name: 'fix',
-      description: `Diagnose and fix a failure, bug, or test issue with targeted code changes and verification.
-
-Parameters:
-- task (required): Description of the issue - include error messages, stack traces, or describe what's not working
-- provider (optional): Override the AI provider for this call
-- model (optional): Override the model for this call
-- parameters (optional): Override model parameters for this call`,
+      description:
+        'Diagnose failing project checks, apply targeted edits, and rerun validation. Use code instead for features or refactors without a known failure.',
       inputSchema: z.object({
-        task: z.string().describe("Description of the issue to fix - include error messages, stack traces, or describe what's not working"),
+        task: z.string().trim().min(1).describe('Failure, expected behavior, and relevant error details.'),
         ...providerOverrideSchema.shape,
       }),
       handler: async (args: Record<string, unknown>, toolContext: McpServerToolContext) => {
@@ -436,23 +408,14 @@ Parameters:
     },
     {
       name: 'commit',
-      description: `Create a git commit. Optionally stage files first; if no message is provided, generate one from the staged diff.
-
-Parameters:
-- message (optional): Custom commit message. If not provided, AI analyzes changes and generates an appropriate message following best practices
-- stageFiles (optional): Files to stage before committing. Use "all" to stage all files, or provide an array of specific file paths to stage
-- provider (optional): Override the AI provider for this call
-- model (optional): Override the model for this call
-- parameters (optional): Override model parameters for this call`,
+      description:
+        'Create a commit from staged changes, optionally staging all or selected files first. The message input provides context for generating the commit message.',
       inputSchema: z.object({
-        message: z
-          .string()
-          .optional()
-          .describe('Optional commit message - if not provided, AI will analyze changes and generate an appropriate message'),
+        message: z.string().trim().min(1).optional().describe('Context for generating the commit message; not the final message.'),
         stageFiles: z
-          .union([z.literal('all'), z.array(z.string())])
+          .union([z.literal('all'), z.array(z.string().trim().min(1)).min(1)])
           .optional()
-          .describe('Files to stage: "all" for all files, or array of specific file paths'),
+          .describe('Use "all" to stage all changes, or provide repository-relative files to stage.'),
         ...providerOverrideSchema.shape,
       }),
       handler: async (args: Record<string, unknown>, toolContext: McpServerToolContext) => {
@@ -493,16 +456,10 @@ Parameters:
     },
     {
       name: 'memory_read',
-      description: `Read content from a project-scoped memory topic.
-
-Parameters:
-- project (required): Absolute path to the project directory. This isolates memory to a specific project.
-- topic (optional): The memory topic to read from. Defaults to ":default:" which stores general conversation context.
-
-Returns the content stored in the specified topic, or a message indicating the topic is empty.`,
+      description: 'Read one project-scoped memory topic. Defaults to ":default:".',
       inputSchema: z.object({
-        project: z.string().describe('Absolute path to the project directory (e.g., "/home/user/my-project")'),
-        topic: z.string().optional().describe('The memory topic to read from (defaults to ":default:")'),
+        project: z.string().trim().min(1).describe('Absolute project directory path.'),
+        topic: z.string().trim().min(1).default(':default:').describe('Memory topic name.'),
       }),
       handler: async (args: Record<string, unknown>, toolContext: McpServerToolContext) => {
         const { project, topic = ':default:' } = args as { project: string; topic?: string }
@@ -526,55 +483,36 @@ Returns the content stored in the specified topic, or a message indicating the t
     },
     {
       name: 'memory_update',
-      description: `Append, replace, or remove content in project-scoped memory.
-
-Parameters:
-- project (required): Absolute path to the project directory. This isolates memory to a specific project.
-- operation (required): The operation to perform. Use "append" to add content, "replace" to overwrite all content, or "remove" to delete the topic.
-- topics (optional): Array of topic names for batch operations. Content can be an array (one per topic) or a single string (broadcast to all topics).
-- topic (optional): Single memory topic to update. Defaults to ":default:".
-- content (optional): The content to store (required for "append" and "replace" operations). For batch operations with topics, provide an array of the same length or a single string to broadcast.
-
-Supports wildcards in topic name for remove operation:
-- Use "*" to remove all topics (e.g., topic ":plan:*")
-- Use pattern matching like ":plan:*" to remove all topics starting with ":plan:"
-
-Returns a message confirming the operation performed.`,
+      description: 'Append, replace, or remove project-scoped memory. Single-topic removal supports * and ? wildcard patterns.',
       inputSchema: z
         .object({
-          project: z.string().describe('Absolute path to the project directory (e.g., "/home/user/my-project")'),
-          operation: z
-            .enum(['append', 'replace', 'remove'])
-            .describe('The operation: append (add content), replace (overwrite), or remove (delete topic(s))'),
-          topic: z.string().optional().describe('Single memory topic to update (defaults to ":default:")'),
-          topics: z.array(z.string()).min(1).optional().describe('Array of topics for batch operations'),
+          project: z.string().trim().min(1).describe('Absolute project directory path.'),
+          operation: z.enum(['append', 'replace', 'remove']).describe('Memory operation.'),
+          topic: z.string().trim().min(1).optional().describe('Single topic or removal pattern. Defaults to ":default:".'),
+          topics: z.array(z.string().trim().min(1)).min(1).optional().describe('Topics for a batch operation.'),
           content: z
             .union([z.string(), z.array(z.string())])
             .optional()
-            .describe('Content to store (string or array for batch). Required for append/replace, omitted for remove'),
+            .describe('Content for append or replace. A string is broadcast across batch topics.'),
         })
-        .refine(
-          (data) => {
-            // If topics array is provided with content, validate the combination
-            if (data.topics && data.content) {
-              // Array content must match topics length
-              if (Array.isArray(data.content)) {
-                return data.content.length === data.topics.length
-              }
-              // String content can be broadcast to any number of topics
-              return true
+        .superRefine((data, context) => {
+          if (data.topic !== undefined && data.topics !== undefined) {
+            context.addIssue({ code: 'custom', message: 'Specify either topic or topics, not both.', path: ['topics'] })
+          }
+          if (data.operation === 'remove' && data.content !== undefined) {
+            context.addIssue({ code: 'custom', message: 'Remove does not accept content.', path: ['content'] })
+          }
+          if (data.operation !== 'remove' && data.content === undefined) {
+            context.addIssue({ code: 'custom', message: `${data.operation} requires content.`, path: ['content'] })
+          }
+          if (Array.isArray(data.content)) {
+            if (!data.topics) {
+              context.addIssue({ code: 'custom', message: 'Array content requires topics.', path: ['content'] })
+            } else if (data.content.length !== data.topics.length) {
+              context.addIssue({ code: 'custom', message: 'Array content must match the number of topics.', path: ['content'] })
             }
-            // If topics is not provided (single topic mode), content must be a string or undefined
-            if (!data.topics && data.content !== undefined && Array.isArray(data.content)) {
-              return false
-            }
-            return true
-          },
-          {
-            message:
-              'For single topic mode, content must be a string. For batch mode with topics array, content can be an array (same length) or a string (broadcast to all topics)',
-          },
-        ),
+          }
+        }),
       handler: async (args: Record<string, unknown>, toolContext: McpServerToolContext) => {
         const {
           project,
@@ -599,23 +537,11 @@ Returns a message confirming the operation performed.`,
         }
 
         try {
-          // Handle batch operations
           if (topics) {
-            // Validate content requirement for batch
-            if (operation === 'remove' && contentInput !== undefined) {
-              return 'Error: Content must not be provided for "remove" operation'
-            }
-            if ((operation === 'append' || operation === 'replace') && contentInput === undefined) {
-              return 'Error: Content is required for "append" and "replace" operations'
-            }
-
-            const contents = Array.isArray(contentInput) ? contentInput : topics.map(() => contentInput as string)
-
-            // Build batch operations
             const operations = topics.map((topic, index) => ({
               operation,
               name: topic,
-              content: operation === 'remove' ? undefined : contents[index],
+              ...(operation === 'remove' ? {} : { content: Array.isArray(contentInput) ? contentInput[index] : contentInput }),
             }))
 
             await memoryStore.store.batchUpdateMemory(operations)
@@ -649,14 +575,6 @@ Returns a message confirming the operation performed.`,
             return `Removed ${matchingTopics.length} topic(s) matching pattern "${topic}":\n${matchingTopics.join('\n')}`
           }
 
-          // Handle single topic operation
-          if ((operation === 'append' || operation === 'replace') && contentInput === undefined) {
-            return 'Error: Content is required for "append" and "replace" operations'
-          }
-          if (operation === 'remove' && contentInput !== undefined) {
-            return 'Error: Content must not be provided for "remove" operation'
-          }
-
           const content = typeof contentInput === 'string' ? contentInput : undefined
           await memoryStore.store.updateMemory(operation, topic, content)
 
@@ -674,14 +592,10 @@ Returns a message confirming the operation performed.`,
     },
     {
       name: 'memory_list',
-      description: `List memory topics that have content for a project.
-
-Parameters:
-- project (required): Absolute path to the project directory. This isolates memory to a specific project.
-- pattern (optional): Filter topics by wildcard pattern (e.g., ":plan:*" for all plan topics)`,
+      description: 'List project-scoped memory topics, optionally filtered by a wildcard pattern.',
       inputSchema: z.object({
-        project: z.string().describe('Absolute path to the project directory (e.g., "/home/user/my-project")'),
-        pattern: z.string().optional().describe('Filter topics by wildcard pattern (e.g., ":plan:*")'),
+        project: z.string().trim().min(1).describe('Absolute project directory path.'),
+        pattern: z.string().trim().min(1).optional().describe('Wildcard topic pattern, such as ":plan:*".'),
       }),
       handler: async (args: Record<string, unknown>, toolContext: McpServerToolContext) => {
         const { project, pattern } = args as { project: string; pattern?: string }
@@ -718,24 +632,15 @@ Parameters:
     },
     {
       name: 'memory_query',
-      description: `Query project memory by content or metadata filters.
-
-Parameters:
-- project (required): Absolute path to the project directory. This isolates memory to a specific project.
-- search (optional): Search text to find in content
-- type (optional): Filter by entry type (note, todo, plan, etc.)
-- status (optional): Filter by status (open, completed, closed, etc.)
-- priority (optional): Filter by priority (null, low, medium, high)
-- tags (optional): Filter by tags
-- operation (optional): Query operation - "select" returns entries, "count" returns count`,
+      description: 'Select or count project-scoped memory entries using content or metadata filters.',
       inputSchema: z.object({
-        project: z.string().describe('Absolute path to the project directory (e.g., "/home/user/my-project")'),
-        search: z.string().optional().describe('Search text to find in content'),
-        type: z.string().optional().describe('Filter by entry type (note, todo, plan, etc.)'),
-        status: z.string().optional().describe('Filter by status (open, completed, closed, etc.)'),
-        priority: z.string().optional().describe('Filter by priority (null, low, medium, high)'),
-        tags: z.string().optional().describe('Filter by tags'),
-        operation: z.enum(['select', 'count']).optional().describe('Query operation (defaults to "select")'),
+        project: z.string().trim().min(1).describe('Absolute project directory path.'),
+        search: z.string().trim().min(1).optional().describe('Text to find in memory content.'),
+        type: z.string().trim().min(1).optional().describe('Entry type filter.'),
+        status: z.string().trim().min(1).optional().describe('Entry status filter.'),
+        priority: z.string().trim().min(1).optional().describe('Entry priority filter.'),
+        tags: z.string().trim().min(1).optional().describe('Tag filter.'),
+        operation: z.enum(['select', 'count']).default('select').describe('Return matching entries or only their count.'),
       }),
       handler: async (args: Record<string, unknown>, toolContext: McpServerToolContext) => {
         const {

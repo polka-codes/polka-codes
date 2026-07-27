@@ -6,7 +6,7 @@ import type { SkillContext } from '../types.js'
  * Tool input parameters for listing skills
  */
 export const ListSkillsInputSchema = z.object({
-  filter: z.string().optional().describe('Optional filter string to match against skill names and descriptions'),
+  filter: z.string().optional().describe('Filter by skill name or description.'),
 })
 
 export type ListSkillsInput = z.infer<typeof ListSkillsInputSchema>
@@ -58,7 +58,7 @@ export async function listSkills(input: ListSkillsInput, context: SkillContext):
  */
 export const listSkillsToolInfo = {
   name: 'listSkills',
-  description: 'List available skills and their descriptions. Use this to discover specialized capabilities for the current task.',
+  description: 'List available skills, optionally filtered by name or description. Use when the required skill name is unknown.',
   parameters: ListSkillsInputSchema,
   returns: ListSkillsOutputSchema,
 } as const

@@ -5,54 +5,35 @@ import { createFileElement, createProviderError, preprocessBoolean } from './uti
 
 export const toolInfo = {
   name: 'readFile',
-  description: `Read one or more text files. Use this to inspect known files before editing, understand code, or read configuration. Prefer searchFiles for content searches and listFiles for directory discovery. The result includes line numbers; use offset and limit for large files.`,
-  parameters: z
-    .object({
-      path: z
-        .preprocess((val) => {
+  description:
+    'Read known text files with line numbers. Use searchFiles to locate content, listFiles to discover paths, and offset/limit for large files.',
+  parameters: z.object({
+    path: z
+      .preprocess(
+        (val) => {
           if (!val) return []
-          // Only split by comma if the input is a string
-          // If it's already an array, use it as-is to support files with commas in names
           if (Array.isArray(val)) {
-            return val.filter((s) => typeof s === 'string' && s.length > 0)
+            return val
+              .map((item) => (typeof item === 'string' ? item.trim() : item))
+              .filter((item) => typeof item !== 'string' || item.length > 0)
           }
-          // Single string input - split by comma for multiple files
-          return (val as string).split(',').filter((s) => s.length > 0)
-        }, z.array(z.string()))
-        .describe('The path of the file to read')
-        .meta({ usageValue: 'Comma separated paths here' }),
-      offset: z.number().optional().describe('Skip first N lines (for partial file reading)').meta({ usageValue: '100' }),
-      limit: z.number().optional().describe('Read at most N lines (for partial file reading)').meta({ usageValue: '50' }),
-      includeIgnored: z
-        .preprocess(preprocessBoolean, z.boolean())
-        .default(false)
-        .describe('Whether to include ignored files. Use true to include files ignored by .gitignore.')
-        .meta({ usageValue: 'true or false (optional)' }),
-    })
-    .meta({
-      examples: [
-        {
-          description: 'Request to read the contents of a file',
-          input: {
-            path: 'src/main.js',
-          },
+          if (typeof val === 'string') {
+            return val
+              .split(',')
+              .map((item) => item.trim())
+              .filter((item) => item.length > 0)
+          }
+          return val
         },
-        {
-          description: 'Request to read multiple files',
-          input: {
-            path: 'src/main.js,src/index.js',
-          },
-        },
-        {
-          description: 'Read partial file (lines 100-150)',
-          input: {
-            path: 'src/large-file.ts',
-            offset: 100,
-            limit: 50,
-          },
-        },
-      ],
-    }),
+        z.array(z.string().min(1)).min(1),
+      )
+      .describe('One or more file paths relative to the current working directory.'),
+    offset: z.number().int().nonnegative().optional().describe('Zero-based line offset; 100 starts at line 101.'),
+    limit: z.number().int().positive().optional().describe('Maximum lines to return from each file.'),
+    includeIgnored: z
+      .preprocess(preprocessBoolean, z.boolean().optional())
+      .describe('Allow files normally hidden by ignore rules. Defaults to false.'),
+  }),
 } as const satisfies ToolInfo
 
 export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (provider, args) => {
@@ -77,7 +58,7 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
   for (const path of paths) {
     const fileContent = await provider.readFile(path, includeIgnored ?? false)
 
-    if (!fileContent) {
+    if (fileContent === undefined) {
       resp.push(createFileElement('read_file_file_content', path, undefined, { file_not_found: 'true' }))
       continue
     }

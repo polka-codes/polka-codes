@@ -7,23 +7,11 @@ import type { FilesystemProvider } from './provider.js'
 
 export const toolInfo = {
   name: 'renameFile',
-  description: 'Rename or move a file from source path to target path.',
-  parameters: z
-    .object({
-      source_path: z.string().describe('The current path of the file').meta({ usageValue: 'Source file path here' }),
-      target_path: z.string().describe('The new path for the file').meta({ usageValue: 'Target file path here' }),
-    })
-    .meta({
-      examples: [
-        {
-          description: 'Request to rename a file',
-          input: {
-            source_path: 'src/old-name.js',
-            target_path: 'src/new-name.js',
-          },
-        },
-      ],
-    }),
+  description: 'Move or rename one file. The target parent directory must already exist.',
+  parameters: z.object({
+    source_path: z.string().min(1).describe('Current file path relative to the working directory.'),
+    target_path: z.string().min(1).describe('New file path relative to the working directory.'),
+  }),
 } as const satisfies ToolInfo
 
 export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (provider, args) => {

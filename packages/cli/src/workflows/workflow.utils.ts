@@ -3,7 +3,7 @@
 import { execSync } from 'node:child_process'
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
-import { type LoadedConfig, listFiles, resolveRules } from '@polka-codes/cli-shared'
+import { type LoadedConfig, resolveRules } from '@polka-codes/cli-shared'
 import type { ExitReason, FullToolInfo, Logger } from '@polka-codes/core'
 import { z } from 'zod'
 import { ApiProviderConfig } from '../ApiProviderConfig'
@@ -345,18 +345,7 @@ export async function getDefaultContext(
   commandName?: string,
 ): Promise<{ context: string; loadRules: Record<string, boolean> | undefined }> {
   const cwd = process.cwd()
-  const [files, truncated] = await listFiles(cwd, true, 2000, cwd, config?.excludeFiles ?? [])
-  const fileList = files.join('\n')
-
-  const now = new Date()
-  const formattedDate = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')}`
-
-  const contextParts: string[] = [
-    `<file_list truncated="${truncated}">
-${fileList}
-</file_list>`,
-    `<now_date>${formattedDate}</now_date>`,
-  ]
+  const contextParts: string[] = []
 
   // Load rules files based on loadRules config (defaults to all enabled for backward compatibility)
   const loadRules = config?.loadRules
@@ -394,29 +383,6 @@ ${fileList}
 
   if (rules) {
     contextParts.push(`<rules>\n${rules}\n</rules>`)
-  }
-
-  if (config?.scripts) {
-    const scripts = Object.entries(config.scripts)
-      .map(([name, script]) => {
-        if (typeof script === 'string') {
-          return `${name}: ${script}`
-        }
-        if ('command' in script) {
-          return `${name}: ${script.command}${script.description ? ` # ${script.description}` : ''}`
-        }
-        if ('workflow' in script) {
-          return `${name}: workflow:${script.workflow}${script.description ? ` # ${script.description}` : ''}`
-        }
-        if ('script' in script) {
-          return `${name}: script:${script.script}${script.description ? ` # ${script.description}` : ''}`
-        }
-        return `${name}: unknown`
-      })
-      .join('\n')
-    if (scripts.length > 0) {
-      contextParts.push(`<scripts>\n${scripts}\n</scripts>`)
-    }
   }
 
   return { context: contextParts.join('\n'), loadRules }

@@ -1,7 +1,7 @@
 import type { ToolResultOutput } from '@ai-sdk/provider-utils'
 import type { z } from 'zod'
 
-export type ToolParameterValue = string | { [key: string]: ToolParameterValue } | ToolParameterValue[]
+export type ToolParameterValue = string | number | boolean | null | { [key: string]: ToolParameterValue } | ToolParameterValue[]
 
 export type ToolParameter = {
   name: string

@@ -3,69 +3,19 @@ import type { FullToolInfo, ToolHandler, ToolInfo } from '../tool.js'
 import type { InteractionProvider } from './provider.js'
 
 const questionObject = z.object({
-  prompt: z.string().describe('The text of the question.').meta({ usageValue: 'question text here' }),
+  prompt: z.string().trim().min(1).describe('Concise question for the user.'),
   options: z
-    .array(z.string())
-    .default([])
-    .describe('Ordered list of suggested answers (omit if none).')
-    .meta({ usageValue: 'suggested answer here' }),
+    .array(z.string().trim().min(1))
+    .optional()
+    .describe('Ordered, mutually exclusive suggested answers. Omit for free-text input.'),
 })
 
 export const toolInfo = {
   name: 'askFollowupQuestion',
-  description:
-    'Ask the user for missing information that blocks progress. Use direct questions, add short mutually exclusive options when helpful, and group related questions in one call.',
-  parameters: z
-    .object({
-      questions: z
-        .array(questionObject)
-        .describe('One or more follow-up questions you need answered before you can continue.')
-        .meta({ usageValue: 'questions here' }),
-    })
-    .meta({
-      examples: [
-        {
-          description: 'Single clarifying question (no options)',
-          input: {
-            questions: [{ prompt: 'What is the target deployment environment?' }],
-          },
-        },
-        {
-          description: 'Single question with multiple-choice options',
-          input: {
-            questions: [
-              {
-                prompt: 'Which frontend framework are you using?',
-                options: ['React', 'Angular', 'Vue', 'Svelte'],
-              },
-            ],
-          },
-        },
-        {
-          description: 'Two related questions in one call',
-          input: {
-            questions: [
-              { prompt: 'What type of application are you building?' },
-              {
-                prompt: 'Preferred programming language?',
-                options: ['JavaScript', 'TypeScript', 'Python', 'Java'],
-              },
-            ],
-          },
-        },
-        {
-          description: 'Binary (yes/no) confirmation',
-          input: {
-            questions: [
-              {
-                prompt: 'Is it acceptable to refactor existing tests to improve performance?',
-                options: ['Yes', 'No'],
-              },
-            ],
-          },
-        },
-      ],
-    }),
+  description: 'Ask concise questions when missing information blocks safe progress. Offer short, mutually exclusive options when useful.',
+  parameters: z.object({
+    questions: z.array(questionObject).min(1).describe('Questions that must be answered before work can continue.'),
+  }),
 } as const satisfies ToolInfo
 
 export const handler: ToolHandler<typeof toolInfo, InteractionProvider> = async (provider, args) => {
@@ -80,20 +30,11 @@ export const handler: ToolHandler<typeof toolInfo, InteractionProvider> = async 
   }
 
   const { questions } = toolInfo.parameters.parse(args)
-  if (questions.length === 0) {
-    return {
-      success: false,
-      message: {
-        type: 'error-text',
-        value: 'No questions provided',
-      },
-    }
-  }
 
   const answers = []
   for (const question of questions) {
     const { prompt, options } = question
-    const answer = await provider.askFollowupQuestion(prompt, options)
+    const answer = await provider.askFollowupQuestion(prompt, options ?? [])
     answers.push(`<ask_followup_question_answer question="${prompt}">
 ${answer}
 </ask_followup_question_answer>`)

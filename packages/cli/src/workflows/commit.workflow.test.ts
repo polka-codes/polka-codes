@@ -99,6 +99,36 @@ describe.skipIf(!gitAvailable)('commitWorkflow', () => {
     })
   })
 
+  test('should stage all files when all=true and files are already staged', async () => {
+    const { context, tools } = createWorkflowTestContext()
+
+    tools.printChangeFile = mock<any>()
+    tools.createCommit = mock<any>()
+
+    tools.printChangeFile.mockResolvedValue({
+      stagedFiles: [{ path: 'src/staged.ts', status: 'M' }],
+      unstagedFiles: [{ path: 'src/unstaged.ts', status: 'M' }],
+    })
+    tools.executeCommand.mockResolvedValue({ exitCode: 0, stdout: 'M\tsrc/staged.ts\nM\tsrc/unstaged.ts', stderr: '' })
+    tools.generateText.mockResolvedValue([
+      {
+        role: 'assistant',
+        content: JSON.stringify({ commitMessage: 'feat: stage every file' }),
+      },
+    ])
+
+    const result = await commitWorkflow({ ...defaultInput, all: true }, context)
+
+    expect(result).toBe('feat: stage every file')
+    expect(tools.executeCommand).toHaveBeenCalledWith({
+      command: 'git',
+      args: ['add', '.'],
+    })
+    expect(tools.createCommit).toHaveBeenCalledWith({
+      message: 'feat: stage every file',
+    })
+  })
+
   test('should prompt user and stage when confirmed', async () => {
     const { context, tools } = createWorkflowTestContext()
 

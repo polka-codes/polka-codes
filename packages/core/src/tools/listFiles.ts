@@ -5,42 +5,17 @@ import { createProviderError, preprocessBoolean } from './utils.js'
 
 export const toolInfo = {
   name: 'listFiles',
-  description:
-    'List files and directories under a directory. Use this for project structure discovery and file existence checks. Recursive listing is enabled by default and can be limited with maxCount.',
-  parameters: z
-    .object({
-      path: z
-        .string()
-        .describe('The path of the directory to list contents for (relative to the current working directory)')
-        .meta({ usageValue: 'Directory path here' }),
-      maxCount: z.coerce
-        .number()
-        .optional()
-        .default(2000)
-        .describe('The maximum number of files to list. Default to 2000')
-        .meta({ usageValue: 'Maximum number of files to list (optional)' }),
-      recursive: z
-        .preprocess(preprocessBoolean, z.boolean())
-        .default(true)
-        .describe('Whether to list files recursively. Use true for recursive listing, false or omit for top-level only.')
-        .meta({ usageValue: 'true or false (optional)' }),
-      includeIgnored: z
-        .preprocess(preprocessBoolean, z.boolean())
-        .default(false)
-        .describe('Whether to include ignored files. Use true to include files ignored by .gitignore.')
-        .meta({ usageValue: 'true or false (optional)' }),
-    })
-    .meta({
-      examples: [
-        {
-          description: 'Request to list files',
-          input: {
-            path: 'src',
-            maxCount: '100',
-          },
-        },
-      ],
-    }),
+  description: 'List files under a directory. Recurses by default and reports when the result is truncated.',
+  parameters: z.object({
+    path: z.string().min(1).describe('Directory path relative to the current working directory.'),
+    maxCount: z.coerce.number().int().positive().optional().describe('Maximum files to return. Defaults to 2000.'),
+    recursive: z
+      .preprocess(preprocessBoolean, z.boolean().optional())
+      .describe('Set false to return only direct child files. Defaults to true.'),
+    includeIgnored: z
+      .preprocess(preprocessBoolean, z.boolean().optional())
+      .describe('Include files normally hidden by ignore rules. Defaults to false.'),
+  }),
 } as const satisfies ToolInfo
 
 export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (provider, args) => {
@@ -49,7 +24,7 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
   }
 
   const { path, maxCount, recursive, includeIgnored } = toolInfo.parameters.parse(args)
-  const [files, limitReached] = await provider.listFiles(path, recursive, maxCount, includeIgnored)
+  const [files, limitReached] = await provider.listFiles(path, recursive ?? true, maxCount ?? 2000, includeIgnored ?? false)
 
   return {
     success: true,

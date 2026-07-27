@@ -5,37 +5,12 @@ import { createProviderError } from './utils.js'
 
 export const toolInfo = {
   name: 'writeToFile',
-  description: `Write complete content to a file, creating parent directories if needed. Use this for new files or full-file replacement. For targeted edits to existing files, prefer replaceInFile. Always provide the complete intended file content.`,
-  parameters: z
-    .object({
-      path: z.string().describe('The path of the file to write to').meta({ usageValue: 'File path here' }),
-      content: z
-        .string()
-        .describe('The complete intended content of the file. Include every part of the file, including sections that have not changed.')
-        .meta({ usageValue: 'Your file content here' }),
-    })
-    .meta({
-      examples: [
-        {
-          description: 'Request to write content to a file',
-          input: {
-            path: 'src/main.js',
-            content: `import React from 'react';
-
-function App() {
-  return (
-    <div>
-      <h1>Hello, World!</h1>
-    </div>
-  );
-}
-
-export default App;
-`,
-          },
-        },
-      ],
-    }),
+  description:
+    'Create or overwrite a text file with the complete supplied content; parent directories are created. Use replaceInFile for targeted edits.',
+  parameters: z.object({
+    path: z.string().min(1).describe('File path relative to the current working directory.'),
+    content: z.string().describe('Complete intended file content, including unchanged sections.'),
+  }),
 } as const satisfies ToolInfo
 
 export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (provider, args) => {

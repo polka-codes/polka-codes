@@ -5,45 +5,24 @@ import type { WebProvider } from './provider.js'
 
 export const toolInfo = {
   name: 'fetchUrl',
-  description:
-    'Fetch one or more HTTP(S) URLs and return their content as Markdown. Use for webpages and raw hosted files such as README or source files.',
-  parameters: z
-    .object({
-      url: z
-        .preprocess((val) => {
-          if (!val) return []
-          const values = Array.isArray(val) ? val : [val]
-          return values.flatMap((i) => (typeof i === 'string' ? i.split(',') : [])).filter((s) => s.length > 0)
-        }, z.array(z.string()))
-        .describe('One or more URLs to fetch, separated by commas if multiple.')
-        .meta({ usageValue: 'url' }),
-    })
-    .meta({
-      examples: [
-        {
-          description: 'Fetch a single webpage',
-          input: {
-            url: 'https://example.com',
-          },
-        },
-        {
-          description: 'Fetch multiple webpages',
-          input: {
-            url: 'https://example.com,https://developer.mozilla.org/en-US/docs/Web/HTTP',
-          },
-        },
-        {
-          description: 'Fetch a raw file from GitHub',
-          input: {
-            url: 'https://raw.githubusercontent.com/user/repo/main/README.md',
-          },
-        },
-      ],
-    }),
+  description: 'Fetch text or Markdown from known HTTP(S) URLs. Use search to discover sources.',
+  parameters: z.object({
+    url: z
+      .preprocess((val) => {
+        if (!val) return []
+        const values = Array.isArray(val) ? val : typeof val === 'string' ? val.split(',') : val
+        if (!Array.isArray(values)) return values
+        return values
+          .map((item) => (typeof item === 'string' ? item.trim() : item))
+          .filter((item) => typeof item !== 'string' || item.length > 0)
+      }, z.array(z.httpUrl()).min(1))
+      .describe('HTTP(S) URLs to fetch.'),
+  }),
 } as const satisfies ToolInfo
 
 export const handler: ToolHandler<typeof toolInfo, WebProvider> = async (provider, args) => {
-  if (!provider.fetchUrl) {
+  const fetchUrl = provider.fetchUrl
+  if (!fetchUrl) {
     return {
       success: false,
       message: {
@@ -55,28 +34,17 @@ export const handler: ToolHandler<typeof toolInfo, WebProvider> = async (provide
 
   const { url: urls } = toolInfo.parameters.parse(args)
 
-  if (urls.length === 0) {
-    return {
-      success: false,
-      message: {
-        type: 'error-text',
-        value: 'No URLs provided. Please provide at least one URL to fetch.',
-      },
-    }
-  }
-
-  const results: Promise<string>[] = []
-  for (const url of urls) {
-    try {
-      const content = provider.fetchUrl(url).then((res) => `<fetch_url_content url="${url}">${res}</fetch_url_content>`)
-      results.push(content)
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      results.push(Promise.resolve(`<fetch_url_error url="${url}">${errorMessage}</fetch_url_error>`))
-    }
-  }
-
-  const resolvedResults = await Promise.all(results)
+  const resolvedResults = await Promise.all(
+    urls.map(async (url) => {
+      try {
+        const content = await fetchUrl(url)
+        return `<fetch_url_content url="${url}">${content}</fetch_url_content>`
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        return `<fetch_url_error url="${url}">${errorMessage}</fetch_url_error>`
+      }
+    }),
+  )
 
   return {
     success: true,

@@ -6,8 +6,7 @@ import { annotateDiffWithLineNumbers } from './utils/diffLineNumbers'
 
 export const toolInfo = {
   name: 'git_diff',
-  description:
-    'Get a git diff for a specific file in the current repository. Supports staged, unstaged, or commit-range diffs. By default, returns unstaged changes.',
+  description: 'Show changes to one file from the working tree, index, or commit range. Defaults to unstaged changes.',
   parameters: z.object({
     staged: z
       .preprocess((val) => {
@@ -17,11 +16,11 @@ export const toolInfo = {
           if (lower === 'true') return true
         }
         return val
-      }, z.boolean().optional().default(false))
-      .describe('Get staged changes instead of unstaged changes.'),
-    commitRange: z.string().optional().describe('The commit range to get the diff for (e.g., "main...HEAD").'),
-    file: z.string().describe('Get the diff for a specific file.'),
-    contextLines: z.coerce.number().optional().default(5).describe('Number of context lines to include around changes.'),
+      }, z.boolean().default(false))
+      .describe('Show staged changes instead of unstaged changes.'),
+    commitRange: z.string().trim().min(1).optional().describe('Git range, such as "main...HEAD".'),
+    file: z.string().trim().min(1).describe('Repository-relative file path.'),
+    contextLines: z.coerce.number().int().min(0).default(5).describe('Context lines around each change.'),
     includeLineNumbers: z
       .preprocess((val) => {
         if (typeof val === 'string') {
@@ -30,8 +29,8 @@ export const toolInfo = {
           if (lower === 'true') return true
         }
         return val
-      }, z.boolean().optional().default(true))
-      .describe('Annotate the diff with line numbers for additions and deletions.'),
+      }, z.boolean().default(true))
+      .describe('Annotate additions and deletions with line numbers.'),
   }),
 } as const satisfies ToolInfo
 
@@ -55,12 +54,10 @@ export const handler: ToolHandler<typeof toolInfo, CommandProvider> = async (pro
   if (commitRange) {
     commandParts.push(commitRange)
   }
-  if (file) {
-    // Properly escape the file path to prevent command injection
-    // Replace single quotes with '\'' (end current quote, add escaped quote, start new quote)
-    const escapedFile = file.replace(/'/g, "'\\''")
-    commandParts.push('--', `'${escapedFile}'`)
-  }
+  // Properly escape the file path to prevent command injection
+  // Replace single quotes with '\'' (end current quote, add escaped quote, start new quote)
+  const escapedFile = file.replace(/'/g, "'\\''")
+  commandParts.push('--', `'${escapedFile}'`)
 
   const command = commandParts.join(' ')
   try {
@@ -85,7 +82,7 @@ export const handler: ToolHandler<typeof toolInfo, CommandProvider> = async (pro
         success: true,
         message: {
           type: 'text',
-          value: `<diff file="${file ?? 'all'}">\n${diffOutput}\n</diff>`,
+          value: `<diff file="${file}">\n${diffOutput}\n</diff>`,
         },
       }
     }

@@ -5,40 +5,12 @@ import type { FilesystemProvider } from './provider.js'
 export const toolInfo = {
   name: 'searchFiles',
   description:
-    'Search files in a directory with a Rust regex pattern and optional file globs. Use this to find code, text, or references before reading specific files.',
-  parameters: z
-    .object({
-      path: z
-        .string()
-        .describe(
-          'The path of the directory to search in (relative to the current working directory). This directory will be recursively searched.',
-        )
-        .meta({ usageValue: 'Directory path here' }),
-      regex: z.string().describe('The regular expression pattern to search for. Uses Rust regex syntax.').meta({
-        usageValue: 'Your regex pattern here',
-      }),
-      filePattern: z
-        .string()
-        .optional()
-        .describe(
-          'Comma-separated glob pattern to filter files (e.g., "*.ts" for TypeScript files or "*.ts,*.js" for both TypeScript and JavaScript files). If not provided, it will search all files (*).',
-        )
-        .meta({
-          usageValue: 'file pattern here (optional)',
-        }),
-    })
-    .meta({
-      examples: [
-        {
-          description: 'Request to perform a regex search across files',
-          input: {
-            path: 'src',
-            regex: '^components/',
-            filePattern: '*.ts,*.tsx',
-          },
-        },
-      ],
-    }),
+    'Search file contents recursively with a Rust-compatible regex and return filename, line, and context matches. Use listFiles to search by filename.',
+  parameters: z.object({
+    path: z.string().min(1).describe('Directory path relative to the current working directory.'),
+    regex: z.string().min(1).describe('Rust-compatible regular expression applied to file contents.'),
+    filePattern: z.string().min(1).optional().describe('Comma-separated file globs, such as "*.ts,*.tsx". Omit to search all files.'),
+  }),
 } as const satisfies ToolInfo
 
 export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (provider, args) => {
@@ -63,9 +35,10 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
     }
   }
   const { path, regex, filePattern } = parsed.data
+  const resolvedFilePattern = filePattern ?? '*'
 
   try {
-    const files = await provider.searchFiles(path, regex, filePattern ?? '*')
+    const files = await provider.searchFiles(path, regex, resolvedFilePattern)
 
     return {
       success: true,
@@ -73,7 +46,7 @@ export const handler: ToolHandler<typeof toolInfo, FilesystemProvider> = async (
         type: 'text',
         value: `<search_files_path>${path}</search_files_path>
 <search_files_regex>${regex}</search_files_regex>
-<search_files_file_pattern>${filePattern}</search_files_file_pattern>
+<search_files_file_pattern>${resolvedFilePattern}</search_files_file_pattern>
 <search_files_files>
 ${files.join('\n')}
 </search_files_files>

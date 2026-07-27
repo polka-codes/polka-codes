@@ -3,9 +3,9 @@ import { z } from 'zod'
 
 export const toolInfo = {
   name: 'readMemory',
-  description: 'Read content from a memory topic. If no topic is specified, reads from the default topic.',
+  description: 'Read a memory topic, using the default topic when omitted.',
   parameters: z.object({
-    topic: z.string().nullish().describe('The topic to read from memory. Defaults to ":default:".'),
+    topic: z.string().min(1).nullish().describe('Topic name. Omit for ":default:".'),
   }),
 } as const satisfies ToolInfo
 

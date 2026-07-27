@@ -3,7 +3,7 @@ import { UpdateTodoItemInputSchema } from '@polka-codes/core'
 
 export const toolInfo = {
   name: 'updateTodoItem',
-  description: 'Add or update a to-do item.',
+  description: 'Add a to-do item or change fields on an existing item.',
   parameters: UpdateTodoItemInputSchema,
 } as const satisfies ToolInfo
 

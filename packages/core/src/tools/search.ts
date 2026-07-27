@@ -4,33 +4,10 @@ import type { WebProvider } from './provider.js'
 
 export const toolInfo = {
   name: 'search',
-  description: 'Search the web for current information, facts, news, documentation, or research that may not be available locally.',
-  parameters: z
-    .object({
-      query: z.string().describe('The query to search for').meta({ usageValue: 'Your search query here' }),
-    })
-    .meta({
-      examples: [
-        {
-          description: 'Search for current events or news',
-          input: {
-            query: 'latest developments in AI language models 2024',
-          },
-        },
-        {
-          description: 'Look up technical documentation',
-          input: {
-            query: 'TypeScript advanced type system features',
-          },
-        },
-        {
-          description: 'Research specific information',
-          input: {
-            query: 'Node.js performance optimization best practices',
-          },
-        },
-      ],
-    }),
+  description: 'Search the web for current or external information. Use fetchUrl for a known URL.',
+  parameters: z.object({
+    query: z.string().min(1).describe('Specific web search question, including relevant scope or dates.'),
+  }),
 } as const satisfies ToolInfo
 
 export const handler: ToolHandler<typeof toolInfo, WebProvider> = async (provider, args) => {
@@ -40,7 +17,7 @@ export const handler: ToolHandler<typeof toolInfo, WebProvider> = async (provide
     return {
       success: false,
       message: {
-        type: 'text',
+        type: 'error-text',
         value: 'This tool requires a web provider to be installed.',
       },
     }

@@ -218,7 +218,7 @@ export const fixWorkflow: WorkflowFn<
 
       return await agentWorkflow(
         {
-          systemPrompt: getFixSystemPrompt(!stateless),
+          systemPrompt: getFixSystemPrompt(),
           userMessage: [
             {
               role: 'user',

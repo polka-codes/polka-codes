@@ -198,7 +198,7 @@ export const codeWorkflow: WorkflowFn<
       }
     }
 
-    const promptOptions = stateless ? { includeMemory: false, includeProjectInstructions: false } : undefined
+    const promptOptions = stateless ? { includeProjectInstructions: false } : undefined
     const baseSystemPrompt = isDirectMode
       ? getDirectCoderSystemPrompt(loadRules, promptOptions)
       : getCoderSystemPrompt(loadRules, promptOptions)
