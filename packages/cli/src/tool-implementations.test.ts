@@ -5,8 +5,9 @@ import type {
   LanguageModelV4GenerateResult,
   LanguageModelV4StreamResult,
 } from '@ai-sdk/provider'
+import { APICallError } from '@ai-sdk/provider'
 import { UsageMeter } from '@polka-codes/core'
-import { MaxRetriesExceededError, MessageLimitExceededError, ProviderTimeoutError } from './errors'
+import { AuthenticationError, MaxRetriesExceededError, MessageLimitExceededError, ProviderTimeoutError } from './errors'
 import { prepareGenerateTextRequest, toolCall } from './tool-implementations'
 
 class TimeoutLanguageModel implements LanguageModelV4 {
@@ -49,6 +50,28 @@ class TimeoutLanguageModel implements LanguageModelV4 {
   }
 }
 
+class ApiErrorLanguageModel implements LanguageModelV4 {
+  readonly specificationVersion = 'v4'
+  readonly provider = 'api-error-test-provider'
+  readonly modelId = 'api-error-test-model'
+  readonly supportedUrls = {}
+  attempts = 0
+
+  async doGenerate(_options: LanguageModelV4CallOptions): Promise<LanguageModelV4GenerateResult> {
+    throw new Error('ApiErrorLanguageModel only supports streaming')
+  }
+
+  async doStream(_options: LanguageModelV4CallOptions): Promise<LanguageModelV4StreamResult> {
+    this.attempts++
+    throw new APICallError({
+      message: 'Unauthorized',
+      url: 'https://example.com/v1/messages',
+      requestBodyValues: {},
+      statusCode: 401,
+    })
+  }
+}
+
 describe('prepareGenerateTextRequest', () => {
   test('moves system messages into the dedicated system prompt', () => {
     const request = prepareGenerateTextRequest(
@@ -73,6 +96,38 @@ describe('prepareGenerateTextRequest', () => {
 })
 
 describe('generateText', () => {
+  test('classifies AI SDK HTTP errors without retrying authentication failures', async () => {
+    const model = new ApiErrorLanguageModel()
+    const request = toolCall(
+      {
+        tool: 'generateText',
+        input: {
+          messages: [{ role: 'user', content: 'Fail authentication.' }],
+          tools: {},
+        },
+      },
+      {
+        model,
+        parameters: {
+          retryCount: 3,
+          usageMeter: new UsageMeter(),
+        },
+        toolProvider: {},
+        workflowContext: {
+          logger: {
+            debug() {},
+            error() {},
+            info() {},
+            warn() {},
+          },
+        },
+      },
+    )
+
+    await expect(request).rejects.toBeInstanceOf(AuthenticationError)
+    expect(model.attempts).toBe(1)
+  })
+
   test('retries timed-out requests without leaking a DOMException', async () => {
     const model = new TimeoutLanguageModel()
     const request = toolCall(
