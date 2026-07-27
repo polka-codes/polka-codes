@@ -4,7 +4,7 @@ import { AiProvider } from './getModel'
 
 export const DEFAULT_MODELS = {
   [AiProvider.Anthropic]: 'claude-sonnet-4-20250514',
-  [AiProvider.DeepSeek]: 'deepseek-chat',
+  [AiProvider.DeepSeek]: 'deepseek-v4-flash',
   [AiProvider.OpenRouter]: 'google/gemini-2.5-pro',
   [AiProvider.OpenAI]: 'gpt-5-2025-08-07',
   [AiProvider.OpenAICompatible]: 'gpt-4o',
@@ -26,7 +26,6 @@ export class ApiProviderConfig {
   }
 
   getConfigForCommand(command: string) {
-    // TODO: strong type command
     const commandConfig = this.commands?.[command]
     const defaultConfig = this.commands?.default
     const mergedConfig = { ...defaultConfig, ...commandConfig }

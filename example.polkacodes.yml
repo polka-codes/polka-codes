@@ -22,7 +22,7 @@ providers:
   # DeepSeek configuration (cost-effective)
   deepseek:
     apiKey: "sk-..." # Your DeepSeek API key
-    defaultModel: "deepseek-chat"
+    defaultModel: "deepseek-v4-flash"
 
   # OpenAI configuration
   openai:

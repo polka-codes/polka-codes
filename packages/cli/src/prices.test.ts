@@ -20,6 +20,7 @@ describe('prices', () => {
         expect(modelChoices).toContain(DEFAULT_MODELS[provider])
       }
     }
+    expect(DEFAULT_MODELS[AiProvider.DeepSeek]).toBe('deepseek-v4-flash')
   })
 
   it('only exposes complete, non-negative finite pricing records', () => {
