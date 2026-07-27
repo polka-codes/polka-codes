@@ -649,14 +649,39 @@ function getNestedProperty(obj: Record<string, unknown>, path: string): unknown 
   return current
 }
 
-/**
- * Compare two values using the specified operator
- * For comparison operators, we assume the values are comparable (strings, numbers, etc.)
- *
- * NOTE: Using 'as any' for comparisons because values are typed as 'unknown'
- * This is an unsafe operation that relies on runtime behavior (string/number comparisons work)
- * but violates type safety. Using 'as any' explicitly acknowledges this limitation.
- */
+function isRelationalOperand(value: unknown): value is string | number | boolean | null {
+  return value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
+}
+
+function looselyEqual(left: unknown, right: unknown): boolean {
+  const leftCanCoerce = (typeof left === 'object' && left !== null) || typeof left === 'function'
+  const rightCanCoerce = (typeof right === 'object' && right !== null) || typeof right === 'function'
+  if (leftCanCoerce || rightCanCoerce) {
+    return left === right
+  }
+
+  // biome-ignore lint/suspicious/noDoubleEquals: loose equality is part of the workflow expression syntax
+  return left == right
+}
+
+function compareOrder(left: unknown, right: unknown): number | undefined {
+  if (!isRelationalOperand(left) || !isRelationalOperand(right)) {
+    return undefined
+  }
+
+  if (typeof left === 'string' && typeof right === 'string') {
+    return left === right ? 0 : left < right ? -1 : 1
+  }
+
+  const numericLeft = Number(left)
+  const numericRight = Number(right)
+  if (Number.isNaN(numericLeft) || Number.isNaN(numericRight)) {
+    return undefined
+  }
+  return numericLeft === numericRight ? 0 : numericLeft < numericRight ? -1 : 1
+}
+
+/** Compare values using the JavaScript operators supported by safe workflow conditions. */
 function compareValues(left: unknown, right: unknown, op: string): boolean {
   switch (op) {
     case '===':
@@ -664,20 +689,28 @@ function compareValues(left: unknown, right: unknown, op: string): boolean {
     case '!==':
       return left !== right
     case '==':
-      return Object.is(left, right)
+      return looselyEqual(left, right)
     case '!=':
-      return !Object.is(left, right)
-    case '>=':
-      return (left as any) >= (right as any)
-    case '<=':
-      return (left as any) <= (right as any)
-    case '>':
-      return (left as any) > (right as any)
-    case '<':
-      return (left as any) < (right as any)
-    default:
-      throw new Error(`Unknown comparison operator: ${op}`)
+      return !looselyEqual(left, right)
   }
+
+  const order = compareOrder(left, right)
+  if (order === undefined) {
+    return false
+  }
+
+  switch (op) {
+    case '>=':
+      return order >= 0
+    case '<=':
+      return order <= 0
+    case '>':
+      return order > 0
+    case '<':
+      return order < 0
+  }
+
+  throw new Error(`Unknown comparison operator: ${op}`)
 }
 
 function createRunWorkflowFn<

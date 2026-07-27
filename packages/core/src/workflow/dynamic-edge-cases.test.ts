@@ -241,6 +241,63 @@ workflows:
   })
 
   describe('condition evaluation edge cases', () => {
+    async function executedBranch(condition: string, value: unknown) {
+      const workflow = createDynamicWorkflow<AgentToolRegistry>(
+        {
+          workflows: {
+            main: {
+              task: 'Evaluate one condition',
+              steps: [
+                {
+                  id: 'branch',
+                  if: {
+                    condition,
+                    thenBranch: [{ id: 'matched', task: 'Return the matching result', tools: [] }],
+                    elseBranch: [{ id: 'notMatched', task: 'Return the non-matching result', tools: [] }],
+                  },
+                  output: 'result',
+                },
+              ],
+              output: 'result',
+            },
+          },
+        },
+        { toolInfo: [] },
+      )
+      const { context, requests } = createAgentTestContext([[{ role: 'assistant', content: 'done' }]])
+
+      await workflow('main', { value }, context)
+
+      const message = requests[0]?.messages.find((entry) => entry.role === 'user')
+      if (!message || typeof message.content !== 'string') {
+        throw new Error('Expected a JSON user message')
+      }
+      const parsed: unknown = JSON.parse(message.content)
+      if (!parsed || typeof parsed !== 'object' || !('stepId' in parsed) || typeof parsed.stepId !== 'string') {
+        throw new Error('Expected the step id in the user message')
+      }
+      return parsed.stepId
+    }
+
+    it('distinguishes loose and strict equality', async () => {
+      expect(await executedBranch('input.value == 1', '1')).toBe('matched')
+      expect(await executedBranch('input.value === 1', '1')).toBe('notMatched')
+    })
+
+    it('does not coerce objects during safe comparisons', async () => {
+      let coerced = false
+      const value = {
+        valueOf() {
+          coerced = true
+          return 1
+        },
+      }
+
+      expect(await executedBranch('input.value > 0', value)).toBe('notMatched')
+      expect(await executedBranch('input.value == 1', value)).toBe('notMatched')
+      expect(coerced).toBe(false)
+    })
+
     it('should handle undefined variables in conditions gracefully', () => {
       const workflowDef: WorkflowFile = {
         workflows: {
