@@ -41,6 +41,16 @@ function assert(condition: boolean, message: string): asserts condition {
   }
 }
 
+function isPackResult(value: unknown): value is PackResult {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'files' in value &&
+    Array.isArray(value.files) &&
+    value.files.every((file) => typeof file === 'object' && file !== null && 'path' in file && typeof file.path === 'string')
+  )
+}
+
 function validateDeclarationImport(declarationPath: string, specifier: string): void {
   assert(runtimeExtension.test(specifier), `Declaration import lacks a runtime extension: ${declarationPath} -> ${specifier}`)
 
@@ -92,10 +102,11 @@ function npmPackDryRun(packageDirectory: string): PackResult {
     throw new Error(result.stderr.toString().trim() || `npm pack failed in ${packageDirectory}`)
   }
 
-  const packResults = JSON.parse(result.stdout.toString()) as PackResult[]
+  const packResults: unknown = JSON.parse(result.stdout.toString())
+  assert(Array.isArray(packResults), `npm pack returned invalid package details in ${packageDirectory}`)
   const packResult = packResults[0]
-  assert(Boolean(packResult), `npm pack returned no package details in ${packageDirectory}`)
-  return packResult as PackResult
+  assert(isPackResult(packResult), `npm pack returned no package details in ${packageDirectory}`)
+  return packResult
 }
 
 function runNode(packageName: string, args: string[], failureDescription: string, options: RunNodeOptions = {}): void {
@@ -169,10 +180,10 @@ function validateRuntimeEntries(packageDirectory: string, packageJson: PackageJs
 async function validatePackage(packageDirectory: string): Promise<void> {
   const packageJson = (await Bun.file(join(packageDirectory, 'package.json')).json()) as PackageJson
   const rootExport = packageJson.exports?.['.']
-  assert(Boolean(rootExport), `${packageJson.name} is missing its root export`)
-  assert(Object.keys(rootExport as PackageExport)[0] === 'types', `${packageJson.name} must list its types export first`)
+  assert(rootExport !== undefined, `${packageJson.name} is missing its root export`)
+  assert(Object.keys(rootExport)[0] === 'types', `${packageJson.name} must list its types export first`)
 
-  const { import: importPath, types: typesPath } = rootExport as PackageExport
+  const { import: importPath, types: typesPath } = rootExport
   assert(typesPath.endsWith('.d.ts'), `${packageJson.name} types export must reference a declaration file`)
 
   const expectedFiles = [typesPath, importPath, ...Object.values(packageJson.bin ?? {}), ...expectedRuntimeAssets(packageJson.name)].map(
