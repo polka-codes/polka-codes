@@ -250,7 +250,7 @@ export function createFileStatusPrompt(changedFiles: FileChange[]): string {
 
 export const specificReviewSchema = z.object({
   file: z.string(),
-  lines: z.string(),
+  lines: z.string().regex(/^L[1-9]\d*(?:-L[1-9]\d*)?$/),
   review: z.string(),
 })
 

@@ -116,7 +116,7 @@ export const reviewCommand = new Command('review')
                   const selectedIndices = await checkbox({
                     message: 'Select findings to address',
                     choices: reviewResult.specificReviews.map((review, index) => ({
-                      name: `${review.file}:${review.lines} - ${review.review.split('\n')[0]}`,
+                      name: `${review.file}#${review.lines} - ${review.review.split('\n')[0]}`,
                       value: index,
                       checked: true,
                     })),

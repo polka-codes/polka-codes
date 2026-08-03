@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { getAgentWorkflowFailureMessage, parseGitDiffNumStat } from './workflow.utils'
+import { formatReviewForConsole, getAgentWorkflowFailureMessage, parseGitDiffNumStat, specificReviewSchema } from './workflow.utils'
 
 describe('getAgentWorkflowFailureMessage', () => {
   test('preserves agent error messages', () => {
@@ -66,5 +66,35 @@ describe('parseGitDiffNumStat', () => {
     expect(result).toEqual({
       'path/part1\tpath/part2.ts': { insertions: 1, deletions: 1 },
     })
+  })
+})
+
+describe('review output formatting', () => {
+  test('requires GitHub line anchors', () => {
+    const review = {
+      file: 'packages/shared/src/fellowship.ts',
+      review: 'The changed branch can return stale data.',
+    }
+
+    expect(specificReviewSchema.safeParse({ ...review, lines: 'L333' }).success).toBe(true)
+    expect(specificReviewSchema.safeParse({ ...review, lines: 'L333-L356' }).success).toBe(true)
+    expect(specificReviewSchema.safeParse({ ...review, lines: '[Lines 333-356]' }).success).toBe(false)
+    expect(specificReviewSchema.safeParse({ ...review, lines: '333-356' }).success).toBe(false)
+  })
+
+  test('formats file locations as GitHub anchors', () => {
+    const formatted = formatReviewForConsole({
+      overview: 'One issue found.',
+      specificReviews: [
+        {
+          file: 'packages/shared/src/fellowship.ts',
+          lines: 'L333-L356',
+          review: 'The changed branch can return stale data.',
+        },
+      ],
+    })
+
+    expect(formatted).toContain('- packages/shared/src/fellowship.ts#L333-L356')
+    expect(formatted).not.toContain('packages/shared/src/fellowship.ts:[Lines 333-356]')
   })
 })
