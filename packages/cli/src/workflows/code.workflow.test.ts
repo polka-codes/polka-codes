@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import type { LoadedConfig } from '@polka-codes/cli-shared'
 import { createContext, type JsonResponseMessage, type StepFn, type WorkflowTools } from '@polka-codes/core'
+import { createAgentModelRound } from '../test/workflow-fixtures'
 import type { CliToolRegistry } from '../workflow-tools'
 import { codeWorkflow } from './code.workflow'
 
@@ -58,7 +59,7 @@ function createHarness(responses: JsonResponseMessage[]) {
             if (!response) {
               throw new Error('No generateText response queued')
             }
-            return [response]
+            return createAgentModelRound([response])
           }
           case 'updateMemory':
             return undefined

@@ -60,7 +60,7 @@ export interface RunAgentWithSchemaOptions<T extends z.ZodSchema> {
   schema: T
   tools?: FullToolInfo[]
   toolConfig?: AgentToolConfig
-  maxToolRoundTrips?: number
+  maxStructuredOutputRepairAttempts?: number
   model?: string
 }
 
@@ -80,21 +80,17 @@ export async function runAgentWithSchema<T extends z.ZodSchema>(
       userMessage: [{ role: 'user', content: options.userMessage }],
       tools,
       outputSchema: options.schema,
-      maxToolRoundTrips: options.maxToolRoundTrips,
+      maxStructuredOutputRepairAttempts: options.maxStructuredOutputRepairAttempts,
       model: options.model,
     },
     context,
   )
 
-  if (result.type !== 'Exit' || !result.object) {
-    const errorMessage =
-      result.type === 'Error'
-        ? result.error?.message || 'Unknown error'
-        : result.type === 'UsageExceeded'
-          ? 'Usage exceeded (tokens or rounds)'
-          : `Unexpected result type: ${result.type}`
-
-    throw new Error(`Agent workflow failed: ${errorMessage}`)
+  if (result.type === 'Error') {
+    throw new Error(`Agent workflow failed: ${result.error.message || 'Unknown error'}`)
+  }
+  if (!result.object) {
+    throw new Error('Agent workflow failed: structured output was missing.')
   }
 
   return result.object as z.infer<T>
@@ -105,7 +101,7 @@ export interface RunAgentOptions {
   userMessage: string
   tools?: FullToolInfo[]
   toolConfig?: AgentToolConfig
-  maxToolRoundTrips?: number
+  maxStructuredOutputRepairAttempts?: number
   model?: string
 }
 
@@ -117,21 +113,14 @@ export async function runAgent(context: CliWorkflowContext, options: RunAgentOpt
       systemPrompt: options.systemPrompt,
       userMessage: [{ role: 'user', content: options.userMessage }],
       tools,
-      maxToolRoundTrips: options.maxToolRoundTrips,
+      maxStructuredOutputRepairAttempts: options.maxStructuredOutputRepairAttempts,
       model: options.model,
     },
     context,
   )
 
   if (result.type !== 'Exit') {
-    const errorMessage =
-      result.type === 'Error'
-        ? result.error?.message || 'Unknown error'
-        : result.type === 'UsageExceeded'
-          ? 'Usage exceeded (tokens or rounds)'
-          : `Unexpected result type: ${(result as { type: string }).type}`
-
-    throw new Error(`Agent workflow failed: ${errorMessage}`)
+    throw new Error(`Agent workflow failed: ${result.error?.message || 'Unknown error'}`)
   }
 
   return result.message
@@ -141,7 +130,7 @@ export interface ContinueAgentOptions {
   messages: JsonModelMessage[]
   tools?: FullToolInfo[]
   toolConfig?: AgentToolConfig
-  maxToolRoundTrips?: number
+  maxStructuredOutputRepairAttempts?: number
   model?: string
 }
 
@@ -156,21 +145,14 @@ export async function continueAgent(
       messages: options.messages,
       userMessage: [{ role: 'user', content: '' }], // Dummy message, will use messages instead
       tools,
-      maxToolRoundTrips: options.maxToolRoundTrips,
+      maxStructuredOutputRepairAttempts: options.maxStructuredOutputRepairAttempts,
       model: options.model,
     },
     context,
   )
 
   if (result.type !== 'Exit') {
-    const errorMessage =
-      result.type === 'Error'
-        ? result.error?.message || 'Unknown error'
-        : result.type === 'UsageExceeded'
-          ? 'Usage exceeded (tokens or rounds)'
-          : `Unexpected result type: ${(result as { type: string }).type}`
-
-    throw new Error(`Agent workflow failed: ${errorMessage}`)
+    throw new Error(`Agent workflow failed: ${result.error?.message || 'Unknown error'}`)
   }
 
   return {

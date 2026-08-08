@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import type { FullToolInfo } from '../tool'
-import type { AgentToolRegistry } from './agent.workflow'
+import type { AgentModelRound, AgentToolRegistry } from './agent.workflow'
 import type { DynamicWorkflowParseResult } from './dynamic'
 import { createDynamicWorkflow, parseDynamicWorkflowDefinition, validateWorkflowFile } from './dynamic'
 import type { ValidationResult, WorkflowFile } from './dynamic-types'
@@ -36,7 +36,10 @@ function createAgentTestContext(responses: JsonResponseMessage[][]) {
       if (!response) {
         throw new Error('No mock model response available')
       }
-      return response
+      return {
+        requestMessages: input.systemPrompt ? [{ role: 'system', content: input.systemPrompt }, ...input.messages] : [...input.messages],
+        responseMessages: response,
+      } satisfies AgentModelRound
     },
     invokeTool: async () => {
       throw new Error('No tools should be invoked')

@@ -373,7 +373,12 @@ async function generateText(input: GenerateTextInput, context: ToolCallContext) 
       })
 
       const resp = await stream.response
-      return resp.messages.map(toJsonModelMessage)
+      return {
+        requestMessages: input.systemPrompt
+          ? [{ role: 'system' as const, content: input.systemPrompt }, ...input.messages]
+          : [...input.messages],
+        responseMessages: resp.messages.map(toJsonModelMessage),
+      }
     } catch (error: unknown) {
       if (repetitionError) {
         if (hasAnotherAttempt) context.workflowContext.logger.warn('Repetition detected, retrying...')

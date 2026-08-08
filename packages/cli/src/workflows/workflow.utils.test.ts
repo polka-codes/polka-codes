@@ -11,10 +11,6 @@ describe('getAgentWorkflowFailureMessage', () => {
       }),
     ).toBe('provider unavailable')
   })
-
-  test('describes usage exhaustion', () => {
-    expect(getAgentWorkflowFailureMessage({ type: 'UsageExceeded', messages: [] })).toBe('Usage limits were exceeded.')
-  })
 })
 
 describe('parseGitDiffNumStat', () => {

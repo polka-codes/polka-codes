@@ -60,7 +60,6 @@ export class GoalDecomposer<TTools extends ToolRegistry = CliToolRegistry> {
       systemPrompt: this.buildSystemPrompt(),
       userMessage: this.buildDecompositionPrompt(goal, codebaseContext),
       schema: GoalDecompositionSchema,
-      maxToolRoundTrips: 50,
     })
 
     // Convert to tasks with Priority enum and proper types

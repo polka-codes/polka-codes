@@ -77,9 +77,7 @@ export interface TaskEventToolError extends TaskEventBase {
   error: ToolResponseResult
 }
 
-/**
- * Event for task usage exceeded
- */
+/** Event emitted when a provider cost or message quota is exhausted. */
 export interface TaskEventUsageExceeded extends TaskEventBase {
   kind: TaskEventKind.UsageExceeded
 }
@@ -117,7 +115,6 @@ export type ExitReasonErrorDetails = {
 }
 
 export type ExitReason =
-  | { type: 'UsageExceeded'; messages: JsonModelMessage[] }
   | { type: 'Exit'; message: string; object?: any; messages: JsonModelMessage[] }
   | {
       type: 'Error'

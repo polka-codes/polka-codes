@@ -4,8 +4,8 @@ import { expect, spyOn, test } from 'bun:test'
 import type { ModelMessage } from 'ai'
 import { z } from 'zod'
 import type { FullToolInfo, ToolResponse } from '../'
-import { type AgentToolRegistry, agentWorkflow } from './agent.workflow'
-import type { JsonResponseMessage, JsonUserModelMessage } from './json-ai-types'
+import { type AgentModelRound, type AgentToolRegistry, agentWorkflow } from './agent.workflow'
+import type { JsonModelMessage, JsonResponseMessage, JsonUserModelMessage } from './json-ai-types'
 import { type TaskEvent, type TaskEventEndTask, TaskEventKind } from './types'
 import { createContext, type WorkflowTools } from './workflow'
 
@@ -14,6 +14,13 @@ function endTaskEvents(events: TaskEvent[]): TaskEventEndTask[] {
 }
 
 const OUTPUT_SCHEMA_PROMPT_PREFIX = 'When finished, return one JSON value matching this schema:\n'
+
+function createModelRound(input: AgentToolRegistry['generateText']['input'], responseMessages: JsonResponseMessage[]): AgentModelRound {
+  const requestMessages: JsonModelMessage[] = input.systemPrompt
+    ? [{ role: 'system', content: input.systemPrompt }, ...input.messages]
+    : [...input.messages]
+  return { requestMessages, responseMessages }
+}
 
 const createMockTool = (name: string, description: string, handler: (args: any) => Promise<ToolResponse>): FullToolInfo => ({
   name,
@@ -66,9 +73,9 @@ test('should run agent workflow with a tool call and reply', async () => {
   const taskEventSpy = spyOn(spied, 'fn')
 
   const tools: WorkflowTools<AgentToolRegistry> = {
-    generateText: async () => {
+    generateText: async (input) => {
       const response = mockResponses.shift()
-      return [response!] as JsonResponseMessage[]
+      return createModelRound(input, [response!] as JsonResponseMessage[])
     },
     invokeTool: async (input) => {
       const { toolName, input: toolInput } = input
@@ -103,7 +110,7 @@ test('should pass system prompts separately from ordinary model messages', async
   const tools: WorkflowTools<AgentToolRegistry> = {
     generateText: async (input) => {
       capturedInput = structuredClone(input) as AgentToolRegistry['generateText']['input']
-      return [{ role: 'assistant', content: 'Done.' }]
+      return createModelRound(input, [{ role: 'assistant', content: 'Done.' }])
     },
     invokeTool: async () => {
       throw new Error('No tools should be invoked')
@@ -153,7 +160,7 @@ test('should include the output schema once in every model request across tool r
   const tools: WorkflowTools<AgentToolRegistry> = {
     generateText: async (input) => {
       requests.push({ messages: [...input.messages], systemPrompt: input.systemPrompt })
-      return [mockResponses.shift()!] as JsonResponseMessage[]
+      return createModelRound(input, [mockResponses.shift()!] as JsonResponseMessage[])
     },
     invokeTool: async ({ toolName, input }) => {
       if (toolName !== listFilesTool.name) {
@@ -208,7 +215,7 @@ test('should preserve JSON repair and Zod validation for transformed output sche
   const tools: WorkflowTools<AgentToolRegistry> = {
     generateText: async (input) => {
       requests.push({ messages: [...input.messages], systemPrompt: input.systemPrompt })
-      return [mockResponses.shift()!] as JsonResponseMessage[]
+      return createModelRound(input, [mockResponses.shift()!] as JsonResponseMessage[])
     },
     invokeTool: async () => {
       throw new Error('No tools should be invoked')
@@ -256,25 +263,110 @@ test('should preserve JSON repair and Zod validation for transformed output sche
   expect(result.object.generatedAt).toBeInstanceOf(Date)
 })
 
-test('should fail if maxToolRoundTrips is exceeded', async () => {
-  const mockResponses: ModelMessage[] = Array(12).fill({
-    role: 'assistant',
-    content: [
-      {
-        type: 'tool-call',
-        toolCallId: 'tool-call-1',
-        toolName: 'listFiles',
-        input: { path: './src' },
-      },
-    ],
+test('should stop after the configured structured output repair attempts', async () => {
+  let generateAttempts = 0
+  const tools: WorkflowTools<AgentToolRegistry> = {
+    generateText: async (input) => {
+      generateAttempts++
+      return createModelRound(input, [{ role: 'assistant', content: 'not JSON' }])
+    },
+    invokeTool: async () => {
+      throw new Error('No tools should be invoked')
+    },
+    taskEvent: async () => {},
+  }
+
+  const result = await agentWorkflow(
+    {
+      userMessage: [{ role: 'user', content: 'Return a structured result.' }],
+      tools: [],
+      systemPrompt: 'Use the dedicated system channel.',
+      outputSchema: z.object({ answer: z.string() }),
+      maxStructuredOutputRepairAttempts: 1,
+    },
+    createContext(tools),
+  )
+
+  expect(result).toMatchObject({
+    type: 'Error',
+    error: { message: 'Structured output remained invalid after 1 repair attempts.' },
   })
+  expect(generateAttempts).toBe(2)
+})
+
+test('should adopt the canonical request transcript returned by the model adapter', async () => {
+  const originalRequest = 'Inspect every historical message.'
+  const compactedRequest = 'Continue from this compacted summary.'
+  const requests: JsonModelMessage[][] = []
+  let generateAttempts = 0
+  const tools: WorkflowTools<AgentToolRegistry> = {
+    generateText: async (input) => {
+      requests.push(structuredClone(input.messages))
+      generateAttempts++
+      if (generateAttempts === 1) {
+        return {
+          requestMessages: [
+            { role: 'system', content: input.systemPrompt ?? '' },
+            { role: 'user', content: compactedRequest },
+          ],
+          responseMessages: [
+            {
+              role: 'assistant',
+              content: [
+                {
+                  type: 'tool-call',
+                  toolCallId: 'compacted-tool-call',
+                  toolName: 'listFiles',
+                  input: { path: './src' },
+                },
+              ],
+            },
+          ],
+        }
+      }
+      return createModelRound(input, [{ role: 'assistant', content: 'Done.' }])
+    },
+    invokeTool: async ({ input }) => await listFilesTool.handler({} as any, input as any),
+    taskEvent: async () => {},
+  }
+
+  const result = await agentWorkflow(
+    {
+      userMessage: [{ role: 'user', content: originalRequest }],
+      tools: [listFilesTool],
+      systemPrompt: 'Use the dedicated system channel.',
+    },
+    createContext(tools),
+  )
+
+  expect(requests).toHaveLength(2)
+  expect(requests[1]).toContainEqual({ role: 'user', content: compactedRequest })
+  expect(requests[1]).not.toContainEqual({ role: 'user', content: originalRequest })
+  expect(result.messages).not.toContainEqual({ role: 'user', content: originalRequest })
+})
+
+test('should continue tool work beyond the former default round limit', async () => {
+  const mockResponses: ModelMessage[] = [
+    ...Array.from({ length: 201 }, (_, index) => ({
+      role: 'assistant' as const,
+      content: [
+        {
+          type: 'tool-call' as const,
+          toolCallId: `tool-call-${index}`,
+          toolName: 'listFiles',
+          input: { path: './src' },
+        },
+      ],
+    })),
+    { role: 'assistant', content: 'Done after the work completed.' },
+  ]
 
   const allTools = [listFilesTool]
 
   const tools: WorkflowTools<AgentToolRegistry> = {
-    generateText: async () => {
+    generateText: async (input) => {
       const response = mockResponses.shift()
-      return [response!] as JsonResponseMessage[]
+      return createModelRound(input, [response!] as JsonResponseMessage[])
     },
     invokeTool: async (input) => {
       const { toolName, input: toolInput } = input
@@ -291,14 +383,12 @@ test('should fail if maxToolRoundTrips is exceeded', async () => {
       userMessage: [{ role: 'user', content: 'List files.' }],
       tools: allTools,
       systemPrompt: 'You are a helpful assistant.',
-      maxToolRoundTrips: 10,
     },
     createContext(tools),
   )
 
-  expect(result.type).toBe('UsageExceeded')
-  expect(result.messages).toBeDefined()
-  expect(result.messages.length).toBeGreaterThan(0)
+  expect(result).toMatchObject({ type: 'Exit', message: 'Done after the work completed.' })
+  expect(mockResponses).toHaveLength(0)
 })
 
 test('should handle mixed valid and invalid tool calls by returning results for both', async () => {
@@ -332,7 +422,8 @@ test('should handle mixed valid and invalid tool calls by returning results for 
   let capturedToolResults: any[] = []
 
   const tools: WorkflowTools<AgentToolRegistry> = {
-    generateText: async ({ messages }) => {
+    generateText: async (input) => {
+      const { messages } = input
       // Check if the last message is a tool result message and capture it
       const lastMsg = messages[messages.length - 1]
       if (lastMsg.role === 'tool') {
@@ -342,9 +433,9 @@ test('should handle mixed valid and invalid tool calls by returning results for 
       const response = mockResponses.shift()
       if (!response) {
         // Return a dummy response to stop the loop if we run out of mocks
-        return [{ role: 'assistant', content: 'Done' }] as JsonResponseMessage[]
+        return createModelRound(input, [{ role: 'assistant', content: 'Done' }])
       }
-      return [response] as JsonResponseMessage[]
+      return createModelRound(input, [response] as JsonResponseMessage[])
     },
     invokeTool: async (input) => {
       const { toolName, input: toolInput } = input
@@ -400,14 +491,15 @@ test('should continue after a recoverable error-text tool failure', async () => 
   let capturedToolResults: any[] | undefined
 
   const tools: WorkflowTools<AgentToolRegistry> = {
-    generateText: async ({ messages }) => {
+    generateText: async (input) => {
+      const { messages } = input
       const lastMessage = messages[messages.length - 1]
       if (lastMessage.role === 'tool') {
         capturedToolResults = structuredClone(lastMessage.content as any[])
       }
 
       const response = mockResponses.shift()
-      return [response!] as JsonResponseMessage[]
+      return createModelRound(input, [response!] as JsonResponseMessage[])
     },
     invokeTool: async ({ toolName, input }) => {
       if (toolName !== failingSearchFilesTool.name) {
@@ -492,14 +584,15 @@ test('should continue after a recoverable replaceInFile error-text tool failure'
   let capturedToolResults: any[] | undefined
 
   const tools: WorkflowTools<AgentToolRegistry> = {
-    generateText: async ({ messages }) => {
+    generateText: async (input) => {
+      const { messages } = input
       const lastMessage = messages[messages.length - 1]
       if (lastMessage.role === 'tool') {
         capturedToolResults = structuredClone(lastMessage.content as any[])
       }
 
       const response = mockResponses.shift()
-      return [response!] as JsonResponseMessage[]
+      return createModelRound(input, [response!] as JsonResponseMessage[])
     },
     invokeTool: async ({ toolName, input }) => {
       if (toolName !== failingReplaceInFileTool.name) {
@@ -581,14 +674,15 @@ test('should preserve recoverable error-json tool failures for the next model re
   let capturedToolResults: any[] | undefined
 
   const tools: WorkflowTools<AgentToolRegistry> = {
-    generateText: async ({ messages }) => {
+    generateText: async (input) => {
+      const { messages } = input
       const lastMessage = messages[messages.length - 1]
       if (lastMessage.role === 'tool') {
         capturedToolResults = structuredClone(lastMessage.content as any[])
       }
 
       const response = mockResponses.shift()
-      return [response!] as JsonResponseMessage[]
+      return createModelRound(input, [response!] as JsonResponseMessage[])
     },
     invokeTool: async ({ toolName, input }) => {
       if (toolName !== failingSearchFilesTool.name) {
@@ -671,14 +765,15 @@ test('should accept SDK-compatible content tool results without a url field', as
   let capturedToolResults: any[] | undefined
 
   const tools: WorkflowTools<AgentToolRegistry> = {
-    generateText: async ({ messages }) => {
+    generateText: async (input) => {
+      const { messages } = input
       const lastMessage = messages[messages.length - 1]
       if (lastMessage.role === 'tool') {
         capturedToolResults = structuredClone(lastMessage.content as any[])
       }
 
       const response = mockResponses.shift()
-      return [response!] as JsonResponseMessage[]
+      return createModelRound(input, [response!] as JsonResponseMessage[])
     },
     invokeTool: async ({ toolName, input }) => {
       if (toolName !== contentTool.name) {
@@ -775,19 +870,20 @@ test('should return and emit the same terminal error when tool execution throws'
   })
   const events: TaskEvent[] = []
   const tools: WorkflowTools<AgentToolRegistry> = {
-    generateText: async () => [
-      {
-        role: 'assistant',
-        content: [
-          {
-            type: 'tool-call',
-            toolCallId: 'failing-tool-call',
-            toolName: 'listFiles',
-            input: { path: './src' },
-          },
-        ],
-      },
-    ],
+    generateText: async (input) =>
+      createModelRound(input, [
+        {
+          role: 'assistant',
+          content: [
+            {
+              type: 'tool-call',
+              toolCallId: 'failing-tool-call',
+              toolName: 'listFiles',
+              input: { path: './src' },
+            },
+          ],
+        },
+      ]),
     invokeTool: async () => {
       throw failure
     },

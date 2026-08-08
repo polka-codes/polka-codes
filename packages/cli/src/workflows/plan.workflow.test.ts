@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, mock, test } from 'bun:test'
 import { UserCancelledError } from '../errors'
+import { createAgentModelRound } from '../test/workflow-fixtures'
 import type { CliToolRegistry } from './../workflow-tools'
 import { planWorkflow } from './plan.workflow'
 import { createTestProxy, type ExpectedToolCall } from './testing/helper'
@@ -25,12 +26,12 @@ describe('planWorkflow', () => {
       {
         toolName: 'generateText',
         args: expect.anything(),
-        returnValue: [
+        returnValue: createAgentModelRound([
           {
             role: 'assistant',
             content: JSON.stringify({ plan: generatedPlan }),
           },
-        ],
+        ]),
       },
       {
         toolName: 'updateMemory',
@@ -81,14 +82,14 @@ describe('planWorkflow', () => {
       {
         toolName: 'generateText',
         args: expect.anything(),
-        returnValue: [
+        returnValue: createAgentModelRound([
           {
             role: 'assistant',
             content: `\`\`\`json
 ${JSON.stringify({ plan: initialPlan })}
 \`\`\``,
           },
-        ],
+        ]),
       },
       {
         toolName: 'updateMemory',
@@ -113,14 +114,14 @@ ${JSON.stringify({ plan: initialPlan })}
       {
         toolName: 'generateText',
         args: expect.anything(),
-        returnValue: [
+        returnValue: createAgentModelRound([
           {
             role: 'assistant',
             content: `\`\`\`json
 ${JSON.stringify({ plan: regeneratedPlan })}
 \`\`\``,
           },
-        ],
+        ]),
       },
       {
         toolName: 'updateMemory',
@@ -162,14 +163,14 @@ ${JSON.stringify({ plan: regeneratedPlan })}
       {
         toolName: 'generateText',
         args: expect.anything(),
-        returnValue: [
+        returnValue: createAgentModelRound([
           {
             role: 'assistant',
             content: `\`\`\`json
 ${JSON.stringify({ plan: generatedPlan })}
 \`\`\``,
           },
-        ],
+        ]),
       },
       {
         toolName: 'updateMemory',
@@ -199,14 +200,14 @@ ${JSON.stringify({ plan: generatedPlan })}
       {
         toolName: 'generateText',
         args: expect.any(Object),
-        returnValue: [
+        returnValue: createAgentModelRound([
           {
             role: 'assistant',
             content: `\`\`\`json
 ${JSON.stringify({ plan: generatedPlan })}
 \`\`\``,
           },
-        ],
+        ]),
       },
       {
         toolName: 'updateMemory',
@@ -227,12 +228,12 @@ ${JSON.stringify({ plan: generatedPlan })}
       {
         toolName: 'generateText',
         args: expect.anything(),
-        returnValue: [
+        returnValue: createAgentModelRound([
           {
             role: 'assistant',
             content: JSON.stringify({ reason }),
           },
-        ],
+        ]),
       },
     ])
     assert = proxyAssert
@@ -253,14 +254,14 @@ ${JSON.stringify({ plan: generatedPlan })}
       {
         toolName: 'generateText',
         args: expect.any(Object),
-        returnValue: [
+        returnValue: createAgentModelRound([
           {
             role: 'assistant',
             content: `\`\`\`json
 ${JSON.stringify({ plan: generatedPlan })}
 \`\`\``,
           },
-        ],
+        ]),
       },
       {
         toolName: 'updateMemory',
@@ -290,14 +291,14 @@ ${JSON.stringify({ plan: generatedPlan })}
       {
         toolName: 'generateText',
         args: expect.any(Object),
-        returnValue: [
+        returnValue: createAgentModelRound([
           {
             role: 'assistant',
             content: `\`\`\`json
 ${JSON.stringify({ plan: generatedPlan })}
 \`\`\``,
           },
-        ],
+        ]),
       },
       {
         toolName: 'updateMemory',
@@ -330,12 +331,12 @@ ${JSON.stringify({ plan: generatedPlan })}
       {
         toolName: 'generateText',
         args: expect.any(Object),
-        returnValue: [
+        returnValue: createAgentModelRound([
           {
             role: 'assistant',
             content: `${JSON.stringify({ question: { question } })}`,
           },
-        ],
+        ]),
       },
       {
         toolName: 'input',
@@ -345,14 +346,14 @@ ${JSON.stringify({ plan: generatedPlan })}
       {
         toolName: 'generateText',
         args: expect.any(Object),
-        returnValue: [
+        returnValue: createAgentModelRound([
           {
             role: 'assistant',
             content: `\`\`\`json
 ${JSON.stringify({ plan: generatedPlan })}
 \`\`\``,
           },
-        ],
+        ]),
       },
       {
         toolName: 'updateMemory',
@@ -384,14 +385,14 @@ ${JSON.stringify({ plan: generatedPlan })}
       {
         toolName: 'generateText',
         args: expect.anything(),
-        returnValue: [
+        returnValue: createAgentModelRound([
           {
             role: 'assistant',
             content: `\`\`\`json
 ${JSON.stringify({ plan: initialPlan })}
 \`\`\``,
           },
-        ],
+        ]),
       },
       {
         toolName: 'updateMemory',
@@ -409,14 +410,14 @@ ${JSON.stringify({ plan: initialPlan })}
       {
         toolName: 'generateText',
         args: expect.anything(),
-        returnValue: [
+        returnValue: createAgentModelRound([
           {
             role: 'assistant',
             content: `\`\`\`json
 ${JSON.stringify({ plan: regeneratedPlan })}
 \`\`\``,
           },
-        ],
+        ]),
       },
       {
         toolName: 'updateMemory',
@@ -451,14 +452,14 @@ ${JSON.stringify({ plan: regeneratedPlan })}
       {
         toolName: 'generateText',
         args: expect.anything(),
-        returnValue: [
+        returnValue: createAgentModelRound([
           {
             role: 'assistant',
             content: `\`\`\`json
 ${JSON.stringify(generatedPlan)}
 \`\`\``,
           },
-        ],
+        ]),
       },
       {
         toolName: 'readFile',

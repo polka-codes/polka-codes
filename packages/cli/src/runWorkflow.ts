@@ -168,12 +168,7 @@ function toTerminalExitReason(error: unknown): ExitReason {
 }
 
 function isExitReason(output: unknown): output is ExitReason {
-  return (
-    output !== null &&
-    typeof output === 'object' &&
-    'type' in output &&
-    (output.type === 'Exit' || output.type === 'Error' || output.type === 'UsageExceeded')
-  )
+  return output !== null && typeof output === 'object' && 'type' in output && (output.type === 'Exit' || output.type === 'Error')
 }
 
 function isSuccessfulWorkflowOutput(output: unknown): boolean {

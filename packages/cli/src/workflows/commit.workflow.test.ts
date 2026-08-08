@@ -3,7 +3,7 @@
 import { afterEach, describe, expect, mock, test } from 'bun:test'
 import { execSync } from 'node:child_process'
 import { UserCancelledError } from '../errors'
-import { createWorkflowTestContext } from '../test/workflow-fixtures'
+import { createAgentModelRound, createWorkflowTestContext } from '../test/workflow-fixtures'
 import { commitWorkflow } from './commit.workflow'
 
 // Check if git is available synchronously
@@ -41,12 +41,14 @@ describe.skipIf(!gitAvailable)('commitWorkflow', () => {
       stdout: '--- a/src/file.ts\n+++ b/src/file.ts\n@@ -1,3 +1,4 @@\n+export const newFunc = () => {}\n',
     })
     tools.createCommit.mockResolvedValue({})
-    tools.generateText.mockResolvedValue([
-      {
-        role: 'assistant',
-        content: JSON.stringify({ commitMessage: 'feat: add newFunc' }),
-      },
-    ])
+    tools.generateText.mockResolvedValue(
+      createAgentModelRound([
+        {
+          role: 'assistant',
+          content: JSON.stringify({ commitMessage: 'feat: add newFunc' }),
+        },
+      ]),
+    )
 
     const result = await commitWorkflow({ ...defaultInput }, context)
 
@@ -79,12 +81,14 @@ describe.skipIf(!gitAvailable)('commitWorkflow', () => {
       unstagedFiles: [{ path: 'src/file.ts', status: 'M' }],
     })
     tools.executeCommand.mockResolvedValue({ exitCode: 0, stdout: 'M\tsrc/file.ts' })
-    tools.generateText.mockResolvedValue([
-      {
-        role: 'assistant',
-        content: JSON.stringify({ commitMessage: 'feat: stage file' }),
-      },
-    ])
+    tools.generateText.mockResolvedValue(
+      createAgentModelRound([
+        {
+          role: 'assistant',
+          content: JSON.stringify({ commitMessage: 'feat: stage file' }),
+        },
+      ]),
+    )
 
     const result = await commitWorkflow({ ...defaultInput, all: true }, context)
 
@@ -110,12 +114,14 @@ describe.skipIf(!gitAvailable)('commitWorkflow', () => {
       unstagedFiles: [{ path: 'src/unstaged.ts', status: 'M' }],
     })
     tools.executeCommand.mockResolvedValue({ exitCode: 0, stdout: 'M\tsrc/staged.ts\nM\tsrc/unstaged.ts', stderr: '' })
-    tools.generateText.mockResolvedValue([
-      {
-        role: 'assistant',
-        content: JSON.stringify({ commitMessage: 'feat: stage every file' }),
-      },
-    ])
+    tools.generateText.mockResolvedValue(
+      createAgentModelRound([
+        {
+          role: 'assistant',
+          content: JSON.stringify({ commitMessage: 'feat: stage every file' }),
+        },
+      ]),
+    )
 
     const result = await commitWorkflow({ ...defaultInput, all: true }, context)
 
@@ -143,12 +149,14 @@ describe.skipIf(!gitAvailable)('commitWorkflow', () => {
     })
     tools.confirm.mockResolvedValue(true)
     tools.executeCommand.mockResolvedValue({ exitCode: 0, stdout: 'M\tsrc/file.ts' })
-    tools.generateText.mockResolvedValue([
-      {
-        role: 'assistant',
-        content: JSON.stringify({ commitMessage: 'feat: stage file' }),
-      },
-    ])
+    tools.generateText.mockResolvedValue(
+      createAgentModelRound([
+        {
+          role: 'assistant',
+          content: JSON.stringify({ commitMessage: 'feat: stage file' }),
+        },
+      ]),
+    )
 
     const result = await commitWorkflow({ ...defaultInput, interactive: true }, context)
 

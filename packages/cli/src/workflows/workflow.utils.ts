@@ -22,7 +22,7 @@ export type BaseWorkflowInput = {
 }
 
 export function getAgentWorkflowFailureMessage(result: Exclude<ExitReason, { type: 'Exit' }>): string {
-  return result.type === 'Error' ? result.error.message : 'Usage limits were exceeded.'
+  return result.error.message
 }
 
 export type FileChange = {

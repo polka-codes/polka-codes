@@ -2,7 +2,7 @@
 
 import { expect, mock, test } from 'bun:test'
 import { createContext } from '@polka-codes/core'
-import { createWorkflowTestContext } from '../test/workflow-fixtures'
+import { createAgentModelRound, createWorkflowTestContext } from '../test/workflow-fixtures'
 import { prWorkflow } from './pr.workflow'
 
 const createMockContext = () => {
@@ -64,16 +64,18 @@ test('should create PR with user context', async () => {
     }) // git diff
 
   // Mock agent workflow response
-  tools.generateText.mockResolvedValue([
-    {
-      role: 'assistant',
-      content: JSON.stringify({
-        title: 'feat: add authentication feature',
-        description:
-          'This PR implements the authentication feature for the application.\n\n### Changes\n- Added authenticate function\n- Fixed login bug',
-      }),
-    },
-  ])
+  tools.generateText.mockResolvedValue(
+    createAgentModelRound([
+      {
+        role: 'assistant',
+        content: JSON.stringify({
+          title: 'feat: add authentication feature',
+          description:
+            'This PR implements the authentication feature for the application.\n\n### Changes\n- Added authenticate function\n- Fixed login bug',
+        }),
+      },
+    ]),
+  )
 
   const result = await run({ context: 'Implementing new authentication feature' })
 

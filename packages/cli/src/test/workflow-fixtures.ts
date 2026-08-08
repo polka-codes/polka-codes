@@ -6,7 +6,7 @@
  */
 
 import { mock } from 'bun:test'
-import type { BaseWorkflowContext } from '@polka-codes/core'
+import type { AgentModelRound, BaseWorkflowContext, JsonModelMessage, JsonResponseMessage } from '@polka-codes/core'
 import type { CliToolRegistry } from '../workflow-tools'
 
 /**
@@ -40,6 +40,10 @@ export interface WorkflowTestContext {
   }
 }
 
+export function createAgentModelRound(responseMessages: JsonResponseMessage[], requestMessages: JsonModelMessage[] = []): AgentModelRound {
+  return { requestMessages, responseMessages }
+}
+
 /**
  * Create a workflow test context with properly typed mocks
  *
@@ -54,7 +58,7 @@ export function createWorkflowTestContext(): WorkflowTestContext {
   const tools = {
     executeCommand: mock<() => Promise<{ exitCode: number; stdout: string; stderr: string }>>(),
     input: mock<() => Promise<string>>(),
-    generateText: mock<() => Promise<Array<{ role: string; content: string }>>>(),
+    generateText: mock<() => Promise<AgentModelRound>>(),
     taskEvent: mock<() => Promise<void>>(),
     getMemoryContext: mock<() => Promise<string>>().mockResolvedValue(''),
     updateMemory: mock<() => Promise<void>>(),
@@ -126,12 +130,14 @@ export function mockFailedCommand(tools: WorkflowTestContext['tools'], stdout: s
  */
 export function mockAgentResponse(tools: WorkflowTestContext['tools'], summary: string | null, bailReason?: string): void {
   const content = JSON.stringify({ summary, bailReason: bailReason ?? null })
-  tools.generateText.mockResolvedValue([
-    {
-      role: 'assistant',
-      content: `\`\`\`json\n${content}\n\`\`\``,
-    },
-  ])
+  tools.generateText.mockResolvedValue(
+    createAgentModelRound([
+      {
+        role: 'assistant',
+        content: `\`\`\`json\n${content}\n\`\`\``,
+      },
+    ]),
+  )
 }
 
 /**

@@ -11,7 +11,7 @@ import type { WorkflowFn } from './workflow.js'
 
 export type AgentWorkflowInput = {
   tools: Readonly<FullToolInfo[]>
-  maxToolRoundTrips?: number
+  maxStructuredOutputRepairAttempts?: number
   userMessage: readonly JsonUserModelMessage[]
   outputSchema?: z.ZodSchema
   model?: string
@@ -24,10 +24,17 @@ export type AgentWorkflowInput = {
     }
 )
 
+export const STRUCTURED_OUTPUT_REPAIR_EXHAUSTED_CODE = 'structured_output_repair_exhausted'
+
+export type AgentModelRound = {
+  requestMessages: JsonModelMessage[]
+  responseMessages: JsonResponseMessage[]
+}
+
 export type AgentToolRegistry = {
   generateText: {
     input: { messages: JsonModelMessage[]; systemPrompt?: string; tools: ToolSet; model?: string }
-    output: JsonResponseMessage[]
+    output: AgentModelRound
   }
   taskEvent: {
     input: TaskEvent
@@ -62,18 +69,27 @@ function isToolInput(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
+function createStructuredOutputRepairError(attempts: number): Error & { code: string } {
+  return Object.assign(new Error(`Structured output remained invalid after ${attempts} repair attempts.`), {
+    code: STRUCTURED_OUTPUT_REPAIR_EXHAUSTED_CODE,
+  })
+}
+
 export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentToolRegistry> = async (input, { step, tools, logger }) => {
   const event = (name: string, event: TaskEvent) => step(name, () => tools.taskEvent(event))
 
-  const { tools: toolInfo, maxToolRoundTrips = 200 } = input
+  const { tools: toolInfo, maxStructuredOutputRepairAttempts = 2 } = input
 
   const systemPrompt = 'systemPrompt' in input ? input.systemPrompt : undefined
-  const messages: JsonModelMessage[] = 'systemPrompt' in input ? [{ role: 'system', content: input.systemPrompt }] : [...input.messages]
   const outputSchemaInstruction = input.outputSchema
     ? `When finished, return one JSON value matching this schema:\n${JSON.stringify(
         toJSONSchema(input.outputSchema, { io: 'input', unrepresentable: 'any' }),
       )}`
     : undefined
+  let messages: JsonModelMessage[] = 'systemPrompt' in input ? [{ role: 'system', content: input.systemPrompt }] : [...input.messages]
+  if (outputSchemaInstruction) {
+    messages.push({ role: 'system', content: outputSchemaInstruction })
+  }
 
   await event('start-task', { kind: TaskEventKind.StartTask, systemPrompt: systemPrompt ?? '' })
 
@@ -96,18 +112,16 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
   }
 
   let nextMessage: readonly JsonModelMessage[] = input.userMessage
+  let structuredOutputRepairAttempts = 0
 
-  for (let i = 0; i < maxToolRoundTrips; i++) {
+  for (let i = 0; ; i++) {
     messages.push(...nextMessage)
 
     await event(`start-round-${i}`, { kind: TaskEventKind.StartRequest, userMessage: nextMessage })
-    let assistantMessage: JsonResponseMessage[]
+    let modelRound: AgentModelRound
     try {
-      assistantMessage = await step(`agent-round-${i}`, async () => {
+      modelRound = await step(`agent-round-${i}`, async () => {
         const systemMessages = messages.filter((message) => message.role === 'system').map((message) => message.content)
-        if (outputSchemaInstruction) {
-          systemMessages.push(outputSchemaInstruction)
-        }
         const requestSystemPrompt = systemMessages.length > 0 ? systemMessages.join('\n\n') : undefined
         const requestMessages = requestSystemPrompt ? messages.filter((message) => message.role !== 'system') : messages
 
@@ -122,7 +136,8 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
       return await endWithError(error)
     }
 
-    messages.push(...assistantMessage)
+    messages = [...modelRound.requestMessages, ...modelRound.responseMessages]
+    const assistantMessage = modelRound.responseMessages
 
     const toolCalls: ToolCallPart[] = []
     for (const msg of assistantMessage) {
@@ -167,6 +182,10 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
 
       const parsed = parseJsonFromMarkdown(textContent)
       if (!parsed.success) {
+        if (structuredOutputRepairAttempts >= maxStructuredOutputRepairAttempts) {
+          return await endWithError(createStructuredOutputRepairError(structuredOutputRepairAttempts))
+        }
+        structuredOutputRepairAttempts += 1
         const errorMessage = `Invalid JSON: ${parsed.error}\nReturn corrected JSON only.`
         nextMessage = [{ role: 'user', content: errorMessage }]
         continue
@@ -174,6 +193,10 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
 
       const validated = input.outputSchema.safeParse(parsed.data)
       if (!validated.success) {
+        if (structuredOutputRepairAttempts >= maxStructuredOutputRepairAttempts) {
+          return await endWithError(createStructuredOutputRepairError(structuredOutputRepairAttempts))
+        }
+        structuredOutputRepairAttempts += 1
         const errorMessage = `JSON does not match the required schema:\n${z.prettifyError(validated.error)}\nReturn corrected JSON only.`
         nextMessage = [{ role: 'user', content: errorMessage }]
         continue
@@ -182,6 +205,8 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
       await event('end-task', { kind: TaskEventKind.EndTask, exitReason })
       return exitReason
     }
+
+    structuredOutputRepairAttempts = 0
 
     const toolResults: { toolCallId: string; toolName: string; output: ToolResultOutput }[] = []
     for (const toolCall of toolCalls) {
@@ -260,8 +285,4 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
       }),
     ]
   }
-
-  const exitReason: ExitReason = { type: 'UsageExceeded', messages }
-  await event('end-task', { kind: TaskEventKind.EndTask, exitReason })
-  return exitReason
 }

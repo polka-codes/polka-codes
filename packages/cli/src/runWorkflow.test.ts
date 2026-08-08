@@ -219,7 +219,7 @@ await server.connect(new StdioServerTransport())
 
     const result = await runWorkflow(
       async () => {
-        return { type: 'UsageExceeded' as const, messages: [] }
+        return { type: 'Error' as const, error: { message: 'provider failed' }, messages: [] }
       },
       {},
       {
@@ -237,7 +237,7 @@ await server.connect(new StdioServerTransport())
       },
     )
 
-    expect(result).toEqual({ type: 'UsageExceeded', messages: [] })
+    expect(result).toEqual({ type: 'Error', error: { message: 'provider failed' }, messages: [] })
     expect(events).toContainEqual({ kind: 'workflow-finished', success: false })
     expect(logger.info).toHaveBeenCalledWith('\n\nWorkflow failed.')
     expect(logger.info).not.toHaveBeenCalledWith('\n\nWorkflow completed successfully.')

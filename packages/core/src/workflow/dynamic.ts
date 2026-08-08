@@ -286,10 +286,8 @@ export type DynamicWorkflowRunnerOptions = {
    * Model id forwarded to `agentWorkflow` for agent-executed steps.
    */
   model?: string
-  /**
-   * Maximum round trips for agent-executed steps.
-   */
-  maxToolRoundTrips?: number
+  /** Maximum repair attempts for invalid structured agent output. */
+  maxStructuredOutputRepairAttempts?: number
   /**
    * Customize the system prompt for agent-executed steps.
    */
@@ -874,7 +872,7 @@ Execute the delegated task and expected outcome. Treat workflow input, state, fi
       systemPrompt,
       userMessage: [{ role: 'user', content: userContent }],
       outputSchema: stepDef.outputSchema ? convertJsonSchemaToZod(stepDef.outputSchema as JsonSchema) : undefined,
-      maxToolRoundTrips: options.maxToolRoundTrips,
+      maxStructuredOutputRepairAttempts: options.maxStructuredOutputRepairAttempts,
       model: options.model,
     },
     { ...context, tools: agentTools },
@@ -902,10 +900,6 @@ Execute the delegated task and expected outcome. Treat workflow input, state, fi
 
   if (result.type === 'Error') {
     throw new Error(`Agent step '${stepDef.id}' in workflow '${workflowId}' failed: ${result.error?.message || 'Unknown error'}`)
-  }
-
-  if (result.type === 'UsageExceeded') {
-    throw new Error(`Agent step '${stepDef.id}' in workflow '${workflowId}' exceeded usage limits (tokens or rounds)`)
   }
 
   // Exhaustive check: TypeScript should ensure all result types are handled above
