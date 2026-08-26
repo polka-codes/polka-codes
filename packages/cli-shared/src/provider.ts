@@ -314,8 +314,6 @@ export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
       command: string,
       _needApprove: boolean,
     ): Promise<{ stdout: string; stderr: string; exitCode: number; summary?: string }> => {
-      // TODO: add timeout
-
       return new Promise((resolve, reject) => {
         // spawn a shell to execute the command
 
@@ -323,7 +321,7 @@ export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
 
         const child = spawn(command, [], {
           shell: true,
-          stdio: 'pipe',
+          stdio: ['ignore', 'pipe', 'pipe'],
         })
 
         let stdoutText = ''

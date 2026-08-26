@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test'
+import { fileURLToPath } from 'node:url'
 import type {
   LanguageModelV4,
   LanguageModelV4CallOptions,
@@ -9,6 +10,8 @@ import { APICallError } from '@ai-sdk/provider'
 import { UsageMeter } from '@polka-codes/core'
 import { AuthenticationError, MaxRetriesExceededError, MessageLimitExceededError, ProviderTimeoutError } from './errors'
 import { prepareGenerateTextRequest, toolCall } from './tool-implementations'
+
+const stdinEofFixturePath = fileURLToPath(new URL('../../cli-shared/src/test-fixtures/read-stdin-until-eof.mjs', import.meta.url))
 
 class TimeoutLanguageModel implements LanguageModelV4 {
   readonly specificationVersion = 'v4'
@@ -92,6 +95,54 @@ describe('prepareGenerateTextRequest', () => {
       { role: 'user', content: 'User request.' },
       { role: 'assistant', content: 'Assistant reply.' },
     ])
+  })
+})
+
+describe('executeCommand', () => {
+  test('closes stdin for shell and direct commands while preserving results', async () => {
+    const model = new TimeoutLanguageModel()
+    const context = {
+      model,
+      parameters: {
+        usageMeter: new UsageMeter(),
+      },
+      toolProvider: {},
+      workflowContext: {
+        logger: {
+          debug() {},
+          error() {},
+          info() {},
+          warn() {},
+        },
+      },
+    }
+    const expected = { exitCode: 7, stdout: 'out', stderr: 'err' }
+
+    await expect(
+      toolCall(
+        {
+          tool: 'executeCommand',
+          input: {
+            command: process.execPath,
+            args: [stdinEofFixturePath],
+          },
+        },
+        context,
+      ),
+    ).resolves.toEqual(expected)
+
+    await expect(
+      toolCall(
+        {
+          tool: 'executeCommand',
+          input: {
+            command: `${JSON.stringify(process.execPath)} ${JSON.stringify(stdinEofFixturePath)}`,
+            shell: true,
+          },
+        },
+        context,
+      ),
+    ).resolves.toEqual(expected)
   })
 })
 

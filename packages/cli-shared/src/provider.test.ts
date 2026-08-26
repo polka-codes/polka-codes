@@ -1,7 +1,9 @@
 import { describe, expect, it, mock } from 'bun:test'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
-import { pathToFileURL } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { getProvider } from './provider'
+
+const stdinEofFixturePath = fileURLToPath(new URL('./test-fixtures/read-stdin-until-eof.mjs', import.meta.url))
 
 describe('getProvider', () => {
   describe('askFollowupQuestion', () => {
@@ -21,6 +23,43 @@ describe('getProvider', () => {
   })
 
   describe('executeCommand', () => {
+    it('closes stdin while preserving command results and observers', async () => {
+      const onStarted = mock(() => {})
+      const onStdout = mock(() => {})
+      const onStderr = mock(() => {})
+      const onExit = mock(() => {})
+      const onError = mock(() => {})
+      const summarizeOutput = mock(async () => 'summary')
+      const provider = getProvider({
+        command: {
+          onStarted,
+          onStdout,
+          onStderr,
+          onExit,
+          onError,
+        },
+        summaryThreshold: 0,
+        summarizeOutput,
+      })
+      if (!provider.executeCommand) throw new Error('executeCommand not defined')
+      const command = `${JSON.stringify(process.execPath)} ${JSON.stringify(stdinEofFixturePath)}`
+
+      const result = await provider.executeCommand(command, false)
+
+      expect(result).toEqual({
+        stdout: 'out',
+        stderr: 'err',
+        exitCode: 7,
+        summary: 'summary',
+      })
+      expect(onStarted).toHaveBeenCalledWith(command)
+      expect(onStdout).toHaveBeenCalledWith('out')
+      expect(onStderr).toHaveBeenCalledWith('err')
+      expect(onExit).toHaveBeenCalledWith(7)
+      expect(onError).not.toHaveBeenCalled()
+      expect(summarizeOutput).toHaveBeenCalledWith('out', 'err')
+    })
+
     it('does not let command observer failures alter command results', async () => {
       const provider = getProvider({
         command: {

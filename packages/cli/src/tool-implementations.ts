@@ -232,8 +232,8 @@ async function executeCommand(input: CliToolRegistry['executeCommand']['input'])
   return new Promise<{ exitCode: number; stdout: string; stderr: string }>((resolve, reject) => {
     const child =
       input.shell === true
-        ? spawn(input.command, { shell: true, stdio: 'pipe' })
-        : spawn(input.command, input.args, { shell: false, stdio: 'pipe' })
+        ? spawn(input.command, { shell: true, stdio: ['ignore', 'pipe', 'pipe'] })
+        : spawn(input.command, input.args, { shell: false, stdio: ['ignore', 'pipe', 'pipe'] })
 
     let stdout = ''
     let stderr = ''
