@@ -85,7 +85,7 @@ export const wsOutgoingMessageSchema = z.discriminatedUnion('type', [
       z.object({
         index: z.number(),
         tool: z.string(),
-        response: userContentSchema,
+        response: z.union([userContentSchema, z.object({ stdout: z.string(), stderr: z.string(), exitCode: z.number().int().nullable() })]),
       }),
     ),
   }),

@@ -1,4 +1,5 @@
 name: Polka Codes Remote Runner
+run-name: Remote Runner - ${{ github.event.client_payload.taskId }}
 
 on:
   repository_dispatch:
@@ -30,4 +31,5 @@ jobs:
       - name: Run
         uses: polka-codes/action@master
         with:
+          runner_api_url: ${{ github.event.client_payload.apiUrl }}
           runner_payload: ${{ toJson(github.event.client_payload) }}

@@ -340,7 +340,9 @@ export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
         })
 
         child.on('close', async (code) => {
-          notifyCommandObserver(options.command?.onExit, code ?? 0)
+          // Node reports null when a signal terminates the command; it is never success.
+          const exitCode = code ?? 1
+          notifyCommandObserver(options.command?.onExit, exitCode)
           const totalLength = stdoutText.length + stderrText.length
           if (totalLength > (options.summaryThreshold ?? 5000) && options.summarizeOutput) {
             try {
@@ -350,7 +352,7 @@ export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
                   summary,
                   stdout: stdoutText,
                   stderr: stderrText,
-                  exitCode: code ?? 0,
+                  exitCode,
                 })
                 return
               }
@@ -361,7 +363,7 @@ export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
           resolve({
             stdout: stdoutText,
             stderr: stderrText,
-            exitCode: code ?? 0,
+            exitCode,
           })
         })
 

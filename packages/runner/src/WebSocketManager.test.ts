@@ -8,6 +8,7 @@ import type { WsOutgoingMessage } from './types'
 import { normalizeRunnerApiUrl, WebSocketManager } from './WebSocketManager'
 
 const workflowSchema = z.object({
+  'run-name': z.string(),
   on: z.object({
     repository_dispatch: z.object({
       types: z.array(z.string()),
@@ -45,6 +46,7 @@ describe('remote runner workflow dispatch', () => {
   test('uses only the app-side remote-runner-session event', async () => {
     const workflow = workflowSchema.parse(parse(await readFile(join(process.cwd(), '.github/workflows/polka-codes-runner.yml'), 'utf8')))
 
+    expect(workflow['run-name']).toBe('Remote Runner - $' + '{{ github.event.client_payload.taskId }}')
     expect(workflow.on.repository_dispatch.types).toContain('remote-runner-session')
     expect(workflow.on.repository_dispatch.types).not.toContain('trigger_remote_runner')
   })
