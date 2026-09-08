@@ -17,7 +17,10 @@ server.on('connection', (socket) => {
     if (message.type === 'connected') {
       if (onConnected === 'reject') socket.close(1008, 'Invalid runner protocol')
       else socket.send(JSON.stringify(onConnected))
-    } else if (message.type === 'pending_tools_response') {
+    } else if (
+      message.type === 'pending_tools_response' ||
+      (onConnected.type === 'get_files' && (message.type === 'get_files_completed' || message.type === 'error'))
+    ) {
       socket.send(JSON.stringify({ type: 'done' }))
     }
   })

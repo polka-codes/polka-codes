@@ -1,6 +1,6 @@
 import { execSync } from 'node:child_process'
 import { promises as fs } from 'node:fs'
-import { getProvider, type LoadedConfig, listFiles as listFilesHelper, loadConfig } from '@polka-codes/cli-shared'
+import { getProvider, type LoadedConfig, loadConfig } from '@polka-codes/cli-shared'
 import {
   executeCommand,
   type FullToolInfo,
@@ -300,28 +300,15 @@ export class Runner {
 
     try {
       // Get git status in porcelain format for machine-readable output
-      const gitStatusOutput = execSync('git status --porcelain=v1', { encoding: 'utf8' })
+      const gitStatusOutput = execSync('git status --porcelain=v1 -z --untracked-files=all', { encoding: 'utf8' })
 
       // Parse the git status output to identify file changes
-      const fileChanges = this.parseGitStatus(gitStatusOutput)
+      const fileChanges = this.#parseGitStatus(gitStatusOutput)
 
       // Process each file change and send appropriate messages
       for (const change of fileChanges) {
-        switch (change.status) {
-          case 'added':
-          case 'modified':
-            await this.sendFileContent(change.path)
-            break
-          case 'deleted':
-            this.sendFileDeleted(change.path)
-            break
-          case 'renamed':
-            if (change.oldPath) {
-              this.sendFileDeleted(change.oldPath)
-              await this.sendFileContent(change.path)
-            }
-            break
-        }
+        if (change.deleted) this.sendFileDeleted(change.path)
+        else await this.#sendFileContent(change.path)
       }
 
       // Signal completion of file processing
@@ -329,11 +316,12 @@ export class Runner {
 
       console.log(`Processed ${fileChanges.length} changed files`)
     } catch (error) {
+      this.#commandFailed = true
       console.error('Error getting changed files:', error)
       // Send an error message back if git command fails
       this.wsManager.sendMessage({
         type: 'error',
-        message: 'Failed to get changed files using git',
+        message: 'Failed to synchronize changed files',
         details: error instanceof Error ? error.message : String(error),
       })
     }
@@ -349,91 +337,29 @@ export class Runner {
     setImmediate(() => process.exit(this.#commandFailed ? 1 : 0))
   }
 
-  /**
-   * Parse git status output
-   */
-  private parseGitStatus(gitStatusOutput: string): Array<{
-    status: 'added' | 'modified' | 'deleted' | 'renamed'
-    path: string
-    oldPath?: string
-  }> {
-    const changes: Array<{
-      status: 'added' | 'modified' | 'deleted' | 'renamed'
-      path: string
-      oldPath?: string
-    }> = []
-
-    const lines = gitStatusOutput.split('\n').filter((line) => line.trim().length > 0)
-
-    for (const line of lines) {
-      const statusCode = line.substring(0, 2)
-      const path = line.substring(3)
-
-      // Handle renamed files (format: R  old-file -> new-file)
-      if (statusCode.startsWith('R')) {
-        const parts = path.split(' -> ')
-        if (parts.length === 2) {
-          const [oldPath, newPath] = parts
-          changes.push({
-            status: 'renamed',
-            path: newPath,
-            oldPath: oldPath,
-          })
-          continue
-        }
+  #parseGitStatus(output: string): Array<{ path: string; deleted: boolean }> {
+    const changes: Array<{ path: string; deleted: boolean }> = []
+    const records = output.split('\0')
+    for (let index = 0; index < records.length; index++) {
+      const record = records[index]
+      if (!record) continue
+      const status = record.slice(0, 2)
+      const path = record.slice(3)
+      // Porcelain -z writes the destination first, followed by a separate source record.
+      if (status.includes('R') || status.includes('C')) {
+        const source = records[++index]
+        if (!source) throw new Error('Missing source path in Git status')
+        if (status.includes('R')) changes.push({ path: source, deleted: true })
       }
-
-      // Handle other status codes
-      if (statusCode === '??') {
-        // Untracked file (new)
-        changes.push({ status: 'added', path })
-      } else if (statusCode.includes('A')) {
-        // Added file
-        changes.push({ status: 'added', path })
-      } else if (statusCode.includes('M')) {
-        // Modified file
-        changes.push({ status: 'modified', path })
-      } else if (statusCode.includes('D')) {
-        // Deleted file
-        changes.push({ status: 'deleted', path })
-      }
+      changes.push({ path, deleted: status.includes('D') })
     }
-
     return changes
   }
 
-  /**
-   * Send file content (supports files and directories)
-   */
-  private async sendFileContent(path: string): Promise<void> {
-    try {
-      const stat = await fs.stat(path).catch(() => null)
-      if (!stat) {
-        console.error(`File or directory not found: ${path}`)
-        return
-      }
-
-      if (stat.isDirectory()) {
-        // Directory: recursively send all files
-        const [files] = await listFilesHelper(path, true, 1000, process.cwd())
-        for (const file of files) {
-          await this.sendFileContent(file)
-        }
-      } else if (stat.isFile()) {
-        const content = await fs.readFile(path, 'utf8')
-        this.wsManager.sendMessage({
-          type: 'file',
-          path,
-          content,
-        })
-        console.log(`Sent content for file: ${path}, size: ${content.length}`)
-      } else {
-        // Not a file or directory
-        console.error(`Path is not a file or directory: ${path}`)
-      }
-    } catch (error) {
-      console.error(`Error processing path ${path}:`, error)
-    }
+  async #sendFileContent(path: string): Promise<void> {
+    const content = await fs.readFile(path, 'utf8')
+    this.wsManager.sendMessage({ type: 'file', path, content })
+    console.log(`Sent content for file: ${path}, size: ${content.length}`)
   }
 
   /**
