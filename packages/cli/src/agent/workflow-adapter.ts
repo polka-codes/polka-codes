@@ -96,18 +96,17 @@ export async function adaptPlanWorkflow(
 
     const result = await planWorkflow(input, context)
 
-    if (!result) {
+    if (result.reason || !result.plan.trim()) {
       return {
         success: false,
-        error: new Error('Plan not approved'),
+        error: new Error(result.reason || 'The planner returned no plan'),
       }
     }
 
     return {
       success: true,
       data: result,
-      output: result.plan || 'Plan created',
-      filesModified: result.files.map((f) => f.path),
+      output: result.plan,
     }
   } catch (error) {
     throw new WorkflowInvocationError(

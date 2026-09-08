@@ -168,3 +168,31 @@ test('successful executions have independent step caches and clear timeout timer
     await expect(invokeWorkflow('unknown', {}, context)).rejects.toThrow('Unknown workflow')
   }, false)
 })
+
+for (const response of [{ reason: 'Requirements are missing' }, { plan: '   ' }]) {
+  test(`planning tasks fail when the planner returns ${JSON.stringify(response)}`, async () => {
+    await withExecutor(async ({ executor, context }) => {
+      context.tools.generateText = async ({ messages }) => ({
+        requestMessages: messages,
+        responseMessages: [{ role: 'assistant', content: JSON.stringify(response) }],
+      })
+      const result = await executor.execute({ ...task(), workflow: 'plan', workflowInput: { task: 'Analyze login', stateless: true } })
+      expect(result.success).toBe(false)
+      expect(result.error?.message).toBe('reason' in response ? response.reason : 'The planner returned no plan')
+    }, false)
+  })
+}
+
+test('a successful planning task does not report files read for context as modified', async () => {
+  await withExecutor(async ({ executor, context }) => {
+    context.tools.generateText = async ({ messages }) => ({
+      requestMessages: messages,
+      responseMessages: [{ role: 'assistant', content: JSON.stringify({ plan: 'Implement session validation', files: ['src/login.ts'] }) }],
+    })
+    context.tools.readFile = async () => 'export function login() {}'
+    const result = await executor.execute({ ...task(), workflow: 'plan', workflowInput: { task: 'Analyze login', stateless: true } })
+    expect(result.success).toBe(true)
+    expect(result.output).toBe('Implement session validation')
+    expect(result.filesModified).toBeUndefined()
+  }, false)
+})
