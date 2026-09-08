@@ -355,6 +355,10 @@ The project is organized as a monorepo with the following packages:
 | [`github`](/packages/github) | GitHub integration, including the GitHub Action. |
 | [`runner`](/packages/runner) | Service for running agents and managing tasks. |
 
+### Runner Command Responses
+
+For `pending_tools` batches containing only `executeCommand` requests, each `pending_tools_response.responses[].response` is `{ stdout, stderr, exitCode }`. Exit code `0` means success, a nonzero code means failure, and `null` marks a command skipped after an earlier failure. Custom runner consumers must read these fields instead of parsing the old text-content arrays. Mixed-tool batches retain their existing content response format.
+
 ## Getting Started
 
 ### Prerequisites
@@ -400,6 +404,10 @@ If you're contributing to this project, please refer to [AGENTS.md](AGENTS.md) f
 A [`.polkacodes.yml`](.polkacodes.yml) configuration file can be used to customize the behavior of polka-codes. An example configuration file is provided in the repository as [`example.polkacodes.yml`](example.polkacodes.yml).
 
 For detailed configuration options, refer to the example file, which includes comprehensive comments for each setting.
+
+### Configuration Overrides
+
+Later configuration files replace each named script definition in full, including when both definitions use the same script type. Repeat any timeout, input, or other options you want to retain. Argument and option arrays also replace inherited arrays; `rules` and `excludeFiles` remain additive, and provider objects support partial overrides.
 
 ### Shared Memory
 
