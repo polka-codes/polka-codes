@@ -8,6 +8,9 @@ import { fileURLToPath } from 'node:url'
 import type { DatabaseStats, IMemoryStore, MemoryConfig, MemoryEntry, MemoryOperation, MemoryQuery, QueryOptions } from '@polka-codes/core'
 import { DEFAULT_MEMORY_CONFIG, resolveHomePath } from '@polka-codes/core'
 import initSqlJs, { type Database, type SqlJsStatic } from 'sql.js'
+import { z } from 'zod'
+
+const lockDataSchema = z.object({ pid: z.number().int().positive(), acquiredAt: z.number().positive() })
 
 /**
  * Simple file lock for cross-process synchronization
@@ -111,31 +114,28 @@ class FileLock {
           // Lock file exists, check if it's stale
           try {
             const lockContent = await readFile(this.lockfilePath, 'utf-8')
-            const lockData = JSON.parse(lockContent)
+            const lockData = lockDataSchema.safeParse(JSON.parse(lockContent))
 
-            // Validate lock data structure
-            if (!lockData || typeof lockData.acquiredAt !== 'number' || lockData.acquiredAt <= 0) {
-              console.warn(`[FileLock] Lock file has invalid acquiredAt, treating as stale`)
-              await rename(this.lockfilePath, `${this.lockfilePath}.invalid.${Date.now()}`)
-              continue // Retry acquisition
-            }
-
-            const lockAge = Date.now() - lockData.acquiredAt
-
-            // If lock is older than timeout, assume stale and break it
-            if (lockAge > FileLock.LOCK_TIMEOUT) {
-              console.warn(`[FileLock] Breaking stale lock (age: ${lockAge}ms)`)
-              await rename(this.lockfilePath, `${this.lockfilePath}.stale.${Date.now()}`)
-              continue // Retry acquisition
+            // A live writer may hold a long transaction. Age alone cannot revoke ownership.
+            if (lockData.success && Date.now() - lockData.data.acquiredAt > FileLock.LOCK_TIMEOUT) {
+              try {
+                process.kill(lockData.data.pid, 0)
+              } catch (error) {
+                if (error instanceof Error && 'code' in error && error.code === 'ESRCH') {
+                  await rename(this.lockfilePath, `${this.lockfilePath}.stale.${Date.now()}`)
+                  continue
+                }
+                throw error
+              }
             }
           } catch (readError) {
-            // If JSON parse fails, lock file is corrupted - treat as stale
-            if (readError instanceof SyntaxError) {
-              console.warn(`[FileLock] Lock file contains invalid JSON, treating as stale`)
-              await rename(this.lockfilePath, `${this.lockfilePath}.corrupt.${Date.now()}`)
-              continue // Retry acquisition
+            // An empty/partial lock file may still be being written. Never steal it.
+            if (
+              !(readError instanceof SyntaxError) &&
+              !(readError instanceof Error && 'code' in readError && readError.code === 'ENOENT')
+            ) {
+              throw readError
             }
-            // Other read errors - assume lock is valid
           }
 
           // Lock is held by another process, wait and retry
@@ -150,6 +150,7 @@ class FileLock {
         }
       }
     }
+    throw new Error(`Cannot acquire lock after ${retries} retries (file: ${this.lockfilePath})`)
   }
 
   /**
@@ -368,35 +369,14 @@ export class SQLiteMemoryStore implements IMemoryStore {
         // Load existing database data or create new one
         let dbData: Uint8Array | undefined
         if (existsSync(dbPath)) {
-          // Acquire lock before reading to prevent concurrent read/write issues
-          const lock = this.getFileLock()
-          await lock.acquire()
-
           try {
-            try {
-              dbData = await readFile(dbPath)
-
-              // Validate SQLite header (first 16 bytes should be "SQLite format 3\0")
-              if (dbData.length >= 16) {
-                const header = String.fromCharCode(...dbData.subarray(0, 15))
-                if (header !== 'SQLite format 3') {
-                  console.warn('[SQLiteMemoryStore] Invalid SQLite database header, will recreate')
-                  dbData = undefined
-                }
-              }
-            } catch (error) {
-              // Only ignore ENOENT (file not found) errors - for all other errors, rethrow
-              // to prevent data loss from overwriting an existing unreadable database
-              const errorCode = (error as NodeJS.ErrnoException)?.code
-              if (errorCode === 'ENOENT') {
-                // File was deleted between existsSync and readFile - treat as new database
-                dbData = undefined
-              } else {
-                throw new Error(`Failed to read database file at ${dbPath}: ${error instanceof Error ? error.message : String(error)}`)
-              }
+            dbData = await readFile(dbPath)
+            if (dbData.length >= 16 && String.fromCharCode(...dbData.subarray(0, 15)) !== 'SQLite format 3') {
+              console.warn('[SQLiteMemoryStore] Invalid SQLite database header, will recreate')
+              dbData = undefined
             }
-          } finally {
-            await lock.release()
+          } catch (error) {
+            if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT')) throw error
           }
         }
 
@@ -449,21 +429,12 @@ export class SQLiteMemoryStore implements IMemoryStore {
       return
     }
 
-    const lock = this.getFileLock()
-    await lock.acquire()
-
-    try {
-      const dbPath = this.resolvePath(this.getDbPath())
-      const tempPath = `${dbPath}.tmp`
-      const data = this.db.export()
-
-      // Write to temporary file first, then atomically rename
-      // Use mode 0o600 to restrict file access to owner only (contains potentially sensitive data)
-      await writeFile(tempPath, data, { mode: 0o600 })
-      await rename(tempPath, dbPath)
-    } finally {
-      await lock.release()
-    }
+    const dbPath = this.resolvePath(this.getDbPath())
+    const tempPath = `${dbPath}.tmp`
+    const data = this.db.export()
+    // The outer transaction holds the file lock until this atomic save completes.
+    await writeFile(tempPath, data, { mode: 0o600 })
+    await rename(tempPath, dbPath)
   }
 
   /**
@@ -569,11 +540,20 @@ export class SQLiteMemoryStore implements IMemoryStore {
 
     // Run callback in AsyncLocalStorage context to enable reentrancy
     return transactionOwnerStorage.run(owner, async () => {
+      const shouldBegin = !this.inTransaction
+      let lock: FileLock | undefined
       try {
+        if (shouldBegin) {
+          await mkdir(dirname(this.resolvePath(this.getDbPath())), { recursive: true, mode: 0o700 })
+          const fileLock = this.getFileLock()
+          await fileLock.acquire()
+          lock = fileLock
+          // Discard cached snapshots only after excluding other writers.
+          await this.close()
+        }
         const db = await this.getDatabase()
 
-        // sql.js is synchronous, so we use explicit transaction control
-        const shouldBegin = !this.inTransaction
+        // Nested transactions share the outer transaction and its file lock.
         try {
           if (shouldBegin) {
             db.run('BEGIN TRANSACTION')
@@ -591,7 +571,7 @@ export class SQLiteMemoryStore implements IMemoryStore {
               // The in-memory db has committed data but disk is stale
               // Close forces re-initialization which will load from disk on next operation
               console.error('[SQLiteMemoryStore] Failed to save database after commit, closing:', saveError)
-              await this.close(true) // Skip save since it just failed
+              await this.close()
               throw saveError
             }
           }
@@ -610,8 +590,11 @@ export class SQLiteMemoryStore implements IMemoryStore {
           throw error
         }
       } finally {
-        // Always release the mutex lock
-        release()
+        try {
+          await lock?.release()
+        } finally {
+          release()
+        }
       }
     })
   }
@@ -970,26 +953,10 @@ export class SQLiteMemoryStore implements IMemoryStore {
     })
   }
 
-  /**
-   * Close database connection
-   * @param skipSave - If true, skip saving before close (useful when save already failed)
-   */
-  async close(skipSave = false): Promise<void> {
-    const db = this.db
-    if (db) {
-      try {
-        if (!skipSave) {
-          await this.saveDatabase()
-        }
-      } finally {
-        // Always close and nullify, even if save fails
-        // Only close if this.db is still the same instance (prevent double-close)
-        if (this.db === db) {
-          db.close()
-          this.db = null
-        }
-      }
-    }
+  /** Close the in-memory snapshot. Transactions persist their own changes. */
+  async close(): Promise<void> {
+    this.db?.close()
+    this.db = null
     this.dbPromise = null
   }
 
