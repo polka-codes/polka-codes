@@ -48,6 +48,7 @@ test('single commits use their own changes and metadata, including clean HEAD an
               content: [
                 { type: 'tool-call', toolCallId: 'read', toolName: 'readFile', input: { path: 'root.txt' } },
                 { type: 'tool-call', toolCallId: 'diff', toolName: 'git_diff', input: { file: 'root.txt', includeLineNumbers: false } },
+                { type: 'tool-call', toolCallId: 'invalid', toolName: 'git_diff', input: { file: '' } },
               ],
             },
           ],
@@ -58,6 +59,7 @@ test('single commits use their own changes and metadata, including clean HEAD an
         expect(reply).toContain('root\\n')
         expect(reply).toContain('+root')
         expect(reply).not.toContain('unrelated worktree content')
+        expect(reply).toContain('error-text')
       }
       return {
         requestMessages: messages,

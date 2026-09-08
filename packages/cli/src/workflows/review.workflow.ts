@@ -419,11 +419,16 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput,
       input.signal?.throwIfAborted()
       const tool = reviewTools.find((tool) => tool.name === input.toolName)
       if (!tool) throw new Error(`Unknown review tool: ${input.toolName}`)
-      return tool.handler(
-        { executeCommand: (command: string) => tools.executeCommand({ command, shell: true, signal: input.signal }) },
-        z.record(z.string(), z.json()).parse(input.input),
-        input.signal,
-      )
+      try {
+        return await tool.handler(
+          { executeCommand: (command: string) => tools.executeCommand({ command, shell: true, signal: input.signal }) },
+          z.record(z.string(), z.json()).parse(input.input),
+          input.signal,
+        )
+      } catch (error) {
+        if (!(error instanceof z.ZodError)) throw error
+        return { success: false, message: { type: 'error-text', value: error.message } }
+      }
     },
   }
 
