@@ -10,13 +10,11 @@ import type { CliWorkflowContext, Task, ToolRegistry } from './types'
 // Promisified exec for non-blocking command execution
 const exec = promisify(execCallback)
 
-/**
- * Type for exec error with stdout/stderr
- */
-interface ExecError extends Error {
-  stdout?: string
-  stderr?: string
-  status?: number
+function getCommandOutput(error: unknown): string {
+  if (!(error instanceof Error)) return String(error)
+  const stdout = 'stdout' in error && typeof error.stdout === 'string' ? error.stdout : ''
+  const stderr = 'stderr' in error && typeof error.stderr === 'string' ? error.stderr : ''
+  return [stdout, stderr].filter(Boolean).join('\n') || String(error)
 }
 
 /**
@@ -76,8 +74,7 @@ async function discoverBuildErrors<TTools extends ToolRegistry>(context: CliWork
       })
     } catch (error) {
       // Type errors found - create high-priority task
-      const execError = error as ExecError
-      const output = execError.stdout || execError.stderr || String(error)
+      const output = getCommandOutput(error)
 
       tasks.push({
         id: generateId('build-typecheck'),
@@ -113,7 +110,7 @@ async function discoverBuildErrors<TTools extends ToolRegistry>(context: CliWork
         timeout: 120000, // 2 minute timeout
       })
     } catch (error) {
-      const output = (error as ExecError).stdout || (error as ExecError).stderr || String(error)
+      const output = getCommandOutput(error)
 
       tasks.push({
         id: generateId('build'),
@@ -163,7 +160,7 @@ async function discoverTestFailures<TTools extends ToolRegistry>(context: CliWor
     // If we get here, tests passed
     context.logger.info('[Discovery] All tests passing')
   } catch (error) {
-    const output = (error as ExecError).stdout || (error as ExecError).stderr || String(error)
+    const output = getCommandOutput(error)
 
     // Parse test output for failures
     const failedTests = parseTestFailures(output)
@@ -201,54 +198,6 @@ async function discoverTestFailures<TTools extends ToolRegistry>(context: CliWor
 }
 
 /**
- * Discover type errors (if not already found in build)
- */
-async function discoverTypeErrors<TTools extends ToolRegistry>(context: CliWorkflowContext<TTools>): Promise<Task[]> {
-  const tasks: Task[] = []
-
-  try {
-    context.logger.info('[Discovery] Running typecheck...')
-
-    await exec('bun typecheck', {
-      cwd: process.cwd(),
-    })
-  } catch (error) {
-    const output = (error as ExecError).stdout || (error as ExecError).stderr || String(error)
-
-    // Count errors
-    const errorCount = (output.match(/error TS/gi) || []).length
-
-    tasks.push({
-      id: generateId('typecheck'),
-      title: `Fix ${errorCount} TypeScript error(s)`,
-      description: `Type errors found`,
-      type: 'bugfix',
-      priority: Priority.HIGH,
-      complexity: 'medium',
-      estimatedTime: Math.min(errorCount * 5, 45),
-      status: 'pending',
-      workflow: 'code',
-      workflowInput: {
-        task: `Fix TypeScript type errors\n\n${output.slice(0, 1000)}`,
-      } satisfies CodeWorkflowInput,
-      dependencies: [],
-      files: [],
-      createdAt: Date.now(),
-      retryCount: 0,
-      metadata: {
-        source: 'discovery',
-        errorType: 'typescript',
-        errorCount,
-      },
-    })
-
-    context.logger.warn(`[Discovery] ${errorCount} type error(s) found`)
-  }
-
-  return tasks
-}
-
-/**
  * Discover lint issues
  */
 async function discoverLintIssues<TTools extends ToolRegistry>(context: CliWorkflowContext<TTools>): Promise<Task[]> {
@@ -263,7 +212,7 @@ async function discoverLintIssues<TTools extends ToolRegistry>(context: CliWorkf
 
     context.logger.info('[Discovery] No lint issues')
   } catch (error) {
-    const output = (error as ExecError).stdout || (error as ExecError).stderr || String(error)
+    const output = getCommandOutput(error)
 
     // Parse lint output for file paths
     const files = parseLintFiles(output)
@@ -353,15 +302,11 @@ export function createTaskDiscoveryEngine<TTools extends ToolRegistry = CliToolR
         tasks.push(...testFailures)
       }
 
-      // 3. Check for type errors
-      const typeErrors = await discoverTypeErrors(context)
-      tasks.push(...typeErrors)
-
-      // 4. Check for lint issues
+      // 3. Check for lint issues
       const lintIssues = await discoverLintIssues(context)
       tasks.push(...lintIssues)
 
-      // 5. Advanced discovery strategies (optional, enabled via flag or config)
+      // 4. Advanced discovery strategies (optional, enabled via flag or config)
       if (includeAdvanced) {
         context.logger.info('[Discovery] Running advanced discovery strategies...')
 
