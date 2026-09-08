@@ -1,103 +1,68 @@
-# Continuous Improvement Workflow (Declarative)
-# This workflow demonstrates continuous execution using YAML while loops
-# No CLI flags needed - the loop is defined in the workflow itself
-#
-# Usage:
-#   polka workflow -f examples/continuous-improvement.yml
-
+# Repeat build/test checks and repairs for a bounded number of cycles.
+# Usage: polka workflow -f examples/continuous-improvement.yml
+# Edit the defaults below to change the cycle count or delay.
+# The runtime also enforces its 1000-iteration limit; this is not a background service.
 workflows:
   main:
-    task: "Continuously improve codebase quality"
-
+    task: Improve codebase quality across repeated checks
     inputs:
-      - id: "maxIterations"
-        description: "Maximum number of improvement cycles (0 = unlimited)"
-        default: 0
-
-      - id: "sleepInterval"
-        description: "Sleep between iterations in milliseconds"
+      - id: maxIterations
+        default: 3
+      - id: sleepInterval
+        description: Delay between cycles in milliseconds
         default: 5000
-
     steps:
-      # Step 1: Initialize iteration counter
-      - id: "init"
-        task: "Initialize iteration counter and state"
+      - id: init
+        task: Return count equal to zero.
         tools: []
-        output: "iteration"
-
-      # Step 2: Main improvement loop
-      - id: "improvement-loop"
+        output: iteration
+        outputSchema: &iteration
+          type: object
+          properties:
+            count: {type: integer}
+          required: [count]
+      - id: improvement-loop
         while:
-          condition: "iteration.maxIterations === 0 || iteration.count < iteration.maxIterations"
+          condition: state.iteration.count < input.maxIterations
           steps:
-            # Step 2a: Increment counter
-            - id: "increment"
-              task: |
-                Increment iteration counter.
-                Current: {{ iteration.count }}
-                Max: {{ iteration.maxIterations }}
+            - id: increment
+              task: Return count equal to state.iteration.count plus one.
               tools: []
-              output: "iteration"
-
-            - id: "log-iteration"
-              task: |
-                Log iteration start:
-                ============================================================
-                Iteration {{ iteration.count }} / {{ iteration.maxIterations || '∞' }}
-                ============================================================
-              tools: ["executeCommand"]
-              expected_outcome: "Iteration logged"
-
-            # Step 2b: Check for build errors
-            - id: "check-build"
-              task: "Run build command to check for errors"
-              tools: ["executeCommand"]
-              output: "buildResult"
-              expected_outcome: "Build succeeds or errors are identified"
-
-            # Step 2c: Check for test failures
-            - id: "check-tests"
-              task: "Run test suite to identify failing tests"
-              tools: ["executeCommand"]
-              output: "testResult"
-              expected_outcome: "Tests pass or failures are identified"
-
-            # Step 2d: Conditional fix step
-            - id: "fix-if-needed"
+              output: iteration
+              outputSchema: *iteration
+            - id: check-build
+              task: Run bun run build and report whether it failed, including the output.
+              tools: [executeCommand]
+              output: buildResult
+              outputSchema: &check
+                type: object
+                properties:
+                  failed: {type: boolean}
+                  details: {type: string}
+                required: [failed, details]
+            - id: check-tests
+              task: Run bun test and report whether it failed, including the output.
+              tools: [executeCommand]
+              output: testResult
+              outputSchema: *check
+            - id: fix-if-needed
               if:
-                condition: "buildResult.hasErrors || testResult.hasFailures"
+                condition: state.buildResult.failed || state.testResult.failed
                 thenBranch:
-                  - id: "analyze-issues"
-                    task: "Analyze the build errors and test failures found"
-                    tools: ["executeCommand", "readFile"]
-                    output: "issueAnalysis"
-
-                  - id: "fix-issues"
-                    task: "Fix the identified issues using AI"
-                    tools: ["executeCommand", "readFile", "writeFile", "searchFiles"]
-                    expected_outcome: "Issues are resolved"
-
-                  - id: "verify-fix"
-                    task: "Verify the fixes by running tests again"
-                    tools: ["executeCommand"]
-                    expected_outcome: "Tests pass"
-
+                  - id: fix-issues
+                    task: Resolve the failures in state.buildResult and state.testResult, then re-run the checks to verify.
+                    tools: [executeCommand, readFile, writeToFile, replaceInFile, searchFiles]
                 elseBranch:
-                  - id: "no-issues"
-                    task: "No issues found - codebase is healthy"
+                  - id: no-issues
+                    task: Report that the checks passed in this cycle.
                     tools: []
-                    output: "status"
-
-            # Step 2e: Sleep between iterations
-            - id: "sleep"
-              task: |
-                Sleep for {{ sleepInterval }}ms before next iteration.
-                This prevents busy-waiting and reduces resource usage.
-              tools: []
-              expected_outcome: "Slept for specified interval"
-
-      # Step 3: Final summary
-      - id: "summary"
-        task: "Generate final summary of improvement cycles"
-        tools: ["executeCommand", "readFile"]
-        output: "finalReport"
+            - id: wait-if-needed
+              if:
+                condition: state.iteration.count < input.maxIterations && input.sleepInterval > 0
+                thenBranch:
+                  - id: sleep
+                    task: Use executeCommand to run a sleep command for input.sleepInterval milliseconds, converting to seconds as needed.
+                    tools: [executeCommand]
+      - id: summary
+        task: Summarize the completed cycles, checks, changes, and any unresolved failures without claiming unverified success.
+        tools: []

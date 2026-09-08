@@ -1,87 +1,36 @@
-# Task Discovery Workflow (Declarative)
-# This workflow demonstrates autonomous task discovery using while loops
-# The loop continues until no more issues remain
-#
-# Usage:
-#   polka workflow -f examples/task-discovery.yml
-
+# Discover and fix issues until a fresh scan reports none.
+# Usage: polka workflow -f examples/task-discovery.yml
+# Optional positional input selects the focus: polka workflow -f examples/task-discovery.yml lint
+# Tasks receive input and state as JSON; task text is not a template.
 workflows:
   main:
-    task: "Discover and complete tasks autonomously"
-
+    task: Discover and resolve repository issues
     inputs:
-      - id: "focus"
-        description: "Area to focus on (e.g., 'tests', 'lint', 'type-check', 'all')"
-        default: "all"
-
+      - id: focus
+        default: all
     steps:
-      # Step 1: Discover issues
-      - id: "discover"
-        task: |
-          Check for issues in the codebase based on focus area: {{ focus }}.
-
-          Run appropriate commands:
-          - 'all': Run build, test, typecheck, and lint
-          - 'tests': Run test suite
-          - 'lint': Run linter
-          - 'type-check': Run type checker
-
-          Collect and count all issues found.
-        tools: ["executeCommand"]
-        output: "issues"
-        expected_outcome: "List of discovered issues with count"
-
-      # Step 2: Fix loop - continues while issues exist
-      - id: "fix-loop"
+      - id: discover
+        task: Run checks for input.focus (all, tests, lint, or type-check). Return the actual remaining issues and their count.
+        tools: [executeCommand]
+        output: issues
+        outputSchema: &issues
+          type: object
+          properties:
+            count: {type: integer}
+            descriptions: {type: array, items: {type: string}}
+          required: [count, descriptions]
+      - id: fix-loop
         while:
-          condition: "issues && issues.count > 0"
+          condition: state.issues.count > 0
           steps:
-            - id: "log-progress"
-              task: |
-                ============================================================
-                Issues remaining: {{ issues.count }}
-                ============================================================
-              tools: ["executeCommand"]
-              expected_outcome: "Progress logged"
-
-            - id: "pick-task"
-              task: |
-                Pick the highest priority issue to fix from the discovered issues.
-                Consider:
-                - Severity (critical > major > minor)
-                - Previous failures (avoid repeating failed tasks)
-                - Dependencies (fix prerequisites first)
-              tools: ["readFile"]
-              output: "currentTask"
-              expected_outcome: "Selected task with details"
-
-            - id: "fix"
-              task: |
-                Fix the current issue using AI code generation:
-                {{ currentTask.description }}
-
-                Use appropriate tools to analyze, fix, and verify.
-              tools: ["executeCommand", "readFile", "writeFile", "searchFiles"]
-              expected_outcome: "Issue is resolved"
-
-            - id: "verify"
-              task: "Verify the fix worked by running checks"
-              tools: ["executeCommand"]
-              expected_outcome: "Checks pass"
-
-            - id: "update-count"
-              task: |
-                Update the issue count by re-running discovery.
-                Decrement count if fix was successful.
-              tools: ["executeCommand"]
-              output: "issues"
-              expected_outcome: "Updated issue count"
-
-      # Step 3: All issues resolved
-      - id: "all-done"
-        task: |
-          All discovered issues have been resolved!
-          Generate final summary of completed work.
-        tools: ["executeCommand", "readFile"]
-        output: "finalReport"
-        expected_outcome: "Summary report generated"
+            - id: fix
+              task: Fix the highest-priority issue in state.issues.descriptions. Inspect relevant files and verify the change.
+              tools: [executeCommand, readFile, writeToFile, replaceInFile, searchFiles]
+            - id: rediscover
+              task: Re-run the checks for input.focus. Return the observed remaining issues and count; do not estimate by decrementing.
+              tools: [executeCommand]
+              output: issues
+              outputSchema: *issues
+      - id: summary
+        task: Summarize the changes and final check results in state.issues.
+        tools: []
