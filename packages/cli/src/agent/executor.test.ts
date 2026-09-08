@@ -135,6 +135,33 @@ test('cancelAll settles every active execution without accepting late success', 
   })
 })
 
+test('parent cancellation settles a pending workflow and prevents later provider calls', async () => {
+  await withExecutor(async ({ executor, context, calls, started, release }) => {
+    const parent = new AbortController()
+    context.signal = parent.signal
+    const result = executor.execute(task())
+    await started
+    parent.abort(new Error('Session stopped'))
+    expect((await promptly(result)).error?.message).toBe('Session stopped')
+    expect(executor.getRunningCount()).toBe(0)
+    expect(calls[0].signal?.aborted).toBe(true)
+    release()
+    await Bun.sleep(10)
+    expect(calls).toHaveLength(1)
+  })
+})
+
+test('an already-cancelled parent cannot start a workflow', async () => {
+  await withExecutor(async ({ executor, context, calls }) => {
+    context.signal = AbortSignal.abort(new Error('Session stopped'))
+    const result = await promptly(executor.execute(task()))
+    expect(result.success).toBe(false)
+    expect(result.error?.message).toBe('Session stopped')
+    expect(executor.getRunningCount()).toBe(0)
+    expect(calls).toHaveLength(0)
+  })
+})
+
 test('task timeout cancels a real workflow and blocks later provider calls', async () => {
   await withExecutor(async ({ executor, calls, release }) => {
     const result = await executor.execute(task(), undefined, 10)

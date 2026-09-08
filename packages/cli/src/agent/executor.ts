@@ -61,10 +61,11 @@ export class TaskExecutor<TTools extends ToolRegistry = CliToolRegistry> {
   }
 
   async #executeTask(task: Task, timeoutMs: number): Promise<WorkflowExecutionResult> {
+    this.#context.signal?.throwIfAborted()
     if (this.#abortControllers.has(task.id)) throw new TaskExecutionError(task.id, 'Task is already running')
     const controller = new AbortController()
     this.#abortControllers.set(task.id, controller)
-    const { signal } = controller
+    const signal = this.#context.signal ? AbortSignal.any([controller.signal, this.#context.signal]) : controller.signal
     const cancelled = Promise.withResolvers<never>()
     const onAbort = () => cancelled.reject(signal.reason)
     signal.addEventListener('abort', onAbort, { once: true })
