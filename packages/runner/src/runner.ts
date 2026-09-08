@@ -1,6 +1,6 @@
 import { execSync } from 'node:child_process'
 import { promises as fs } from 'node:fs'
-import { getProvider, type LoadedConfig, loadConfig, parseGitPorcelain } from '@polka-codes/cli-shared'
+import { getProvider, type LoadedConfig, listFiles as listFilesHelper, loadConfig, parseGitPorcelain } from '@polka-codes/cli-shared'
 import {
   executeCommand,
   type FullToolInfo,
@@ -340,9 +340,13 @@ export class Runner {
   }
 
   async #sendFileContent(path: string): Promise<void> {
-    const content = await fs.readFile(path, 'utf8')
-    this.wsManager.sendMessage({ type: 'file', path, content })
-    console.log(`Sent content for file: ${path}, size: ${content.length}`)
+    const stat = await fs.stat(path)
+    const files = stat.isDirectory() ? (await listFilesHelper(path, true, Number.POSITIVE_INFINITY, process.cwd()))[0] : [path]
+    for (const file of files) {
+      const content = await fs.readFile(file, 'utf8')
+      this.wsManager.sendMessage({ type: 'file', path: file, content })
+      console.log(`Sent content for file: ${file}, size: ${content.length}`)
+    }
   }
 
   /**

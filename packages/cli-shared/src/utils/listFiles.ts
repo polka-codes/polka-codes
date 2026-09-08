@@ -82,7 +82,7 @@ export async function listFiles(
     {
       path: start,
       layers,
-      relPath: relative(cwd, resolve(dirPath)).replace(/\\/g, '/') || '.',
+      relPath: relative(cwd, resolve(dirPath)).split(sep).join('/') || '.',
     },
   ]
 
@@ -103,7 +103,7 @@ export async function listFiles(
     for (const entry of entries) {
       const fullPath = join(currentPath, entry.name)
       // Convert full path to something relative to `cwd`
-      const relPath = relative(cwd, fullPath).replace(/\\/g, '/')
+      const relPath = relative(cwd, fullPath).split(sep).join('/')
 
       if (isIgnored(fullPath, entry.isDirectory(), currentLayers)) {
         continue // Skip ignored entries

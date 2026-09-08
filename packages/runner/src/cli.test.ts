@@ -90,6 +90,20 @@ async function git(directory: string, ...args: string[]) {
   const child = Bun.spawn(['git', ...args], { cwd: directory, stdout: 'pipe', stderr: 'pipe' })
   const stderr = await new Response(child.stderr).text()
   expect({ code: await child.exited, stderr }).toEqual({ code: 0, stderr: '' })
+  return new Response(child.stdout).text()
+}
+
+async function addSubmodule(dir: string) {
+  await git(dir, 'init', '-q')
+  await git(dir, 'init', '-q', 'module')
+  const module = join(dir, 'module')
+  await writeFile(join(module, 'file.txt'), 'original')
+  await git(module, 'add', '--all')
+  await git(module, '-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '-qm', 'module')
+  const head = (await git(module, 'rev-parse', 'HEAD')).trim()
+  await git(dir, 'update-index', '--add', '--cacheinfo', `160000,${head},module`)
+  await git(dir, '-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '-qm', 'initial')
+  return module
 }
 
 test('synchronizes exact Git paths, renames, and staged files deleted from the working tree', async () => {
@@ -125,6 +139,32 @@ test('reports an unreadable required file without successful synchronization', a
   const result = await runRunnerProcess({ type: 'get_files' }, async (dir) => {
     await git(dir, 'init', '-q')
     await symlink('missing-target', join(dir, 'broken-link'))
+  })
+  expect(result.exitCode).toBe(1)
+  expect(result.messages.at(-1)).toMatchObject({ type: 'error', message: 'Failed to synchronize changed files' })
+  expect(result.messages.some((message) => message.type === 'get_files_completed')).toBe(false)
+})
+
+test('synchronizes every submodule file with its exact path', async () => {
+  const names = ['file.txt', 'a file.txt', '你好.txt', 'line\nbreak.txt', 'nested/file.txt']
+  if (process.platform !== 'win32') names.push('slash\\name.txt')
+  const result = await runRunnerProcess({ type: 'get_files' }, async (dir) => {
+    const module = await addSubmodule(dir)
+    await mkdir(join(module, 'nested'))
+    for (const name of names) await writeFile(join(module, name), name)
+    for (let i = 0; i < 1001; i++) await writeFile(join(module, `extra-${i}.txt`), 'extra')
+  })
+  expect(result.exitCode).toBe(0)
+  expect(result.messages.at(-1)).toEqual({ type: 'get_files_completed' })
+  const files = result.messages.filter((message) => message.type === 'file')
+  expect(files).toHaveLength(names.length + 1001)
+  for (const name of names) expect(files.find((message) => message.path === `module/${name}`)?.content).toBe(name)
+})
+
+test('does not complete synchronization when a submodule file is unreadable', async () => {
+  const result = await runRunnerProcess({ type: 'get_files' }, async (dir) => {
+    const module = await addSubmodule(dir)
+    await symlink('missing-target', join(module, 'broken-link'))
   })
   expect(result.exitCode).toBe(1)
   expect(result.messages.at(-1)).toMatchObject({ type: 'error', message: 'Failed to synchronize changed files' })
