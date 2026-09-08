@@ -1,3 +1,4 @@
+import type { StepFn, StepOptions } from '@polka-codes/core'
 import type { CliToolRegistry } from '../workflow-tools'
 import type { BaseWorkflowInput } from '../workflows'
 import type { CodeWorkflowInput } from '../workflows/code.workflow'
@@ -179,6 +180,40 @@ export async function adaptCommitWorkflow(
   }
 }
 
+function withCancellation<TTools extends ToolRegistry>(
+  context: CliWorkflowContext<TTools>,
+  signal: AbortSignal,
+): CliWorkflowContext<TTools> {
+  const step: StepFn = async <T>(name: string, ...args: [() => Promise<T>] | [StepOptions, () => Promise<T>]) => {
+    signal.throwIfAborted()
+    const run = args.length === 1 ? args[0] : args[1]
+    const checked = async () => {
+      signal.throwIfAborted()
+      const result = await run()
+      signal.throwIfAborted()
+      return result
+    }
+    const result = args.length === 1 ? await context.step(name, checked) : await context.step(name, args[0], checked)
+    signal.throwIfAborted()
+    return result
+  }
+  const tools = new Proxy(context.tools, {
+    get(target, name, receiver) {
+      const tool: unknown = Reflect.get(target, name, receiver)
+      if (typeof tool !== 'function') return tool
+      return async (input: unknown) => {
+        signal.throwIfAborted()
+        const cancellable = name === 'generateText' || name === 'invokeTool' || name === 'executeCommand'
+        const argument = cancellable && input !== null && typeof input === 'object' ? { ...input, signal } : input
+        const result: unknown = await tool.call(target, argument)
+        signal.throwIfAborted()
+        return result
+      }
+    },
+  })
+  return { ...context, signal, step, tools }
+}
+
 /**
  * Generic workflow invoker
  * Routes to the appropriate adapter based on workflow name
@@ -194,24 +229,9 @@ export async function invokeWorkflow<TTools extends ToolRegistry = CliToolRegist
   context: CliWorkflowContext<TTools>,
   signal?: AbortSignal,
 ): Promise<WorkflowExecutionResult> {
-  // Check if operation was aborted before starting
-  if (signal?.aborted) {
-    const abortReason = signal.reason ? String(signal.reason) : 'Workflow was cancelled before execution'
-    throw new WorkflowInvocationError(workflowName, abortReason)
-  }
-
-  // Create a wrapped context that can check abort status
-  const wrappedContext = signal
-    ? {
-        ...context,
-        checkAbort: () => {
-          if (signal.aborted) {
-            const reason = signal.reason ? String(signal.reason) : 'Workflow was cancelled'
-            throw new WorkflowInvocationError(workflowName, reason)
-          }
-        },
-      }
-    : context
+  signal?.throwIfAborted()
+  const cancellation = signal && context.signal ? AbortSignal.any([signal, context.signal]) : (signal ?? context.signal)
+  const wrappedContext = cancellation ? withCancellation(context, cancellation) : context
 
   // Cast input to proper workflow input type based on workflow name
   // The caller is responsible for passing the correct input structure
@@ -245,22 +265,20 @@ export async function invokeWorkflowWithTimeout<TTools extends ToolRegistry = Cl
   context: CliWorkflowContext<TTools>,
   timeoutMs: number,
 ): Promise<WorkflowExecutionResult> {
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    setTimeout(() => {
-      reject(new Error(`Workflow ${workflowName} timed out after ${timeoutMs}ms`))
-    }, timeoutMs)
-  })
-
+  const controller = new AbortController()
+  const error = new Error(`Workflow ${workflowName} timed out after ${timeoutMs}ms`)
+  const timeout = Promise.withResolvers<never>()
+  const timer = setTimeout(() => {
+    controller.abort(error)
+    timeout.reject(error)
+  }, timeoutMs)
   try {
-    return await Promise.race([invokeWorkflow(workflowName, input as Record<string, unknown> & BaseWorkflowInput, context), timeoutPromise])
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('timed out')) {
-      return {
-        success: false,
-        error,
-      }
-    }
-    throw error
+    return await Promise.race([invokeWorkflow(workflowName, input, context, controller.signal), timeout.promise])
+  } catch (failure) {
+    if (controller.signal.aborted) return { success: false, error }
+    throw failure
+  } finally {
+    clearTimeout(timer)
   }
 }
 

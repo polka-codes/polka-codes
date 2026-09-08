@@ -683,7 +683,6 @@ export interface CliWorkflowContext<TTools extends ToolRegistry = CliToolRegistr
   workingDir: string
   sessionId: string
   config?: AgentConfig
-  checkAbort?: () => void
   workflowInput?: BaseWorkflowInput
 }
 

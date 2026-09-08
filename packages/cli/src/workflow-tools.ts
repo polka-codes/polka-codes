@@ -52,7 +52,7 @@ export type CliToolRegistry = {
 
   // === Command Execution ===
   executeCommand: ToolSignature<
-    { command: string; pipe?: boolean } & ({ args: string[]; shell?: false } | { shell: true }),
+    { command: string; pipe?: boolean; signal?: AbortSignal } & ({ args: string[]; shell?: false } | { shell: true }),
     { exitCode: number; stdout: string; stderr: string }
   >
 
