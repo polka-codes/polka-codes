@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { chmod, mkdtemp, readdir, readFile, rm, utimes, writeFile } from 'node:fs/promises'
+import { chmod, mkdir, mkdtemp, open, readdir, readFile, rename, rm, utimes, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -83,6 +83,41 @@ test('does not reclaim a recent partial legacy lock', async () => {
     await expect(store.updateMemory('replace', 'new', 'uncommitted')).rejects.toThrow('Cannot acquire lock')
     expect(await readFile(`${path}.lock`, 'utf8')).toBe('{"pid":')
     expect(await readFile(path)).toEqual(before)
+  })
+})
+
+test.skipIf(process.platform === 'win32')('a delayed owner read cannot retire a replacement lock', async () => {
+  await withDatabase(async (path, store) => {
+    const exited = Bun.spawn([process.execPath, '-e', ''], { stdout: 'ignore', stderr: 'pipe' })
+    expect(await exited.exited).toBe(0)
+    const lock = `${path}.lock`
+    const ownerPath = join(lock, 'owner.json')
+    await mkdir(lock)
+    // A FIFO pauses the real filesystem read without adding production hooks.
+    expect(Bun.spawnSync(['mkfifo', ownerPath]).exitCode).toBe(0)
+    const update = store.updateMemory('replace', 'new', 'must not commit')
+    const outcome = update.then(
+      () => 'committed',
+      (error: unknown) => error,
+    )
+    const writer = await open(ownerPath, 'w')
+    try {
+      // The contender has opened the old record. Its owner releases and exits,
+      // and another writer publishes a lock before that read finishes.
+      await rename(lock, `${lock}.released-observation`)
+      await mkdir(lock)
+      const replacement = JSON.stringify({ pid: process.pid, acquiredAt: Date.now() })
+      await writeFile(ownerPath, replacement)
+      await writer.writeFile(JSON.stringify({ pid: exited.pid, acquiredAt: Date.now() - 60_000 }))
+      await writer.close()
+      await expect(update).rejects.toThrow('Cannot acquire lock')
+      expect(await readFile(ownerPath, 'utf8')).toBe(replacement)
+      expect(await store.readMemory('new')).toBeUndefined()
+      expect(await store.readMemory('kept')).toBe('original')
+    } finally {
+      await writer.close()
+      await outcome
+    }
   })
 })
 

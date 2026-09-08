@@ -1,7 +1,7 @@
 import { AsyncLocalStorage } from 'node:async_hooks'
 import { randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
-import { lstat, mkdir, mkdtemp, readdir, readFile, rename, rm, unlink, writeFile } from 'node:fs/promises'
+import { lstat, mkdir, mkdtemp, open, readdir, readFile, rename, rm, unlink, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -126,30 +126,39 @@ class FileLock {
 
   async #recoverAbandonedLock(): Promise<void> {
     try {
-      const stat = await lstat(this.#lockfilePath, { bigint: true })
+      const lock = await lstat(this.#lockfilePath)
       // Old releases used a regular JSON file at this same path.
-      const ownerPath = stat.isDirectory() ? join(this.#lockfilePath, 'owner.json') : this.#lockfilePath
-      const content = await readFile(ownerPath, 'utf8')
-      let parsed: unknown
+      const ownerPath = lock.isDirectory() ? join(this.#lockfilePath, 'owner.json') : this.#lockfilePath
+      const record = await open(ownerPath, 'r')
       try {
-        parsed = JSON.parse(content)
-      } catch (error) {
-        if (!(error instanceof SyntaxError)) throw error
-      }
-      const owner = lockDataSchema.safeParse(parsed)
-      const acquiredAt = owner.success ? owner.data.acquiredAt : Number(stat.mtimeMs)
-      if (Date.now() - acquiredAt <= FileLock.LOCK_TIMEOUT) return
-      if (owner.success) {
+        // Keep the observed record open so a released owner's inode cannot be reused.
+        const stat = await record.stat({ bigint: true })
+        const content = await record.readFile('utf8')
+        let parsed: unknown
         try {
-          process.kill(owner.data.pid, 0)
-          return
+          parsed = JSON.parse(content)
         } catch (error) {
-          if (!hasErrorCode(error, 'ESRCH')) throw error
+          if (!(error instanceof SyntaxError)) throw error
         }
+        const owner = lockDataSchema.safeParse(parsed)
+        const acquiredAt = owner.success ? owner.data.acquiredAt : Number(stat.mtimeMs)
+        if (Date.now() - acquiredAt <= FileLock.LOCK_TIMEOUT) return
+        if (owner.success) {
+          try {
+            process.kill(owner.data.pid, 0)
+            return
+          } catch (error) {
+            if (!hasErrorCode(error, 'ESRCH')) throw error
+          }
+        }
+        const current = await lstat(ownerPath, { bigint: true })
+        if (current.dev !== stat.dev || current.ino !== stat.ino) return
+        // Retain this destination: another recovery leaves the same fence, so a
+        // delayed contender cannot retire a newer owner's nonempty directory.
+        await rename(this.#lockfilePath, `${this.#lockfilePath}.retired-${stat.dev}-${stat.ino}`)
+      } finally {
+        await record.close()
       }
-      // Retain this destination: delayed contenders cannot replace it with a newer
-      // owner's nonempty directory. Keeping its inode prevents recovery-name reuse.
-      await rename(this.#lockfilePath, `${this.#lockfilePath}.retired-${stat.dev}-${stat.ino}`)
     } catch (error) {
       if (!hasErrorCode(error, 'ENOENT', 'EEXIST', 'ENOTEMPTY', 'ENOTDIR', 'EISDIR')) throw error
     }
