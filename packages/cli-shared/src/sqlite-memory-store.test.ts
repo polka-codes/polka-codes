@@ -418,6 +418,41 @@ describe('SQLiteMemoryStore', () => {
   })
 
   describe('Scope Management', () => {
+    for (const currentScope of ['global', 'project:/tmp/project-2']) {
+      for (const scope of [undefined, 'auto', 'project', 'global'] as const) {
+        it(`scopes select/count/delete for ${currentScope} with ${scope ?? 'omitted'} scope`, async () => {
+          const scopes = ['global', 'project:/tmp/project-1', 'project:/tmp/project-2']
+          for (const writerScope of scopes) {
+            const writer = new SQLiteMemoryStore(config, writerScope)
+            try {
+              await writer.updateMemory('replace', 'shared-name', writerScope)
+            } finally {
+              await writer.close()
+            }
+          }
+          const expectedScopes = scope === undefined && currentScope === 'global' ? scopes : [scope === 'global' ? 'global' : currentScope]
+          const reader = new SQLiteMemoryStore(config, currentScope)
+          try {
+            const entries = await reader.queryMemory({ scope })
+            if (!Array.isArray(entries)) throw new Error('Expected memory entries')
+            expect(entries.map((entry) => entry.scope).sort()).toEqual([...expectedScopes].sort())
+            expect(await reader.queryMemory({ scope }, { operation: 'count' })).toBe(expectedScopes.length)
+            expect(await reader.queryMemory({ scope }, { operation: 'delete' })).toBe(expectedScopes.length)
+          } finally {
+            await reader.close()
+          }
+          const reopened = new SQLiteMemoryStore(config, 'global')
+          try {
+            const entries = await reopened.queryMemory({})
+            if (!Array.isArray(entries)) throw new Error('Expected memory entries')
+            expect(entries.map((entry) => entry.scope).sort()).toEqual(scopes.filter((item) => !expectedScopes.includes(item)).sort())
+          } finally {
+            await reopened.close()
+          }
+        })
+      }
+    }
+
     it('should isolate entries by scope', async () => {
       const store1 = new SQLiteMemoryStore(config, 'project:/tmp/project-1')
       const store2 = new SQLiteMemoryStore(config, 'project:/tmp/project-2')

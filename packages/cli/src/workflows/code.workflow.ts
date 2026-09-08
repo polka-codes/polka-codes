@@ -116,6 +116,10 @@ export const codeWorkflow: WorkflowFn<
       return { success: false, reason: 'Plan not approved', summaries }
     }
 
+    if (planResult.reason || !planResult.plan.trim()) {
+      return { success: false, reason: planResult.reason || 'Planning produced no implementation plan.', summaries }
+    }
+
     const { plan, files: planFiles } = planResult
 
     // Implementation phase

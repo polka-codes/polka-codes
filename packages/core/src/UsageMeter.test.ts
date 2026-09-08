@@ -3,6 +3,7 @@
  */
 
 import { beforeEach, describe, expect, test } from 'bun:test'
+import type { LanguageModelUsage } from 'ai'
 import { UsageMeter } from './UsageMeter'
 
 // Minimal LanguageModelV4 identity for testing
@@ -78,6 +79,46 @@ describe('UsageMeter', () => {
   })
 
   describe('addUsage', () => {
+    test.each([
+      { input: 100, output: 50, text: 10, reasoning: 40, expectedOutput: 50 },
+      { input: 100, output: 0, text: 0, reasoning: 0, expectedOutput: 0 },
+      { input: 0, output: 50, text: 10, reasoning: 40, expectedOutput: 50 },
+      { input: undefined, output: 50, text: 10, reasoning: 40, expectedOutput: 50 },
+      { input: 100, output: undefined, text: 10, reasoning: 40, expectedOutput: 50 },
+      { input: 100, output: undefined, text: undefined, reasoning: undefined, expectedOutput: 0 },
+    ])('normalizes SDK and provider usage equally: %j', async ({ input, output, text, reasoning, expectedOutput }) => {
+      const sdkMeter = new UsageMeter({}, { maxCost: 0.0015 })
+      const providerMeter = new UsageMeter({}, { maxCost: 0.0015 })
+      const model = createMockModel('openai', 'test')
+      const modelInfo = { inputPrice: 10, outputPrice: 20, cacheReadsPrice: 0, cacheWritesPrice: 0 }
+      const usage: LanguageModelUsage = {
+        inputTokens: input,
+        inputTokenDetails: { noCacheTokens: input, cacheReadTokens: 0, cacheWriteTokens: 0 },
+        outputTokens: output,
+        outputTokenDetails: { textTokens: text, reasoningTokens: reasoning },
+        totalTokens: undefined,
+      }
+
+      await sdkMeter.addUsage(model, { totalUsage: usage }, { modelInfo })
+      await providerMeter.addUsage(
+        model,
+        {
+          usage: {
+            inputTokens: { total: input, noCache: input, cacheRead: 0, cacheWrite: 0 },
+            outputTokens: { total: output, text, reasoning },
+          },
+        },
+        { modelInfo },
+      )
+
+      const expectedCost = ((input ?? 0) * 10 + expectedOutput * 20) / 1_000_000
+      expect(sdkMeter.usage).toEqual(providerMeter.usage)
+      expect(sdkMeter.usage.input).toBe(input ?? 0)
+      expect(sdkMeter.usage.output).toBe(expectedOutput)
+      expect(sdkMeter.usage.cost).toBeCloseTo(expectedCost, 8)
+      expect(sdkMeter.isLimitExceeded().cost).toBe(expectedCost >= 0.0015)
+    })
+
     test('accumulates usage across multiple calls', () => {
       const model = createMockModel('openai', 'gpt-4')
 

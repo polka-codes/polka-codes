@@ -21,7 +21,7 @@ export async function searchFiles(
   regex: string,
   filePattern: string,
   cwd: string,
-  excludeFiles?: string[],
+  excludeFiles?: readonly string[],
 ): Promise<string[]> {
   // Build ripgrep arguments
   const args = [
@@ -42,9 +42,7 @@ export async function searchFiles(
 
     // Add each pattern as a separate --glob argument
     for (const pattern of patterns) {
-      if (pattern) {
-        args.push('--glob', pattern)
-      }
+      args.push('--glob', pattern)
     }
   }
 
@@ -56,10 +54,10 @@ export async function searchFiles(
   }
 
   // Add the search pattern and path
-  args.push(regex, path)
+  args.push('-e', regex, '--', path)
 
   return new Promise((resolve, reject) => {
-    const results: string[] = []
+    let stdout = ''
     let stderr = ''
 
     const rg = spawn('rg', args, {
@@ -67,13 +65,14 @@ export async function searchFiles(
       stdio: ['ignore', 'pipe', 'pipe'],
     })
 
-    rg.stdout.on('data', (data) => {
-      const lines = data.toString().split('\n').filter(Boolean)
-      results.push(...lines)
+    rg.stdout.setEncoding('utf8')
+    rg.stdout.on('data', (data: string) => {
+      stdout += data
     })
 
-    rg.stderr.on('data', (data) => {
-      stderr += data.toString()
+    rg.stderr.setEncoding('utf8')
+    rg.stderr.on('data', (data: string) => {
+      stderr += data
     })
 
     rg.on('error', (error) => {
@@ -88,7 +87,7 @@ export async function searchFiles(
         reject(new Error(`Ripgrep process exited with code ${code}${details}`))
         return
       }
-      resolve(results)
+      resolve(stdout.split('\n').filter(Boolean))
     })
   })
 }

@@ -835,13 +835,9 @@ export class SQLiteMemoryStore implements IMemoryStore {
     let sql = 'SELECT * FROM memory_entries WHERE 1=1'
 
     // Scope handling
-    const scope = query.scope === 'auto' ? this.currentScope : query.scope
-    if (scope === 'global') {
+    if (query.scope !== undefined || this.currentScope !== 'global') {
       conditions.push(`scope = ?`)
-      params.push('global')
-    } else if (scope === 'project' || (!scope && this.currentScope !== 'global')) {
-      conditions.push(`scope = ?`)
-      params.push(this.currentScope)
+      params.push(query.scope === 'global' ? 'global' : this.currentScope)
     }
 
     // Name filter (exact match)

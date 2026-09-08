@@ -1,9 +1,113 @@
 import { describe, expect, it } from 'bun:test'
 import type { FullToolInfo } from '../tool'
+import type { AgentToolRegistry } from './agent.workflow'
 import { createDynamicWorkflow, validateWorkflowFile } from './dynamic'
-import type { WorkflowFile } from './dynamic-types'
+import type { WorkflowControlFlowStep, WorkflowFile } from './dynamic-types'
+import { createContext } from './workflow'
 
 describe('Dynamic Workflow Try/Catch Blocks', () => {
+  it.each([undefined, 'saved-result'])('stores a loop result after break with output=%s', async (output) => {
+    const context = createContext<AgentToolRegistry>({
+      generateText: async ({ messages }) => ({
+        requestMessages: messages,
+        responseMessages: [{ role: 'assistant', content: '42' }],
+      }),
+      taskEvent: async () => {},
+      invokeTool: async () => {
+        throw new Error('No tool calls expected')
+      },
+    })
+    const run = createDynamicWorkflow<AgentToolRegistry>(
+      {
+        workflows: {
+          test: {
+            task: 'Return the result of a loop that breaks inside try',
+            output: output ?? 'loop',
+            steps: [
+              {
+                id: 'loop',
+                output,
+                while: {
+                  condition: 'true',
+                  steps: [
+                    { id: 'value', task: 'Produce a result' },
+                    { id: 'guard', try: { trySteps: [{ break: true }], catchSteps: [] } },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      },
+      { toolInfo: [] },
+    )
+
+    expect(await run('test', {}, context)).toBe(42)
+  })
+
+  for (const arm of ['try', 'catch'] as const) {
+    for (const control of ['break', 'continue'] as const) {
+      it(`propagates ${control} through an if inside the ${arm} arm`, async () => {
+        const requests: string[] = []
+        const context = createContext<AgentToolRegistry>({
+          generateText: async ({ messages }) => {
+            requests.push(JSON.stringify(messages))
+            return {
+              requestMessages: [...messages],
+              responseMessages: [{ role: 'assistant', content: String(requests.length - 1) }],
+            }
+          },
+          taskEvent: async () => {},
+          invokeTool: async () => {
+            throw new Error('No tool calls expected')
+          },
+        })
+        const controlledSteps: WorkflowControlFlowStep[] = [
+          {
+            id: 'branch',
+            if: { condition: 'true', thenBranch: [control === 'break' ? { break: true } : { continue: true }] },
+          },
+          { id: 'skipped-in-arm', task: 'must not execute inside the arm' },
+        ]
+        const definition: WorkflowFile = {
+          workflows: {
+            test: {
+              task: 'Propagate loop control',
+              steps: [
+                { id: 'init', task: 'initialize', output: 'iteration' },
+                {
+                  id: 'loop',
+                  while: {
+                    condition: 'state.iteration < 2',
+                    steps: [
+                      { id: 'advance', task: 'advance', output: 'iteration' },
+                      {
+                        id: 'guard',
+                        try: {
+                          trySteps:
+                            arm === 'try' ? controlledSteps : [{ id: 'fail', if: { condition: 'unsupportedExpression', thenBranch: [] } }],
+                          catchSteps: arm === 'catch' ? controlledSteps : [],
+                        },
+                      },
+                      { id: 'skipped-in-loop', task: 'must not execute after the guard' },
+                    ],
+                  },
+                },
+                { id: 'done', task: 'after the loop' },
+              ],
+            },
+          },
+        }
+        const run = createDynamicWorkflow<AgentToolRegistry>(definition, { toolInfo: [] })
+        await run('test', {}, context)
+
+        expect(requests).toHaveLength(control === 'break' ? 3 : 4)
+        expect(requests.some((request) => request.includes('must not execute'))).toBe(false)
+        expect(requests.at(-1)).toContain('after the loop')
+      })
+    }
+  }
+
   const mockToolInfo: FullToolInfo[] = [
     {
       name: 'errorTool',

@@ -6,6 +6,33 @@ import { getProvider } from './provider'
 const stdinEofFixturePath = fileURLToPath(new URL('./test-fixtures/read-stdin-until-eof.mjs', import.meta.url))
 
 describe('getProvider', () => {
+  describe('executeFile', () => {
+    it('passes arguments literally without shell expansion', async () => {
+      const provider = getProvider()
+      if (!provider.executeFile) throw new Error('executeFile not defined')
+      const args = ['a b', "a'b", '$(printf injected)', '; printf injected', '%PATH%', '$HOME', 'é']
+      const result = await provider.executeFile(process.execPath, [
+        '-e',
+        'process.stdout.write(JSON.stringify(process.argv.slice(1)))',
+        ...args,
+      ])
+      expect(result.exitCode).toBe(0)
+      expect(JSON.parse(result.stdout)).toEqual(args)
+      expect(result.stderr).toBe('')
+    })
+
+    it('preserves stdin closure, exit status, and output summarization', async () => {
+      const provider = getProvider({ summaryThreshold: 0, summarizeOutput: async () => 'summary' })
+      if (!provider.executeFile) throw new Error('executeFile not defined')
+      expect(await provider.executeFile(process.execPath, [stdinEofFixturePath])).toEqual({
+        stdout: 'out',
+        stderr: 'err',
+        exitCode: 7,
+        summary: 'summary',
+      })
+    })
+  })
+
   describe('askFollowupQuestion', () => {
     it('should return first option when yes is true and options are provided', async () => {
       const provider = getProvider({ yes: true })

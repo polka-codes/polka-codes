@@ -14,11 +14,12 @@ export type FilesystemProvider = {
   }>
 }
 
+export type CommandResult = { stdout: string; stderr: string; exitCode: number; summary?: string }
+
 export type CommandProvider = {
-  executeCommand?: (
-    command: string,
-    needApprove: boolean,
-  ) => Promise<{ stdout: string; stderr: string; exitCode: number; summary?: string }>
+  executeCommand?: (command: string, needApprove: boolean) => Promise<CommandResult>
+  /** Execute a program with literal arguments, without invoking a shell. */
+  executeFile?: (file: string, args: string[]) => Promise<CommandResult>
 }
 
 export type InteractionProvider = {

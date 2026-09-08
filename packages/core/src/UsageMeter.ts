@@ -78,27 +78,19 @@ export class UsageMeter {
   }
 
   #calculateProviderUsage(usage: LanguageModelV4Usage, providerMetadata: Record<string, unknown> | undefined, modelInfo: ModelInfo) {
-    if (!usage?.inputTokens || !usage?.outputTokens) {
-      return { input: 0, output: 0, cachedRead: 0, cost: 0 }
-    }
-
     const providerMetadataKey = Object.keys(providerMetadata ?? {})[0]
     const metadata = (providerMetadata?.[providerMetadataKey] ?? {}) as Record<string, unknown>
 
     // Provider format: inputTokens: { total, noCache, cacheRead, cacheWrite }
-    const inputTokens = usage.inputTokens.noCache ?? usage.inputTokens.total ?? 0
-    const cachedReadTokens = usage.inputTokens.cacheRead ?? 0
-    const cachedWriteTokens = usage.inputTokens.cacheWrite ?? 0
-    const outputTokens = usage.outputTokens.total ?? usage.outputTokens.text ?? 0
+    const inputTokens = usage.inputTokens?.noCache ?? usage.inputTokens?.total ?? 0
+    const cachedReadTokens = usage.inputTokens?.cacheRead ?? 0
+    const cachedWriteTokens = usage.inputTokens?.cacheWrite ?? 0
+    const outputTokens = usage.outputTokens?.total ?? (usage.outputTokens?.text ?? 0) + (usage.outputTokens?.reasoning ?? 0)
 
     return this.#calculateCost(inputTokens, outputTokens, cachedReadTokens, cachedWriteTokens, providerMetadataKey, metadata, modelInfo)
   }
 
   #calculateUsageAiPackage(usage: LanguageModelUsage, providerMetadata: Record<string, unknown> | undefined, modelInfo: ModelInfo) {
-    if (!usage?.inputTokens || !usage?.outputTokens) {
-      return { input: 0, output: 0, cachedRead: 0, cost: 0 }
-    }
-
     const providerMetadataKey = Object.keys(providerMetadata ?? {})[0]
     const metadata = (providerMetadata?.[providerMetadataKey] ?? {}) as Record<string, unknown>
 
@@ -108,7 +100,7 @@ export class UsageMeter {
     const inputTokens = details?.noCacheTokens ?? usage.inputTokens ?? 0
     const cachedReadTokens = details?.cacheReadTokens ?? 0
     const cachedWriteTokens = details?.cacheWriteTokens ?? 0
-    const outputTokens = outputDetails?.textTokens ?? usage.outputTokens ?? 0
+    const outputTokens = usage.outputTokens ?? (outputDetails?.textTokens ?? 0) + (outputDetails?.reasoningTokens ?? 0)
 
     return this.#calculateCost(inputTokens, outputTokens, cachedReadTokens, cachedWriteTokens, providerMetadataKey, metadata, modelInfo)
   }

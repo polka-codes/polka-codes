@@ -12,23 +12,18 @@ This directory contains the implementation of MCP (Model Context Protocol) suppo
    - `McpServerConfig`: Configuration for MCP servers
    - `IMcpClient`: Interface for MCP client implementations
 
-2. **`transport.ts`** - Transport layer for MCP communication
-   - `StdioTransport`: Handles stdio-based communication with local MCP servers
-   - JSON-RPC message format implementation
-   - Process management and message parsing
-
-3. **`client.ts`** - MCP client implementation
-   - `McpClient`: Main client class for connecting to MCP servers
+2. **`client.ts` / `sdk-client.ts`** - MCP client factory and implementation using the official MCP SDK and its stdio transport
+   - `createMcpClient`: Constructs and connects an `SdkMcpClient`
    - Tool listing and execution
    - Resource reading
    - Error handling and connection management
 
-4. **`manager.ts`** - MCP server manager
+3. **`manager.ts`** - MCP server manager
    - `McpManager`: Manages multiple MCP server connections
    - Tool registration and routing
    - Connection lifecycle management
 
-5. **`errors.ts`** - MCP-specific error classes
+4. **`errors.ts`** - MCP-specific error classes
    - `McpConnectionError`: Server connection failures
    - `McpTimeoutError`: Request timeouts
    - `McpProtocolError`: Protocol violations
@@ -65,7 +60,7 @@ mcpServers:
 When MCP servers are configured, polka-codes automatically:
 1. Connects to all configured servers at workflow startup
 2. Lists available tools from each server
-3. Registers tools with the format `<server-name>/<tool-name>`
+3. Registers enabled tools with the format `<server-name>/<tool-name>`
 4. Makes tools available to AI agents during workflow execution
 
 ### Tool Calling
@@ -84,10 +79,10 @@ mcpServers:
     tools:
       specific_tool: true          # enabled
       another_tool: false         # disabled
-      custom_tool:                # enabled with custom model
-        provider: anthropic
-        model: claude-3-5-sonnet-20241022
 ```
+
+Tools set to `false` are neither exposed nor callable. Unspecified tools remain enabled.
+Read-only tasks exclude external MCP tools because no trusted read-only policy is configured for them.
 
 ## Error Handling
 
@@ -101,7 +96,7 @@ MCP integration includes comprehensive error handling:
 
 1. **Path Restrictions**: Filesystem MCP servers should be restricted to allowed paths
 2. **Authentication**: Support for API keys and tokens via environment variables
-3. **Sandboxing**: MCP servers run as separate processes with limited permissions
+3. **Process Permissions**: Local MCP servers inherit the CLI user's operating-system permissions; running in a separate process does not sandbox them
 4. **Tool-Level Control**: Enable/disable specific tools per server
 
 ## Implementation Status

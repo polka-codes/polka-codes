@@ -18,8 +18,14 @@ export const toolInfo = {
         return val
       }, z.boolean().default(false))
       .describe('Show staged changes instead of unstaged changes.'),
-    commitRange: z.string().trim().min(1).optional().describe('Git range, such as "main...HEAD".'),
-    file: z.string().trim().min(1).describe('Repository-relative file path.'),
+    commitRange: z
+      .string()
+      .trim()
+      .min(1)
+      .refine((value) => !value.startsWith('-'), 'Git revisions must not start with a dash.')
+      .optional()
+      .describe('Git range, such as "main...HEAD".'),
+    file: z.string().regex(/\S/, 'File path must not be blank.').describe('Repository-relative file path.'),
     contextLines: z.coerce.number().int().min(0).default(5).describe('Context lines around each change.'),
     includeLineNumbers: z
       .preprocess((val) => {
@@ -35,33 +41,29 @@ export const toolInfo = {
 } as const satisfies ToolInfo
 
 export const handler: ToolHandler<typeof toolInfo, CommandProvider> = async (provider, args) => {
-  if (!provider.executeCommand) {
+  if (!provider.executeFile) {
     return {
       success: false,
       message: {
         type: 'error-text',
-        value: 'Not possible to execute command. Abort.',
+        value: 'This provider does not support direct program execution.',
       },
     }
   }
 
   const { staged, file, commitRange, contextLines, includeLineNumbers } = toolInfo.parameters.parse(args)
 
-  const commandParts = ['git', 'diff', '--no-color', `-U${contextLines}`]
+  const gitArgs = ['--literal-pathspecs', 'diff', '--no-color', `-U${contextLines}`]
   if (staged) {
-    commandParts.push('--staged')
+    gitArgs.push('--staged')
   }
   if (commitRange) {
-    commandParts.push(commitRange)
+    gitArgs.push(commitRange)
   }
-  // Properly escape the file path to prevent command injection
-  // Replace single quotes with '\'' (end current quote, add escaped quote, start new quote)
-  const escapedFile = file.replace(/'/g, "'\\''")
-  commandParts.push('--', `'${escapedFile}'`)
+  gitArgs.push('--', file)
 
-  const command = commandParts.join(' ')
   try {
-    const result = await provider.executeCommand(command, false)
+    const result = await provider.executeFile('git', gitArgs)
     if (result.exitCode === 0) {
       if (!result.stdout.trim()) {
         return {
@@ -90,7 +92,7 @@ export const handler: ToolHandler<typeof toolInfo, CommandProvider> = async (pro
       success: false,
       message: {
         type: 'error-text',
-        value: `\`${command}\` exited with code ${result.exitCode}:\n${result.stderr}`,
+        value: `git diff exited with code ${result.exitCode}:\n${result.stderr}`,
       },
     }
   } catch (error) {

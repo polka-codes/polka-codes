@@ -94,6 +94,25 @@ function createHarness(responses: JsonResponseMessage[]) {
 }
 
 describe('codeWorkflow', () => {
+  test.each([
+    { output: { reason: 'Missing requirements; cannot produce a plan.' }, reason: 'Missing requirements; cannot produce a plan.' },
+    { output: { plan: '' }, reason: 'Planning produced no implementation plan.' },
+    { output: { plan: '   ' }, reason: 'Planning produced no implementation plan.' },
+  ])('stops before implementation when planning returns $output', async ({ output, reason }) => {
+    const harness = createHarness([jsonResponse(output)])
+
+    const result = await codeWorkflow(
+      { task: 'Implement an unspecified change.', interactive: false, additionalTools: {} },
+      harness.context,
+    )
+
+    expect(result).toEqual({ success: false, reason, summaries: [] })
+    expect(harness.generateTextInputs).toHaveLength(1)
+    expect(harness.executeCommandInputs).toHaveLength(0)
+    expect(harness.toolCalls).not.toContain('readFile')
+    expect(harness.infoMessages.join('\n')).not.toContain('Phase 2:')
+  })
+
   test('direct mode calls the implementation agent without planning', async () => {
     const task = 'Replace the generated test scaffold.'
     const harness = createHarness([jsonResponse({ summary: 'Replaced scaffold.', bailReason: null })])

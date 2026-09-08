@@ -907,10 +907,7 @@ Execute the delegated task and expected outcome. Treat workflow input, state, fi
   throw new Error(`Agent step '${stepDef.id}' in workflow '${workflowId}' exited unexpectedly with unhandled type`)
 }
 
-async function executeStepWithTimeout<
-  TTools extends ToolRegistry,
-  TContext extends BaseWorkflowContext<TTools> = BaseWorkflowContext<TTools>,
->(
+async function executeStep<TTools extends ToolRegistry, TContext extends BaseWorkflowContext<TTools> = BaseWorkflowContext<TTools>>(
   stepDef: WorkflowStepDefinition,
   workflowId: string,
   input: Record<string, unknown>,
@@ -950,50 +947,6 @@ async function executeStepWithTimeout<
   }
 
   return await executeStepLogic()
-}
-
-async function executeStep<TTools extends ToolRegistry, TContext extends BaseWorkflowContext<TTools> = BaseWorkflowContext<TTools>>(
-  stepDef: WorkflowStepDefinition,
-  workflowId: string,
-  input: Record<string, unknown>,
-  state: Record<string, unknown>,
-  context: TContext,
-  options: DynamicWorkflowRunnerOptions,
-  runInternal: (
-    workflowId: string,
-    input: Record<string, unknown>,
-    context: TContext,
-    inheritedState: Record<string, unknown>,
-  ) => Promise<unknown>,
-): Promise<unknown> {
-  const result = await executeStepWithTimeout(stepDef, workflowId, input, state, context, options, runInternal)
-
-  // Validate output against schema if provided
-  if (stepDef.outputSchema) {
-    try {
-      context.logger.debug(`[Step] Validating output for step '${stepDef.id}' against schema`)
-
-      // Convert JSON Schema to Zod schema
-      // Type assertion is safe here as JsonSchema structure is validated by convertJsonSchemaToZod
-      const zodSchema = convertJsonSchemaToZod(stepDef.outputSchema as JsonSchema)
-
-      // Validate the result
-      const validationResult = zodSchema.safeParse(result)
-
-      if (!validationResult.success) {
-        const errorDetails = validationResult.error.issues.map((e) => `  - ${e.path.join('.') || 'root'}: ${e.message}`).join('\n')
-        throw new Error(`Output does not match expected schema:\n${errorDetails}`)
-      }
-
-      context.logger.debug(`[Step] Output validation successful for step '${stepDef.id}'`)
-    } catch (error) {
-      throw new Error(
-        `Step '${stepDef.id}' in workflow '${workflowId}' output validation failed: ${error instanceof Error ? error.message : String(error)}`,
-      )
-    }
-  }
-
-  return result
 }
 
 /**
@@ -1080,8 +1033,6 @@ async function executeControlFlowStep<
     inheritedState: Record<string, unknown>,
   ) => Promise<unknown>,
   loopDepth: number,
-  breakFlag: { value: boolean },
-  continueFlag: { value: boolean },
 ): Promise<{ result: unknown; shouldBreak: boolean; shouldContinue: boolean }> {
   // Handle break statement
   if (isBreakStep(step)) {
@@ -1110,7 +1061,7 @@ async function executeControlFlowStep<
     let iterationCount = 0
     let loopResult: unknown
 
-    while (true) {
+    loop: while (true) {
       iterationCount++
       if (iterationCount > MAX_WHILE_LOOP_ITERATIONS) {
         throw new Error(
@@ -1138,19 +1089,15 @@ async function executeControlFlowStep<
           options,
           runInternal,
           loopDepth + 1,
-          breakFlag,
-          continueFlag,
         )
 
         if (shouldBreak) {
           context.logger.debug(`[ControlFlow] Breaking from while loop '${step.id}'`)
-          breakFlag.value = false
-          return { result: loopResult, shouldBreak: false, shouldContinue: false }
+          break loop
         }
 
         if (shouldContinue) {
           context.logger.debug(`[ControlFlow] Continuing to next iteration of while loop '${step.id}'`)
-          continueFlag.value = false
           break
         }
 
@@ -1200,8 +1147,6 @@ async function executeControlFlowStep<
         options,
         runInternal,
         loopDepth,
-        breakFlag,
-        continueFlag,
       )
 
       // Propagate break/continue from within branches
@@ -1237,7 +1182,7 @@ async function executeControlFlowStep<
     try {
       // Execute try steps
       for (const tryStepItem of tryStep.try.trySteps) {
-        const { result } = await executeControlFlowStep(
+        const { result, shouldBreak, shouldContinue } = await executeControlFlowStep(
           tryStepItem,
           workflowId,
           input,
@@ -1246,9 +1191,11 @@ async function executeControlFlowStep<
           options,
           runInternal,
           loopDepth,
-          breakFlag,
-          continueFlag,
         )
+
+        if (shouldBreak || shouldContinue) {
+          return { result, shouldBreak, shouldContinue }
+        }
 
         // Store output if specified
         storeStepOutput(tryStepItem, result, state)
@@ -1270,7 +1217,7 @@ async function executeControlFlowStep<
       // Execute catch steps
       let catchResult: unknown
       for (const catchStepItem of tryStep.try.catchSteps) {
-        const { result } = await executeControlFlowStep(
+        const { result, shouldBreak, shouldContinue } = await executeControlFlowStep(
           catchStepItem,
           workflowId,
           input,
@@ -1279,9 +1226,11 @@ async function executeControlFlowStep<
           options,
           runInternal,
           loopDepth,
-          breakFlag,
-          continueFlag,
         )
+
+        if (shouldBreak || shouldContinue) {
+          return { result, shouldBreak, shouldContinue }
+        }
 
         // Store output if specified
         storeStepOutput(catchStepItem, result, state)
@@ -1347,9 +1296,6 @@ export function createDynamicWorkflow<
     const state: Record<string, unknown> = { ...inheritedState }
     let lastOutput: unknown
 
-    const breakFlag = { value: false }
-    const continueFlag = { value: false }
-
     for (let i = 0; i < workflow.steps.length; i++) {
       const stepDef = workflow.steps[i]
       const stepId = getStepId(stepDef)
@@ -1366,8 +1312,6 @@ export function createDynamicWorkflow<
         options,
         runInternal,
         0, // loop depth
-        breakFlag,
-        continueFlag,
       )
 
       lastOutput = result

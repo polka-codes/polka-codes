@@ -61,7 +61,7 @@ export class McpManager {
       })
 
       // List available tools from the server
-      const serverTools = await client.listTools()
+      const serverTools = (await client.listTools()).filter((tool) => serverConfig.tools?.[tool.name] !== false)
 
       this.connections.set(serverName, client)
 

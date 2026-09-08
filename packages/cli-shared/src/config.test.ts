@@ -48,6 +48,14 @@ defaultModel: claude-3-opus
     expect(config?.defaultModel).toBe('claude-3-opus')
   })
 
+  test('rejects malformed project YAML for both discovered and explicit paths', async () => {
+    const configPath = join(testSubDir, '.polkacodes.yml')
+    writeFileSync(configPath, 'rules: [broken')
+
+    await expect(loadConfig(undefined, testSubDir, testHomeDir)).rejects.toThrow('Flow sequence')
+    await expect(loadConfig(configPath, testSubDir, testHomeDir)).rejects.toThrow('Flow sequence')
+  })
+
   test('loads multiple config files', async () => {
     const configPath1 = join(testSubDir, 'config1.yml')
     const configPath2 = join(testSubDir, 'config2.yml')

@@ -147,35 +147,16 @@ export async function loadConfig(
     }
   }
 
-  // Load project configs
-  if (paths && paths.length > 0) {
-    const configPaths = Array.isArray(paths) ? paths : [paths]
-    for (const path of configPaths) {
-      try {
-        const config = readConfig(path)
-        configs.push(config)
-      } catch (error) {
-        // Check for ENOENT (file not found) - silently skip these
-        const errorCode = (error as NodeJS.ErrnoException)?.code
-        if (errorCode === 'ENOENT') {
-          // File not found is not an error
-          continue
-        }
-        // All other errors should be reported (YAML parse errors, validation errors, etc)
-        console.error(`Error loading config file: ${path}\n${error}`)
-        throw error
-      }
-    }
-  } else {
-    const configPath = join(cwd, localConfigFileName)
+  const configPaths = paths?.length ? (Array.isArray(paths) ? paths : [paths]) : [join(cwd, localConfigFileName)]
+  for (const configPath of configPaths) {
     try {
-      const projectConfig = readConfig(configPath)
-      configs.push(projectConfig)
+      configs.push(readConfig(configPath))
     } catch (error) {
-      if (error instanceof ZodError) {
-        console.error(`Error in config file: ${configPath}\n${error}`)
-        throw error
+      if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+        continue
       }
+      console.error(`Error loading config file: ${configPath}\n${error}`)
+      throw error
     }
   }
 

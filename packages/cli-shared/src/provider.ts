@@ -4,7 +4,7 @@ import { dirname, isAbsolute, normalize, sep as pathSeparator, relative, resolve
 import { vertex } from '@ai-sdk/google-vertex'
 import type { LanguageModelV4 } from '@ai-sdk/provider'
 import { input, select } from '@inquirer/prompts'
-import type { IMemoryStore, TodoItem, ToolProvider } from '@polka-codes/core'
+import type { CommandResult, IMemoryStore, TodoItem, ToolProvider } from '@polka-codes/core'
 import { generateText, stepCountIs } from 'ai'
 import ignore from 'ignore'
 import { lookup } from 'mime-types'
@@ -63,6 +63,66 @@ function notifyCommandObserver<T>(callback: ((value: T) => void) | undefined, va
  */
 function isIMemoryStore(store: ProviderDataStore<Record<string, string>> | IMemoryStore): store is IMemoryStore {
   return 'readMemory' in store && 'updateMemory' in store
+}
+
+function runCommand(command: string, args: string[] | undefined, options: ProviderOptions): Promise<CommandResult> {
+  return new Promise((resolve, reject) => {
+    const description = args ? [command, ...args.map((arg) => JSON.stringify(arg))].join(' ') : command
+    notifyCommandObserver(options.command?.onStarted, description)
+
+    const child = spawn(command, args ?? [], {
+      shell: args === undefined,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
+
+    let stdoutText = ''
+    let stderrText = ''
+
+    child.stdout.setEncoding('utf8')
+    child.stdout.on('data', (dataStr: string) => {
+      notifyCommandObserver(options.command?.onStdout, dataStr)
+      stdoutText += dataStr
+    })
+
+    child.stderr.setEncoding('utf8')
+    child.stderr.on('data', (dataStr: string) => {
+      notifyCommandObserver(options.command?.onStderr, dataStr)
+      stderrText += dataStr
+    })
+
+    child.on('close', async (code) => {
+      // Node reports null when a signal terminates the command; it is never success.
+      const exitCode = code ?? 1
+      notifyCommandObserver(options.command?.onExit, exitCode)
+      const totalLength = stdoutText.length + stderrText.length
+      if (totalLength > (options.summaryThreshold ?? 5000) && options.summarizeOutput) {
+        try {
+          const summary = await options.summarizeOutput(stdoutText, stderrText)
+          if (summary) {
+            resolve({
+              summary,
+              stdout: stdoutText,
+              stderr: stderrText,
+              exitCode,
+            })
+            return
+          }
+        } catch (_e) {
+          console.error('Summarization failed:', _e)
+        }
+      }
+      resolve({
+        stdout: stdoutText,
+        stderr: stderrText,
+        exitCode,
+      })
+    })
+
+    child.on('error', (err) => {
+      notifyCommandObserver(options.command?.onError, err)
+      reject(err)
+    })
+  })
 }
 
 export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
@@ -310,69 +370,8 @@ export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
       }
     },
 
-    executeCommand: (
-      command: string,
-      _needApprove: boolean,
-    ): Promise<{ stdout: string; stderr: string; exitCode: number; summary?: string }> => {
-      return new Promise((resolve, reject) => {
-        // spawn a shell to execute the command
-
-        notifyCommandObserver(options.command?.onStarted, command)
-
-        const child = spawn(command, [], {
-          shell: true,
-          stdio: ['ignore', 'pipe', 'pipe'],
-        })
-
-        let stdoutText = ''
-        let stderrText = ''
-
-        child.stdout.on('data', (data) => {
-          const dataStr = data.toString()
-          notifyCommandObserver(options.command?.onStdout, dataStr)
-          stdoutText += dataStr
-        })
-
-        child.stderr.on('data', (data) => {
-          const dataStr = data.toString()
-          notifyCommandObserver(options.command?.onStderr, dataStr)
-          stderrText += dataStr
-        })
-
-        child.on('close', async (code) => {
-          // Node reports null when a signal terminates the command; it is never success.
-          const exitCode = code ?? 1
-          notifyCommandObserver(options.command?.onExit, exitCode)
-          const totalLength = stdoutText.length + stderrText.length
-          if (totalLength > (options.summaryThreshold ?? 5000) && options.summarizeOutput) {
-            try {
-              const summary = await options.summarizeOutput(stdoutText, stderrText)
-              if (summary) {
-                resolve({
-                  summary,
-                  stdout: stdoutText,
-                  stderr: stderrText,
-                  exitCode,
-                })
-                return
-              }
-            } catch (_e) {
-              console.error('Summarization failed:', _e)
-            }
-          }
-          resolve({
-            stdout: stdoutText,
-            stderr: stderrText,
-            exitCode,
-          })
-        })
-
-        child.on('error', (err) => {
-          notifyCommandObserver(options.command?.onError, err)
-          reject(err)
-        })
-      })
-    },
+    executeCommand: (command, _needApprove) => runCommand(command, undefined, options),
+    executeFile: (file, args) => runCommand(file, args, options),
     askFollowupQuestion: async (question: string, answerOptions: string[]): Promise<string> => {
       if (options.yes) {
         if (answerOptions.length > 0) {
