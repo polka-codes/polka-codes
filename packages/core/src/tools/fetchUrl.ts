@@ -20,7 +20,7 @@ export const toolInfo = {
   }),
 } as const satisfies ToolInfo
 
-export const handler: ToolHandler<typeof toolInfo, WebProvider> = async (provider, args) => {
+export const handler: ToolHandler<typeof toolInfo, WebProvider> = async (provider, args, signal) => {
   const fetchUrl = provider.fetchUrl
   if (!fetchUrl) {
     return {
@@ -37,7 +37,8 @@ export const handler: ToolHandler<typeof toolInfo, WebProvider> = async (provide
   const resolvedResults = await Promise.all(
     urls.map(async (url) => {
       try {
-        const content = await fetchUrl(url)
+        signal?.throwIfAborted()
+        const content = await fetchUrl(url, signal)
         return `<fetch_url_content url="${url}">${content}</fetch_url_content>`
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error'

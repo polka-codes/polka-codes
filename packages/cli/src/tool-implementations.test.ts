@@ -147,6 +147,26 @@ describe('executeCommand', () => {
 })
 
 describe('generateText', () => {
+  test('passes workflow cancellation to the provider without retrying', async () => {
+    const model = new TimeoutLanguageModel()
+    const controller = new AbortController()
+    const request = toolCall(
+      { tool: 'generateText', input: { messages: [{ role: 'user', content: 'Wait' }], tools: {}, signal: controller.signal } },
+      {
+        model,
+        parameters: { retryCount: 3, usageMeter: new UsageMeter() },
+        toolProvider: {},
+        workflowContext: { logger: { debug() {}, error() {}, info() {}, warn() {} } },
+      },
+    )
+    await Bun.sleep(10)
+    const error = new Error('Workflow cancelled')
+    controller.abort(error)
+    await expect(request).rejects.toThrow('Workflow cancelled')
+    expect(model.attempts).toBe(1)
+    expect(model.abortReasons).toEqual([error])
+  })
+
   test('classifies AI SDK HTTP errors without retrying authentication failures', async () => {
     const model = new ApiErrorLanguageModel()
     const request = toolCall(

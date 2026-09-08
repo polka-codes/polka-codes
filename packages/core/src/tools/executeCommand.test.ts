@@ -17,7 +17,7 @@ describe('executeCommand', () => {
     })
 
     expect(result).toMatchSnapshot()
-    expect(mockProvider.executeCommand).toHaveBeenCalledWith('echo test', false)
+    expect(mockProvider.executeCommand).toHaveBeenCalledWith('echo test', false, undefined)
   })
 
   it('should handle command errors', async () => {
@@ -32,7 +32,7 @@ describe('executeCommand', () => {
     // The handler now catches the error and returns a ToolResponseError
     const toolResponse = await result
     expect(toolResponse).toMatchSnapshot()
-    expect(mockProvider.executeCommand).toHaveBeenCalledWith('invalid-command', false)
+    expect(mockProvider.executeCommand).toHaveBeenCalledWith('invalid-command', false, undefined)
   })
 
   it('should handle command with non-zero exit code', async () => {
@@ -49,7 +49,7 @@ describe('executeCommand', () => {
     })
 
     expect(result).toMatchSnapshot()
-    expect(mockProvider.executeCommand).toHaveBeenCalledWith('invalid-command', false)
+    expect(mockProvider.executeCommand).toHaveBeenCalledWith('invalid-command', false, undefined)
   })
 
   it('should handle approval required', async () => {
@@ -66,7 +66,7 @@ describe('executeCommand', () => {
     })
 
     expect(result).toMatchSnapshot()
-    expect(mockProvider.executeCommand).toHaveBeenCalledWith('rm -rf /', true)
+    expect(mockProvider.executeCommand).toHaveBeenCalledWith('rm -rf /', true, undefined)
   })
 
   it('should default approval requests to false', async () => {

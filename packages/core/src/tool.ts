@@ -32,4 +32,8 @@ export type ToolResponse = {
   message: ToolResponseResult
 }
 
-export type ToolHandler<_T, P> = (provider: P, args: Partial<Record<string, ToolParameterValue>>) => Promise<ToolResponse>
+export type ToolHandler<_T, P> = (
+  provider: P,
+  args: Partial<Record<string, ToolParameterValue>>,
+  signal?: AbortSignal,
+) => Promise<ToolResponse>

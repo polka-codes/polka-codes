@@ -127,6 +127,7 @@ type ToolCallContext = {
 export type { ToolCallContext }
 
 export type GenerateTextInput = {
+  signal?: AbortSignal
   messages: JsonModelMessage[]
   systemPrompt?: string
   tools: ToolSet
@@ -284,6 +285,7 @@ async function generateText(input: GenerateTextInput, context: ToolCallContext) 
   for (let i = 0; i < maxAttempts; i++) {
     const hasAnotherAttempt = i + 1 < maxAttempts
     await usageMeter.waitForPending()
+    input.signal?.throwIfAborted()
     const limitResult = usageMeter.isLimitExceeded()
     if (limitResult.cost) {
       agentCallback?.({
@@ -327,6 +329,7 @@ async function generateText(input: GenerateTextInput, context: ToolCallContext) 
         messages: prompt.messages,
         tools: input.tools,
         async onChunk({ chunk }) {
+          if (input.signal?.aborted) return
           clearTimeout(timeout)
           timeout = setTimeout(abortForTimeout, requestTimeoutSeconds * 1000)
           switch (chunk.type) {
@@ -365,7 +368,7 @@ async function generateText(input: GenerateTextInput, context: ToolCallContext) 
         },
         onError: ({ error }) => captureStreamError(error),
         providerOptions: context.parameters.providerOptions,
-        abortSignal: abortController.signal,
+        abortSignal: input.signal ? AbortSignal.any([input.signal, abortController.signal]) : abortController.signal,
       })
 
       await stream.consumeStream({
@@ -373,6 +376,7 @@ async function generateText(input: GenerateTextInput, context: ToolCallContext) 
       })
 
       const resp = await stream.response
+      input.signal?.throwIfAborted()
       return {
         requestMessages: input.systemPrompt
           ? [{ role: 'system' as const, content: input.systemPrompt }, ...input.messages]
@@ -380,6 +384,7 @@ async function generateText(input: GenerateTextInput, context: ToolCallContext) 
         responseMessages: resp.messages.map(toJsonModelMessage),
       }
     } catch (error: unknown) {
+      input.signal?.throwIfAborted()
       if (repetitionError) {
         if (hasAnotherAttempt) context.workflowContext.logger.warn('Repetition detected, retrying...')
         lastError = repetitionError
@@ -451,6 +456,7 @@ async function generateText(input: GenerateTextInput, context: ToolCallContext) 
 }
 
 async function invokeTool(input: AgentToolRegistry['invokeTool']['input'], context: ToolCallContext): Promise<ToolResponse> {
+  input.signal?.throwIfAborted()
   const tool = toolHandlers.get(input.toolName)
   if (!tool) {
     return {
@@ -462,7 +468,7 @@ async function invokeTool(input: AgentToolRegistry['invokeTool']['input'], conte
     }
   }
   try {
-    const result = await tool.handler(context.toolProvider, input.input as Partial<Record<string, ToolParameterValue>>)
+    const result = await tool.handler(context.toolProvider, input.input as Partial<Record<string, ToolParameterValue>>, input.signal)
     return result
   } catch (error: unknown) {
     return {

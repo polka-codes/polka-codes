@@ -26,6 +26,7 @@ export interface StepFn {
 }
 
 export interface BaseWorkflowContext<TTools extends ToolRegistry> {
+  signal?: AbortSignal
   step: StepFn
   logger: Logger
   tools: WorkflowTools<TTools>

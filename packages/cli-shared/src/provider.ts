@@ -65,14 +65,16 @@ function isIMemoryStore(store: ProviderDataStore<Record<string, string>> | IMemo
   return 'readMemory' in store && 'updateMemory' in store
 }
 
-function runCommand(command: string, args: string[] | undefined, options: ProviderOptions): Promise<CommandResult> {
+function runCommand(command: string, args: string[] | undefined, options: ProviderOptions, signal?: AbortSignal): Promise<CommandResult> {
   return new Promise((resolve, reject) => {
+    signal?.throwIfAborted()
     const description = args ? [command, ...args.map((arg) => JSON.stringify(arg))].join(' ') : command
     notifyCommandObserver(options.command?.onStarted, description)
 
     const child = spawn(command, args ?? [], {
       shell: args === undefined,
       stdio: ['ignore', 'pipe', 'pipe'],
+      signal,
     })
 
     let stdoutText = ''
@@ -91,6 +93,10 @@ function runCommand(command: string, args: string[] | undefined, options: Provid
     })
 
     child.on('close', async (code) => {
+      if (signal?.aborted) {
+        reject(signal.reason)
+        return
+      }
       // Node reports null when a signal terminates the command; it is never success.
       const exitCode = code ?? 1
       notifyCommandObserver(options.command?.onExit, exitCode)
@@ -370,7 +376,7 @@ export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
       }
     },
 
-    executeCommand: (command, _needApprove) => runCommand(command, undefined, options),
+    executeCommand: (command, _needApprove, signal) => runCommand(command, undefined, options, signal),
     executeFile: (file, args) => runCommand(file, args, options),
     askFollowupQuestion: async (question: string, answerOptions: string[]): Promise<string> => {
       if (options.yes) {
@@ -396,13 +402,13 @@ export const getProvider = (options: ProviderOptions = {}): ToolProvider => {
       }
       return answer
     },
-    fetchUrl: async (url: string): Promise<string> => {
+    fetchUrl: async (url: string, signal?: AbortSignal): Promise<string> => {
       const isRaw = url.startsWith('https://raw.githubusercontent.com/')
 
       const urlToFetch = isRaw ? url : `https://r.jina.ai/${url}`
 
       try {
-        const response = await fetch(urlToFetch)
+        const response = await fetch(urlToFetch, { signal })
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`)
         }

@@ -33,7 +33,7 @@ export type AgentModelRound = {
 
 export type AgentToolRegistry = {
   generateText: {
-    input: { messages: JsonModelMessage[]; systemPrompt?: string; tools: ToolSet; model?: string }
+    input: { messages: JsonModelMessage[]; systemPrompt?: string; tools: ToolSet; model?: string; signal?: AbortSignal }
     output: AgentModelRound
   }
   taskEvent: {
@@ -41,7 +41,7 @@ export type AgentToolRegistry = {
     output: void
   }
   invokeTool: {
-    input: { toolName: string; input: unknown }
+    input: { toolName: string; input: unknown; signal?: AbortSignal }
     output: ToolResponse
   }
 }
@@ -75,8 +75,14 @@ function createStructuredOutputRepairError(attempts: number): Error & { code: st
   })
 }
 
-export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentToolRegistry> = async (input, { step, tools, logger }) => {
-  const event = (name: string, event: TaskEvent) => step(name, () => tools.taskEvent(event))
+export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentToolRegistry> = async (
+  input,
+  { step, tools, logger, signal },
+) => {
+  const event = (name: string, event: TaskEvent) => {
+    signal?.throwIfAborted()
+    return step(name, () => tools.taskEvent(event))
+  }
 
   const { tools: toolInfo, maxStructuredOutputRepairAttempts = 2 } = input
 
@@ -121,16 +127,20 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
     let modelRound: AgentModelRound
     try {
       modelRound = await step(`agent-round-${i}`, async () => {
+        signal?.throwIfAborted()
         const systemMessages = messages.filter((message) => message.role === 'system').map((message) => message.content)
         const requestSystemPrompt = systemMessages.length > 0 ? systemMessages.join('\n\n') : undefined
         const requestMessages = requestSystemPrompt ? messages.filter((message) => message.role !== 'system') : messages
 
-        return await tools.generateText({
+        const result = await tools.generateText({
           messages: requestMessages,
           systemPrompt: requestSystemPrompt,
           tools: toolSet,
           model: input.model,
+          signal,
         })
+        signal?.throwIfAborted()
+        return result
       })
     } catch (error) {
       return await endWithError(error)
@@ -239,10 +249,14 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
       let toolResponse: ToolResponse
       try {
         toolResponse = await step(`invoke-tool-${toolCall.toolName}-${toolCall.toolCallId}`, async () => {
-          return await tools.invokeTool({
+          signal?.throwIfAborted()
+          const result = await tools.invokeTool({
             toolName: toolCall.toolName,
             input: toolCall.input,
+            signal,
           })
+          signal?.throwIfAborted()
+          return result
         })
       } catch (error) {
         return await endWithError(error)

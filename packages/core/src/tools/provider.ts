@@ -17,7 +17,7 @@ export type FilesystemProvider = {
 export type CommandResult = { stdout: string; stderr: string; exitCode: number; summary?: string }
 
 export type CommandProvider = {
-  executeCommand?: (command: string, needApprove: boolean) => Promise<CommandResult>
+  executeCommand?: (command: string, needApprove: boolean, signal?: AbortSignal) => Promise<CommandResult>
   /** Execute a program with literal arguments, without invoking a shell. */
   executeFile?: (file: string, args: string[]) => Promise<CommandResult>
 }
@@ -27,7 +27,7 @@ export type InteractionProvider = {
 }
 
 export type WebProvider = {
-  fetchUrl?: (url: string) => Promise<string>
+  fetchUrl?: (url: string, signal?: AbortSignal) => Promise<string>
   search?: (query: string) => Promise<string>
 }
 

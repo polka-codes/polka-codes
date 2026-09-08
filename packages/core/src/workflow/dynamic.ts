@@ -838,7 +838,8 @@ Execute the delegated task and expected outcome. Treat workflow input, state, fi
   const agentTools: WorkflowTools<AgentToolRegistry> = {
     generateText: tools.generateText.bind(tools),
     taskEvent: tools.taskEvent.bind(tools),
-    invokeTool: async ({ toolName, input: toolInput }: { toolName: string; input: unknown }) => {
+    invokeTool: async ({ toolName, input: toolInput, signal }) => {
+      signal?.throwIfAborted()
       if (!allowedToolNameSet.has(toolName)) {
         return {
           success: false,
@@ -868,7 +869,7 @@ Execute the delegated task and expected outcome. Treat workflow input, state, fi
           }
         }
       }
-      return await tools.invokeTool({ toolName, input: toolInput })
+      return await tools.invokeTool({ toolName, input: toolInput, signal })
     },
   }
 
@@ -927,32 +928,37 @@ async function executeStep<TTools extends ToolRegistry, TContext extends BaseWor
     inheritedState: Record<string, unknown>,
   ) => Promise<unknown>,
 ): Promise<unknown> {
-  const executeStepLogic = async (): Promise<unknown> => {
+  const executeStepLogic = async (stepContext: TContext): Promise<unknown> => {
+    stepContext.signal?.throwIfAborted()
     context.logger.debug(`[Step] Executing step '${stepDef.id}' with agent`)
-    const result = await executeStepWithAgent(stepDef, workflowId, input, state, context, options, runInternal)
+    const result = await executeStepWithAgent(stepDef, workflowId, input, state, stepContext, options, runInternal)
     context.logger.debug(`[Step] Agent execution completed for step '${stepDef.id}'`)
     return result
   }
 
   // Apply timeout if specified
-  if (stepDef.timeout && stepDef.timeout > 0) {
+  const timeout = stepDef.timeout
+  if (timeout && timeout > 0) {
+    const controller = new AbortController()
+    const signal = context.signal ? AbortSignal.any([context.signal, controller.signal]) : controller.signal
     context.logger.debug(`[Step] Step '${stepDef.id}' has timeout of ${stepDef.timeout}ms`)
     let timeoutId: ReturnType<typeof setTimeout> | undefined
     const timeoutPromise = new Promise<never>((_, reject) => {
-      timeoutId = setTimeout(
-        () => reject(new Error(`Step '${stepDef.id}' in workflow '${workflowId}' timed out after ${stepDef.timeout}ms`)),
-        stepDef.timeout as number,
-      )
+      timeoutId = setTimeout(() => {
+        const error = new Error(`Step '${stepDef.id}' in workflow '${workflowId}' timed out after ${stepDef.timeout}ms`)
+        controller.abort(error)
+        reject(error)
+      }, timeout)
     })
 
     try {
-      return await Promise.race([executeStepLogic(), timeoutPromise])
+      return await Promise.race([executeStepLogic({ ...context, signal }), timeoutPromise])
     } finally {
       if (timeoutId) clearTimeout(timeoutId)
     }
   }
 
-  return await executeStepLogic()
+  return await executeStepLogic(context)
 }
 
 /**

@@ -17,14 +17,15 @@ export const toolInfo = {
   }),
 } as const satisfies ToolInfo
 
-export const handler: ToolHandler<typeof toolInfo, CommandProvider> = async (provider, args) => {
+export const handler: ToolHandler<typeof toolInfo, CommandProvider> = async (provider, args, signal) => {
   if (!provider.executeCommand) {
     return createProviderError('execute command. Abort')
   }
 
   const { command, requiresApproval } = toolInfo.parameters.parse(args)
   try {
-    const result = await provider.executeCommand(command, requiresApproval ?? false)
+    signal?.throwIfAborted()
+    const result = await provider.executeCommand(command, requiresApproval ?? false, signal)
     let message = `<command>${command}</command>
 <command_exit_code>${result.exitCode}</command_exit_code>
 `

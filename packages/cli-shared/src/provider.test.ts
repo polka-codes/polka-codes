@@ -50,6 +50,31 @@ describe('getProvider', () => {
   })
 
   describe('executeCommand', () => {
+    it('cancels a running command without starting output summarization', async () => {
+      const controller = new AbortController()
+      let summaries = 0
+      const provider = getProvider({
+        command: {
+          onStarted() {},
+          onStdout() {
+            controller.abort(new Error('Step cancelled'))
+          },
+          onStderr() {},
+          onExit() {},
+          onError() {},
+        },
+        summaryThreshold: 0,
+        summarizeOutput: async () => {
+          summaries++
+          return 'summary'
+        },
+      })
+      if (!provider.executeCommand) throw new Error('executeCommand not defined')
+      await expect(provider.executeCommand('printf ready; exec sleep 60', false, controller.signal)).rejects.toThrow()
+      await Bun.sleep(10)
+      expect(summaries).toBe(0)
+    })
+
     it.each([false, true])('fails a signal-terminated command with output summarization %s', async (summarize) => {
       const onExit = mock(() => {})
       const provider = getProvider({
