@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { mkdir, readdir, readFile, rename, unlink, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
-import { basename, dirname, resolve } from 'node:path'
+import { basename, dirname, isAbsolute, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { DatabaseStats, IMemoryStore, MemoryConfig, MemoryEntry, MemoryOperation, MemoryQuery, QueryOptions } from '@polka-codes/core'
 import { DEFAULT_MEMORY_CONFIG, resolveHomePath } from '@polka-codes/core'
@@ -316,7 +316,7 @@ export class SQLiteMemoryStore implements IMemoryStore {
    */
   private getFileLock(): FileLock {
     if (!this.fileLock) {
-      const dbPath = this.resolvePath(this.getDbPath())
+      const dbPath = this.#resolvePath(this.getDbPath())
       this.fileLock = new FileLock(dbPath)
     }
     return this.fileLock
@@ -352,7 +352,7 @@ export class SQLiteMemoryStore implements IMemoryStore {
         return this.db
       }
 
-      const dbPath = this.resolvePath(this.getDbPath())
+      const dbPath = this.#resolvePath(this.getDbPath())
 
       const SqlJs = await getSqlJs()
       let dbData: Uint8Array | undefined
@@ -415,7 +415,7 @@ export class SQLiteMemoryStore implements IMemoryStore {
       return
     }
 
-    const dbPath = this.resolvePath(this.getDbPath())
+    const dbPath = this.#resolvePath(this.getDbPath())
     const tempPath = `${dbPath}.tmp`
     const data = this.db.export()
     // The outer transaction holds the file lock until this atomic save completes.
@@ -482,11 +482,17 @@ export class SQLiteMemoryStore implements IMemoryStore {
   }
 
   /**
-   * Resolve home directory in path using shared utility
+   * Normalize database paths and keep home-relative paths inside home.
    */
-  private resolvePath(path: string): string {
-    const resolved = resolveHomePath(path)
-    return resolve(resolved)
+  #resolvePath(path: string): string {
+    const resolved = resolve(resolveHomePath(path))
+    if (path.startsWith('~')) {
+      const fromHome = relative(resolveHomePath('~'), resolved)
+      if (fromHome === '..' || fromHome.startsWith(`..${sep}`) || isAbsolute(fromHome)) {
+        throw new Error('Memory path must not escape the home directory')
+      }
+    }
+    return resolved
   }
 
   /**
@@ -524,7 +530,7 @@ export class SQLiteMemoryStore implements IMemoryStore {
       let lock: FileLock | undefined
       try {
         if (shouldBegin) {
-          await mkdir(dirname(this.resolvePath(this.getDbPath())), { recursive: true, mode: 0o700 })
+          await mkdir(dirname(this.#resolvePath(this.getDbPath())), { recursive: true, mode: 0o700 })
           const fileLock = this.getFileLock()
           await fileLock.acquire()
           lock = fileLock
@@ -958,7 +964,7 @@ export class SQLiteMemoryStore implements IMemoryStore {
     }
 
     // Get database file size
-    const dbPath = this.resolvePath(this.getDbPath())
+    const dbPath = this.#resolvePath(this.getDbPath())
     let databaseSize = 0
     try {
       const stats = await import('node:fs/promises').then((fs) => fs.stat(dbPath))

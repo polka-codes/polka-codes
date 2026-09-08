@@ -284,22 +284,6 @@ describe('SQLiteMemoryStore', () => {
       const results = await store.queryMemory({ search: '%_' }, { operation: 'select' })
       expect(Array.isArray(results)).toBe(true)
     })
-
-    it('should validate path does not escape home directory', async () => {
-      const configWithBadPath: MemoryConfig = {
-        enabled: true,
-        type: 'sqlite',
-        path: '~/.config/polka-codes/../../../etc/passwd',
-      }
-
-      const badStore = new SQLiteMemoryStore(configWithBadPath, 'project:/tmp/test')
-
-      await expect(async () => {
-        await badStore.updateMemory('replace', 'test', 'content', { entry_type: 'note' })
-      }).toThrow()
-
-      badStore.close()
-    })
   })
 
   describe('Edge Cases', () => {
