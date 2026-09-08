@@ -1,5 +1,7 @@
 import { describe, expect, test } from 'bun:test'
-import { relative } from 'node:path'
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type {
   LanguageModelV4,
@@ -12,6 +14,7 @@ import { getProvider } from '@polka-codes/cli-shared'
 import { UsageMeter } from '@polka-codes/core'
 import { AuthenticationError, MaxRetriesExceededError, MessageLimitExceededError, ProviderTimeoutError } from './errors'
 import { prepareGenerateTextRequest, toolCall } from './tool-implementations'
+import { quoteForShell } from './utils/shell'
 
 const stdinEofFixturePath = fileURLToPath(new URL('../../cli-shared/src/test-fixtures/read-stdin-until-eof.mjs', import.meta.url))
 
@@ -101,6 +104,51 @@ describe('prepareGenerateTextRequest', () => {
 })
 
 describe('executeCommand', () => {
+  test.each(['provider', 'shell', 'direct'] as const)('cancellation stops descendants of %s commands', async (mode) => {
+    const dir = await mkdtemp(join(tmpdir(), 'command-cancellation-'))
+    const ready = join(dir, 'ready')
+    const effect = join(dir, 'effect')
+    const script = join(dir, 'child.ts')
+    await writeFile(
+      script,
+      `await Bun.write(${JSON.stringify(ready)}, 'ready'); await Bun.sleep(500); await Bun.write(${JSON.stringify(effect)}, 'late write');`,
+    )
+    const controller = new AbortController()
+    // Keep the shell alive so it cannot replace itself with the child process.
+    const command = `${quoteForShell(process.execPath)} ${quoteForShell(script)}; true`
+    const provider = getProvider()
+    if (!provider.executeCommand) throw new Error('Missing command provider')
+    const pending =
+      mode === 'provider'
+        ? provider.executeCommand(command, false, controller.signal)
+        : toolCall(
+            {
+              tool: 'executeCommand',
+              input:
+                mode === 'shell'
+                  ? { command, shell: true, signal: controller.signal }
+                  : { command: 'sh', args: ['-c', command], signal: controller.signal },
+            },
+            {
+              model: new TimeoutLanguageModel(),
+              parameters: { usageMeter: new UsageMeter() },
+              toolProvider: provider,
+              workflowContext: { logger: { debug() {}, error() {}, info() {}, warn() {} } },
+            },
+          )
+    try {
+      for (let i = 0; i < 200 && !(await Bun.file(ready).exists()); i++) await Bun.sleep(10)
+      expect(await Bun.file(ready).exists()).toBe(true)
+      controller.abort(new Error('Cancelled'))
+      await expect(pending).rejects.toThrow()
+      await Bun.sleep(650)
+      expect(await Bun.file(effect).exists()).toBe(false)
+    } finally {
+      controller.abort()
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
   test('closes stdin for shell and direct commands while preserving results', async () => {
     const model = new TimeoutLanguageModel()
     const context = {

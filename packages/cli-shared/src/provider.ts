@@ -1,4 +1,3 @@
-import { spawn } from 'node:child_process'
 import { mkdir, readFile, realpath, rename, unlink, writeFile } from 'node:fs/promises'
 import { dirname, isAbsolute, normalize, sep as pathSeparator, relative, resolve } from 'node:path'
 import { vertex } from '@ai-sdk/google-vertex'
@@ -11,6 +10,7 @@ import { lookup } from 'mime-types'
 import { checkRipgrep } from './utils/checkRipgrep.js'
 import { listFiles } from './utils/listFiles.js'
 import { searchFiles } from './utils/searchFiles.js'
+import { spawnCommand } from './utils/spawnCommand.js'
 
 export interface ProviderDataStore<T> {
   read(): Promise<T | undefined>
@@ -71,11 +71,7 @@ function runCommand(command: string, args: string[] | undefined, options: Provid
     const description = args ? [command, ...args.map((arg) => JSON.stringify(arg))].join(' ') : command
     notifyCommandObserver(options.command?.onStarted, description)
 
-    const child = spawn(command, args ?? [], {
-      shell: args === undefined,
-      stdio: ['ignore', 'pipe', 'pipe'],
-      signal,
-    })
+    const child = spawnCommand(command, args, signal)
 
     let stdoutText = ''
     let stderrText = ''
