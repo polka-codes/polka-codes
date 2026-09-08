@@ -1,5 +1,5 @@
 import { promises as fs } from 'node:fs'
-import { join, relative, resolve } from 'node:path'
+import { join, relative, resolve, sep } from 'node:path'
 import ignore, { type Ignore } from 'ignore'
 
 /** Default patterns commonly ignored in projects of various languages. */
@@ -19,25 +19,26 @@ const DEFAULT_IGNORES = [
   'Thumbs.db',
 ]
 
-/**
- * Reads a `.gitignore` file in `dirPath` (if it exists) and appends its lines
- * to the `basePatterns`. Returns a new array without mutating the original.
- */
-async function extendPatterns(basePatterns: string[], dirPath: string): Promise<string[]> {
+type IgnoreLayer = { base: string; matcher: Ignore }
+
+async function extendLayers(layers: IgnoreLayer[], directory: string): Promise<IgnoreLayer[]> {
   try {
-    const gitignorePath = join(dirPath, '.gitignore')
-    const content = await fs.readFile(gitignorePath, 'utf8')
-    const lines = content.split(/\r?\n/).filter(Boolean)
-    return [...basePatterns, ...lines]
-  } catch {
-    // No .gitignore or unreadable
-    return basePatterns
+    const content = await fs.readFile(join(directory, '.gitignore'), 'utf8')
+    return [...layers, { base: directory, matcher: ignore().add(content) }]
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return layers
+    throw error
   }
 }
 
-/** Creates an `ignore` instance from the given patterns. */
-function createIgnore(patterns: string[]): Ignore {
-  return ignore().add(patterns)
+function isIgnored(path: string, directory: boolean, layers: IgnoreLayer[]): boolean {
+  let ignored = false
+  for (const layer of layers) {
+    const result = layer.matcher.test(relative(layer.base, path).split(sep).join('/') + (directory ? '/' : ''))
+    if (result.ignored) ignored = true
+    else if (result.unignored) ignored = false
+  }
+  return ignored
 }
 
 /**
@@ -59,17 +60,14 @@ export async function listFiles(
   excludeFiles?: string[],
   includeIgnored?: boolean,
 ): Promise<[string[], boolean]> {
-  // Merge default ignores with root .gitignore and excludeFiles (if found)
-  let rootPatterns = [...(excludeFiles || [])]
-  if (!includeIgnored) {
-    rootPatterns.push(...DEFAULT_IGNORES)
-    try {
-      const rootGitignore = await fs.readFile(join(cwd, '.gitignore'), 'utf8')
-      const lines = rootGitignore.split(/\r?\n/).filter(Boolean)
-      rootPatterns = [...rootPatterns, ...lines]
-    } catch {
-      // No .gitignore at root or unreadable; ignore silently
-    }
+  const root = resolve(cwd)
+  const start = resolve(dirPath)
+  let layers: IgnoreLayer[] = [{ base: root, matcher: ignore().add([...(excludeFiles ?? []), ...(includeIgnored ? [] : DEFAULT_IGNORES)]) }]
+  let ancestor = root
+  for (const part of relative(root, start).split(sep).filter(Boolean)) {
+    if (!includeIgnored) layers = await extendLayers(layers, ancestor)
+    ancestor = join(ancestor, part)
+    if (isIgnored(ancestor, true, layers)) return [[], false]
   }
 
   // Final results (relative to `cwd`) and indicator if we reached the limit
@@ -80,10 +78,10 @@ export async function listFiles(
 
   // BFS queue
   // Each entry holds the directory path, patterns, and relative path
-  const queue: Array<{ path: string; patterns: string[]; relPath: string }> = [
+  const queue: Array<{ path: string; layers: IgnoreLayer[]; relPath: string }> = [
     {
-      path: resolve(dirPath),
-      patterns: rootPatterns,
+      path: start,
+      layers,
       relPath: relative(cwd, resolve(dirPath)).replace(/\\/g, '/') || '.',
     },
   ]
@@ -91,14 +89,13 @@ export async function listFiles(
   // Perform BFS until queue is empty or maxCount is reached
   while (queue.length > 0) {
     // biome-ignore lint/style/noNonNullAssertion: checked above
-    const { path: currentPath, patterns: parentPatterns, relPath: currentRelPath } = queue.shift()!
+    const { path: currentPath, layers: parentLayers, relPath: currentRelPath } = queue.shift()!
 
     // Mark this directory as processed
     processedDirs.add(currentRelPath)
 
     // Merge parent's patterns with local .gitignore
-    const mergedPatterns = includeIgnored ? parentPatterns : await extendPatterns(parentPatterns, currentPath)
-    const folderIg = createIgnore(mergedPatterns)
+    const currentLayers = includeIgnored ? parentLayers : await extendLayers(parentLayers, currentPath)
 
     const entries = await fs.readdir(currentPath, { withFileTypes: true })
     entries.sort((a, b) => a.name.localeCompare(b.name)) // Sort entries for consistent order
@@ -108,7 +105,7 @@ export async function listFiles(
       // Convert full path to something relative to `cwd`
       const relPath = relative(cwd, fullPath).replace(/\\/g, '/')
 
-      if (folderIg.ignores(relPath)) {
+      if (isIgnored(fullPath, entry.isDirectory(), currentLayers)) {
         continue // Skip ignored entries
       }
 
@@ -116,7 +113,7 @@ export async function listFiles(
         if (recursive) {
           queue.push({
             path: fullPath,
-            patterns: mergedPatterns,
+            layers: currentLayers,
             relPath,
           })
         }
@@ -129,7 +126,7 @@ export async function listFiles(
           // First, check if there are remaining files in the current directory
           const remainingEntries = entries.slice(entries.indexOf(entry) + 1)
           const hasRemainingFiles = remainingEntries.some(
-            (e) => !e.isDirectory() && !folderIg.ignores(relative(cwd, join(currentPath, e.name)).replace(/\\/g, '/')),
+            (e) => !e.isDirectory() && !isIgnored(join(currentPath, e.name), false, currentLayers),
           )
 
           if (hasRemainingFiles) {
