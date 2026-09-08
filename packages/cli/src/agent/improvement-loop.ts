@@ -1,5 +1,4 @@
 import type { CliToolRegistry } from '../workflow-tools'
-import { TaskExecutor } from './executor'
 import { createTaskPlanner, type TaskPlanner } from './planner'
 import type { AgentStateManager } from './state-manager'
 import { createTaskDiscoveryEngine, type TaskDiscoveryEngine } from './task-discovery'
@@ -9,10 +8,9 @@ import type { CliWorkflowContext, Plan, Task, ToolRegistry } from './types'
 /**
  * Continuous improvement loop state
  */
-interface ContinuousImprovementLoopState<TTools extends ToolRegistry = CliToolRegistry> {
+interface ContinuousImprovementLoopState {
   discovery: TaskDiscoveryEngine
   planner: TaskPlanner
-  executor: TaskExecutor<TTools>
   prioritizer: TaskPrioritizer
   running: boolean
   iterationCount: number
@@ -40,12 +38,11 @@ export interface ContinuousImprovementLoop {
 export function createContinuousImprovementLoop<TTools extends ToolRegistry = CliToolRegistry>(
   context: CliWorkflowContext<TTools>,
   stateManager: AgentStateManager,
-  _sessionId: string,
+  executeTask: (task: Task) => Promise<boolean>,
 ): ContinuousImprovementLoop {
-  const state: ContinuousImprovementLoopState<TTools> = {
+  const state: ContinuousImprovementLoopState = {
     discovery: createTaskDiscoveryEngine(context),
     planner: createTaskPlanner(context),
-    executor: new TaskExecutor(context, context.logger),
     prioritizer: new TaskPrioritizer(),
     running: false,
     iterationCount: 0,
@@ -83,47 +80,11 @@ export function createContinuousImprovementLoop<TTools extends ToolRegistry = Cl
           continue
         }
 
-        try {
-          // Get current state
-          const currentState = await stateManager.getState()
-
-          if (!currentState) {
-            context.logger.error('[Continuous] State is null')
-            continue
-          }
-
-          // Execute task
-          const result = await state.executor.execute(task, currentState)
-
-          if (result.success) {
-            context.logger.info(`[Continuous] ✅ ${task.title}`)
-
-            // Move task from queue to completed
-            await stateManager.moveTask(task.id, 'queue', 'completed')
-
-            // Record success for prioritization learning
-            state.prioritizer.recordExecution(task.id, true)
-
-            // Record file changes
-            for (const file of task.files) {
-              state.prioritizer.recordFileChange(file)
-            }
-
-            completedTasks++
-          } else {
-            context.logger.error(`[Continuous] ❌ ${task.title}`, result.error)
-
-            // Move task from queue to failed
-            await stateManager.moveTask(task.id, 'queue', 'failed')
-
-            // Record failure for prioritization learning
-            state.prioritizer.recordExecution(task.id, false)
-          }
-        } catch (error) {
-          context.logger.error(`[Continuous] ❌ ${task.title}`, error as Error)
-
-          // Move task from queue to failed
-          await stateManager.moveTask(task.id, 'queue', 'failed')
+        const success = await executeTask(task)
+        state.prioritizer.recordExecution(task.id, success)
+        if (success) {
+          for (const file of task.files) state.prioritizer.recordFileChange(file)
+          completedTasks++
         }
       }
     }
@@ -239,7 +200,6 @@ export function createContinuousImprovementLoop<TTools extends ToolRegistry = Cl
     async stop(): Promise<void> {
       context.logger.info('[Continuous] Stopping loop...')
       state.running = false
-      state.executor.cancelAll()
     },
 
     /**

@@ -63,6 +63,8 @@ export class ApprovalManager {
    * Request user approval for a task
    */
   async requestApproval(task: Task): Promise<ApprovalDecision> {
+    if (!this.requiresApproval(task)) return { approved: true }
+
     // Check if running in an interactive terminal
     if (!process.stdin.isTTY) {
       this.#logger.warn(`⚠️  Not running in an interactive terminal - auto-rejecting task: ${task.title}`)
@@ -131,6 +133,7 @@ export class ApprovalManager {
    * @returns Approval decision with approved flag and optional reason
    */
   async requestPlanApproval(request: PlanApprovalRequest): Promise<ApprovalDecision> {
+    if (!request.tasks.some((task) => this.requiresApproval(task))) return { approved: true }
     // Check if running in an interactive terminal
     if (!process.stdin.isTTY) {
       this.#logger.warn(`⚠️  Not running in an interactive terminal - auto-rejecting plan: ${request.goal}`)

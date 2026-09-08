@@ -3,7 +3,7 @@ import { runAgent } from '../agent'
 
 const command = new Command().option('--config <path>').option('--yes')
 command.parse(['--config', process.argv[2], '--yes'], { from: 'user' })
-await runAgent('Inspect the example package', { approvalLevel: 'none' }, command)
+await runAgent('Inspect the example package', { approvalLevel: 'all' }, command)
 
 // Exercise a task workflow through the same initialized registry and inherited base input.
 const { runWorkflow } = await import('../../runWorkflow')

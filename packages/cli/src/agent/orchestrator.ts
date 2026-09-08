@@ -327,7 +327,7 @@ export class AutonomousAgent<TTools extends ToolRegistry = CliToolRegistry> {
     })
 
     // Create and start continuous loop
-    this.#improvementLoop = createContinuousImprovementLoop(this.#context, this.#stateManager, this.#sessionId)
+    this.#improvementLoop = createContinuousImprovementLoop(this.#context, this.#stateManager, (task) => this.#executeTask(task))
 
     try {
       await this.#improvementLoop.start()
@@ -345,15 +345,16 @@ export class AutonomousAgent<TTools extends ToolRegistry = CliToolRegistry> {
   async stop(): Promise<void> {
     this.#logger.info('[Stop] Stopping agent...')
 
-    // Stop continuous loop if running
-    if (this.#improvementLoop?.isRunning()) {
-      await this.#improvementLoop.stop()
+    // The continuous run owns its final state update.
+    const continuous = this.#improvementLoop?.isRunning()
+    if (continuous) {
+      await this.#improvementLoop?.stop()
     }
 
     // Cancel executing tasks
     this.#taskExecutor.cancelAll()
 
-    await this.#stateManager.updateState({ currentMode: 'idle' })
+    if (!continuous) await this.#stateManager.updateState({ currentMode: 'idle' })
 
     this.#logger.info('[Stop] ✅ Agent stopped')
   }
@@ -414,7 +415,7 @@ export class AutonomousAgent<TTools extends ToolRegistry = CliToolRegistry> {
 
         // Execute task
         this.#metrics.recordTaskStart(task.id)
-        const success = await this.executeTask(task)
+        const success = await this.#executeTask(task)
 
         if (success) {
           this.#metrics.recordTaskComplete(task.id)
@@ -436,7 +437,7 @@ export class AutonomousAgent<TTools extends ToolRegistry = CliToolRegistry> {
   /**
    * Execute a single task
    */
-  private async executeTask(task: Task): Promise<boolean> {
+  async #executeTask(task: Task): Promise<boolean> {
     this.#logger.info(`[Run] → ${task.title}`)
 
     try {
@@ -456,10 +457,13 @@ export class AutonomousAgent<TTools extends ToolRegistry = CliToolRegistry> {
 
         if (!decision.approved) {
           this.#logger.info(`[Run] ⏭️  Task skipped (not approved): ${decision.reason || 'No reason provided'}`)
+          await this.#stateManager.updateTask(task.id, { status: 'blocked' })
+          await this.#stateManager.moveTask(task.id, 'queue', 'blocked')
           return false
         }
       }
 
+      await this.#stateManager.updateTask(task.id, { status: 'in-progress' })
       // Execute task
       const taskStartTime = Date.now()
       const result = await this.#taskExecutor.execute(task, state)
@@ -489,6 +493,7 @@ export class AutonomousAgent<TTools extends ToolRegistry = CliToolRegistry> {
         }
 
         // Move task from queue to completed
+        await this.#stateManager.updateTask(task.id, { status: 'completed' })
         await this.#stateManager.moveTask(task.id, 'queue', 'completed')
 
         // Add to history
@@ -508,6 +513,7 @@ export class AutonomousAgent<TTools extends ToolRegistry = CliToolRegistry> {
         this.#logger.error('[Run]', new Error(`Task failed: ${errorMsg}`))
 
         // Move task from queue to failed
+        await this.#stateManager.updateTask(task.id, { status: 'failed' })
         await this.#stateManager.moveTask(task.id, 'queue', 'failed')
 
         return false
@@ -516,7 +522,10 @@ export class AutonomousAgent<TTools extends ToolRegistry = CliToolRegistry> {
       this.#logger.error('[Run]', error as Error)
 
       // Move task from queue to failed
-      await this.#stateManager.moveTask(task.id, 'queue', 'failed')
+      if (this.#stateManager.getState()?.taskQueue.some((queued) => queued.id === task.id)) {
+        await this.#stateManager.updateTask(task.id, { status: 'failed' })
+        await this.#stateManager.moveTask(task.id, 'queue', 'failed')
+      }
 
       return false
     }
