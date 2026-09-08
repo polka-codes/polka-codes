@@ -14,11 +14,6 @@ export async function runWorkflowCommand(task: string | undefined, _options: unk
 
   const { file, workflow: workflowName } = command.opts()
 
-  if (!file) {
-    logger.error('Error: Workflow file is required. Use -f or --file.')
-    return
-  }
-
   // Read and parse workflow file
   logger.info(`Loading workflow from '${file}'...`)
   let content: string
@@ -26,44 +21,30 @@ export async function runWorkflowCommand(task: string | undefined, _options: unk
     content = await readFile(file, 'utf-8')
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
-    logger.error(`Error reading file '${file}': ${errorMessage}`)
-    return
+    command.error(`Error reading file '${file}': ${errorMessage}`)
   }
 
   const parsedResult = parseDynamicWorkflowDefinition(content)
   if (!parsedResult.success) {
-    logger.error(`Failed to parse workflow: ${parsedResult.error}`)
-    return
+    command.error(`Failed to parse workflow: ${parsedResult.error}`)
   }
   const workflowDef = parsedResult.definition
 
   const workflowNames = Object.keys(workflowDef.workflows)
   logger.info(`Available workflows: ${workflowNames.join(', ')}`)
 
-  let workflowId = workflowName
+  const workflowId = workflowName ?? (workflowNames.includes('main') ? 'main' : workflowNames.length === 1 ? workflowNames[0] : undefined)
   if (!workflowId) {
-    if (workflowNames.includes('main')) {
-      workflowId = 'main'
-      logger.info(`Using 'main' workflow`)
-    } else if (workflowNames.length === 1) {
-      workflowId = workflowNames[0]
-      logger.info(`Using workflow '${workflowId}'`)
-    } else if (workflowNames.length > 1) {
-      logger.error(
-        `Multiple workflows found in file and no 'main' workflow. Please specify one using --workflow <name>. Available workflows: ${workflowNames.join(', ')}`,
-      )
-      return
-    } else {
-      logger.error('No workflows found in file.')
-      return
-    }
-  } else {
-    if (!workflowNames.includes(workflowId)) {
-      logger.error(`Workflow '${workflowId}' not found in file. Available workflows: ${workflowNames.join(', ')}`)
-      return
-    }
-    logger.info(`Using workflow '${workflowId}'`)
+    command.error(
+      workflowNames.length === 0
+        ? 'No workflows found in file.'
+        : `Multiple workflows found in file and no 'main' workflow. Please specify one using --workflow <name>. Available workflows: ${workflowNames.join(', ')}`,
+    )
   }
+  if (!workflowNames.includes(workflowId)) {
+    command.error(`Workflow '${workflowId}' not found in file. Available workflows: ${workflowNames.join(', ')}`)
+  }
+  logger.info(`Using workflow '${workflowId}'`)
 
   // Create dynamic workflow runner
   let dynamicRunner: ReturnType<typeof createDynamicWorkflow>
@@ -80,9 +61,7 @@ export async function runWorkflowCommand(task: string | undefined, _options: unk
     })
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
-    logger.error(`Failed to parse workflow: ${errorMessage}`)
-    process.exitCode = 1
-    return
+    command.error(`Failed to parse workflow: ${errorMessage}`)
   }
 
   const workflowFn: WorkflowFn<BaseWorkflowInput, unknown, DynamicWorkflowRegistry> = async (input, context) => {
@@ -121,6 +100,6 @@ export async function runWorkflowCommand(task: string | undefined, _options: unk
 export const workflowCommand = new Command('workflow')
   .description('Run custom workflows.')
   .argument('[task]', 'The task input for the workflow.')
-  .option('-f, --file <path>', 'Path to the workflow file (required)')
+  .requiredOption('-f, --file <path>', 'Path to the workflow file')
   .option('-w, --workflow <name>', 'The name of the workflow to run')
   .action(runWorkflowCommand)

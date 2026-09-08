@@ -7,6 +7,52 @@ import { z } from 'zod'
 
 const cli = fileURLToPath(new URL('../index.ts', import.meta.url))
 const requestSchema = z.object({ messages: z.array(z.unknown()), tools: z.array(z.object({ function: z.object({ name: z.string() }) })) })
+
+for (const scenario of [
+  { name: 'missing file option', content: undefined, args: [], error: 'required option' },
+  { name: 'unreadable file', content: undefined, args: ['-f', 'workflow.yml'], error: 'Error reading file' },
+  { name: 'malformed YAML', content: 'workflows: [', args: ['-f', 'workflow.yml'], error: 'Failed to parse workflow' },
+  {
+    name: 'invalid schema',
+    content: 'workflows:\n  main:\n    steps: invalid',
+    args: ['-f', 'workflow.yml'],
+    error: 'Failed to parse workflow',
+  },
+  { name: 'empty registry', content: 'workflows: {}', args: ['-f', 'workflow.yml'], error: 'No workflows found' },
+  {
+    name: 'ambiguous selection',
+    content:
+      'workflows:\n  first:\n    task: First\n    steps:\n      - id: first\n        task: Inspect\n  second:\n    task: Second\n    steps:\n      - id: second\n        task: Inspect',
+    args: ['-f', 'workflow.yml'],
+    error: 'Multiple workflows found',
+  },
+  {
+    name: 'unknown selection',
+    content: 'workflows:\n  main:\n    task: Main\n    steps:\n      - id: inspect\n        task: Inspect',
+    args: ['-f', 'workflow.yml', '-w', 'missing'],
+    error: "Workflow 'missing' not found",
+  },
+]) {
+  test(`workflow CLI exits with a failure for ${scenario.name}`, async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'workflow-invalid-'))
+    try {
+      if (scenario.content !== undefined) await writeFile(join(dir, 'workflow.yml'), scenario.content)
+      const child = Bun.spawn([process.execPath, cli, 'workflow', ...scenario.args], {
+        cwd: dir,
+        env: { ...process.env, HOME: dir },
+        stdin: 'ignore',
+        stdout: 'pipe',
+        stderr: 'pipe',
+      })
+      const [code, stdout, stderr] = await Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()])
+      expect(stdout + stderr).toContain(scenario.error)
+      expect(code).not.toBe(0)
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+}
+
 test('workflow CLI uses supported handlers, enforces step allow-lists, and rejects unknown tools before execution', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'workflow-tools-'))
   const requests: z.infer<typeof requestSchema>[] = []
