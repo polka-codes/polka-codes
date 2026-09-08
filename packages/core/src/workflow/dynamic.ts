@@ -179,7 +179,7 @@ export type DynamicWorkflowParseResult = { success: true; definition: WorkflowFi
 /**
  * Validate a workflow file for common issues
  */
-export function validateWorkflowFile(definition: WorkflowFile): ValidationResult {
+export function validateWorkflowFile(definition: WorkflowFile, availableTools?: ReadonlySet<string>): ValidationResult {
   const errors: string[] = []
 
   // Check each workflow
@@ -191,55 +191,41 @@ export function validateWorkflowFile(definition: WorkflowFile): ValidationResult
     }
 
     // Check for break/continue outside loops
-    const checkBreakOutsideLoop = (steps: WorkflowControlFlowStep[], inLoop: boolean, path: string): void => {
+    const checkSteps = (steps: WorkflowControlFlowStep[], inLoop: boolean, path: string): void => {
       for (const step of steps) {
+        if (availableTools && 'task' in step) {
+          for (const name of step.tools ?? []) {
+            if (name !== 'all' && name !== 'runWorkflow' && !Object.hasOwn(TOOL_GROUPS, name) && !availableTools.has(name)) {
+              errors.push(
+                `Unknown tool '${name}' at '${path}/${step.id}'. Available tools: ${[...availableTools, 'runWorkflow'].join(', ')}`,
+              )
+            }
+          }
+        }
         if (isBreakStep(step) || isContinueStep(step)) {
           if (!inLoop) {
             errors.push(`${path} has break/continue outside of a loop`)
           }
         }
         if (isWhileLoopStep(step)) {
-          checkBreakOutsideLoop(step.while.steps, true, `${path}/${step.id}`)
+          checkSteps(step.while.steps, true, `${path}/${step.id}`)
         }
         if (isIfElseStep(step)) {
           if (step.if.thenBranch) {
-            checkBreakOutsideLoop(step.if.thenBranch, inLoop, `${path}/${step.id}/then`)
+            checkSteps(step.if.thenBranch, inLoop, `${path}/${step.id}/then`)
           }
           if (step.if.elseBranch) {
-            checkBreakOutsideLoop(step.if.elseBranch, inLoop, `${path}/${step.id}/else`)
+            checkSteps(step.if.elseBranch, inLoop, `${path}/${step.id}/else`)
           }
         }
         if (isTryCatchStep(step)) {
-          checkBreakOutsideLoop(step.try.trySteps, inLoop, `${path}/${step.id}/try`)
-          checkBreakOutsideLoop(step.try.catchSteps, inLoop, `${path}/${step.id}/catch`)
+          checkSteps(step.try.trySteps, inLoop, `${path}/${step.id}/try`)
+          checkSteps(step.try.catchSteps, inLoop, `${path}/${step.id}/catch`)
         }
       }
     }
 
-    checkBreakOutsideLoop(workflow.steps, false, workflowId)
-
-    // Check for runWorkflow calls to non-existent workflows
-    const findRunWorkflowCalls = (steps: WorkflowControlFlowStep[], path: string): void => {
-      for (const step of steps) {
-        if (isWhileLoopStep(step)) {
-          findRunWorkflowCalls(step.while.steps, `${path}/${step.id}`)
-        }
-        if (isIfElseStep(step)) {
-          if (step.if.thenBranch) {
-            findRunWorkflowCalls(step.if.thenBranch, `${path}/${step.id}/then`)
-          }
-          if (step.if.elseBranch) {
-            findRunWorkflowCalls(step.if.elseBranch, `${path}/${step.id}/else`)
-          }
-        }
-        if (isTryCatchStep(step)) {
-          findRunWorkflowCalls(step.try.trySteps, `${path}/${step.id}/try`)
-          findRunWorkflowCalls(step.try.catchSteps, `${path}/${step.id}/catch`)
-        }
-      }
-    }
-
-    findRunWorkflowCalls(workflow.steps, workflowId)
+    checkSteps(workflow.steps, false, workflowId)
   }
 
   if (errors.length > 0) {
@@ -1278,6 +1264,9 @@ export function createDynamicWorkflow<
     }
     definition = res.definition
   }
+
+  const validation = validateWorkflowFile(definition, options.toolInfo && new Set(options.toolInfo.map((tool) => tool.name)))
+  if (!validation.success) throw new Error(`Workflow validation failed:\n${validation.errors.join('\n')}`)
 
   const runInternal = async (
     workflowId: string,

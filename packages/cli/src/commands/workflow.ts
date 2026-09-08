@@ -1,17 +1,9 @@
 import { readFile } from 'node:fs/promises'
-import {
-  askFollowupQuestion,
-  createDynamicWorkflow,
-  type DynamicWorkflowRegistry,
-  type FullToolInfo,
-  listFiles,
-  parseDynamicWorkflowDefinition,
-  searchFiles,
-  type WorkflowFn,
-} from '@polka-codes/core'
+import { createDynamicWorkflow, type DynamicWorkflowRegistry, parseDynamicWorkflowDefinition, type WorkflowFn } from '@polka-codes/core'
 import { Command } from 'commander'
 import { createLogger } from '../logger'
 import { runWorkflow } from '../runWorkflow'
+import { toolHandlers } from '../tool-implementations'
 import { getBaseWorkflowOptions } from '../utils/command'
 import { type BaseWorkflowInput, commitWorkflow, fixWorkflow, planWorkflow, prWorkflow, reviewWorkflow } from '../workflows'
 
@@ -74,12 +66,10 @@ export async function runWorkflowCommand(task: string | undefined, _options: unk
   }
 
   // Create dynamic workflow runner
-  const tools: FullToolInfo[] = [listFiles, askFollowupQuestion, searchFiles]
-
   let dynamicRunner: ReturnType<typeof createDynamicWorkflow>
   try {
     dynamicRunner = createDynamicWorkflow(workflowDef, {
-      toolInfo: tools,
+      toolInfo: [...toolHandlers.values()],
       builtInWorkflows: {
         plan: planWorkflow,
         fix: fixWorkflow,
@@ -91,6 +81,7 @@ export async function runWorkflowCommand(task: string | undefined, _options: unk
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
     logger.error(`Failed to parse workflow: ${errorMessage}`)
+    process.exitCode = 1
     return
   }
 
