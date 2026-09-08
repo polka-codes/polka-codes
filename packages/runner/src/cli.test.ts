@@ -170,3 +170,73 @@ test('does not complete synchronization when a submodule file is unreadable', as
   expect(result.messages.at(-1)).toMatchObject({ type: 'error', message: 'Failed to synchronize changed files' })
   expect(result.messages.some((message) => message.type === 'get_files_completed')).toBe(false)
 })
+
+test('synchronizes tracked submodule files even when file-search rules ignore them', async () => {
+  const result = await runRunnerProcess({ type: 'get_files' }, async (dir) => {
+    const module = await addSubmodule(dir)
+    await mkdir(join(module, 'dist'))
+    await writeFile(join(module, '.gitignore'), 'ignored.txt\n')
+    await writeFile(join(module, 'dist', 'tracked.js'), 'tracked build')
+    await writeFile(join(module, 'ignored.txt'), 'tracked despite ignore')
+    await git(module, 'add', '-f', 'dist/tracked.js', 'ignored.txt', '.gitignore')
+    await writeFile(join(module, 'ignored-untracked.txt'), 'not tracked')
+    await writeFile(join(module, '.gitignore'), 'ignored*.txt\n')
+  })
+  expect(result.exitCode).toBe(0)
+  const files = result.messages.filter((message) => message.type === 'file')
+  expect(files.find((message) => message.path === 'module/dist/tracked.js')?.content).toBe('tracked build')
+  expect(files.find((message) => message.path === 'module/ignored.txt')?.content).toBe('tracked despite ignore')
+  expect(files.some((message) => message.path === 'module/ignored-untracked.txt')).toBe(false)
+})
+
+test.each(['unstaged', 'staged', 'committed'])('synchronizes %s submodule deletions', async (state) => {
+  const result = await runRunnerProcess({ type: 'get_files' }, async (dir) => {
+    const module = await addSubmodule(dir)
+    await rm(join(module, 'file.txt'))
+    if (state !== 'unstaged') await git(module, 'add', '--all')
+    if (state === 'committed') await git(module, '-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '-qm', 'delete')
+  })
+  expect(result.exitCode).toBe(0)
+  expect(result.messages).toContainEqual({ type: 'file_deleted', path: 'module/file.txt' })
+  expect(result.messages.at(-1)).toEqual({ type: 'get_files_completed' })
+})
+
+test('synchronizes a submodule file recreated after its staged deletion', async () => {
+  const result = await runRunnerProcess({ type: 'get_files' }, async (dir) => {
+    const module = await addSubmodule(dir)
+    await git(module, 'rm', '--cached', '-q', 'file.txt')
+    await writeFile(join(module, 'file.txt'), 'recreated')
+  })
+  expect(result.exitCode).toBe(0)
+  expect(result.messages).toContainEqual({ type: 'file', path: 'module/file.txt', content: 'recreated' })
+  expect(result.messages).not.toContainEqual({ type: 'file_deleted', path: 'module/file.txt' })
+})
+
+test('synchronizes a submodule file replaced with a directory', async () => {
+  const result = await runRunnerProcess({ type: 'get_files' }, async (dir) => {
+    const module = await addSubmodule(dir)
+    await git(module, 'rm', '-q', 'file.txt')
+    await mkdir(join(module, 'file.txt'))
+    await writeFile(join(module, 'file.txt', 'child.txt'), 'child')
+  })
+  expect(result.exitCode).toBe(0)
+  expect(result.messages).toContainEqual({ type: 'file_deleted', path: 'module/file.txt' })
+  expect(result.messages).toContainEqual({ type: 'file', path: 'module/file.txt/child.txt', content: 'child' })
+})
+
+test('synchronizes nested submodules against the original parent commit', async () => {
+  const result = await runRunnerProcess({ type: 'get_files' }, async (dir) => {
+    const module = await addSubmodule(dir)
+    const nested = await addSubmodule(module)
+    await git(dir, 'add', 'module')
+    await git(dir, '-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '-qm', 'record nested module')
+    await git(nested, 'mv', 'file.txt', 'new\nname.txt')
+    await git(nested, '-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '-qm', 'rename')
+    await git(module, 'add', 'module')
+    await git(module, '-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '-qm', 'update nested module')
+  })
+  expect(result.exitCode).toBe(0)
+  expect(result.messages).toContainEqual({ type: 'file_deleted', path: 'module/module/file.txt' })
+  expect(result.messages).toContainEqual({ type: 'file', path: 'module/module/new\nname.txt', content: 'original' })
+  expect(result.messages.at(-1)).toEqual({ type: 'get_files_completed' })
+})

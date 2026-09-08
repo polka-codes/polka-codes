@@ -1,6 +1,7 @@
-import { execSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 import { promises as fs } from 'node:fs'
-import { getProvider, type LoadedConfig, listFiles as listFilesHelper, loadConfig, parseGitPorcelain } from '@polka-codes/cli-shared'
+import { posix } from 'node:path'
+import { getProvider, type LoadedConfig, loadConfig, parseGitPorcelain } from '@polka-codes/cli-shared'
 import {
   executeCommand,
   type FullToolInfo,
@@ -20,6 +21,20 @@ import type { UserContent, WsIncomingMessage } from './types'
 import { WebSocketManager } from './WebSocketManager'
 
 type RunnerMediaSource = { type: 'base64'; data: string } | { type: 'url'; url: string }
+
+function submoduleCommits(directory: string, commit?: string, paths?: string[]): Map<string, string> {
+  const commits = new Map<string, string>()
+  if (!commit || paths?.length === 0) return commits
+  const tree = execFileSync('git', ['--literal-pathspecs', 'ls-tree', '-r', '-z', commit, '--', ...(paths ?? [])], {
+    cwd: directory,
+    encoding: 'utf8',
+  })
+  for (const entry of tree.split('\0')) {
+    const match = /^160000 commit ([a-f0-9]+)\t([\s\S]+)$/.exec(entry)
+    if (match) commits.set(match[2], match[1])
+  }
+  return commits
+}
 
 function toRunnerMediaSource(data: unknown): RunnerMediaSource | undefined {
   if (typeof data === 'string') return { type: 'base64', data }
@@ -300,17 +315,26 @@ export class Runner {
 
     try {
       // Get git status in porcelain format for machine-readable output
-      const gitStatusOutput = execSync('git status --porcelain=v1 -z --untracked-files=all', { encoding: 'utf8' })
+      const gitStatusOutput = execFileSync('git', ['status', '--porcelain=v1', '-z', '--untracked-files=all'], { encoding: 'utf8' })
 
       // Parse the git status output to identify file changes
       const fileChanges = parseGitPorcelain(gitStatusOutput)
+      const head = spawnSync('git', ['rev-parse', '--verify', '--quiet', 'HEAD'], { encoding: 'utf8' })
+      if (head.error) throw head.error
+      // Exit 1 means the repository has no commits yet.
+      if (head.status !== 0 && head.status !== 1) throw new Error(head.stderr || 'Failed to resolve Git HEAD')
+      const submodules = submoduleCommits(
+        '.',
+        head.status === 0 ? head.stdout.trim() : undefined,
+        fileChanges.map((change) => change.originalPath ?? change.path),
+      )
 
       // Process each file change and send appropriate messages
       for (const change of fileChanges) {
         const status = change.indexStatus + change.workingTreeStatus
         if (change.originalPath && status.includes('R')) this.sendFileDeleted(change.originalPath)
         if (status.includes('D')) this.sendFileDeleted(change.path)
-        else await this.#sendFileContent(change.path)
+        else await this.#sendFileContent(change.path, submodules.get(change.originalPath ?? change.path))
       }
 
       // Signal completion of file processing
@@ -339,13 +363,39 @@ export class Runner {
     setImmediate(() => process.exit(this.#commandFailed ? 1 : 0))
   }
 
-  async #sendFileContent(path: string): Promise<void> {
-    const stat = await fs.stat(path)
-    const files = stat.isDirectory() ? (await listFilesHelper(path, true, Number.POSITIVE_INFINITY, process.cwd()))[0] : [path]
+  async #sendFileContent(path: string, baseCommit?: string): Promise<void> {
+    const stat = await fs.lstat(path).catch((error: unknown) => {
+      if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return undefined
+      throw error
+    })
+    if (!stat) {
+      this.sendFileDeleted(path)
+      return
+    }
+    if (stat.isDirectory()) {
+      await this.#sendSubmodule(path, baseCommit)
+      return
+    }
+    const content = await fs.readFile(path, 'utf8')
+    this.wsManager.sendMessage({ type: 'file', path, content })
+    console.log(`Sent content for file: ${path}, size: ${content.length}`)
+  }
+
+  async #sendSubmodule(path: string, baseCommit?: string): Promise<void> {
+    const git = (...args: string[]) => execFileSync('git', args, { cwd: path, encoding: 'utf8' })
+    if (git('rev-parse', '--show-prefix').trim()) throw new Error(`Submodule is not initialized: ${path}`)
+    const submodules = submoduleCommits(path, baseCommit)
+    // Compare with the parent's recorded commit, including deletions already
+    // committed inside the submodule. Disable rename detection to send both paths.
+    const deleted = baseCommit
+      ? git('diff', '--name-only', '--diff-filter=D', '--no-renames', '-z', baseCommit, '--').split('\0').filter(Boolean)
+      : []
+    const files = new Set(git('ls-files', '--cached', '--others', '--exclude-standard', '-z').split('\0').filter(Boolean))
+    for (const file of deleted) {
+      if (!files.has(file)) this.sendFileDeleted(posix.join(path, file))
+    }
     for (const file of files) {
-      const content = await fs.readFile(file, 'utf8')
-      this.wsManager.sendMessage({ type: 'file', path: file, content })
-      console.log(`Sent content for file: ${file}, size: ${content.length}`)
+      await this.#sendFileContent(posix.join(path, file), submodules.get(file))
     }
   }
 
