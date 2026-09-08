@@ -1,250 +1,107 @@
-import { beforeEach, describe, expect, it, mock } from 'bun:test'
-import { Priority } from './constants'
+import { expect, test } from 'bun:test'
+import { type AgentToolRegistry, createContext, type JsonResponseMessage } from '@polka-codes/core'
+import type { CliToolRegistry } from '../workflow-tools'
+import { TaskExecutor } from './executor'
 import { GoalDecomposer } from './goal-decomposer'
-import type { CliWorkflowContext } from './types'
+import { createTaskPlanner } from './planner'
+import { type CliWorkflowContext, Priority } from './types'
 
-describe('GoalDecomposer', () => {
-  const mockTools = {
-    executeCommand: async () => ({ stdout: '', stderr: '', exitCode: 0 }),
-    readFile: async () => null,
+const unused = async () => {
+  throw new Error('Unexpected tool call')
+}
+function fixture(responses: JsonResponseMessage[]) {
+  const requests: AgentToolRegistry['generateText']['input'][] = []
+  const memory = new Map<string, string>()
+  const context: CliWorkflowContext = {
+    ...createContext<CliToolRegistry>({
+      generateText: async (input) => {
+        requests.push(input)
+        const response = responses.shift()
+        if (!response) throw new Error('Unexpected model request')
+        return { requestMessages: input.messages, responseMessages: [response] }
+      },
+      taskEvent: async () => {},
+      executeCommand: async () => ({ stdout: '', stderr: '', exitCode: 0 }),
+      readFile: async () => null,
+      getMemoryContext: async () => '',
+      updateMemory: async (input) => {
+        if (input.topic !== undefined && 'content' in input && input.content !== undefined) memory.set(input.topic, input.content)
+      },
+      invokeTool: unused,
+      createCommit: unused,
+      printChangeFile: unused,
+      confirm: unused,
+      input: unused,
+      select: unused,
+      writeToFile: unused,
+      readMemory: unused,
+      listMemoryTopics: unused,
+      listTodoItems: unused,
+      getTodoItem: unused,
+      updateTodoItem: unused,
+      createPullRequest: unused,
+      runAgent: unused,
+    }),
+    sessionId: 'goal-test',
+    stateDir: '.',
+    workingDir: '.',
+    workflowInput: { interactive: false, additionalTools: {}, config: { loadRules: { 'AGENTS.md': false, 'CLAUDE.md': false } } },
   }
+  return { context, requests, memory }
+}
+const response = (value: unknown): JsonResponseMessage => ({ role: 'assistant', content: JSON.stringify(value) })
+const goalTask = (type: string, title = 'Implement login', dependencies: string[] = []) => ({
+  title,
+  type,
+  description: 'Implement login with session validation',
+  priority: 'high',
+  complexity: 'low',
+  estimatedTime: 10,
+  files: ['src/login.ts'],
+  dependencies,
+})
+const decomposition = (tasks: unknown[]) => ({
+  requirements: ['Session validation'],
+  highLevelPlan: 'Implement and verify session validation',
+  tasks,
+  risks: [],
+})
 
-  const mockContext: CliWorkflowContext = {
-    logger: {
-      info: () => {},
-      warn: () => {},
-      error: () => {},
-      debug: () => {},
-    },
-    tools: mockTools as any,
-    step: {} as any,
-    stateDir: '/test/state',
-    workingDir: '/test/workspace',
-    sessionId: 'test-session',
-  }
-
-  let decomposer: GoalDecomposer
-
-  beforeEach(() => {
-    decomposer = new GoalDecomposer(mockContext)
+for (const type of ['feature', 'bugfix']) {
+  test(`${type} goals reach implementation with their description and file context even without configured checks`, async () => {
+    const { context, requests, memory } = fixture([
+      response(decomposition([goalTask(type)])),
+      response({ plan: 'Implement the requested session validation.' }),
+      response({ summary: 'Implemented session validation.' }),
+    ])
+    const result = await new GoalDecomposer(context).decompose('Add session validation')
+    const task = result.tasks[0]
+    expect(task.priority).toBe(Priority.HIGH)
+    expect(task.files).toEqual(['src/login.ts'])
+    expect(task.workflowInput).not.toHaveProperty('files')
+    expect(task.workflowInput).not.toHaveProperty('error')
+    const execution = await new TaskExecutor(context, context.logger).execute(task)
+    expect(execution.success).toBe(true)
+    expect(execution.output).toBe('Implemented session validation.')
+    expect(requests).toHaveLength(3)
+    expect(JSON.stringify(requests[1].messages)).toContain('Implement login with session validation')
+    expect(JSON.stringify(requests[1].messages)).toContain('src/login.ts')
+    expect(memory.get('implementation-summary')).toBe('Implemented session validation.')
   })
+}
 
-  describe('decompose', () => {
-    it('should decompose goal into GoalDecompositionResult', async () => {
-      mock.module('../workflows/agent-builder', () => ({
-        runAgentWithSchema: async () => ({
-          requirements: ['User authentication', 'Session management'],
-          highLevelPlan: 'Implement authentication with JWT tokens',
-          tasks: [
-            {
-              title: 'Add authentication middleware',
-              type: 'feature',
-              priority: 'high',
-              complexity: 'medium',
-              estimatedTime: 60,
-              dependencies: [],
-              files: ['src/middleware/auth.ts'],
-              description: 'Create auth middleware',
-            },
-          ],
-          risks: ['Security concerns'],
-        }),
-      }))
+test('decomposed dependencies are accepted by the real planner and analysis remains a planning task', async () => {
+  const { context } = fixture([
+    response(decomposition([goalTask('other', 'Analyze login'), goalTask('feature', 'Implement login', ['Analyze login'])])),
+  ])
+  const result = await new GoalDecomposer(context).decompose('Add session validation')
+  const plan = createTaskPlanner(context).createPlan(result.goal, result.tasks)
+  expect(plan.executionOrder).toEqual([[result.tasks[0].id], [result.tasks[1].id]])
+  expect(plan.tasks[0].workflow).toBe('plan')
+  expect(plan.tasks[1].workflow).toBe('code')
+})
 
-      const result = await decomposer.decompose('Add user authentication')
-
-      expect(result).toBeDefined()
-      expect(result.goal).toBe('Add user authentication')
-      expect(result.tasks).toHaveLength(1)
-      expect(result.tasks[0].title).toBe('Add authentication middleware')
-      expect(result.tasks[0].priority).toBe(Priority.HIGH)
-      expect(result.tasks[0].type).toBe('feature')
-      expect(result.requirements).toHaveLength(2)
-      expect(result.highLevelPlan).toBe('Implement authentication with JWT tokens')
-      expect(result.risks).toHaveLength(1)
-    })
-
-    it('should map string priorities to enum values', async () => {
-      mock.module('../workflows/agent-builder', () => ({
-        runAgentWithSchema: async () => ({
-          requirements: [],
-          highLevelPlan: 'Fix bugs',
-          tasks: [
-            {
-              title: 'Critical bug fix',
-              type: 'bugfix',
-              priority: 'critical',
-              complexity: 'low',
-              estimatedTime: 15,
-              dependencies: [],
-              files: [],
-              description: 'Fix critical bug',
-            },
-            {
-              title: 'Minor improvement',
-              type: 'feature',
-              priority: 'low',
-              complexity: 'low',
-              estimatedTime: 30,
-              dependencies: [],
-              files: [],
-              description: 'Minor improvement',
-            },
-          ],
-          risks: [],
-        }),
-      }))
-
-      const result = await decomposer.decompose('Fix bugs')
-
-      expect(result.tasks[0].priority).toBe(Priority.CRITICAL)
-      expect(result.tasks[1].priority).toBe(Priority.LOW)
-    })
-
-    it('should generate task IDs', async () => {
-      mock.module('../workflows/agent-builder', () => ({
-        runAgentWithSchema: async () => ({
-          requirements: [],
-          highLevelPlan: 'Do something',
-          tasks: [
-            {
-              title: 'Task 1',
-              type: 'bugfix',
-              priority: 'medium',
-              complexity: 'low',
-              estimatedTime: 30,
-              dependencies: [],
-              files: [],
-              description: 'Task 1',
-            },
-          ],
-          risks: [],
-        }),
-      }))
-
-      const result = await decomposer.decompose('Do something')
-
-      expect(result.tasks[0].id).toBeDefined()
-      expect(result.tasks[0].id).toMatch(/^task-\d+-[a-z0-9]+$/)
-    })
-
-    it('should set createdAt timestamp', async () => {
-      mock.module('../workflows/agent-builder', () => ({
-        runAgentWithSchema: async () => ({
-          requirements: [],
-          highLevelPlan: 'Build feature',
-          tasks: [
-            {
-              title: 'Task 1',
-              type: 'feature',
-              priority: 'medium',
-              complexity: 'medium',
-              estimatedTime: 45,
-              dependencies: [],
-              files: [],
-              description: 'Task 1',
-            },
-          ],
-          risks: [],
-        }),
-      }))
-
-      const before = Date.now()
-      const result = await decomposer.decompose('Build feature')
-      const after = Date.now()
-
-      expect(result.tasks[0].createdAt).toBeGreaterThanOrEqual(before)
-      expect(result.tasks[0].createdAt).toBeLessThanOrEqual(after)
-    })
-
-    it('should include retryCount in tasks', async () => {
-      mock.module('../workflows/agent-builder', () => ({
-        runAgentWithSchema: async () => ({
-          requirements: [],
-          highLevelPlan: 'Test',
-          tasks: [
-            {
-              title: 'Test task',
-              type: 'feature',
-              priority: 'medium',
-              complexity: 'low',
-              estimatedTime: 30,
-              dependencies: [],
-              files: [],
-              description: 'Test task',
-            },
-          ],
-          risks: [],
-        }),
-      }))
-
-      const result = await decomposer.decompose('Test goal')
-
-      expect(result.tasks[0].retryCount).toBe(0)
-    })
-
-    it('should estimate complexity', async () => {
-      mock.module('../workflows/agent-builder', () => ({
-        runAgentWithSchema: async () => ({
-          requirements: [],
-          highLevelPlan: 'Simple task',
-          tasks: [
-            {
-              title: 'Simple task',
-              type: 'feature',
-              priority: 'medium',
-              complexity: 'low',
-              estimatedTime: 30,
-              dependencies: [],
-              files: [],
-              description: 'Simple task',
-            },
-          ],
-          risks: [],
-        }),
-      }))
-
-      const result = await decomposer.decompose('Simple task')
-
-      expect(result.estimatedComplexity).toBeDefined()
-      expect(['low', 'medium', 'high']).toContain(result.estimatedComplexity)
-    })
-
-    it('should extract dependencies', async () => {
-      mock.module('../workflows/agent-builder', () => ({
-        runAgentWithSchema: async () => ({
-          requirements: [],
-          highLevelPlan: 'Multi-step task',
-          tasks: [
-            {
-              title: 'Task 1',
-              type: 'feature',
-              priority: 'high',
-              complexity: 'medium',
-              estimatedTime: 30,
-              dependencies: [],
-              files: [],
-              description: 'First task',
-            },
-            {
-              title: 'Task 2',
-              type: 'feature',
-              priority: 'medium',
-              complexity: 'low',
-              estimatedTime: 15,
-              dependencies: ['Task 1'],
-              files: [],
-              description: 'Second task',
-            },
-          ],
-          risks: [],
-        }),
-      }))
-
-      const result = await decomposer.decompose('Multi-step task')
-
-      expect(result.dependencies).toHaveLength(1)
-      expect(result.dependencies[0].type).toBe('hard')
-    })
-  })
+test('goal decomposition validates actual model output instead of accepting incomplete tasks', async () => {
+  const { context } = fixture(Array.from({ length: 3 }, () => response(decomposition([{ type: 'feature' }]))))
+  await expect(new GoalDecomposer(context).decompose('Add session validation')).rejects.toThrow('Structured output remained invalid')
 })

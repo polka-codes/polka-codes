@@ -1,8 +1,9 @@
 import { z } from 'zod'
 import type { CliToolRegistry } from '../workflow-tools'
 import { runAgentWithSchema } from '../workflows/agent-builder'
+import type { CodeWorkflowInput } from '../workflows/code.workflow'
 import { WORKFLOW_MAPPING } from './constants'
-import type { CliWorkflowContext, GoalDecompositionResult, Task, TaskComplexity, ToolRegistry, WorkflowInput } from './types'
+import type { CliWorkflowContext, GoalDecompositionResult, Task, TaskComplexity, ToolRegistry } from './types'
 import { Priority } from './types'
 
 /**
@@ -64,7 +65,8 @@ export class GoalDecomposer<TTools extends ToolRegistry = CliToolRegistry> {
 
     // Convert to tasks with Priority enum and proper types
     const tasks = result.tasks.map((t, i) => {
-      const workflow = WORKFLOW_MAPPING[t.type]
+      const description = t.type === 'test' ? `Add tests for: ${t.description}` : t.description
+      const fileContext = t.files?.length ? `Relevant files:\n${t.files.join('\n')}` : undefined
 
       return {
         id: `task-${Date.now()}-${i}`,
@@ -77,8 +79,8 @@ export class GoalDecomposer<TTools extends ToolRegistry = CliToolRegistry> {
         estimatedTime: t.estimatedTime,
         status: 'pending' as const,
         files: t.files ?? [],
-        workflow,
-        workflowInput: this.buildWorkflowInput(t),
+        workflow: WORKFLOW_MAPPING[t.type],
+        workflowInput: { task: [description, fileContext].filter(Boolean).join('\n\n') } satisfies Pick<CodeWorkflowInput, 'task'>,
         retryCount: 0,
         createdAt: Date.now(),
       }
@@ -129,22 +131,6 @@ ${goal}
 <codebase_context>
 ${codebaseContext}
 </codebase_context>`
-  }
-
-  /**
-   * Build workflow input for task
-   */
-  private buildWorkflowInput(task: GoalTask): WorkflowInput {
-    if (task.type === 'bugfix') {
-      return { error: task.description }
-    }
-    if (task.type === 'other') {
-      return { task: task.description }
-    }
-    return {
-      task: task.type === 'test' ? `Add tests for: ${task.description}` : task.description,
-      files: task.files ?? [],
-    }
   }
 
   /**

@@ -8,8 +8,8 @@ export { Priority }
  * Mapping of task types to workflows
  */
 export const WORKFLOW_MAPPING: Record<TaskType, WorkflowName> = {
-  feature: 'plan',
-  bugfix: 'fix',
+  feature: 'code',
+  bugfix: 'code',
   refactor: 'code',
   refactoring: 'code',
   test: 'code',
