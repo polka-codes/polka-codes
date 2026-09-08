@@ -16,12 +16,18 @@ import {
   WorkflowFileSchema,
   type WorkflowStepDefinition,
 } from './dynamic-types.js'
-import type { BaseWorkflowContext, Logger, StepFn, ToolRegistry, WorkflowFn, WorkflowTools } from './workflow.js'
+import type { BaseWorkflowContext, Logger, StepFn, StepOptions, ToolRegistry, WorkflowFn, WorkflowTools } from './workflow.js'
 
 /**
  * Maximum iterations for while loops to prevent infinite loops
  */
 const MAX_WHILE_LOOP_ITERATIONS = 1000
+
+function withStepScope<TContext extends { step: StepFn }>(context: TContext, scope: string): TContext {
+  const step: StepFn = <T>(name: string, ...args: [() => Promise<T>] | [StepOptions, () => Promise<T>]) =>
+    args.length === 1 ? context.step(`${scope}/${name}`, args[0]) : context.step(`${scope}/${name}`, args[0], args[1])
+  return { ...context, step }
+}
 
 /**
  * JSON Schema type to Zod type mapping
@@ -1079,13 +1085,13 @@ async function executeControlFlowStep<
       }
 
       // Execute loop body steps
-      for (const bodyStep of step.while.steps) {
+      for (const [index, bodyStep] of step.while.steps.entries()) {
         const { result, shouldBreak, shouldContinue } = await executeControlFlowStep(
           bodyStep,
           workflowId,
           input,
           state,
-          context,
+          withStepScope(context, `iteration:${iterationCount}/step:${index}`),
           options,
           runInternal,
           loopDepth + 1,
@@ -1137,13 +1143,13 @@ async function executeControlFlowStep<
 
     let branchResult: unknown
 
-    for (const branchStep of branchSteps) {
+    for (const [index, branchStep] of branchSteps.entries()) {
       const { result, shouldBreak, shouldContinue } = await executeControlFlowStep(
         branchStep,
         workflowId,
         input,
         state,
-        context,
+        withStepScope(context, `${branchName}/step:${index}`),
         options,
         runInternal,
         loopDepth,
@@ -1181,13 +1187,13 @@ async function executeControlFlowStep<
 
     try {
       // Execute try steps
-      for (const tryStepItem of tryStep.try.trySteps) {
+      for (const [index, tryStepItem] of tryStep.try.trySteps.entries()) {
         const { result, shouldBreak, shouldContinue } = await executeControlFlowStep(
           tryStepItem,
           workflowId,
           input,
           state,
-          context,
+          withStepScope(context, `try/step:${index}`),
           options,
           runInternal,
           loopDepth,
@@ -1216,13 +1222,13 @@ async function executeControlFlowStep<
 
       // Execute catch steps
       let catchResult: unknown
-      for (const catchStepItem of tryStep.try.catchSteps) {
+      for (const [index, catchStepItem] of tryStep.try.catchSteps.entries()) {
         const { result, shouldBreak, shouldContinue } = await executeControlFlowStep(
           catchStepItem,
           workflowId,
           input,
           state,
-          context,
+          withStepScope(context, `catch/step:${index}`),
           options,
           runInternal,
           loopDepth,
@@ -1273,6 +1279,7 @@ export function createDynamicWorkflow<
     context: TContext,
     inheritedState: Record<string, unknown>,
   ): Promise<unknown> => {
+    context = withStepScope(context, `workflow:${encodeURIComponent(workflowId)}`)
     const workflow = definition.workflows[workflowId]
     if (!workflow) {
       const builtIn = options.builtInWorkflows?.[workflowId]
@@ -1308,7 +1315,7 @@ export function createDynamicWorkflow<
         workflowId,
         validatedInput,
         state,
-        context,
+        withStepScope(context, `step:${i}`),
         options,
         runInternal,
         0, // loop depth
