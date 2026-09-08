@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { type Config, type ConfigRule, configSchema } from '@polka-codes/core'
-import { merge } from 'lodash-es'
+import { mergeWith } from 'lodash-es'
 import { parse } from 'yaml'
 import { ZodError } from 'zod'
 
@@ -48,8 +48,11 @@ export function mergeConfigs(configs: Config[]): Config {
     return {}
   }
 
-  const mergedConfig = configs.reduce((acc, config) => {
-    const merged = merge({}, acc, config)
+  const mergedConfig = configs.reduce<Config>((acc, config) => {
+    // Objects support partial overrides; argument and option arrays are replacements.
+    const merged: Config = mergeWith({}, acc, config, (_previous: unknown, next: unknown) => (Array.isArray(next) ? [...next] : undefined))
+    // Each named executable has one owner and one variant.
+    if (acc.scripts || config.scripts) merged.scripts = { ...acc.scripts, ...config.scripts }
 
     // Special handling for rules array
     const accRules = acc.rules ? (Array.isArray(acc.rules) ? acc.rules : [acc.rules]) : undefined
@@ -60,9 +63,9 @@ export function mergeConfigs(configs: Config[]): Config {
     merged.excludeFiles = mergeArray(acc.excludeFiles, config.excludeFiles)
 
     return merged
-  }, {} as Config) // Add initial value to prevent potential errors with empty arrays
+  }, {})
 
-  return mergedConfig
+  return configSchema.parse(mergedConfig) ?? {}
 }
 
 export type LoadedConfig = Omit<Config, 'rules'> & { rules?: string }

@@ -4,7 +4,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, spyOn, te
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { loadConfig, mergeConfigs } from './config'
+import { type Config, loadConfig, mergeConfigs } from './config'
 
 describe('config', () => {
   let testDir: string
@@ -427,5 +427,49 @@ loadRules:
     const mixedConfig = await loadConfig(configPath, testSubDir, testHomeDir)
     expect(mixedConfig?.loadRules?.['AGENTS.md']).toBe(true)
     expect(mixedConfig?.loadRules?.['CLAUDE.md']).toBe(false)
+  })
+})
+
+describe('executable configuration overrides', () => {
+  test.each([{ args: ['server-new.js'] }, { args: [] }])('replaces inherited argv with %j', ({ args }) => {
+    const inherited: Config = { mcpServers: { server: { command: 'npx', args: ['--old', 'server-old'], env: { KEEP: 'yes' } } } }
+    const result = mergeConfigs([inherited, { mcpServers: { server: { command: 'node', args: [...args] } } }])
+    expect(result.mcpServers?.server).toEqual({ command: 'node', args: [...args], env: { KEEP: 'yes' } })
+    expect(inherited.mcpServers?.server.args).toEqual(['--old', 'server-old'])
+  })
+
+  test('replaces script variants without inheriting executable fields', () => {
+    const variants: NonNullable<Config['scripts']>[string][] = [
+      'echo plain',
+      { command: 'echo command', description: 'command' },
+      { workflow: './new.yml', input: { value: 1 } },
+      { script: './new.ts', permissions: { subprocess: false } },
+    ]
+    for (const old of variants)
+      for (const next of variants) {
+        const result = mergeConfigs([{ scripts: { test: old, keep: 'echo keep' } }, { scripts: { test: next } }])
+        expect(result.scripts).toEqual({ test: next, keep: 'echo keep' })
+      }
+  })
+
+  test('retains partial providers and additive policies while replacing nested option arrays', () => {
+    const result = mergeConfigs([
+      {
+        providers: { local: { apiKey: 'secret', defaultParameters: { nested: { left: 1, right: 2 }, stop: ['a', 'b'] } } },
+        rules: ['first'],
+        excludeFiles: ['one'],
+        agent: { discovery: { enabledStrategies: ['old', 'other'] } },
+      },
+      {
+        providers: { local: { defaultParameters: { nested: { right: 3 }, stop: [] } } },
+        rules: 'second',
+        excludeFiles: ['two'],
+        agent: { discovery: { enabledStrategies: ['new'] } },
+      },
+    ])
+    expect(result.providers?.local).toEqual({ apiKey: 'secret', defaultParameters: { nested: { left: 1, right: 3 }, stop: [] } })
+    expect(result.rules).toEqual(['first', 'second'])
+    expect(result.excludeFiles).toEqual(['one', 'two'])
+    expect(result.agent?.discovery?.enabledStrategies).toEqual(['new'])
   })
 })
