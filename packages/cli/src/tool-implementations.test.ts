@@ -13,6 +13,7 @@ import { APICallError } from '@ai-sdk/provider'
 import { getProvider } from '@polka-codes/cli-shared'
 import { UsageMeter } from '@polka-codes/core'
 import { AuthenticationError, MaxRetriesExceededError, MessageLimitExceededError, ProviderTimeoutError } from './errors'
+import { McpManager } from './mcp/manager'
 import { prepareGenerateTextRequest, toolCall } from './tool-implementations'
 import { quoteForShell } from './utils/shell'
 
@@ -101,6 +102,33 @@ describe('prepareGenerateTextRequest', () => {
       { role: 'assistant', content: 'Assistant reply.' },
     ])
   })
+})
+
+test('agent tool dispatch invokes enabled MCP tools and rejects disabled tools', async () => {
+  const manager = new McpManager()
+  try {
+    await manager.connectToServer('fixture', {
+      command: process.execPath,
+      args: [fileURLToPath(new URL('./mcp/test-fixtures/tool-server.mjs', import.meta.url))],
+      tools: { disabled: false },
+    })
+    const context = {
+      model: new TimeoutLanguageModel(),
+      parameters: { usageMeter: new UsageMeter(), mcpManager: manager },
+      toolProvider: {},
+      workflowContext: { logger: { debug() {}, error() {}, info() {}, warn() {} } },
+    }
+    expect(await toolCall({ tool: 'invokeTool', input: { toolName: 'fixture/enabled', input: {} } }, context)).toEqual({
+      success: true,
+      message: { type: 'text', value: 'enabled' },
+    })
+    expect(await toolCall({ tool: 'invokeTool', input: { toolName: 'fixture/disabled', input: {} } }, context)).toMatchObject({
+      success: false,
+      message: { type: 'error-text', value: expect.stringContaining('Tool not found') },
+    })
+  } finally {
+    await manager.disconnectAll()
+  }
 })
 
 describe('executeCommand', () => {

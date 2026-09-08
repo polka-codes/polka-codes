@@ -47,6 +47,7 @@ import {
   writeToFile as writeToFileTool,
 } from '@polka-codes/core'
 import { streamText, type ToolSet } from 'ai'
+import { z } from 'zod'
 import {
   createProviderErrorFromStatus,
   MaxRetriesExceededError,
@@ -459,6 +460,9 @@ async function invokeTool(input: AgentToolRegistry['invokeTool']['input'], conte
   input.signal?.throwIfAborted()
   const tool = toolHandlers.get(input.toolName)
   if (!tool) {
+    if (context.parameters.mcpManager?.hasTool(input.toolName)) {
+      return invokeMcpTool(context.parameters.mcpManager, input.toolName, input.input)
+    }
     return {
       success: false,
       message: {
@@ -477,6 +481,20 @@ async function invokeTool(input: AgentToolRegistry['invokeTool']['input'], conte
         type: 'error-text',
         value: error instanceof Error ? error.message : String(error),
       },
+    }
+  }
+}
+
+async function invokeMcpTool(manager: McpManager, toolName: string, input: unknown): Promise<ToolResponse> {
+  try {
+    const result = await manager.callTool(toolName, z.record(z.string(), z.unknown()).parse(input))
+    const value = typeof result === 'string' ? result : result == null ? '' : JSON.stringify(result, null, 2)
+    return { success: true, message: { type: 'text', value } }
+  } catch (error) {
+    if (error instanceof McpError) throw error
+    return {
+      success: false,
+      message: { type: 'error-text', value: `Error: ${error instanceof Error ? error.message : String(error)}` },
     }
   }
 }
@@ -686,32 +704,7 @@ export async function toolCall(toolCall: ToolCall<CliToolRegistry>, context: Too
 
   // Check MCP tools
   if (context.parameters.mcpManager?.hasTool(toolCall.tool as string)) {
-    const input = typeof toolCall.input === 'object' && toolCall.input !== null && !Array.isArray(toolCall.input) ? toolCall.input : {}
-    try {
-      const result = await context.parameters.mcpManager.callTool(toolCall.tool as string, input as Record<string, unknown>)
-      // Wrap result in ToolResponse format
-      const value = typeof result === 'string' ? result : result == null ? '' : JSON.stringify(result, null, 2)
-      return {
-        success: true,
-        message: {
-          type: 'text',
-          value,
-        },
-      }
-    } catch (error) {
-      // McpError should bubble up to the workflow level for proper handling
-      if (error instanceof McpError) {
-        throw error
-      }
-      // Other errors are returned as ToolResponse so the agent can see them and recover
-      return {
-        success: false,
-        message: {
-          type: 'error-text',
-          value: `Error: ${error instanceof Error ? error.message : String(error)}`,
-        },
-      }
-    }
+    return invokeMcpTool(context.parameters.mcpManager, toolCall.tool as string, toolCall.input)
   }
 
   // Check toolHandlers Map (for core/registered tools)
