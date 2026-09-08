@@ -1,5 +1,37 @@
 import { describe, expect, test } from 'bun:test'
+import { execFileSync } from 'node:child_process'
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { createGitAwareDiff, createGitListFiles, createGitReadBinaryFile, createGitReadFile } from './git-file-tools'
+
+test('lists exact committed paths and can read them back', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'git-file-tools-'))
+  const git = (...args: string[]) => execFileSync('git', args, { cwd: dir, encoding: 'utf8' })
+  const provider = {
+    executeCommand: async (command: string) => ({
+      stdout: execFileSync('sh', ['-c', command], { cwd: dir, encoding: 'utf8' }),
+      stderr: '',
+      exitCode: 0,
+    }),
+  }
+  try {
+    git('init', '-q')
+    const names = ['你好.txt', 'line\nbreak.txt', 'tab\tname.txt']
+    for (const name of names) await writeFile(join(dir, name), `content of ${name}`)
+    git('add', '--all')
+    git('-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '-qm', 'initial')
+    const listing = await createGitListFiles('HEAD').handler(provider, {})
+    if (listing.message.type !== 'text') throw new Error('Expected a text file listing')
+    for (const name of names) {
+      expect(listing.message.value).toContain(`\n${name}\n`)
+      const content = await createGitReadFile('HEAD').handler(provider, { path: name })
+      expect(content.message).toMatchObject({ type: 'text', value: expect.stringContaining(`content of ${name}`) })
+    }
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})
 
 describe('historical git file tool contracts', () => {
   test('normalizes and requires text-file paths', () => {

@@ -46,37 +46,6 @@ function getMediaType(path: string): string {
 }
 
 /**
- * Helper to extract the target commit from a git range
- * For ranges like "A..B", "A...B", or "HEAD~3..HEAD", returns B
- * For single commit, returns the commit
- * For local changes, returns null
- */
-export function extractTargetCommit(range?: string, pr?: number): string | null {
-  // PR reviews checkout the branch, so working directory is correct
-  if (pr) {
-    return null
-  }
-
-  // No range or empty range means local changes, use working directory
-  if (!range || range.trim() === '') {
-    return null
-  }
-
-  // Parse the range to extract the target commit
-  // Supports formats: "A..B", "A...B", "commit", "HEAD~3", etc.
-  const parts = range.split(/\.\.\.?/)
-  if (parts.length > 1) {
-    // Range format: "A..B" or "A...B"
-    // The second part is the target commit (B)
-    return parts[1].trim() || null
-  }
-
-  // Single commit reference
-  const trimmed = range.trim()
-  return trimmed || null
-}
-
-/**
  * Create git-aware version of readFile that reads from a specific commit
  */
 export function createGitReadFile(commit: string): FullToolInfo {
@@ -179,7 +148,7 @@ export function createGitListFiles(commit: string): FullToolInfo {
     const quotedCommit = quoteForShell(commit)
     const quotedPath = quoteForShell(path)
     // Use git ls-tree to list files at the specific commit
-    const result = await provider.executeCommand(`git ls-tree -r --name-only ${quotedCommit} ${quotedPath}`, false)
+    const result = await provider.executeCommand(`git ls-tree -r -z --name-only ${quotedCommit} -- ${quotedPath}`, false)
 
     if (result.exitCode !== 0) {
       return {
@@ -191,10 +160,7 @@ export function createGitListFiles(commit: string): FullToolInfo {
       }
     }
 
-    const files = result.stdout
-      .trim()
-      .split('\n')
-      .filter((f) => f.length > 0)
+    const files = result.stdout.split('\0').filter((f) => f.length > 0)
 
     const truncated = files.length > parsed.maxCount
     const displayFiles = truncated ? files.slice(0, parsed.maxCount) : files
