@@ -11,6 +11,8 @@ import { createOpenRouter } from '@openrouter/ai-sdk-provider'
 import { getEnv } from './env'
 import { ConfigurationError } from './errors'
 
+const INTERLEAVED_THINKING_BETA = 'interleaved-thinking-2025-05-14'
+
 function headersToObject(headers: HeadersInit | undefined): Record<string, string> | undefined {
   if (!headers) {
     return undefined
@@ -210,6 +212,7 @@ export const getModel = (config: ModelConfig, debugLogging = false): LanguageMod
         apiKey: config.apiKey,
         baseURL: config.baseUrl,
         fetch: fetchOverride,
+        headers: { 'anthropic-beta': INTERLEAVED_THINKING_BETA },
       })
       return anthropic(config.model)
     }
@@ -231,6 +234,7 @@ export const getModel = (config: ModelConfig, debugLogging = false): LanguageMod
         headers: {
           'HTTP-Referer': 'https://polka.codes',
           'X-Title': 'Polka Codes',
+          ...(config.model.startsWith('anthropic/') ? { 'x-anthropic-beta': INTERLEAVED_THINKING_BETA } : {}),
         },
       })
       return openrouter.chat(config.model, {

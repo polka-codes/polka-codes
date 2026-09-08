@@ -44,10 +44,12 @@ test.each(['signed and encrypted', 'encrypted only'])('preserves %s OpenRouter r
     function: { name: 'readMemory', arguments: '{"topic":"test"}' },
   }
   const requests: z.infer<typeof requestSchema>[] = []
+  const betaHeaders: (string | null)[] = []
   const server = Bun.serve({
     hostname: '127.0.0.1',
     port: 0,
     async fetch(request) {
+      betaHeaders.push(request.headers.get('x-anthropic-beta'))
       requests.push(requestSchema.parse(await request.json()))
       const firstRound = requests.length === 1
       const deltas = firstRound
@@ -117,6 +119,7 @@ test.each(['signed and encrypted', 'encrypted only'])('preserves %s OpenRouter r
 
     expect(result).toMatchObject({ type: 'Exit', message: 'Memory checked.' })
     expect(requests).toHaveLength(2)
+    expect(betaHeaders).toEqual(['interleaved-thinking-2025-05-14', 'interleaved-thinking-2025-05-14'])
     expect(requests[1].messages.filter((message) => message.role === 'assistant')).toEqual([
       expect.objectContaining({ reasoning_details: reasoningDetails, tool_calls: [toolCallData] }),
     ])
