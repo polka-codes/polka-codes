@@ -3,6 +3,40 @@ import { AiProvider } from './getModel'
 import { getProviderOptions } from './getProviderOptions'
 
 describe('getProviderOptions', () => {
+  test.each(['anthropic/claude-sonnet-4', 'google/gemini-2.5-pro'])(
+    'configures an explicit thinking budget for %s through OpenRouter',
+    (modelId) => {
+      expect(
+        getProviderOptions({
+          provider: AiProvider.OpenRouter,
+          modelId,
+          parameters: { thinkingBudgetTokens: 8192 },
+        }),
+      ).toEqual({ openrouter: { reasoning: { max_tokens: 8192 } } })
+    },
+  )
+
+  test.each([undefined, 0, -1])('omits OpenRouter thinking options for budget %s', (thinkingBudgetTokens) => {
+    expect(
+      getProviderOptions({
+        provider: AiProvider.OpenRouter,
+        modelId: 'anthropic/claude-sonnet-4',
+        parameters: { thinkingBudgetTokens },
+      }),
+    ).toEqual({})
+  })
+
+  test('honors an explicit thinking capability override for OpenRouter', () => {
+    expect(
+      getProviderOptions({
+        provider: AiProvider.OpenRouter,
+        modelId: 'anthropic/claude-sonnet-4',
+        parameters: { thinkingBudgetTokens: 8192 },
+        supportThinking: false,
+      }),
+    ).toEqual({})
+  })
+
   test('configures reasoning effort for OpenAI-compatible providers', () => {
     expect(
       getProviderOptions({
