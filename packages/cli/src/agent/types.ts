@@ -4,6 +4,7 @@
 
 import type { BaseWorkflowContext, ToolRegistry as CoreToolRegistry } from '@polka-codes/core'
 import type { CliToolRegistry } from '../workflow-tools'
+import type { BaseWorkflowInput } from '../workflows/workflow.utils'
 
 // Re-export ToolRegistry for use in other agent modules
 export type ToolRegistry = CoreToolRegistry
@@ -692,6 +693,7 @@ export interface CliWorkflowContext<TTools extends ToolRegistry = CliToolRegistr
   sessionId: string
   config?: AgentConfig
   checkAbort?: () => void
+  workflowInput?: BaseWorkflowInput
 }
 
 export interface DiscoveryStrategy<TTools extends ToolRegistry = CliToolRegistry> {

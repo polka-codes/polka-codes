@@ -621,6 +621,31 @@ async function readSkillFile(input: { skillName: string; filename: string }, con
   })
 }
 
+async function readFile(input: CliToolRegistry['readFile']['input'], { toolProvider }: ToolCallContext) {
+  if (!toolProvider.readFile) throw new Error('File reader is not available')
+  return (await toolProvider.readFile(input.path, false)) ?? null
+}
+
+async function writeToFile(input: CliToolRegistry['writeToFile']['input'], { toolProvider }: ToolCallContext) {
+  if (!toolProvider.writeFile) throw new Error('File writer is not available')
+  await toolProvider.writeFile(input.path, input.content)
+}
+
+async function readMemory(input: CliToolRegistry['readMemory']['input'], { toolProvider }: ToolCallContext) {
+  if (!toolProvider.readMemory) throw new Error('Memory reader is not available')
+  return (await toolProvider.readMemory(input.topic)) ?? ''
+}
+
+async function listMemoryTopics(_input: void, { toolProvider }: ToolCallContext) {
+  if (!toolProvider.listMemoryTopics) throw new Error('Memory topic listing is not available')
+  return toolProvider.listMemoryTopics()
+}
+
+async function updateMemory(input: CliToolRegistry['updateMemory']['input'], { toolProvider }: ToolCallContext) {
+  if (!toolProvider.updateMemory) throw new Error('Memory writer is not available')
+  await toolProvider.updateMemory(input.operation, input.topic, 'content' in input ? input.content : undefined)
+}
+
 const localToolHandlers = {
   runAgent,
   createPullRequest,
@@ -629,14 +654,16 @@ const localToolHandlers = {
   confirm,
   input,
   select,
-  // Note: writeToFile and readFile removed to use core implementations with safety features
+  readFile,
+  writeToFile,
   executeCommand,
   generateText,
   invokeTool,
   taskEvent,
   getMemoryContext,
-  // Note: readMemory, listMemoryTopics, updateMemory removed to use proper tool implementations
-  // from tools/ directory that return proper XML formatted responses
+  readMemory,
+  listMemoryTopics,
+  updateMemory,
   listTodoItems,
   getTodoItem,
   updateTodoItem,

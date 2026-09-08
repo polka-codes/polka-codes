@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test'
+import { relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type {
   LanguageModelV4,
@@ -7,6 +8,7 @@ import type {
   LanguageModelV4StreamResult,
 } from '@ai-sdk/provider'
 import { APICallError } from '@ai-sdk/provider'
+import { getProvider } from '@polka-codes/cli-shared'
 import { UsageMeter } from '@polka-codes/core'
 import { AuthenticationError, MaxRetriesExceededError, MessageLimitExceededError, ProviderTimeoutError } from './errors'
 import { prepareGenerateTextRequest, toolCall } from './tool-implementations'
@@ -316,4 +318,23 @@ describe('generateText', () => {
     expect(model.attempts).toBe(2)
     expect(usageMeter.usage.messageCount).toBe(2)
   })
+})
+
+test('workflow memory calls return raw data while model tool calls retain their response envelope', async () => {
+  const context = {
+    model: new TimeoutLanguageModel(),
+    parameters: { usageMeter: new UsageMeter() },
+    toolProvider: getProvider(),
+    workflowContext: { logger: { debug() {}, error() {}, info() {}, warn() {} } },
+  }
+  await toolCall({ tool: 'updateMemory', input: { operation: 'replace', topic: 'test', content: 'raw memory' } }, context)
+  expect(await toolCall({ tool: 'readMemory', input: { topic: 'test' } }, context)).toBe('raw memory')
+  expect(await toolCall({ tool: 'listMemoryTopics', input: undefined }, context)).toEqual(['test'])
+  await toolCall({ tool: 'updateMemory', input: { operation: 'remove', topic: 'test' } }, context)
+  expect(await toolCall({ tool: 'readMemory', input: { topic: 'test' } }, context)).toBe('')
+  const modelRead = await toolCall(
+    { tool: 'invokeTool', input: { toolName: 'readFile', input: { path: [relative(process.cwd(), stdinEofFixturePath)] } } },
+    context,
+  )
+  expect(modelRead).toMatchObject({ success: true, message: { type: 'text' } })
 })

@@ -191,8 +191,8 @@ ${codebaseContext}
     try {
       // Get project structure using git ls-files (cross-platform)
       const pkgResult = await this.#context.tools.executeCommand({
-        command: 'git ls-files "src/**/*.ts"',
-        shell: true,
+        command: 'git',
+        args: ['ls-files', '--', 'src'],
       })
 
       const files = pkgResult.stdout.split('\n').filter(Boolean).slice(0, 20) // First 20 files

@@ -215,17 +215,8 @@ export async function invokeWorkflow<TTools extends ToolRegistry = CliToolRegist
 
   // Cast input to proper workflow input type based on workflow name
   // The caller is responsible for passing the correct input structure
-  const workflowInput = input as Record<string, unknown> & BaseWorkflowInput
+  const workflowInput = { ...context.workflowInput, ...(input as Record<string, unknown>) } as Record<string, unknown> & BaseWorkflowInput
 
-  // NOTE: Type assertion to CliToolRegistry is needed here because:
-  // - invokeWorkflow is generic (accepts any ToolRegistry)
-  // - Actual workflow adapters require CliToolRegistry (full tool set)
-  // - Agent command currently provides AgentToolsRegistry (subset)
-  //
-  // This is a known limitation - see agent.ts lines 86-102 for the TODO
-  // about refactoring to provide full tool support to the agent.
-  //
-  // Runtime errors will occur if workflows try to use tools not provided by the caller.
   const cliContext = wrappedContext as CliWorkflowContext<CliToolRegistry>
 
   switch (workflowName) {
