@@ -1,9 +1,9 @@
 import { AsyncLocalStorage } from 'node:async_hooks'
 import { randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
-import { mkdir, readdir, readFile, rename, unlink, writeFile } from 'node:fs/promises'
+import { lstat, mkdir, mkdtemp, readdir, readFile, rename, rm, unlink, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
-import { basename, dirname, isAbsolute, relative, resolve, sep } from 'node:path'
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { DatabaseStats, IMemoryStore, MemoryConfig, MemoryEntry, MemoryOperation, MemoryQuery, QueryOptions } from '@polka-codes/core'
 import { DEFAULT_MEMORY_CONFIG, resolveHomePath } from '@polka-codes/core'
@@ -12,19 +12,24 @@ import { z } from 'zod'
 
 const lockDataSchema = z.object({ pid: z.number().int().positive(), acquiredAt: z.number().positive() })
 
+function hasErrorCode(error: unknown, ...codes: string[]): boolean {
+  return error instanceof Error && 'code' in error && typeof error.code === 'string' && codes.includes(error.code)
+}
+
 /**
- * Simple file lock for cross-process synchronization
- * Uses a lockfile with PID and timestamp to prevent concurrent writes
+ * Publish a nonempty lock directory atomically. Renaming it to a retained,
+ * inode-specific recovery path lets only one contender retire that owner.
  */
 class FileLock {
-  private lockfilePath: string
-  private static readonly LOCK_TIMEOUT = 30000 // 30 seconds max lock time
+  #lockfilePath: string
+  #attemptDirectory?: string
+  private static readonly LOCK_TIMEOUT = 30000
   private static readonly CLEANUP_AGE = 600000 // 10 minutes - cleanup old lock files
   private static lastCleanupTime = 0
   private static readonly CLEANUP_THROTTLE = 60000 // Throttle cleanup to once per minute
 
   constructor(dbPath: string) {
-    this.lockfilePath = `${dbPath}.lock`
+    this.#lockfilePath = `${dbPath}.lock`
   }
 
   /**
@@ -96,84 +101,69 @@ class FileLock {
    * @throws Error if lock cannot be acquired after retries
    */
   async acquire(retries = 10, delay = 100): Promise<void> {
-    for (let i = 0; i < retries; i++) {
-      try {
-        // Try to create lockfile exclusively (fails if exists)
-        const lockData = JSON.stringify({
-          pid: process.pid,
-          acquiredAt: Date.now(),
-        })
-        await writeFile(this.lockfilePath, lockData, {
-          flag: 'wx', // Exclusive create - fails if file exists
-          mode: 0o600,
-        })
-        return // Lock acquired successfully
-      } catch (error: unknown) {
-        const errorCode = (error as NodeJS.ErrnoException)?.code
-        if (errorCode === 'EEXIST') {
-          // Lock file exists, check if it's stale
-          try {
-            const lockContent = await readFile(this.lockfilePath, 'utf-8')
-            const lockData = lockDataSchema.safeParse(JSON.parse(lockContent))
-
-            // A live writer may hold a long transaction. Age alone cannot revoke ownership.
-            if (lockData.success && Date.now() - lockData.data.acquiredAt > FileLock.LOCK_TIMEOUT) {
-              try {
-                process.kill(lockData.data.pid, 0)
-              } catch (error) {
-                if (error instanceof Error && 'code' in error && error.code === 'ESRCH') {
-                  await rename(this.lockfilePath, `${this.lockfilePath}.stale.${Date.now()}`)
-                  continue
-                }
-                throw error
-              }
-            }
-          } catch (readError) {
-            // An empty/partial lock file may still be being written. Never steal it.
-            if (
-              !(readError instanceof SyntaxError) &&
-              !(readError instanceof Error && 'code' in readError && readError.code === 'ENOENT')
-            ) {
-              throw readError
-            }
-          }
-
-          // Lock is held by another process, wait and retry
-          if (i < retries - 1) {
-            await new Promise((resolve) => setTimeout(resolve, delay))
-          } else {
-            throw new Error(`Cannot acquire lock after ${retries} retries (file: ${this.lockfilePath})`)
-          }
-        } else {
-          // Other error (permissions, etc.)
-          throw error
+    const attempt = await mkdtemp(`${this.#lockfilePath}.pending-`)
+    const candidate = join(attempt, 'owner')
+    try {
+      await mkdir(candidate, { mode: 0o700 })
+      await writeFile(join(candidate, 'owner.json'), JSON.stringify({ pid: process.pid, acquiredAt: Date.now() }), { mode: 0o600 })
+      for (let i = 0; i < retries; i++) {
+        try {
+          // A published directory is always nonempty, so rename cannot replace it.
+          await rename(candidate, this.#lockfilePath)
+          this.#attemptDirectory = attempt
+          return
+        } catch (error) {
+          if (!hasErrorCode(error, 'EEXIST', 'ENOTEMPTY', 'ENOTDIR', 'EISDIR')) throw error
         }
+        await this.#recoverAbandonedLock()
+        if (i < retries - 1) await new Promise((resolve) => setTimeout(resolve, delay))
       }
+      throw new Error(`Cannot acquire lock after ${retries} retries (file: ${this.#lockfilePath})`)
+    } finally {
+      if (this.#attemptDirectory !== attempt) await rm(attempt, { recursive: true, force: true })
     }
-    throw new Error(`Cannot acquire lock after ${retries} retries (file: ${this.lockfilePath})`)
   }
 
-  /**
-   * Release the lock by removing the lockfile
-   */
-  async release(): Promise<void> {
+  async #recoverAbandonedLock(): Promise<void> {
     try {
-      await rename(this.lockfilePath, `${this.lockfilePath}.released.${Date.now()}`)
-
-      // Trigger cleanup in the background after releasing lock
-      // This is fire-and-forget - we don't await the result
-      // Remove .lock suffix (5 chars) safely using slice
-      const dbPath = this.lockfilePath.slice(0, -5)
-      FileLock.cleanupOldLockFiles(dbPath).catch(() => {
-        // Ignore errors
-      })
-    } catch (error: unknown) {
-      const errorCode = (error as NodeJS.ErrnoException).code
-      if (errorCode !== 'ENOENT') {
-        // Log but don't throw - lock might have been cleaned up by another process
-        console.warn(`[FileLock] Error releasing lock: ${error instanceof Error ? error.message : String(error)}`)
+      const stat = await lstat(this.#lockfilePath, { bigint: true })
+      // Old releases used a regular JSON file at this same path.
+      const ownerPath = stat.isDirectory() ? join(this.#lockfilePath, 'owner.json') : this.#lockfilePath
+      const content = await readFile(ownerPath, 'utf8')
+      let parsed: unknown
+      try {
+        parsed = JSON.parse(content)
+      } catch (error) {
+        if (!(error instanceof SyntaxError)) throw error
       }
+      const owner = lockDataSchema.safeParse(parsed)
+      const acquiredAt = owner.success ? owner.data.acquiredAt : Number(stat.mtimeMs)
+      if (Date.now() - acquiredAt <= FileLock.LOCK_TIMEOUT) return
+      if (owner.success) {
+        try {
+          process.kill(owner.data.pid, 0)
+          return
+        } catch (error) {
+          if (!hasErrorCode(error, 'ESRCH')) throw error
+        }
+      }
+      // Retain this destination: delayed contenders cannot replace it with a newer
+      // owner's nonempty directory. Keeping its inode prevents recovery-name reuse.
+      await rename(this.#lockfilePath, `${this.#lockfilePath}.retired-${stat.dev}-${stat.ino}`)
+    } catch (error) {
+      if (!hasErrorCode(error, 'ENOENT', 'EEXIST', 'ENOTEMPTY', 'ENOTDIR', 'EISDIR')) throw error
     }
+  }
+
+  async release(): Promise<void> {
+    const attempt = this.#attemptDirectory
+    if (!attempt) return
+    // Move the complete directory before deleting anything; never expose an empty
+    // shared directory that an acquisition could replace during cleanup.
+    await rename(this.#lockfilePath, join(attempt, 'owner'))
+    this.#attemptDirectory = undefined
+    await rm(attempt, { recursive: true, force: true })
+    await FileLock.cleanupOldLockFiles(this.#lockfilePath.slice(0, -5))
   }
 }
 

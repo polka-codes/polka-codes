@@ -401,6 +401,12 @@ A [`.polkacodes.yml`](.polkacodes.yml) configuration file can be used to customi
 
 For detailed configuration options, refer to the example file, which includes comprehensive comments for each setting.
 
+### Shared Memory
+
+Memory writes persist inside transactions. `SQLiteMemoryStore.close()` releases its snapshot; the legacy boolean argument remains accepted and has no effect.
+
+Finish older CLI and runner sessions sharing a memory database before upgrading: lock ownership now uses an atomically published `.lock` directory. The database format is unchanged. Old malformed lock files receive a 30-second grace period before recovery, and live owners retain their locks. Retired lock records are kept to protect against delayed recovery attempts.
+
 ### Tool Format
 
 You can specify the format for tool integration using the `toolFormat` option in your `.polkacodes.yml` file. This setting determines how the AI model interacts with the available tools.
