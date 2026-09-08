@@ -1,6 +1,6 @@
 import { execSync } from 'node:child_process'
 import { promises as fs } from 'node:fs'
-import { getProvider, type LoadedConfig, loadConfig } from '@polka-codes/cli-shared'
+import { getProvider, type LoadedConfig, loadConfig, parseGitPorcelain } from '@polka-codes/cli-shared'
 import {
   executeCommand,
   type FullToolInfo,
@@ -303,11 +303,13 @@ export class Runner {
       const gitStatusOutput = execSync('git status --porcelain=v1 -z --untracked-files=all', { encoding: 'utf8' })
 
       // Parse the git status output to identify file changes
-      const fileChanges = this.#parseGitStatus(gitStatusOutput)
+      const fileChanges = parseGitPorcelain(gitStatusOutput)
 
       // Process each file change and send appropriate messages
       for (const change of fileChanges) {
-        if (change.deleted) this.sendFileDeleted(change.path)
+        const status = change.indexStatus + change.workingTreeStatus
+        if (change.originalPath && status.includes('R')) this.sendFileDeleted(change.originalPath)
+        if (status.includes('D')) this.sendFileDeleted(change.path)
         else await this.#sendFileContent(change.path)
       }
 
@@ -335,25 +337,6 @@ export class Runner {
     this.wsManager.close(true)
     // Ensure exit happens after potential close event processing
     setImmediate(() => process.exit(this.#commandFailed ? 1 : 0))
-  }
-
-  #parseGitStatus(output: string): Array<{ path: string; deleted: boolean }> {
-    const changes: Array<{ path: string; deleted: boolean }> = []
-    const records = output.split('\0')
-    for (let index = 0; index < records.length; index++) {
-      const record = records[index]
-      if (!record) continue
-      const status = record.slice(0, 2)
-      const path = record.slice(3)
-      // Porcelain -z writes the destination first, followed by a separate source record.
-      if (status.includes('R') || status.includes('C')) {
-        const source = records[++index]
-        if (!source) throw new Error('Missing source path in Git status')
-        if (status.includes('R')) changes.push({ path: source, deleted: true })
-      }
-      changes.push({ path, deleted: status.includes('D') })
-    }
-    return changes
   }
 
   async #sendFileContent(path: string): Promise<void> {

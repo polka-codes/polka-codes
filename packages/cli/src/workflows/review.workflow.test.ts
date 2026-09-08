@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createContext } from '@polka-codes/core'
 import type { CliToolRegistry } from '../workflow-tools'
-import { createGitAwareDiff } from './git-file-tools'
+import { createGitAwareDiff, createGitReadFile } from './git-file-tools'
 import { reviewWorkflow } from './review.workflow'
 
 const unused = async () => {
@@ -88,7 +88,28 @@ test('single commits use their own changes and metadata, including clean HEAD an
       expect(requests.at(-1)).toContain('next.txt')
       expect(requests.at(-1)).not.toContain('unrelated worktree content')
     }
-    expect(requests).toHaveLength(4)
+    const destination = 'new -> \t"你好".txt'
+    git('mv', 'root.txt', destination)
+    const selectedInput = {
+      interactive: false,
+      additionalTools: {},
+      files: [join(git('rev-parse', '--show-toplevel').trim(), destination)],
+    }
+    expect((await reviewWorkflow(selectedInput, context)).overview).toBe('Reviewed')
+    git('-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '-qm', 'Rename root')
+    expect((await reviewWorkflow({ ...selectedInput, range: `${head}..HEAD` }, context)).overview).toBe('Reviewed')
+    const content = await createGitReadFile('HEAD').handler(
+      {
+        executeCommand: async (command: string) => ({
+          stdout: execFileSync('sh', ['-c', command], { cwd: dir, encoding: 'utf8' }),
+          stderr: '',
+          exitCode: 0,
+        }),
+      },
+      { path: [destination] },
+    )
+    expect(content.message).toMatchObject({ type: 'text', value: expect.stringContaining('root\n') })
+    expect(requests).toHaveLength(6)
   } finally {
     await rm(dir, { recursive: true, force: true })
   }

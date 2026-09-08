@@ -36,7 +36,7 @@ describe.skipIf(!gitAvailable)('commitWorkflow', () => {
       stagedFiles: [{ path: 'src/file.ts', status: 'M' }],
       unstagedFiles: [],
     })
-    tools.executeCommand.mockResolvedValueOnce({ exitCode: 0, stdout: 'M\tsrc/file.ts' }).mockResolvedValueOnce({
+    tools.executeCommand.mockResolvedValueOnce({ exitCode: 0, stdout: 'M\0src/file.ts\0' }).mockResolvedValueOnce({
       exitCode: 0,
       stdout: '--- a/src/file.ts\n+++ b/src/file.ts\n@@ -1,3 +1,4 @@\n+export const newFunc = () => {}\n',
     })
@@ -56,7 +56,7 @@ describe.skipIf(!gitAvailable)('commitWorkflow', () => {
     expect(tools.printChangeFile).toHaveBeenCalled()
     expect(tools.executeCommand).toHaveBeenCalledWith({
       command: 'git',
-      args: ['diff', '--name-status', '--no-color', '--staged'],
+      args: ['diff', '--name-status', '-z', '--no-color', '--staged'],
     })
     expect(tools.executeCommand).toHaveBeenCalledWith({
       command: 'git',
@@ -80,7 +80,7 @@ describe.skipIf(!gitAvailable)('commitWorkflow', () => {
       stagedFiles: [],
       unstagedFiles: [{ path: 'src/file.ts', status: 'M' }],
     })
-    tools.executeCommand.mockResolvedValue({ exitCode: 0, stdout: 'M\tsrc/file.ts' })
+    tools.executeCommand.mockResolvedValue({ exitCode: 0, stdout: 'M\0src/file.ts\0' })
     tools.generateText.mockResolvedValue(
       createAgentModelRound([
         {
@@ -113,7 +113,7 @@ describe.skipIf(!gitAvailable)('commitWorkflow', () => {
       stagedFiles: [{ path: 'src/staged.ts', status: 'M' }],
       unstagedFiles: [{ path: 'src/unstaged.ts', status: 'M' }],
     })
-    tools.executeCommand.mockResolvedValue({ exitCode: 0, stdout: 'M\tsrc/staged.ts\nM\tsrc/unstaged.ts', stderr: '' })
+    tools.executeCommand.mockResolvedValue({ exitCode: 0, stdout: 'M\0src/staged.ts\0M\0src/unstaged.ts\0', stderr: '' })
     tools.generateText.mockResolvedValue(
       createAgentModelRound([
         {
@@ -148,7 +148,7 @@ describe.skipIf(!gitAvailable)('commitWorkflow', () => {
       unstagedFiles: [{ path: 'src/file.ts', status: 'M' }],
     })
     tools.confirm.mockResolvedValue(true)
-    tools.executeCommand.mockResolvedValue({ exitCode: 0, stdout: 'M\tsrc/file.ts' })
+    tools.executeCommand.mockResolvedValue({ exitCode: 0, stdout: 'M\0src/file.ts\0' })
     tools.generateText.mockResolvedValue(
       createAgentModelRound([
         {
@@ -209,7 +209,7 @@ describe.skipIf(!gitAvailable)('commitWorkflow', () => {
       stagedFiles: [{ path: 'src/file.ts', status: 'M' }],
       unstagedFiles: [],
     })
-    tools.executeCommand.mockResolvedValue({ exitCode: 0, stdout: 'M\tsrc/file.ts', stderr: '' })
+    tools.executeCommand.mockResolvedValue({ exitCode: 0, stdout: 'M\0src/file.ts\0', stderr: '' })
     tools.generateText.mockRejectedValue(new Error('provider unavailable'))
 
     await expect(commitWorkflow({ ...defaultInput }, context)).rejects.toThrow('Failed to generate commit message: provider unavailable')

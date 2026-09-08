@@ -3,7 +3,7 @@
 import { execSync } from 'node:child_process'
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
-import { type LoadedConfig, resolveRules } from '@polka-codes/cli-shared'
+import { type LoadedConfig, parseGitPorcelain, resolveRules } from '@polka-codes/cli-shared'
 import type { ExitReason, FullToolInfo, Logger } from '@polka-codes/core'
 import { z } from 'zod'
 import { ApiProviderConfig } from '../ApiProviderConfig'
@@ -26,42 +26,30 @@ export function getAgentWorkflowFailureMessage(result: Exclude<ExitReason, { typ
 }
 
 export type FileChange = {
+  originalPath?: string
   path: string
   status: string
   insertions?: number
   deletions?: number
 }
 
-export function parseGitDiffNameStatus(diffOutput: string): FileChange[] {
-  const lines = diffOutput.split('\n').filter((line) => line.trim())
-  return lines.map((line) => {
-    const [status, ...pathParts] = line.split('\t')
-    const path = pathParts.join('\t')
-    let statusDescription: string
-    switch (status[0]) {
-      case 'A':
-        statusDescription = 'Added'
-        break
-      case 'M':
-        statusDescription = 'Modified'
-        break
-      case 'D':
-        statusDescription = 'Deleted'
-        break
-      case 'R':
-        statusDescription = 'Renamed'
-        break
-      case 'C':
-        statusDescription = 'Copied'
-        break
-      case 'T':
-        statusDescription = 'Type changed'
-        break
-      default:
-        statusDescription = 'Unknown'
-    }
-    return { path, status: statusDescription }
-  })
+const changeDescriptions: Record<string, string> = { A: 'Added', M: 'Modified', D: 'Deleted', R: 'Renamed', C: 'Copied', T: 'Type changed' }
+
+export function parseGitDiffNameStatus(output: string): FileChange[] {
+  const records = output.split('\0')
+  const files: FileChange[] = []
+  for (let index = 0; index < records.length; index++) {
+    const status = records[index]
+    if (!status) continue
+    const path = records[++index]
+    if (!path) throw new Error('Missing path in Git name-status')
+    if (status.startsWith('R') || status.startsWith('C')) {
+      const destination = records[++index]
+      if (!destination) throw new Error('Missing destination in Git name-status')
+      files.push({ path: destination, originalPath: path, status: changeDescriptions[status[0]] })
+    } else files.push({ path, status: changeDescriptions[status[0]] ?? 'Unknown' })
+  }
+  return files
 }
 
 export function printChangedFiles(logger: Logger, changedFiles: FileChange[]) {
@@ -81,100 +69,46 @@ export function printChangedFiles(logger: Logger, changedFiles: FileChange[]) {
 }
 
 export function parseGitDiffNumStat(output: string): Record<string, { insertions: number; deletions: number }> {
-  const stats: Record<string, { insertions: number; deletions: number }> = {}
-  const lines = output.split('\n').filter((line) => line.trim())
-
-  for (const line of lines) {
-    const parts = line.split('\t')
-    if (parts.length >= 3) {
-      const insertions = parts[0] === '-' ? 0 : Number.parseInt(parts[0], 10)
-      const deletions = parts[1] === '-' ? 0 : Number.parseInt(parts[1], 10)
-      const path = unquotePath(parts.slice(2).join('\t'))
-
-      stats[path] = { insertions, deletions }
+  const stats: Array<[string, { insertions: number; deletions: number }]> = []
+  const records = output.split('\0')
+  for (let index = 0; index < records.length; index++) {
+    const record = records[index]
+    if (!record) continue
+    const [added, removed, ...pathParts] = record.split('\t')
+    let path = pathParts.join('\t')
+    if (!path) {
+      // Rename/copy numstat records have an empty path followed by source and destination.
+      index++
+      path = records[++index]
     }
+    if (!path) throw new Error('Missing path in Git numstat')
+    stats.push([
+      path,
+      { insertions: added === '-' ? 0 : Number.parseInt(added, 10), deletions: removed === '-' ? 0 : Number.parseInt(removed, 10) },
+    ])
   }
-  return stats
+  return Object.fromEntries(stats)
 }
 
-// unquotes path from git status --porcelain
-// see: https://git-scm.com/docs/git-status#_changed_track_entries
-const unquotePath = (path: string) => {
-  if (path.startsWith('"') && path.endsWith('"')) {
-    try {
-      return JSON.parse(path)
-    } catch {
-      // if JSON.parse fails, return the original string
-      return path
-    }
-  }
-  return path
-}
-
-export function parseGitStatus(statusOutput: string): FileChange[] {
-  const statusLines = statusOutput.split('\n').filter((line) => line)
-  const files: FileChange[] = []
-
-  for (const line of statusLines) {
-    const indexStatus = line[0]
-    const workingTreeStatus = line[1]
-    const path = line.length > 3 ? unquotePath(line.slice(3)) : line
-
-    const statuses = []
-    if (indexStatus !== ' ' && indexStatus !== '?') {
-      switch (indexStatus) {
-        case 'A':
-          statuses.push('Added (staged)')
-          break
-        case 'M':
-          statuses.push('Modified (staged)')
-          break
-        case 'D':
-          statuses.push('Deleted (staged)')
-          break
-        case 'R':
-          statuses.push('Renamed (staged)')
-          break
-        case 'C':
-          statuses.push('Copied (staged)')
-          break
-        default:
-          statuses.push('Changed (staged)')
-      }
-    }
-    if (workingTreeStatus !== ' ') {
-      switch (workingTreeStatus) {
-        case 'M':
-          statuses.push('Modified (unstaged)')
-          break
-        case 'D':
-          statuses.push('Deleted (unstaged)')
-          break
-        case '?':
-          statuses.push('Untracked')
-          break
-        default:
-          statuses.push('Changed (unstaged)')
-      }
-    }
-
-    if (statuses.length > 0) {
-      files.push({ path, status: statuses.join(', ') })
-    }
-  }
-
-  return files
+export function parseGitStatus(output: string): FileChange[] {
+  return parseGitPorcelain(output).map(({ path, originalPath, indexStatus, workingTreeStatus }) => {
+    const statuses: string[] = []
+    if (indexStatus !== ' ' && indexStatus !== '?') statuses.push(`${changeDescriptions[indexStatus] ?? 'Changed'} (staged)`)
+    if (workingTreeStatus === '?') statuses.push('Untracked')
+    else if (workingTreeStatus !== ' ') statuses.push(`${changeDescriptions[workingTreeStatus] ?? 'Changed'} (unstaged)`)
+    return { path, ...(originalPath ? { originalPath } : {}), status: statuses.join(', ') }
+  })
 }
 
 export function getLocalChanges() {
-  const statusOutput = execSync('git status --porcelain=v1', {
+  const statusOutput = execSync('git status --porcelain=v1 -z --untracked-files=all', {
     encoding: 'utf-8',
   })
   const allFiles = parseGitStatus(statusOutput)
 
   let stagedStats: Record<string, { insertions: number; deletions: number }> = {}
   try {
-    const stagedDiffOutput = execSync('git diff --staged --numstat --no-color', { encoding: 'utf-8' })
+    const stagedDiffOutput = execSync('git diff --staged --numstat -z --no-color', { encoding: 'utf-8' })
     stagedStats = parseGitDiffNumStat(stagedDiffOutput)
   } catch {
     // Ignore error
@@ -182,7 +116,7 @@ export function getLocalChanges() {
 
   let unstagedStats: Record<string, { insertions: number; deletions: number }> = {}
   try {
-    const unstagedDiffOutput = execSync('git diff --numstat --no-color', { encoding: 'utf-8' })
+    const unstagedDiffOutput = execSync('git diff --numstat -z --no-color', { encoding: 'utf-8' })
     unstagedStats = parseGitDiffNumStat(unstagedDiffOutput)
   } catch {
     // Ignore error

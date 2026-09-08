@@ -83,7 +83,7 @@ export const commitWorkflow: WorkflowFn<CommitWorkflowInput & BaseWorkflowInput,
     let changedFiles: FileChange[] = []
     const diffNameStatusResult = await tools.executeCommand({
       command: 'git',
-      args: ['diff', '--name-status', '--no-color', '--staged'],
+      args: ['diff', '--name-status', '-z', '--no-color', '--staged'],
     })
     if (diffNameStatusResult.exitCode === 0) {
       changedFiles = parseGitDiffNameStatus(diffNameStatusResult.stdout)

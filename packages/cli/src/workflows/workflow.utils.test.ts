@@ -15,7 +15,7 @@ describe('getAgentWorkflowFailureMessage', () => {
 
 describe('parseGitDiffNumStat', () => {
   test('parses standard changes', () => {
-    const output = '1\t2\tpath/to/file.ts\n'
+    const output = '1\t2\tpath/to/file.ts\0'
     const result = parseGitDiffNumStat(output)
 
     // Verify the file was parsed with correct stats
@@ -25,7 +25,7 @@ describe('parseGitDiffNumStat', () => {
   })
 
   test('parses binary files', () => {
-    const output = '-\t-\tpath/to/image.png\n'
+    const output = '-\t-\tpath/to/image.png\0'
     const result = parseGitDiffNumStat(output)
 
     // Binary files are represented with 0 insertions/deletions
@@ -34,28 +34,28 @@ describe('parseGitDiffNumStat', () => {
     })
   })
 
-  test('parses quoted paths', () => {
-    const output = '1\t1\t"path/to/file with spaces.ts"\n'
+  test('preserves literal quote characters', () => {
+    const output = '1\t1\t"path/to/file with spaces.ts"\0'
     const result = parseGitDiffNumStat(output)
 
-    // Quoted paths should be unquoted
+    // NUL-delimited output uses literal paths.
     expect(result).toEqual({
-      'path/to/file with spaces.ts': { insertions: 1, deletions: 1 },
+      '"path/to/file with spaces.ts"': { insertions: 1, deletions: 1 },
     })
   })
 
-  test('handles rename entries gracefully (invalid json-like string)', () => {
-    const output = '0\t0\t"old" -> "new"\n'
+  test('parses rename destination statistics', () => {
+    const output = '0\t0\t\0old\0new\0'
     const result = parseGitDiffNumStat(output)
 
-    // Invalid JSON-like strings should be preserved as-is
+    // Statistics belong to the destination path.
     expect(result).toEqual({
-      '"old" -> "new"': { insertions: 0, deletions: 0 },
+      new: { insertions: 0, deletions: 0 },
     })
   })
 
   test('parses paths containing tabs', () => {
-    const output = '1\t1\tpath/part1\tpath/part2.ts\n'
+    const output = '1\t1\tpath/part1\tpath/part2.ts\0'
     const result = parseGitDiffNumStat(output)
 
     // Paths with tabs should be reconstructed correctly

@@ -1,5 +1,6 @@
 export * from './checkRipgrep.js'
 export * from './eventHandler.js'
+export { type GitStatusEntry, parseGitPorcelain } from './git-status.js'
 export * from './listFiles.js'
 export * from './parameterSimplifier.js'
 export * from './readMultiline.js'
