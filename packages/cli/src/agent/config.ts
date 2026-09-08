@@ -1,8 +1,8 @@
 import { deepMerge } from '@polka-codes/core'
 import { z } from 'zod'
-import { CONFIG_PRESETS, DEFAULT_AGENT_CONFIG } from './constants'
+import { CONFIG_PRESETS, DEFAULT_AGENT_CONFIG, WORKFLOW_MAPPING } from './constants'
 import { ConfigValidationError } from './errors'
-import type { AgentConfig } from './types'
+import type { AgentConfig, TaskType } from './types'
 
 /**
  * Zod schema for ContinuousImprovementConfig
@@ -30,15 +30,14 @@ export const AgentConfigSchema = z.object({
   continueOnCompletion: z.boolean().default(false),
   maxIterations: z.number().int().nonnegative().default(0),
   timeout: z.number().int().nonnegative().default(0),
-  requireApprovalFor: z.enum(['none', 'destructive', 'commits', 'all']).default('destructive'),
   pauseOnError: z.boolean().default(true),
   workingBranch: z.string().default('main'),
   maxConcurrency: z.number().int().min(1).default(1),
   autoSaveInterval: z.number().int().min(1000).default(30000),
   enableProgress: z.boolean().default(true),
-  destructiveOperations: z.array(z.string()).default([]),
-  maxAutoApprovalCost: z.number().int().nonnegative().default(5),
-  autoApproveSafeTasks: z.boolean().default(true),
+  destructiveOperations: z
+    .array(z.custom<TaskType>((value) => typeof value === 'string' && Object.hasOwn(WORKFLOW_MAPPING, value)))
+    .default([]),
   workingDir: z.string().optional(),
   continuousImprovement: ContinuousImprovementConfigSchema.default(DEFAULT_AGENT_CONFIG.continuousImprovement),
   discovery: DiscoveryConfigSchema.default(DEFAULT_AGENT_CONFIG.discovery),
@@ -79,10 +78,10 @@ export function isValidAgentConfig(config: unknown): config is AgentConfig {
  */
 export function validateConfig(config: unknown): AgentConfig {
   try {
-    return AgentConfigSchema.parse(config) as AgentConfig
+    return AgentConfigSchema.parse(normalizeOverrides(config))
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const errors = error.issues.map((e: any) => `${e.path.join('.')}: ${e.message}`)
+      const errors = error.issues.map((e) => `${e.path.join('.')}: ${e.message}`)
       throw new ConfigValidationError('Configuration validation failed', errors)
     }
     throw error
@@ -92,49 +91,60 @@ export function validateConfig(config: unknown): AgentConfig {
 /**
  * Load configuration from CLI options and config file
  */
-export async function loadConfig(cliOptions: Partial<AgentConfig>, configPath?: string): Promise<AgentConfig> {
-  // Start with defaults
-  let config: AgentConfig = { ...DEFAULT_AGENT_CONFIG }
+const approvalOverridesSchema = z.object({
+  level: z.enum(['none', 'destructive', 'commits', 'all']).optional(),
+  autoApproveSafeTasks: z.boolean().optional(),
+  maxAutoApprovalCost: z.number().int().nonnegative().optional(),
+})
 
-  // Apply preset if specified
-  if (cliOptions.preset && CONFIG_PRESETS[cliOptions.preset]) {
-    config = mergeConfig(config, CONFIG_PRESETS[cliOptions.preset])
-    config.preset = cliOptions.preset
+function normalizeOverrides(input: unknown): Record<string, unknown> {
+  const { requireApprovalFor, autoApproveSafeTasks, maxAutoApprovalCost, approval, ...config } = z
+    .record(z.string(), z.unknown())
+    .parse(input)
+  const legacy = approvalOverridesSchema.parse({
+    ...(requireApprovalFor !== undefined ? { level: requireApprovalFor } : {}),
+    ...(autoApproveSafeTasks !== undefined ? { autoApproveSafeTasks } : {}),
+    ...(maxAutoApprovalCost !== undefined ? { maxAutoApprovalCost } : {}),
+  })
+  if (approval !== undefined || Object.keys(legacy).length > 0) {
+    config.approval = { ...legacy, ...(approval === undefined ? {} : approvalOverridesSchema.parse(approval)) }
   }
-
-  // Load from file if exists
-  if (configPath) {
-    const fileConfig = await loadConfigFromFile(configPath)
-    config = mergeConfig(config, fileConfig)
-  }
-
-  // Apply CLI options (highest priority)
-  config = mergeConfig(config, cliOptions)
-
-  // Validate configuration
-  return validateConfig(config)
+  return config
 }
 
-/**
- * Merge two configurations (second overrides first)
- *
- * Uses deepMerge utility with explicit path specification for nested objects.
- * This makes it clear which fields get deep merged vs shallow merge.
- */
-export function mergeConfig(base: AgentConfig, override: Partial<AgentConfig>): AgentConfig {
-  return deepMerge(base, override, [
-    'continuousImprovement', // Explicit: these get deep merged
-    'discovery',
-    'approval',
-    'safety',
-  ])
-  // Other fields use shallow merge (spread) - explicit and clear!
+export async function loadConfig(cliOptions: unknown, configPath?: string): Promise<AgentConfig> {
+  const cli = normalizeOverrides(cliOptions)
+  const file = normalizeOverrides(configPath ? await loadConfigFromFile(configPath) : {})
+  const presetName = z
+    .string()
+    .optional()
+    .parse(cli.preset ?? file.preset)
+  let config = DEFAULT_AGENT_CONFIG
+  if (presetName) {
+    const preset = CONFIG_PRESETS[presetName]
+    if (!Object.hasOwn(CONFIG_PRESETS, presetName)) throw new ConfigValidationError(`Unknown agent preset: ${presetName}`, [])
+    config = mergeConfig(config, preset)
+  }
+  return mergeConfig(mergeConfig(config, file), cli)
+}
+
+/** Objects merge only at the supported configuration sections; arrays replace. */
+export function mergeConfig(base: AgentConfig, override: unknown): AgentConfig {
+  return validateConfig(
+    deepMerge<Record<string, unknown>>({ ...base }, normalizeOverrides(override), [
+      'continuousImprovement',
+      'discovery',
+      'approval',
+      'safety',
+      'healthCheck',
+    ]),
+  )
 }
 
 /**
  * Load configuration from file
  */
-async function loadConfigFromFile(configPath: string): Promise<Partial<AgentConfig>> {
+async function loadConfigFromFile(configPath: string): Promise<unknown> {
   try {
     const fs = await import('node:fs/promises')
     const content = await fs.readFile(configPath, 'utf-8')

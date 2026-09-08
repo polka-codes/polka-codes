@@ -1,4 +1,4 @@
-import type { AgentConfig, ApprovalLevel, TaskType, WorkflowName } from './types'
+import type { AgentConfig, TaskType, WorkflowName } from './types'
 import { Priority } from './types'
 
 // Re-export Priority for convenience
@@ -77,15 +77,12 @@ export const DEFAULT_AGENT_CONFIG: AgentConfig = {
   continueOnCompletion: false,
   maxIterations: 0,
   timeout: 0,
-  requireApprovalFor: 'destructive',
   pauseOnError: true,
   workingBranch: 'main',
   maxConcurrency: 1,
   autoSaveInterval: 30000,
   enableProgress: true,
   destructiveOperations: ['delete', 'force-push', 'reset'],
-  maxAutoApprovalCost: 5,
-  autoApproveSafeTasks: true,
   continuousImprovement: {
     sleepTimeOnNoTasks: 60000, // 1 minute
     sleepTimeBetweenTasks: 5000, // 5 seconds
@@ -114,9 +111,7 @@ export const DEFAULT_AGENT_CONFIG: AgentConfig = {
 export const CONFIG_PRESETS: Record<string, Partial<AgentConfig>> = {
   conservative: {
     strategy: 'goal-directed',
-    requireApprovalFor: 'all' as ApprovalLevel,
-    autoApproveSafeTasks: false,
-    maxAutoApprovalCost: 0,
+    approval: { level: 'all', autoApproveSafeTasks: false, maxAutoApprovalCost: 0 },
     pauseOnError: true,
     maxConcurrency: 1,
     discovery: {
@@ -128,9 +123,7 @@ export const CONFIG_PRESETS: Record<string, Partial<AgentConfig>> = {
 
   balanced: {
     strategy: 'goal-directed',
-    requireApprovalFor: 'destructive' as ApprovalLevel,
-    autoApproveSafeTasks: true,
-    maxAutoApprovalCost: 10,
+    approval: { level: 'destructive', autoApproveSafeTasks: true, maxAutoApprovalCost: 10 },
     pauseOnError: true,
     maxConcurrency: 1,
     discovery: {
@@ -142,9 +135,7 @@ export const CONFIG_PRESETS: Record<string, Partial<AgentConfig>> = {
 
   aggressive: {
     strategy: 'goal-directed',
-    requireApprovalFor: 'none' as ApprovalLevel,
-    autoApproveSafeTasks: true,
-    maxAutoApprovalCost: 30,
+    approval: { level: 'none', autoApproveSafeTasks: true, maxAutoApprovalCost: 30 },
     pauseOnError: false,
     maxConcurrency: 2,
     discovery: {
@@ -158,9 +149,7 @@ export const CONFIG_PRESETS: Record<string, Partial<AgentConfig>> = {
     strategy: 'continuous-improvement',
     continueOnCompletion: true,
     maxIterations: 0,
-    requireApprovalFor: 'commits' as ApprovalLevel,
-    autoApproveSafeTasks: true,
-    maxAutoApprovalCost: 15,
+    approval: { level: 'commits', autoApproveSafeTasks: true, maxAutoApprovalCost: 15 },
     pauseOnError: false,
     maxConcurrency: 2,
     discovery: {
@@ -174,9 +163,7 @@ export const CONFIG_PRESETS: Record<string, Partial<AgentConfig>> = {
     strategy: 'continuous-improvement',
     continueOnCompletion: true,
     maxIterations: 0,
-    requireApprovalFor: 'commits' as ApprovalLevel,
-    autoApproveSafeTasks: true,
-    maxAutoApprovalCost: 30,
+    approval: { level: 'commits', autoApproveSafeTasks: true, maxAutoApprovalCost: 30 },
     pauseOnError: false,
     maxConcurrency: 1,
     workingDir: './plans', // Default working directory

@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import * as path from 'node:path'
 import type { WorkflowFn } from '@polka-codes/core'
 import { Command } from 'commander'
+import { z } from 'zod'
 import { loadConfig } from '../agent/config'
 import { AutonomousAgent } from '../agent/orchestrator'
 import type { AgentConfig, CliWorkflowContext } from '../agent/types'
@@ -47,22 +48,23 @@ export const autonomousAgentWorkflow: WorkflowFn<
  */
 export async function runAgent(goal: string | undefined, options: Record<string, unknown>, _command: Command) {
   const workflowOptions = getBaseWorkflowOptions(_command)
-  // Map CLI options to config format
-  // --continuous flag maps to strategy: 'continuous-improvement'
-  // --approval-level maps to requireApprovalFor in config
-  const strategy: 'goal-directed' | 'continuous-improvement' = options.continuous
-    ? 'continuous-improvement'
-    : ((options.strategy as 'goal-directed' | 'continuous-improvement') ?? 'goal-directed')
-  const requireApprovalFor: 'none' | 'destructive' | 'commits' | 'all' =
-    (options.approvalLevel as 'none' | 'destructive' | 'commits' | 'all') ?? 'destructive'
-
-  const configOptions = {
-    strategy,
-    approval: { level: requireApprovalFor, autoApproveSafeTasks: true, maxAutoApprovalCost: 5 },
-  }
-
-  // Load configuration
-  const config = await loadConfig(configOptions, options.config as string | undefined)
+  const parsed = z
+    .object({
+      continuous: z.boolean().optional(),
+      strategy: z.enum(['goal-directed', 'continuous-improvement']).optional(),
+      approvalLevel: z.enum(['none', 'destructive', 'commits', 'all']).optional(),
+      preset: z.string().optional(),
+      config: z.string().optional(),
+    })
+    .parse(options)
+  const config = await loadConfig(
+    {
+      ...(parsed.continuous ? { strategy: 'continuous-improvement' } : parsed.strategy ? { strategy: parsed.strategy } : {}),
+      ...(parsed.approvalLevel ? { approval: { level: parsed.approvalLevel } } : {}),
+      ...(parsed.preset ? { preset: parsed.preset } : {}),
+    },
+    parsed.config,
+  )
 
   await runWorkflow(
     autonomousAgentWorkflow,
@@ -80,7 +82,7 @@ export const agentCommand = new Command('agent')
   .description('Run autonomous agent (experimental)')
   .argument('[goal]', 'Goal to achieve', '')
   .option('--continuous', 'Run in continuous improvement mode')
-  .option('--preset <name>', 'Configuration preset', 'balanced')
+  .option('--preset <name>', 'Configuration preset')
   .option('--config <path>', 'Configuration file path')
-  .option('--approval-level <level>', 'Approval level (none|destructive|commits|all)', 'destructive')
+  .option('--approval-level <level>', 'Approval level (none|destructive|commits|all)')
   .action(runAgent)

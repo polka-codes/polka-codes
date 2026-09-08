@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'bun:test'
-import { AgentConfigSchema, mergeConfig, validateConfig } from './config'
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { AgentConfigSchema, loadConfig, mergeConfig, validateConfig } from './config'
 import { DEFAULT_AGENT_CONFIG } from './constants'
 import type { AgentConfig } from './types'
 
@@ -23,9 +26,9 @@ describe('AgentConfig', () => {
 
     it('should reject invalid requireApprovalFor value', () => {
       expect(() => {
-        AgentConfigSchema.parse({
+        validateConfig({
           ...DEFAULT_AGENT_CONFIG,
-          requireApprovalFor: 'invalid' as any,
+          requireApprovalFor: 'invalid',
         })
       }).toThrow()
     })
@@ -38,7 +41,6 @@ describe('AgentConfig', () => {
       }
       const validated = AgentConfigSchema.parse(partialConfig)
       expect(validated.pauseOnError).toBe(true)
-      expect(validated.requireApprovalFor).toBe('destructive')
       expect(validated.maxConcurrency).toBe(1)
       expect(validated.approval.level).toBe('destructive')
       expect(validated.safety.blockDestructive).toBe(true)
@@ -61,7 +63,7 @@ describe('AgentConfig', () => {
 
       // Check base fields are preserved
       expect(merged.pauseOnError).toBe(base.pauseOnError)
-      expect(merged.requireApprovalFor).toBe(base.requireApprovalFor)
+      expect(merged.approval).toEqual(base.approval)
       expect(merged.continuousImprovement).toEqual(base.continuousImprovement)
     })
 
@@ -162,5 +164,49 @@ describe('AgentConfig', () => {
       const { isValidAgentConfig } = require('./config')
       expect(isValidAgentConfig({})).toBe(false)
     })
+  })
+})
+
+describe('approval configuration precedence', () => {
+  it('uses the effective approval settings from each preset', async () => {
+    expect((await loadConfig({ preset: 'conservative' })).approval).toEqual({
+      level: 'all',
+      autoApproveSafeTasks: false,
+      maxAutoApprovalCost: 0,
+    })
+    expect((await loadConfig({ preset: 'aggressive' })).approval).toEqual({
+      level: 'none',
+      autoApproveSafeTasks: true,
+      maxAutoApprovalCost: 30,
+    })
+    await expect(loadConfig({ preset: 'unknown' })).rejects.toThrow('Unknown agent preset')
+  })
+
+  it('preserves file settings until explicitly overridden and normalizes legacy fields', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'agent-config-'))
+    const path = join(dir, 'config.json')
+    try {
+      await writeFile(
+        path,
+        JSON.stringify({ preset: 'aggressive', requireApprovalFor: 'commits', autoApproveSafeTasks: false, maxAutoApprovalCost: 2 }),
+      )
+      const fromFile = await loadConfig({}, path)
+      expect(fromFile.approval).toEqual({ level: 'commits', autoApproveSafeTasks: false, maxAutoApprovalCost: 2 })
+      expect(fromFile).not.toHaveProperty('requireApprovalFor')
+      expect(fromFile).not.toHaveProperty('autoApproveSafeTasks')
+      expect(fromFile).not.toHaveProperty('maxAutoApprovalCost')
+      expect((await loadConfig({ approval: { level: 'all' } }, path)).approval).toEqual({
+        level: 'all',
+        autoApproveSafeTasks: false,
+        maxAutoApprovalCost: 2,
+      })
+      expect((await loadConfig({ requireApprovalFor: 'none' }, path)).approval.level).toBe('none')
+      await writeFile(path, JSON.stringify({ preset: 'conservative' }))
+      expect((await loadConfig({}, path)).approval.level).toBe('all')
+      expect((await loadConfig({ preset: 'aggressive' }, path)).approval.level).toBe('none')
+      expect((await loadConfig({ requireApprovalFor: 'none', approval: { level: 'all' } })).approval.level).toBe('all')
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
   })
 })

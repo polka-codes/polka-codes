@@ -125,9 +125,6 @@ export interface AgentConfig {
   /** Session timeout in minutes (0 = no timeout) */
   timeout: number
 
-  /** Approval requirement level */
-  requireApprovalFor: ApprovalLevel
-
   /** Pause on error and wait for user input */
   pauseOnError: boolean
 
@@ -145,12 +142,6 @@ export interface AgentConfig {
 
   /** Destructive operations that require approval */
   destructiveOperations: TaskType[]
-
-  /** Maximum estimated time for auto-approval (minutes) */
-  maxAutoApprovalCost: number
-
-  /** Auto-approve safe tasks */
-  autoApproveSafeTasks: boolean
 
   /** Working directory for plans and task documentation */
   workingDir?: string

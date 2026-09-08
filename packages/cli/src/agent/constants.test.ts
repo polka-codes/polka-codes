@@ -157,8 +157,8 @@ describe('constants', () => {
     it('should have all presets with valid approval levels', () => {
       const validLevels = ['all', 'destructive', 'none', 'commits']
       Object.values(CONFIG_PRESETS).forEach((preset) => {
-        if (preset.requireApprovalFor) {
-          expect(validLevels).toContain(preset.requireApprovalFor)
+        if (preset.approval?.level) {
+          expect(validLevels).toContain(preset.approval?.level)
         }
       })
     })
