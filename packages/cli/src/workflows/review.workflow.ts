@@ -34,6 +34,7 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput,
   const { step, tools, logger } = context
   const { pr, range, context: userContext, files } = input
   let changeInfo: ReviewToolInput | undefined
+  let resolvedCommit: string | undefined
 
   // Get git root to normalize file paths
   const gitRootResult = await tools.executeCommand({ command: 'git', args: ['rev-parse', '--show-toplevel'] })
@@ -173,10 +174,20 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput,
     await step(`Reviewing git range '${range}'...`, async () => {})
     logger.info(`Reviewing commit range: ${range}`)
 
+    if (!range.includes('..')) {
+      const commit = await tools.executeCommand({
+        command: 'git',
+        args: ['rev-parse', '--verify', '--end-of-options', `${range.trim()}^{commit}`],
+      })
+      if (commit.exitCode !== 0) throw new Error(`Invalid review commit '${range}': ${commit.stderr.trim()}`)
+      resolvedCommit = commit.stdout.trim()
+    }
+    const diffSelection = resolvedCommit ? ['show', '--format=', resolvedCommit] : ['diff', range]
+
     const allRangeChangedFiles = await step('Getting file changes...', async () => {
       const diffResult = await tools.executeCommand({
         command: 'git',
-        args: ['--no-pager', 'diff', '--name-status', '--no-color', range],
+        args: ['--no-pager', ...diffSelection, '--name-status', '--no-color', '--'],
       })
       if (diffResult.exitCode !== 0) {
         logger.warn('Warning: Could not retrieve file changes list')
@@ -186,7 +197,7 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput,
 
       const statResult = await tools.executeCommand({
         command: 'git',
-        args: ['--no-pager', 'diff', '--numstat', '--no-color', range],
+        args: ['--no-pager', ...diffSelection, '--numstat', '--no-color', '--'],
       })
       if (statResult.exitCode === 0) {
         const stats = parseGitDiffNumStat(statResult.stdout)
@@ -217,12 +228,12 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput,
     // Get commit messages for the range
     const logResult = await tools.executeCommand({
       command: 'git',
-      args: ['log', '--format=%B', range],
+      args: resolvedCommit ? ['show', '-s', '--format=%B', resolvedCommit, '--'] : ['log', '--format=%B', range],
     })
     const commitMessages = logResult.exitCode === 0 ? logResult.stdout.trim() : ''
 
     changeInfo = {
-      commitRange: range,
+      commitRange: resolvedCommit ?? range,
       changedFiles: rangeChangedFiles,
       commitMessages,
       context: userContext,
@@ -387,7 +398,7 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput,
   // Detect if we're reviewing a specific commit (not HEAD) or a commit range
   // For ranges (e.g., "A..B"), use regular gitDiff which handles ranges correctly
   // Only use git-aware tools for single commits
-  const targetCommit = extractTargetCommit(range, pr)
+  const targetCommit = resolvedCommit ?? extractTargetCommit(range, pr)
   const isRange = range?.includes('..')
 
   // Add targetCommit to changeInfo if present (and not a range)
