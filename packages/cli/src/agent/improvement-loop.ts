@@ -101,7 +101,7 @@ export function createContinuousImprovementLoop<TTools extends ToolRegistry = Cl
 
     try {
       // 1. Discover tasks
-      const tasks = await state.discovery.discover({ useCache: true })
+      const tasks = await state.discovery.discover()
 
       if (tasks.length === 0) {
         context.logger.info('[Continuous] No tasks discovered')

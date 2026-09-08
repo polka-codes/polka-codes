@@ -122,7 +122,6 @@ const agentContinuousImprovementSchema = z
 const agentDiscoverySchema = z
   .object({
     enabledStrategies: z.array(z.string()).optional(),
-    cacheTime: z.number().int().optional(),
     checkChanges: z.boolean().optional(),
   })
   .strict()

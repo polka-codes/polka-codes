@@ -18,7 +18,6 @@ const ContinuousImprovementConfigSchema = z.object({
  */
 const DiscoveryConfigSchema = z.object({
   enabledStrategies: z.array(z.string()).min(1),
-  cacheTime: z.number().int().positive().default(300000),
   checkChanges: z.boolean().default(true),
 })
 

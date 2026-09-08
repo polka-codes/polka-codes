@@ -6,7 +6,7 @@ import type { CliToolRegistry } from '../../workflow-tools'
 import { mergeConfig } from '../config'
 import { DEFAULT_AGENT_CONFIG } from '../constants'
 import { AutonomousAgent } from '../orchestrator'
-import { type CliWorkflowContext, Priority, type Task } from '../types'
+import type { CliWorkflowContext } from '../types'
 
 const [mode, level, terminal] = process.argv.slice(2)
 if (terminal === 'tty') Object.defineProperty(process.stdin, 'isTTY', { value: true })
@@ -62,7 +62,9 @@ const tools = createContext<CliToolRegistry>(
                       },
                     ],
                   }
-                : { plan: 'Inspect the current project configuration.' },
+                : mode === 'continuous' && taskCalls > 1
+                  ? { summary: 'Verified project configuration.' }
+                  : { plan: 'Inspect the current project configuration.' },
             ),
           },
         ],
@@ -82,7 +84,7 @@ const tools = createContext<CliToolRegistry>(
     },
     readMemory: unused,
     listMemoryTopics: unused,
-    updateMemory: unused,
+    updateMemory: async () => {},
     listTodoItems: unused,
     getTodoItem: unused,
     updateTodoItem: unused,
@@ -97,36 +99,13 @@ const context: CliWorkflowContext = {
   sessionId: 'approval-test',
   workingDir: process.cwd(),
   stateDir: join(process.cwd(), '.polka/state'),
-  workflowInput: { interactive: false, additionalTools: {}, config: { loadRules: { 'AGENTS.md': false, 'CLAUDE.md': false } } },
+  workflowInput: {
+    interactive: false,
+    additionalTools: {},
+    config: { scripts: { check: 'true' }, loadRules: { 'AGENTS.md': false, 'CLAUDE.md': false } },
+  },
 }
 const agent = new AutonomousAgent(config, context)
-if (mode === 'continuous') {
-  const task: Task = {
-    id: 'discovered-plan',
-    title: 'Inspect project',
-    description: 'Inspect the current project configuration.',
-    type: 'other',
-    priority: Priority.LOW,
-    complexity: 'low',
-    estimatedTime: 1,
-    status: 'pending',
-    workflow: 'plan',
-    workflowInput: { task: 'Inspect project' },
-    dependencies: [],
-    files: [],
-    createdAt: Date.now(),
-    retryCount: 0,
-  }
-  await mkdir('.polka/cache', { recursive: true })
-  await writeFile(
-    '.polka/cache/discovery-cache.json',
-    JSON.stringify({
-      gitHead: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
-      timestamp: Date.now(),
-      discoveredTasks: [task],
-    }),
-  )
-}
 await agent.initialize()
 try {
   if (mode === 'goal') {

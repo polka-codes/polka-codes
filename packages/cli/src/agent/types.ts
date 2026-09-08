@@ -200,9 +200,6 @@ export interface DiscoveryConfig {
   /** Enable/disable specific strategies */
   enabledStrategies: string[]
 
-  /** Cache discovery results (ms) */
-  cacheTime: number
-
   /** Only run discovery if git status shows changes */
   checkChanges: boolean
 }

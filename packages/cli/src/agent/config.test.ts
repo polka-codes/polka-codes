@@ -102,7 +102,6 @@ describe('AgentConfig', () => {
       const override: Partial<AgentConfig> = {
         discovery: {
           enabledStrategies: ['test-coverage'],
-          cacheTime: 600000,
           checkChanges: base.discovery.checkChanges,
         },
       }
@@ -110,7 +109,6 @@ describe('AgentConfig', () => {
       const merged = mergeConfig(base, override)
 
       expect(merged.discovery.enabledStrategies).toEqual(['test-coverage'])
-      expect(merged.discovery.cacheTime).toBe(600000)
       expect(merged.discovery.checkChanges).toBe(base.discovery.checkChanges)
     })
 

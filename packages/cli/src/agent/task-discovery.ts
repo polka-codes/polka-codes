@@ -1,13 +1,10 @@
 import { exec as execCallback } from 'node:child_process'
-import * as fs from 'node:fs/promises'
-import * as path from 'node:path'
 import { promisify } from 'node:util'
-import type { Logger } from '@polka-codes/core'
 import { ulid } from 'ulid'
 import type { CliToolRegistry } from '../workflow-tools'
+import type { CodeWorkflowInput } from '../workflows/code.workflow'
 import { AdvancedDiscoveryStrategies } from './advanced-discovery'
 import { Priority } from './constants'
-import { logAndSuppress } from './error-handling'
 import type { CliWorkflowContext, Task, ToolRegistry } from './types'
 
 // Promisified exec for non-blocking command execution
@@ -20,15 +17,6 @@ interface ExecError extends Error {
   stdout?: string
   stderr?: string
   status?: number
-}
-
-/**
- * Task discovery cache entry
- */
-interface DiscoveryCache {
-  gitHead: string
-  timestamp: number
-  discoveredTasks: Task[]
 }
 
 /**
@@ -71,23 +59,6 @@ function parseLintFiles(output: string): string[] {
 }
 
 /**
- * Get current git HEAD commit
- */
-async function getGitHead(logger?: Logger): Promise<string> {
-  try {
-    const { stdout } = await exec('git rev-parse HEAD', {
-      cwd: process.cwd(),
-    })
-    return stdout.trim()
-  } catch (error) {
-    if (logger) {
-      logAndSuppress(logger, error, 'getGitHead')
-    }
-    return 'unknown'
-  }
-}
-
-/**
  * Discover build errors
  *
  * Strategy: Run typecheck first, then build if types pass
@@ -119,10 +90,8 @@ async function discoverBuildErrors<TTools extends ToolRegistry>(context: CliWork
         status: 'pending',
         workflow: 'code',
         workflowInput: {
-          prompt: 'Fix all TypeScript errors reported by bun typecheck',
-          files: [],
-          context: output.slice(0, 1000),
-        },
+          task: `Fix all TypeScript errors reported by bun typecheck\n\n${output.slice(0, 1000)}`,
+        } satisfies CodeWorkflowInput,
         dependencies: [],
         files: [],
         createdAt: Date.now(),
@@ -157,10 +126,8 @@ async function discoverBuildErrors<TTools extends ToolRegistry>(context: CliWork
         status: 'pending',
         workflow: 'code',
         workflowInput: {
-          prompt: 'Fix build errors. Start by examining the build output carefully.',
-          files: [],
-          context: output.slice(0, 1000),
-        },
+          task: `Fix build errors. Start by examining the build output carefully.\n\n${output.slice(0, 1000)}`,
+        } satisfies CodeWorkflowInput,
         dependencies: [],
         files: [],
         createdAt: Date.now(),
@@ -213,10 +180,8 @@ async function discoverTestFailures<TTools extends ToolRegistry>(context: CliWor
         status: 'pending',
         workflow: 'code',
         workflowInput: {
-          prompt: `Fix failing tests:\n${failedTests.slice(0, 20).join('\n')}`,
-          files: [],
-          context: output.slice(0, 1500),
-        },
+          task: `Fix failing tests:\n${failedTests.slice(0, 20).join('\n')}\n\n${output.slice(0, 1500)}`,
+        } satisfies CodeWorkflowInput,
         dependencies: [],
         files: [],
         createdAt: Date.now(),
@@ -264,10 +229,8 @@ async function discoverTypeErrors<TTools extends ToolRegistry>(context: CliWorkf
       status: 'pending',
       workflow: 'code',
       workflowInput: {
-        prompt: 'Fix TypeScript type errors',
-        files: [],
-        context: output.slice(0, 1000),
-      },
+        task: `Fix TypeScript type errors\n\n${output.slice(0, 1000)}`,
+      } satisfies CodeWorkflowInput,
       dependencies: [],
       files: [],
       createdAt: Date.now(),
@@ -317,10 +280,8 @@ async function discoverLintIssues<TTools extends ToolRegistry>(context: CliWorkf
         status: 'pending',
         workflow: 'code',
         workflowInput: {
-          prompt: 'Fix lint issues',
-          files,
-          context: output.slice(0, 1000),
-        },
+          task: `Fix lint issues\n\n${output.slice(0, 1000)}`,
+        } satisfies CodeWorkflowInput,
         dependencies: [],
         files,
         createdAt: Date.now(),
@@ -340,83 +301,9 @@ async function discoverLintIssues<TTools extends ToolRegistry>(context: CliWorkf
 }
 
 /**
- * Load cached discovery results
- *
- * CRITICAL: Only use cache if git HEAD unchanged
- */
-async function loadFromCache<TTools extends ToolRegistry>(context: CliWorkflowContext<TTools>, cacheDir: string): Promise<Task[] | null> {
-  try {
-    const cacheFile = path.join(cacheDir, 'discovery-cache.json')
-    const exists = await fs
-      .access(cacheFile)
-      .then(() => true)
-      .catch(() => false)
-
-    if (!exists) {
-      return null
-    }
-
-    let cached: DiscoveryCache
-    try {
-      cached = JSON.parse(await fs.readFile(cacheFile, 'utf-8'))
-    } catch (error) {
-      context.logger.warn(`[Discovery] Failed to parse cache file: ${error instanceof Error ? error.message : String(error)}`)
-      return null
-    }
-
-    // Check if git state changed
-    const currentHead = await getGitHead(context.logger)
-    if (cached.gitHead !== currentHead) {
-      context.logger.info('[Discovery] Cache invalid (git state changed)')
-      return null
-    }
-
-    // Check cache age (max 1 hour)
-    const age = Date.now() - cached.timestamp
-    if (age > 3600000) {
-      context.logger.info('[Discovery] Cache expired (too old)')
-      return null
-    }
-
-    return cached.discoveredTasks
-  } catch (error) {
-    context.logger.warn('[Discovery] Failed to load cache', error as Error)
-    return null
-  }
-}
-
-/**
- * Save discovery results to cache
- */
-async function saveToCache<TTools extends ToolRegistry>(
-  context: CliWorkflowContext<TTools>,
-  cacheDir: string,
-  tasks: Task[],
-): Promise<void> {
-  try {
-    await fs.mkdir(cacheDir, { recursive: true })
-
-    const cacheFile = path.join(cacheDir, 'discovery-cache.json')
-    const gitHead = await getGitHead(context.logger)
-
-    const cache: DiscoveryCache = {
-      gitHead,
-      timestamp: Date.now(),
-      discoveredTasks: tasks,
-    }
-
-    await fs.writeFile(cacheFile, JSON.stringify(cache, null, 2))
-    context.logger.info('[Discovery] Cached discovery results')
-  } catch (error) {
-    context.logger.warn('[Discovery] Failed to save cache', error as Error)
-  }
-}
-
-/**
  * Task discovery engine state
  */
 interface TaskDiscoveryEngineState {
-  cacheDir: string
   backoffSeconds: number
   maxBackoffSeconds: number
 }
@@ -426,11 +313,11 @@ interface TaskDiscoveryEngineState {
  *
  * Critical behavior:
  * - Uses build output, then tests (not both in same workflow)
- * - Tracks git HEAD to invalidate cache on changes
+ * - Scans the current working tree on every iteration
  * - Exponential backoff in continuous mode
  */
 export interface TaskDiscoveryEngine {
-  discover(options?: { useCache?: boolean; includeAdvanced?: boolean }): Promise<Task[]>
+  discover(options?: { includeAdvanced?: boolean }): Promise<Task[]>
   getBackoffSeconds(): number
   increaseBackoff(): void
   resetBackoff(): void
@@ -440,7 +327,6 @@ export function createTaskDiscoveryEngine<TTools extends ToolRegistry = CliToolR
   context: CliWorkflowContext<TTools>,
 ): TaskDiscoveryEngine {
   const state: TaskDiscoveryEngineState = {
-    cacheDir: path.join(process.cwd(), '.polka', 'cache'),
     backoffSeconds: 60,
     maxBackoffSeconds: 900, // 15 minutes
   }
@@ -449,19 +335,10 @@ export function createTaskDiscoveryEngine<TTools extends ToolRegistry = CliToolR
     /**
      * Discover tasks in the codebase
      */
-    async discover(options: { useCache?: boolean; includeAdvanced?: boolean } = {}): Promise<Task[]> {
-      const { useCache = true, includeAdvanced = false } = options
+    async discover(options: { includeAdvanced?: boolean } = {}): Promise<Task[]> {
+      const { includeAdvanced = false } = options
 
       context.logger.info('[Discovery] Scanning codebase for issues...')
-
-      // Check cache first (only if git state unchanged)
-      if (useCache) {
-        const cached = await loadFromCache(context, state.cacheDir)
-        if (cached) {
-          context.logger.info(`[Discovery] Using cached results (${cached.length} tasks)`)
-          return cached
-        }
-      }
 
       const tasks: Task[] = []
 
@@ -507,9 +384,6 @@ export function createTaskDiscoveryEngine<TTools extends ToolRegistry = CliToolR
           context.logger.warn('[Discovery] Advanced strategies failed', error as Error)
         }
       }
-
-      // 6. Cache results if git state is stable
-      await saveToCache(context, state.cacheDir, tasks)
 
       context.logger.info(`[Discovery] Found ${tasks.length} tasks`)
 

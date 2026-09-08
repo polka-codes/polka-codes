@@ -11,7 +11,11 @@ for (const mode of ['goal', 'continuous']) {
     test(`${mode} mode enforces ${decision} approval and records the task outcome`, async () => {
       const dir = await mkdtemp(join(tmpdir(), 'approval-modes-'))
       try {
-        await writeFile(join(dir, 'package.json'), '{}')
+        await writeFile(
+          join(dir, 'package.json'),
+          JSON.stringify({ scripts: { typecheck: 'true', build: 'true', lint: 'echo source.ts >&2; exit 1', fix: 'true' } }),
+        )
+        await writeFile(join(dir, 'check.test.ts'), "import { test } from 'bun:test'; test('passes', () => {});")
         execFileSync('git', ['init', '-q'], { cwd: dir })
         execFileSync('git', ['add', 'package.json'], { cwd: dir })
         execFileSync('git', ['-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '-qm', 'initial'], { cwd: dir })
@@ -56,7 +60,7 @@ for (const mode of ['goal', 'continuous']) {
         if (!line) throw new Error(output || 'No child output')
         const executed = decision === 'none' || decision === 'accept'
         expect(JSON.parse(line.slice(7))).toEqual({
-          taskCalls: executed ? 1 : 0,
+          taskCalls: executed ? (mode === 'continuous' ? 2 : 1) : 0,
           queued: 0,
           completed: executed ? ['completed'] : [],
           blocked: !executed && (mode === 'continuous' || decision === 'reject') ? ['blocked'] : [],

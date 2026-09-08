@@ -295,7 +295,6 @@ agent:
       - "type-errors"
       - "lint-issues"
       - "working-dir"              # Monitor working directory for plans
-    cacheTime: 300000              # Cache discovery results for 5 minutes
     checkChanges: true             # Check for git changes
 
   # Safety checks

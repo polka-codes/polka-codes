@@ -90,7 +90,6 @@ export const DEFAULT_AGENT_CONFIG: AgentConfig = {
   },
   discovery: {
     enabledStrategies: [...DEFAULT_DISCOVERY_STRATEGIES],
-    cacheTime: 300000, // 5 minutes
     checkChanges: true,
   },
   approval: {
@@ -116,7 +115,6 @@ export const CONFIG_PRESETS: Record<string, Partial<AgentConfig>> = {
     maxConcurrency: 1,
     discovery: {
       enabledStrategies: [...DEFAULT_DISCOVERY_STRATEGIES],
-      cacheTime: 300000,
       checkChanges: true,
     },
   },
@@ -128,7 +126,6 @@ export const CONFIG_PRESETS: Record<string, Partial<AgentConfig>> = {
     maxConcurrency: 1,
     discovery: {
       enabledStrategies: [...DEFAULT_DISCOVERY_STRATEGIES],
-      cacheTime: 300000,
       checkChanges: true,
     },
   },
@@ -140,7 +137,6 @@ export const CONFIG_PRESETS: Record<string, Partial<AgentConfig>> = {
     maxConcurrency: 2,
     discovery: {
       enabledStrategies: [...ALL_DISCOVERY_STRATEGIES],
-      cacheTime: 600000,
       checkChanges: false,
     },
   },
@@ -154,7 +150,6 @@ export const CONFIG_PRESETS: Record<string, Partial<AgentConfig>> = {
     maxConcurrency: 2,
     discovery: {
       enabledStrategies: [...DEFAULT_DISCOVERY_STRATEGIES, 'test-coverage'],
-      cacheTime: 300000,
       checkChanges: true,
     },
   },
@@ -169,7 +164,6 @@ export const CONFIG_PRESETS: Record<string, Partial<AgentConfig>> = {
     workingDir: './plans', // Default working directory
     discovery: {
       enabledStrategies: ['working-dir'],
-      cacheTime: 60000, // Check every minute for new tasks
       checkChanges: false,
     },
   },
