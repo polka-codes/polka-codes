@@ -272,6 +272,7 @@ async function getSqlJs(): Promise<SqlJsStatic> {
         `Attempted to locate WASM at:\n` +
         `  - ${bundledWasmPath}\n\n` +
         `If you're developing, run: bun run build in packages/cli-shared`,
+      { cause: error },
     )
   }
 }
@@ -340,7 +341,7 @@ export class SQLiteMemoryStore implements IMemoryStore {
   /**
    * Initialize database connection and schema
    */
-  private async initializeDatabase(): Promise<Database> {
+  private async initializeDatabase(recoverCorruption = false): Promise<Database> {
     // Use promise singleton pattern to prevent race conditions
     if (this.dbPromise) {
       return this.dbPromise
@@ -353,72 +354,57 @@ export class SQLiteMemoryStore implements IMemoryStore {
 
       const dbPath = this.resolvePath(this.getDbPath())
 
+      const SqlJs = await getSqlJs()
+      let dbData: Uint8Array | undefined
       try {
-        // Create directory if needed
-        const dir = dirname(dbPath)
-        if (!existsSync(dir)) {
-          await mkdir(dir, { recursive: true, mode: 0o700 })
-        }
-
-        // Trigger cleanup of old lock files in the background
-        // This is fire-and-forget - we don't await the result
-        FileLock.cleanupOldLockFiles(dbPath).catch(() => {
-          // Ignore errors
-        })
-
-        // Load existing database data or create new one
-        let dbData: Uint8Array | undefined
-        if (existsSync(dbPath)) {
-          try {
-            dbData = await readFile(dbPath)
-            if (dbData.length >= 16 && String.fromCharCode(...dbData.subarray(0, 15)) !== 'SQLite format 3') {
-              console.warn('[SQLiteMemoryStore] Invalid SQLite database header, will recreate')
-              dbData = undefined
-            }
-          } catch (error) {
-            if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT')) throw error
-          }
-        }
-
-        // Initialize sql.js and create database
-        const SqlJs = await getSqlJs()
-        const db = new SqlJs.Database(dbData)
-
-        // Configure pragmas
-        this.configurePragmas(db)
-
-        // Check integrity and initialize schema
-        this.checkIntegrity(db)
-        this.initializeSchema(db)
-
-        this.db = db
-        return db
+        dbData = await readFile(dbPath)
       } catch (error) {
-        console.error('[SQLiteMemoryStore] Initialization failed:', error)
-
-        // Recovery: backup corrupted database
-        if (existsSync(dbPath)) {
-          const backupPath = `${dbPath}.corrupted.${Date.now()}`
-          console.warn(`[SQLiteMemoryStore] Backing up corrupted database to: ${backupPath}`)
-          try {
-            await rename(dbPath, backupPath)
-          } catch (backupError) {
-            console.error('[SQLiteMemoryStore] Failed to backup corrupted database:', backupError)
-            this.dbPromise = null
-            throw backupError
-          }
-
-          // Clear promise and retry once
-          this.dbPromise = null
-          return this.initializeDatabase()
-        }
-
-        this.dbPromise = null
-        throw error
+        if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT')) throw error
       }
+
+      const openDatabase = (data?: Uint8Array): Database => {
+        if (data && (data.length < 16 || new TextDecoder().decode(data.subarray(0, 16)) !== 'SQLite format 3\0')) {
+          throw new Error('Invalid SQLite database header')
+        }
+        const db = new SqlJs.Database(data)
+        try {
+          this.configurePragmas(db)
+          this.checkIntegrity(db)
+          this.initializeSchema(db)
+          return db
+        } catch (error) {
+          db.close()
+          throw error
+        }
+      }
+
+      try {
+        this.db = openDatabase(dbData)
+      } catch (error) {
+        const corruption =
+          error instanceof Error &&
+          [
+            'Invalid SQLite database header',
+            'file is not a database',
+            'database disk image is malformed',
+            'Database integrity check failed',
+          ].includes(error.message)
+        if (!recoverCorruption || !dbData || !corruption) throw error
+        // Only the outer write transaction requests recovery; it owns the file lock.
+        const backupPath = `${dbPath}.corrupted.${randomUUID()}`
+        await rename(dbPath, backupPath)
+        console.warn(`[SQLiteMemoryStore] Backed up corrupted database to: ${backupPath}`)
+        this.db = openDatabase()
+      }
+      return this.db
     })()
 
-    return this.dbPromise
+    try {
+      return await this.dbPromise
+    } catch (error) {
+      this.dbPromise = null
+      throw error
+    }
   }
 
   /**
@@ -451,15 +437,9 @@ export class SQLiteMemoryStore implements IMemoryStore {
    * Check database integrity
    */
   private checkIntegrity(db: Database): void {
-    try {
-      // Ensure the database is accessible
-      const results = db.exec('SELECT 1')
-      if (results.length === 0) {
-        throw new Error('Database query returned no results')
-      }
-    } catch (error) {
-      console.error('[SQLiteMemoryStore] Integrity check failed:', error)
-      throw new Error('Database is corrupted')
+    const results = db.exec('PRAGMA quick_check')
+    if (results[0]?.values.length !== 1 || results[0]?.values[0]?.[0] !== 'ok') {
+      throw new Error('Database integrity check failed')
     }
   }
 
@@ -494,9 +474,9 @@ export class SQLiteMemoryStore implements IMemoryStore {
   /**
    * Get database instance
    */
-  private async getDatabase(): Promise<Database> {
+  private async getDatabase(recoverCorruption = false): Promise<Database> {
     if (!this.db) {
-      this.db = await this.initializeDatabase()
+      this.db = await this.initializeDatabase(recoverCorruption)
     }
     return this.db
   }
@@ -551,7 +531,7 @@ export class SQLiteMemoryStore implements IMemoryStore {
           // Discard cached snapshots only after excluding other writers.
           await this.close()
         }
-        const db = await this.getDatabase()
+        const db = await this.getDatabase(shouldBegin)
 
         // Nested transactions share the outer transaction and its file lock.
         try {
