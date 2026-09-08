@@ -939,8 +939,11 @@ export class SQLiteMemoryStore implements IMemoryStore {
     })
   }
 
-  /** Close the in-memory snapshot. Transactions persist their own changes. */
-  async close(): Promise<void> {
+  /**
+   * Close the in-memory snapshot. Transactions persist their own changes.
+   * @param _skipSave Deprecated; accepted for compatibility and ignored.
+   */
+  async close(_skipSave?: boolean): Promise<void> {
     this.db?.close()
     this.db = null
     this.dbPromise = null

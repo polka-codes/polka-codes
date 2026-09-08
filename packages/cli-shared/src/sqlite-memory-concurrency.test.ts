@@ -22,7 +22,7 @@ async function withDatabase(run: (open: () => SQLiteMemoryStore, path: string) =
   }
 }
 
-test('interleaved writers and stale readers preserve committed updates and deletions', async () => {
+test.each([undefined, false, true])('close(%s) preserves interleaved updates and deletions', async (skipSave) => {
   await withDatabase(async (open) => {
     const a = open()
     await a.updateMemory('replace', 'a', 'first')
@@ -34,7 +34,7 @@ test('interleaved writers and stale readers preserve committed updates and delet
     await b.updateMemory('remove', 'a', undefined)
     await a.updateMemory('replace', 'c', 'third')
     await Promise.all([a.updateMemory('append', 'b', 'A'), b.updateMemory('append', 'b', 'B')])
-    await reader.close()
+    await reader.close(skipSave)
     await a.close()
     await b.close()
     const persisted = open()
