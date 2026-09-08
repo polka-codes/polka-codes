@@ -2,11 +2,21 @@
 
 import path from 'node:path'
 import { parseGitPorcelain } from '@polka-codes/cli-shared'
-import { agentWorkflow, listFiles, readBinaryFile, readFile, searchFiles, type WorkflowFn } from '@polka-codes/core'
+import {
+  type AgentToolRegistry,
+  agentWorkflow,
+  listFiles,
+  readBinaryFile,
+  readFile,
+  searchFiles,
+  type WorkflowFn,
+  type WorkflowTools,
+} from '@polka-codes/core'
+import { z } from 'zod'
 import { MissingDependencyError } from '../errors'
 import { gitDiff } from '../tools'
 import type { CliToolRegistry } from '../workflow-tools'
-import { createGitAwareDiff, createGitAwareTools, extractTargetCommit } from './git-file-tools'
+import { createGitAwareDiff, createGitAwareTools } from './git-file-tools'
 import { CODE_REVIEW_SYSTEM_PROMPT, formatReviewToolInput, type ReviewToolInput } from './prompts'
 import {
   type BaseWorkflowInput,
@@ -396,26 +406,26 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput,
     return { overview: 'No changes to review.', specificReviews: [] }
   }
 
-  // Detect if we're reviewing a specific commit (not HEAD) or a commit range
-  // For ranges (e.g., "A..B"), use regular gitDiff which handles ranges correctly
-  // Only use git-aware tools for single commits
-  const targetCommit = resolvedCommit ?? extractTargetCommit(range, pr)
-  const isRange = range?.includes('..')
-
-  // Add targetCommit to changeInfo if present (and not a range)
-  const finalChangeInfo = targetCommit && !isRange ? { ...changeInfo, targetCommit } : changeInfo
-
-  // If reviewing a specific commit (single commit, not range), use git-aware tools
-  // For ranges or local changes, use regular filesystem tools
-  const fileTools = targetCommit && !isRange ? createGitAwareTools(targetCommit) : { readFile, listFiles, readBinaryFile }
-
-  // When reviewing single commits, use git-aware versions of all tools including gitDiff
-  // gitDiff for commits uses `git show <commit>` to display changes
-  // For ranges or local changes, use regular gitDiff which handles them correctly
-  const reviewTools =
-    targetCommit && !isRange
-      ? [fileTools.readFile, fileTools.readBinaryFile, fileTools.listFiles, createGitAwareDiff(targetCommit)]
-      : [readFile, readBinaryFile, searchFiles, listFiles, gitDiff]
+  const finalChangeInfo = resolvedCommit ? { ...changeInfo, targetCommit: resolvedCommit } : changeInfo
+  const reviewTools = resolvedCommit
+    ? [...Object.values(createGitAwareTools(resolvedCommit)), createGitAwareDiff(resolvedCommit)]
+    : [readFile, readBinaryFile, searchFiles, listFiles, gitDiff]
+  const agentTools: WorkflowTools<AgentToolRegistry> = {
+    generateText: (input) => tools.generateText(input),
+    taskEvent: (event) => tools.taskEvent(event),
+    invokeTool: async (input) => {
+      if (!resolvedCommit) return tools.invokeTool(input)
+      // Dispatch the same commit-specific handlers whose schemas the model sees.
+      input.signal?.throwIfAborted()
+      const tool = reviewTools.find((tool) => tool.name === input.toolName)
+      if (!tool) throw new Error(`Unknown review tool: ${input.toolName}`)
+      return tool.handler(
+        { executeCommand: (command: string) => tools.executeCommand({ command, shell: true, signal: input.signal }) },
+        z.record(z.string(), z.json()).parse(input.input),
+        input.signal,
+      )
+    },
+  }
 
   const result = await step('review', async () => {
     const { context: defaultContext } = await getDefaultContext(input.config, 'review')
@@ -435,7 +445,7 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput,
         tools: reviewTools,
         outputSchema: reviewOutputSchema,
       },
-      context,
+      { ...context, tools: agentTools },
     )
   })
 
