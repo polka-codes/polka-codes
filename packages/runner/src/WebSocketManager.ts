@@ -161,6 +161,10 @@ export class WebSocketManager {
         message: 'Failed to process message',
         details: String(error),
       })
+      // A protocol/execution error is terminal. Flush the error frame during close,
+      // then fail the job instead of waiting for a server response that will not arrive.
+      process.exitCode = 1
+      this.close(true)
     }
   }
 
@@ -176,6 +180,12 @@ export class WebSocketManager {
     if (this.isClosingExpected) {
       console.log('Connection closed as expected.')
       return // Don't reconnect if closure was intended
+    }
+
+    if (code === 1008) {
+      console.error('Runner protocol rejected by the server.')
+      process.exit(1)
+      return
     }
 
     if (!this.initialConnectionEstablished) {
