@@ -23,6 +23,18 @@ describe('getProvider', () => {
   })
 
   describe('executeCommand', () => {
+    it.each([false, true])('fails a signal-terminated command with output summarization %s', async (summarize) => {
+      const onExit = mock(() => {})
+      const provider = getProvider({
+        command: { onExit, onStarted() {}, onStdout() {}, onStderr() {}, onError() {} },
+        ...(summarize ? { summaryThreshold: 0, summarizeOutput: async () => 'summary' } : {}),
+      })
+      if (!provider.executeCommand) throw new Error('executeCommand not defined')
+      const result = await provider.executeCommand("printf 'before signal'; kill -TERM $$", false)
+      expect(result).toMatchObject({ stdout: 'before signal', exitCode: 1 })
+      expect(onExit).toHaveBeenCalledWith(1)
+    })
+
     it('closes stdin while preserving command results and observers', async () => {
       const onStarted = mock(() => {})
       const onStdout = mock(() => {})

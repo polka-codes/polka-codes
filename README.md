@@ -355,6 +355,12 @@ The project is organized as a monorepo with the following packages:
 | [`github`](/packages/github) | GitHub integration, including the GitHub Action. |
 | [`runner`](/packages/runner) | Service for running agents and managing tasks. |
 
+## Runner command results
+
+For `pending_tools` batches containing only `executeCommand` requests, each `pending_tools_response.responses[].response` is `{ stdout, stderr, exitCode }`. Exit code `0` means success, a nonzero code means failure, and `null` marks a command skipped after an earlier failure. Consumers must use these fields instead of parsing formatted command output. Mixed-tool batches retain their existing content response format.
+
+Signal-terminated commands fail. The runner exits nonzero after a failed command batch or a terminal protocol error; a server policy rejection (WebSocket code 1008) is terminal.
+
 ## Getting Started
 
 ### Prerequisites

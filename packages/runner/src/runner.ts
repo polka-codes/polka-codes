@@ -15,6 +15,7 @@ import {
   type ToolResponseResult,
   writeToFile,
 } from '@polka-codes/core'
+import { executeRunnerCommands } from './commands'
 import type { UserContent, WsIncomingMessage } from './types'
 import { WebSocketManager } from './WebSocketManager'
 
@@ -81,6 +82,7 @@ export interface RunnerOptions {
 }
 
 export class Runner {
+  #commandFailed = false
   private wsManager: WebSocketManager
   private provider: ReturnType<typeof getProvider>
   private availableTools: Record<string, FullToolInfo>
@@ -171,6 +173,15 @@ export class Runner {
       `Received tool requests for step ${message.step}:`,
       message.requests.map((r) => r.tool),
     )
+
+    if (message.requests.every((request) => request.tool === 'executeCommand')) {
+      const execute = this.provider.executeCommand
+      if (!execute) throw new Error('Runner command execution is unavailable.')
+      const responses = await executeRunnerCommands(message.requests, execute)
+      this.#commandFailed ||= responses.some(({ response }) => response.exitCode !== 0)
+      this.wsManager.sendMessage({ type: 'pending_tools_response', step: message.step, responses })
+      return
+    }
 
     const responses: { index: number; tool: string; response: UserContent }[] = []
 
@@ -335,7 +346,7 @@ export class Runner {
     console.log('Received done message. Closing connection.')
     this.wsManager.close(true)
     // Ensure exit happens after potential close event processing
-    setImmediate(() => process.exit(0))
+    setImmediate(() => process.exit(this.#commandFailed ? 1 : 0))
   }
 
   /**
