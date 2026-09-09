@@ -56,19 +56,15 @@ export function createGitReadFile(commit: string): FullToolInfo {
       path: z
         .preprocess(
           (val) => {
-            if (!val) return []
-            const values = Array.isArray(val) ? val : [val]
-            // NOTE: Comma-splitting matches standard readFile tool behavior
-            // This prevents reading files with commas in their names, but allows
-            // reading multiple files in a single call (e.g., "file1.ts,file2.ts")
-            return values
-              .flatMap((i) => (typeof i === 'string' ? i.split(',') : []))
+            if (typeof val !== 'string') return val
+            return val
+              .split(',')
               .map((value) => value.trim())
               .filter((value) => value.length > 0)
           },
           z.array(z.string().min(1)).min(1),
         )
-        .describe('Repository-relative path or comma-separated paths.'),
+        .describe('Repository-relative paths. Use an array to preserve commas or surrounding whitespace; strings are comma-separated.'),
     }),
   } as const satisfies ToolInfo
 
@@ -124,7 +120,11 @@ export function createGitListFiles(commit: string): FullToolInfo {
     name: 'listFiles',
     description: `List repository-relative files as they existed at git commit ${commit}.`,
     parameters: z.object({
-      path: z.string().trim().min(1).optional().describe('Repository-relative directory. Defaults to the repository root.'),
+      path: z
+        .string()
+        .regex(/\S/, 'Directory path must not be blank.')
+        .optional()
+        .describe('Repository-relative directory. Defaults to the repository root.'),
       maxCount: z.coerce.number().int().positive().default(2000).describe('Maximum number of paths to return.'),
     }),
   } as const satisfies ToolInfo
@@ -140,15 +140,17 @@ export function createGitListFiles(commit: string): FullToolInfo {
       }
     }
 
-    // Parse with fallback for empty string to '.'
     const parsed = toolInfo.parameters.parse(args)
-    const path = parsed.path || '.'
+    const path = parsed.path ?? '.'
 
     // SECURITY: Use quoteForShell to prevent command injection
     const quotedCommit = quoteForShell(commit)
     const quotedPath = quoteForShell(path)
     // Use git ls-tree to list files at the specific commit
-    const result = await provider.executeCommand(`git ls-tree -r -z --name-only ${quotedCommit} -- ${quotedPath}`, false)
+    const result = await provider.executeCommand(
+      `git --literal-pathspecs ls-tree --full-tree -r -z --name-only ${quotedCommit} -- ${quotedPath}`,
+      false,
+    )
 
     if (result.exitCode !== 0) {
       return {
@@ -192,7 +194,7 @@ export function createGitReadBinaryFile(commit: string): FullToolInfo {
     name: 'readBinaryFile',
     description: `Read one binary file as it existed at git commit ${commit}.`,
     parameters: z.object({
-      url: z.string().trim().min(1).describe('Repository-relative file path; URLs are not supported.'),
+      url: z.string().regex(/\S/, 'File path must not be blank.').describe('Repository-relative file path; URLs are not supported.'),
     }),
   } as const satisfies ToolInfo
 
@@ -304,7 +306,7 @@ export function createGitAwareDiff(commit: string): FullToolInfo {
     name: 'git_diff',
     description: `Show changes to one file introduced by git commit ${commit}.`,
     parameters: z.object({
-      file: z.string().trim().min(1).describe('Repository-relative file path.'),
+      file: z.string().regex(/\S/, 'File path must not be blank.').describe('Repository-relative file path.'),
       contextLines: z.coerce.number().int().min(0).default(5).describe('Context lines around each change.'),
       includeLineNumbers: z
         .preprocess((val) => {
@@ -335,7 +337,7 @@ export function createGitAwareDiff(commit: string): FullToolInfo {
     // SECURITY: Use quoteForShell to prevent command injection
     const quotedCommit = quoteForShell(commit)
 
-    const quotedFile = quoteForShell(file)
+    const quotedFile = quoteForShell(`:(top,literal)${file}`)
     const command = `git show --no-color --format= -U${contextLines} ${quotedCommit} -- ${quotedFile}`
 
     try {
