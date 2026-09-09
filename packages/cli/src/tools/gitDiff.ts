@@ -53,14 +53,14 @@ export const handler: ToolHandler<typeof toolInfo, CommandProvider> = async (pro
 
   const { staged, file, commitRange, contextLines, includeLineNumbers } = toolInfo.parameters.parse(args)
 
-  const gitArgs = ['--literal-pathspecs', 'diff', '--no-color', `-U${contextLines}`]
+  const gitArgs = ['diff', '--no-color', `-U${contextLines}`]
   if (staged) {
     gitArgs.push('--staged')
   }
   if (commitRange) {
     gitArgs.push(commitRange)
   }
-  gitArgs.push('--', file)
+  gitArgs.push('--', `:(top,literal)${file}`)
 
   try {
     const result = await provider.executeFile('git', gitArgs)

@@ -3,6 +3,9 @@ import { execFileSync } from 'node:child_process'
 import { mkdtemp, rename, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { createContext } from '@polka-codes/core'
+import type { CliToolRegistry } from '../workflow-tools'
+import { commitWorkflow } from './commit.workflow'
 import { parseGitDiffNameStatus, parseGitDiffNumStat, parseGitStatus } from './workflow.utils'
 
 test('real Git rename records preserve both paths and align destination statistics', async () => {
@@ -30,6 +33,57 @@ test('real Git rename records preserve both paths and align destination statisti
       expect(diff).toContainEqual({ ...paths, status: 'Renamed' })
       expect(stats[`new-${name}`]).toEqual({ insertions: 1, deletions: 0 })
     }
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+})
+
+test.each(['literal[ab].txt', ':(glob)*.txt', '--all'])('commit file selection preserves the literal filename %s', async (file) => {
+  const dir = await mkdtemp(join(tmpdir(), 'commit-paths-'))
+  const git = (...args: string[]) => execFileSync('git', args, { cwd: dir, encoding: 'utf8' })
+  const unused = async () => {
+    throw new Error('Unexpected tool call')
+  }
+  const context = createContext<CliToolRegistry>({
+    executeCommand: async (input) => {
+      if (input.shell) throw new Error('Unexpected shell command')
+      return { stdout: execFileSync(input.command, input.args, { cwd: dir, encoding: 'utf8' }), stderr: '', exitCode: 0 }
+    },
+    printChangeFile: async () => ({ stagedFiles: [], unstagedFiles: parseGitStatus(git('status', '--porcelain=v1', '-z')) }),
+    createCommit: async ({ message }) => {
+      git('-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '-qm', message)
+      return { message }
+    },
+    generateText: async ({ messages }) => ({
+      requestMessages: messages,
+      responseMessages: [{ role: 'assistant', content: JSON.stringify({ commitMessage: 'Update selected file' }) }],
+    }),
+    taskEvent: async () => {},
+    invokeTool: unused,
+    confirm: unused,
+    input: unused,
+    select: unused,
+    readFile: unused,
+    writeToFile: unused,
+    getMemoryContext: unused,
+    readMemory: unused,
+    listMemoryTopics: unused,
+    updateMemory: unused,
+    listTodoItems: unused,
+    getTodoItem: unused,
+    updateTodoItem: unused,
+    createPullRequest: unused,
+    runAgent: unused,
+  })
+  try {
+    git('init', '-q')
+    for (const name of [file, 'literala.txt']) await writeFile(join(dir, name), 'before\n')
+    git('add', '--all')
+    git('-c', 'user.name=Test', '-c', 'user.email=test@example.com', 'commit', '-qm', 'initial')
+    for (const name of [file, 'literala.txt']) await writeFile(join(dir, name), 'after\n')
+    await commitWorkflow({ files: [file], interactive: false, additionalTools: {} }, context)
+    expect(git('diff', '--name-only', '-z', 'HEAD~1', 'HEAD')).toBe(`${file}\0`)
+    expect(git('diff', '--name-only', '-z')).toBe('literala.txt\0')
   } finally {
     await rm(dir, { recursive: true, force: true })
   }
