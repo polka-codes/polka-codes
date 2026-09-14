@@ -152,13 +152,13 @@ export class Runner {
   /**
    * Start the runner
    */
-  public start(): void {
+  public async start(): Promise<void> {
     console.log('Runner initialized with:')
     console.log(`  API URL: ${this.options.api}`)
     console.log(`  Task ID: ${this.options.taskId}`)
 
     // Connect to WebSocket server
-    this.wsManager.connect()
+    await this.wsManager.connect()
   }
 
   /**
@@ -427,5 +427,5 @@ export async function runRunner(options: RunnerOptions): Promise<void> {
 
   // Create and start the runner
   const runner = new Runner(options, config)
-  runner.start()
+  await runner.start()
 }

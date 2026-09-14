@@ -355,6 +355,26 @@ The project is organized as a monorepo with the following packages:
 | [`github`](/packages/github) | GitHub integration, including the GitHub Action. |
 | [`runner`](/packages/runner) | Service for running agents and managing tasks. |
 
+### Runner Authentication
+
+Install `@polka-codes/runner@latest` and run it inside a GitHub Actions job with job-level permissions:
+
+```yaml
+permissions:
+  contents: read
+  id-token: write
+```
+
+The runner takes the connection details supplied by the app:
+
+```bash
+polka-runner --task-id "$TASK_ID" --session-token "$SESSION_TOKEN" --api "$API_URL"
+```
+
+The runner requests a fresh GitHub Actions OIDC token for each WebSocket connection, including reconnects. The receiving app must verify that token together with the task-scoped session token before accepting the connection. GitHub-hosted and self-hosted Actions jobs are supported; no OIDC token option or additional secret is needed. An independently supplied `GITHUB_TOKEN` remains available to commands and is not used for runner authentication.
+
+Missing OIDC credentials, failed token acquisition, and authentication rejection fail the job. Token expiry does not interrupt an established connection.
+
 ### Runner Command Responses
 
 For `pending_tools` batches containing only `executeCommand` requests, each `pending_tools_response.responses[].response` is `{ stdout, stderr, exitCode }`. Exit code `0` means success, a nonzero code means failure, and `null` marks a command skipped after an earlier failure. Custom runner consumers must read these fields instead of parsing the old text-content arrays. Mixed-tool batches retain their existing content response format.

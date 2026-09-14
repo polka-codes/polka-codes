@@ -3,6 +3,7 @@
 
 import WebSocket from 'ws'
 
+import { requestGitHubOidcToken } from './github-oidc'
 import { type WsIncomingMessage, type WsOutgoingMessage, wsIncomingMessageSchema } from './types'
 
 export function normalizeRunnerApiUrl(apiUrl: string): string {
@@ -44,30 +45,45 @@ export class WebSocketManager {
 
   #queuedMessages: WsOutgoingMessage[] = []
   #reconnectTimer?: ReturnType<typeof setTimeout>
+  #tokenRequest?: AbortController
 
   constructor(private options: WebSocketManagerOptions) {}
 
   /**
    * Connects to the WebSocket server and sets up event handlers
    */
-  public connect(): void {
+  public async connect(): Promise<void> {
     if (this.#reconnectTimer) {
       clearTimeout(this.#reconnectTimer)
       this.#reconnectTimer = undefined
     }
     const apiUrl = normalizeRunnerApiUrl(this.options.apiUrl)
     const taskId = encodeURIComponent(this.options.taskId)
+    const origin = new URL(apiUrl)
+    origin.protocol = origin.protocol === 'wss:' ? 'https:' : 'http:'
+    const audience = `${origin.origin}/api/ws/runner/${taskId}`
 
     console.log(`Attempting to connect to WebSocket: ${apiUrl}/${taskId} (Attempt ${this.reconnectAttempts + 1})`)
 
     this.isClosingExpected = false // Reset flag on new connection attempt
-    this.ws = new WebSocket(`${apiUrl}/${taskId}`, {
-      headers: {
-        'x-session-token': this.options.sessionToken,
-      },
-    })
+    const request = new AbortController()
+    this.#tokenRequest = request
+    try {
+      const token = await requestGitHubOidcToken(audience, request.signal)
+      if (request.signal.aborted) return
+      this.ws = new WebSocket(`${apiUrl}/${taskId}`, {
+        headers: {
+          'x-session-token': this.options.sessionToken,
+          'x-github-oidc-token': token,
+        },
+      })
 
-    this.setupEventHandlers()
+      this.setupEventHandlers()
+    } catch (error) {
+      if (!request.signal.aborted) throw error
+    } finally {
+      if (this.#tokenRequest === request) this.#tokenRequest = undefined
+    }
   }
 
   /**
@@ -106,6 +122,7 @@ export class WebSocketManager {
    */
   public close(expected = true): void {
     this.isClosingExpected = expected
+    this.#tokenRequest?.abort()
     if (this.#reconnectTimer) {
       clearTimeout(this.#reconnectTimer)
       this.#reconnectTimer = undefined
@@ -123,6 +140,20 @@ export class WebSocketManager {
     this.ws.on('message', this.handleMessage.bind(this))
     this.ws.on('error', this.handleError.bind(this))
     this.ws.on('close', this.handleClose.bind(this))
+    const socket = this.ws
+    socket.on('unexpected-response', (request, response) => {
+      // This listener takes over ws's default cleanup for every rejected upgrade.
+      const denied = response.statusCode === 401 || response.statusCode === 403
+      if (denied) {
+        this.isClosingExpected = true
+        console.error(`Runner authentication rejected (HTTP ${response.statusCode}). Check the job's authorization for this session.`)
+        response.destroy()
+        socket.terminate()
+        process.exit(1)
+      }
+      request.destroy(new Error(`WebSocket upgrade failed (HTTP ${response.statusCode}).`))
+      response.destroy()
+    })
   }
 
   private handleOpen(): void {
@@ -206,7 +237,11 @@ export class WebSocketManager {
 
       this.#reconnectTimer = setTimeout(() => {
         this.#reconnectTimer = undefined
-        this.connect()
+        this.connect().catch((error: unknown) => {
+          console.error('Runner reconnect failed:', error instanceof Error ? error.message : 'Unknown startup error.')
+          this.close(true)
+          process.exit(1)
+        })
       }, delay)
     } else {
       console.error(`Maximum reconnection attempts (${this.MAX_RECONNECT_ATTEMPTS}) reached. Exiting.`)

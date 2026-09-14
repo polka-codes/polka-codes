@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test'
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { access, mkdir, mkdtemp, rename, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -6,12 +6,38 @@ import { fileURLToPath } from 'node:url'
 import { z } from 'zod'
 import { type WsIncomingMessage, wsOutgoingMessageSchema } from './types'
 
-const runnerCli = fileURLToPath(new URL('./cli.ts', import.meta.url))
+let runnerCli: string
+let buildDirectory: string
+
+beforeAll(async () => {
+  buildDirectory = await mkdtemp(join(tmpdir(), 'runner-cli-build-'))
+  // Exercise Node's ws implementation, including HTTP upgrade rejection events.
+  const build = await Bun.build({
+    entrypoints: [fileURLToPath(new URL('./cli.ts', import.meta.url))],
+    target: 'node',
+    outdir: buildDirectory,
+  })
+  expect(build.success).toBe(true)
+  runnerCli = join(buildDirectory, 'cli.js')
+})
+
+afterAll(async () => {
+  await rm(buildDirectory, { recursive: true, force: true })
+})
+
+interface AuthScenario {
+  tokenFailure?: 'missing-url' | 'missing-token' | 'http' | 'json' | 'empty'
+  tokenFailureAt?: number
+  upgradeStatus?: number
+  upgradeFailureAt?: number
+  policyRejectAt?: number
+}
 
 async function runRunnerProcess(
   onConnected: WsIncomingMessage | 'reject' | 'reconnect',
   setup?: (directory: string) => Promise<void>,
   githubToken?: string,
+  scenario: AuthScenario = {},
 ) {
   const directory = await mkdtemp(join(tmpdir(), 'runner-lifecycle-'))
   let fixture: Bun.Subprocess<'ignore', 'pipe', 'pipe'> | undefined
@@ -22,11 +48,10 @@ async function runRunnerProcess(
       [
         'node',
         fileURLToPath(new URL('./test-fixtures/run-runner-session.cjs', import.meta.url)),
-        process.execPath,
+        'node',
         runnerCli,
         directory,
-        JSON.stringify(onConnected),
-        ...(githubToken === undefined ? [] : [githubToken]),
+        JSON.stringify({ onConnected, githubToken, ...scenario }),
       ],
       { stdout: 'pipe', stderr: 'pipe' },
     )
@@ -36,17 +61,28 @@ async function runRunnerProcess(
       new Response(fixture.stderr).text(),
     ])
     expect({ exitCode, stderr }).toEqual({ exitCode: 0, stderr: '' })
+    const credentialsSchema = z.object({ sessionToken: z.string(), oidcToken: z.string(), githubToken: z.string().optional() })
     const result = z
       .object({
         exitCode: z.number().int().nullable(),
-        connections: z.array(z.object({ sessionToken: z.string(), githubToken: z.string().optional() })),
+        api: z.string(),
+        tokenRequests: z.array(z.object({ audience: z.string(), authorization: z.string() })),
+        upgrades: z.array(credentialsSchema),
+        connections: z.array(credentialsSchema),
         messages: z.array(wsOutgoingMessageSchema),
         stdout: z.string(),
         stderr: z.string(),
       })
       .parse(JSON.parse(stdout))
-    expect(result.connections.length).toBeGreaterThan(0)
-    for (const connection of result.connections) expect(connection).toEqual({ sessionToken: 'test-token' })
+    for (const request of result.tokenRequests) {
+      expect(request).toEqual({ audience: `${result.api}/api/ws/runner/lifecycle-test`, authorization: 'Bearer request-secret' })
+    }
+    for (const [index, upgrade] of result.upgrades.entries()) {
+      expect(upgrade).toEqual({ sessionToken: 'test-token', oidcToken: `oidc-token-${index + 1}` })
+    }
+    for (const secret of ['test-token', 'request-secret', 'url-secret', 'response-secret', 'oidc-token-']) {
+      expect(result.stdout + result.stderr).not.toContain(secret)
+    }
     return result
   } finally {
     fixture?.kill()
@@ -56,7 +92,7 @@ async function runRunnerProcess(
 
 describe('runner CLI options', () => {
   test('shows the session credential and API options without a GitHub token option', () => {
-    const result = Bun.spawnSync([process.execPath, runnerCli, '--help'])
+    const result = Bun.spawnSync(['node', runnerCli, '--help'])
     expect(result.exitCode).toBe(0)
     const help = result.stdout.toString()
     expect(help).toContain('--task-id <id>')
@@ -72,7 +108,7 @@ describe('runner CLI options', () => {
       error: "unknown option '--github-token'",
     },
   ])('rejects $error', ({ args, error }) => {
-    const result = Bun.spawnSync([process.execPath, runnerCli, ...args])
+    const result = Bun.spawnSync(['node', runnerCli, ...args])
     expect(result.exitCode).toBe(1)
     expect(result.stderr.toString()).toContain(error)
     expect(result.stdout.toString()).not.toContain('Attempting to connect')
@@ -121,9 +157,10 @@ describe('runner process completion', () => {
     expect(result.exitCode).toBe(0)
   })
 
-  test('authenticates reconnects with only the session token', async () => {
+  test('authenticates reconnects with a fresh OIDC token and the session token', async () => {
     const result = await runRunnerProcess('reconnect')
     expect(result.connections).toHaveLength(2)
+    expect(result.tokenRequests).toHaveLength(2)
     expect(result.messages).toEqual([{ type: 'connected' }, { type: 'connected' }])
     expect(result.exitCode).toBe(0)
   })
@@ -153,6 +190,69 @@ describe('runner process completion', () => {
     expect(result.exitCode).toBe(1)
     expect(result.stdout).not.toContain('Attempting to reconnect')
   })
+})
+
+describe('runner authentication failures', () => {
+  test.each(['missing-url', 'missing-token', 'http', 'json', 'empty'] as const)(
+    'fails closed on %s acquisition failure',
+    async (tokenFailure) => {
+      const result = await runRunnerProcess({ type: 'done' }, undefined, 'independent-github-token', { tokenFailure })
+      expect(result.exitCode).toBe(1)
+      expect(result.tokenRequests).toHaveLength(tokenFailure.startsWith('missing') ? 0 : 1)
+      expect(result.upgrades).toHaveLength(0)
+      expect(result.connections).toHaveLength(0)
+      expect(result.messages).toEqual([])
+      expect(result.stderr).toContain('Runner startup failed:')
+      expect(result.stdout).not.toContain('Attempting to reconnect')
+      if (tokenFailure.startsWith('missing')) expect(result.stderr).toContain('id-token: write')
+    },
+  )
+
+  test.each([401, 403])('treats HTTP %i during initial upgrade as terminal', async (upgradeStatus) => {
+    const result = await runRunnerProcess({ type: 'done' }, undefined, undefined, { upgradeStatus })
+    expect(result.exitCode).toBe(1)
+    expect(result.tokenRequests).toHaveLength(1)
+    expect(result.upgrades).toHaveLength(1)
+    expect(result.connections).toHaveLength(0)
+    expect(result.stderr).toContain(`Runner authentication rejected (HTTP ${upgradeStatus})`)
+    expect(result.stdout).not.toContain('Attempting to reconnect')
+  })
+
+  test.each([401, 403])('does not retry after HTTP %i rejects a reconnect', async (upgradeStatus) => {
+    const result = await runRunnerProcess('reconnect', undefined, undefined, { upgradeStatus, upgradeFailureAt: 2 })
+    expect(result.exitCode).toBe(1)
+    expect(result.tokenRequests).toHaveLength(2)
+    expect(result.upgrades).toHaveLength(2)
+    expect(result.connections).toHaveLength(1)
+    expect(result.stderr).toContain(`Runner authentication rejected (HTTP ${upgradeStatus})`)
+  })
+
+  test('does not retry failed token acquisition during reconnect', async () => {
+    const result = await runRunnerProcess('reconnect', undefined, undefined, { tokenFailure: 'http', tokenFailureAt: 2 })
+    expect(result.exitCode).toBe(1)
+    expect(result.tokenRequests).toHaveLength(2)
+    expect(result.upgrades).toHaveLength(1)
+    expect(result.stderr).toContain('Runner reconnect failed: GitHub OIDC token request failed (HTTP 403).')
+  })
+
+  test('does not reconnect after a policy rejection on the second connection', async () => {
+    const result = await runRunnerProcess('reconnect', undefined, undefined, { policyRejectAt: 2 })
+    expect(result.exitCode).toBe(1)
+    expect(result.tokenRequests).toHaveLength(2)
+    expect(result.connections).toHaveLength(2)
+    expect(result.stderr).toContain('Runner protocol rejected')
+  })
+
+  test('cleans up an HTTP 503 upgrade and retains transport retries', async () => {
+    const result = await runRunnerProcess('reconnect', undefined, undefined, { upgradeStatus: 503, upgradeFailureAt: 2 })
+    expect(result.exitCode).toBe(0)
+    expect(result.tokenRequests).toHaveLength(3)
+    expect(result.upgrades).toHaveLength(3)
+    expect(result.connections).toHaveLength(2)
+    expect(result.messages).toEqual([{ type: 'connected' }, { type: 'connected' }])
+    expect(result.stderr).toContain('WebSocket upgrade failed (HTTP 503)')
+    expect(result.stderr).not.toContain('WebSocket was closed before the connection was established')
+  }, 10000)
 })
 
 async function git(directory: string, ...args: string[]) {
