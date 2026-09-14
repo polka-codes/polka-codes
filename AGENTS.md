@@ -118,20 +118,6 @@ Scale discovery, planning, and review to the task. Ask when an answer materially
 
 Finish when the requested journey works end to end, the result has received an appropriate quality review, unnecessary complexity introduced by the task has been removed, and relevant checks are complete. Keep the handoff brief: what changed, what was actually verified, and remaining limitations. If tools or the environment block verification, name the specific gap and distinguish implemented behavior from verified behavior; never imply unperformed tests or UI inspection passed.
 
-## Configuration and skills
+## Configuration
 
 Project configuration lives in `.polkacodes.yml`. Important fields are `providers`, `scripts`, `rules`, `excludeFiles`, `loadRules`, and `toolFormat`.
-
-Skills are discovered in this order:
-
-1. `.claude/skills/`
-2. `~/.claude/skills/`
-3. `node_modules/@polka-codes/skill-*/`
-
-Each skill needs a `SKILL.md` with `name`, `description`, optional `allowed-tools`, and its instructions. Use:
-
-```bash
-bun run cli skills list
-bun run cli skills validate <name>
-bun run cli init skill <name>
-```
