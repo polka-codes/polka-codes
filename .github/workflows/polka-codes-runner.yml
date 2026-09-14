@@ -1,5 +1,5 @@
 name: Polka Codes Remote Runner
-run-name: Remote Runner - ${{ github.event.client_payload.taskId }}
+run-name: Polka Codes Runner - ${{ github.event.client_payload.taskId }}
 
 on:
   repository_dispatch:
@@ -19,6 +19,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.client_payload.ref }}
+          persist-credentials: false
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
@@ -31,5 +34,4 @@ jobs:
       - name: Run
         uses: polka-codes/action@master
         with:
-          runner_api_url: ${{ github.event.client_payload.apiUrl }}
           runner_payload: ${{ toJson(github.event.client_payload) }}
