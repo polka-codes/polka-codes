@@ -1,45 +1,98 @@
 import { describe, expect, test } from 'bun:test'
-import { mkdir, mkdtemp, rename, rm, symlink, writeFile } from 'node:fs/promises'
+import { access, mkdir, mkdtemp, rename, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { z } from 'zod'
 import { type WsIncomingMessage, wsOutgoingMessageSchema } from './types'
 
-async function runRunnerProcess(onConnected: WsIncomingMessage | 'reject', setup?: (directory: string) => Promise<void>) {
+const runnerCli = fileURLToPath(new URL('./cli.ts', import.meta.url))
+
+async function runRunnerProcess(
+  onConnected: WsIncomingMessage | 'reject' | 'reconnect',
+  setup?: (directory: string) => Promise<void>,
+  githubToken?: string,
+) {
   const directory = await mkdtemp(join(tmpdir(), 'runner-lifecycle-'))
-  await setup?.(directory)
-  // Run ws under Node, the production runtime; Bun's ws close-handshake cleanup can hang.
-  const fixture = Bun.spawn(
-    [
-      'node',
-      fileURLToPath(new URL('./test-fixtures/run-runner-session.cjs', import.meta.url)),
-      process.execPath,
-      directory,
-      JSON.stringify(onConnected),
-    ],
-    { stdout: 'pipe', stderr: 'pipe' },
-  )
+  let fixture: Bun.Subprocess<'ignore', 'pipe', 'pipe'> | undefined
   try {
+    await setup?.(directory)
+    // Run ws under Node, the production runtime; Bun's ws close-handshake cleanup can hang.
+    fixture = Bun.spawn(
+      [
+        'node',
+        fileURLToPath(new URL('./test-fixtures/run-runner-session.cjs', import.meta.url)),
+        process.execPath,
+        runnerCli,
+        directory,
+        JSON.stringify(onConnected),
+        ...(githubToken === undefined ? [] : [githubToken]),
+      ],
+      { stdout: 'pipe', stderr: 'pipe' },
+    )
     const [exitCode, stdout, stderr] = await Promise.all([
       fixture.exited,
       new Response(fixture.stdout).text(),
       new Response(fixture.stderr).text(),
     ])
     expect({ exitCode, stderr }).toEqual({ exitCode: 0, stderr: '' })
-    return z
+    const result = z
       .object({
         exitCode: z.number().int().nullable(),
+        connections: z.array(z.object({ sessionToken: z.string(), githubToken: z.string().optional() })),
         messages: z.array(wsOutgoingMessageSchema),
         stdout: z.string(),
         stderr: z.string(),
       })
       .parse(JSON.parse(stdout))
+    expect(result.connections.length).toBeGreaterThan(0)
+    for (const connection of result.connections) expect(connection).toEqual({ sessionToken: 'test-token' })
+    return result
   } finally {
-    fixture.kill()
+    fixture?.kill()
     await rm(directory, { recursive: true, force: true })
   }
 }
+
+describe('runner CLI options', () => {
+  test('shows the session credential and API options without a GitHub token option', () => {
+    const result = Bun.spawnSync([process.execPath, runnerCli, '--help'])
+    expect(result.exitCode).toBe(0)
+    const help = result.stdout.toString()
+    expect(help).toContain('--task-id <id>')
+    expect(help).toContain('--session-token <token>')
+    expect(help).toContain('--api <url>')
+    expect(help).not.toContain('--github-token')
+  })
+
+  test.each([
+    { args: ['--task-id', 'test'], error: "required option '--session-token <token>' not specified" },
+    {
+      args: ['--task-id', 'test', '--session-token', 'test-token', '--api', 'http://127.0.0.1:1', '--github-token', 'unused'],
+      error: "unknown option '--github-token'",
+    },
+  ])('rejects $error', ({ args, error }) => {
+    const result = Bun.spawnSync([process.execPath, runnerCli, ...args])
+    expect(result.exitCode).toBe(1)
+    expect(result.stderr.toString()).toContain(error)
+    expect(result.stdout.toString()).not.toContain('Attempting to connect')
+  })
+})
+
+test('cleans up the runner workspace when setup fails', async () => {
+  let directory = ''
+  try {
+    await expect(
+      runRunnerProcess({ type: 'done' }, async (path) => {
+        directory = path
+        throw new Error('Workspace setup failed')
+      }),
+    ).rejects.toThrow('Workspace setup failed')
+    await expect(access(directory)).rejects.toThrow('ENOENT')
+  } finally {
+    await rm(directory, { recursive: true, force: true })
+  }
+})
 
 function commands(...commands: string[]): WsIncomingMessage {
   return {
@@ -50,12 +103,28 @@ function commands(...commands: string[]): WsIncomingMessage {
 }
 
 describe('runner process completion', () => {
-  test('reports successful command results and exits zero after done', async () => {
-    const result = await runRunnerProcess(commands('printf ok'))
+  test('runs without GITHUB_TOKEN and reports successful command results before exiting zero', async () => {
+    const result = await runRunnerProcess(commands('test -z "$GITHUB_TOKEN" && printf ok && printf diagnostic >&2'))
     expect(result.messages.at(-1)).toMatchObject({
       type: 'pending_tools_response',
-      responses: [{ response: { stdout: 'ok', exitCode: 0 } }],
+      responses: [{ response: { stdout: 'ok', stderr: 'diagnostic', exitCode: 0 } }],
     })
+    expect(result.exitCode).toBe(0)
+  })
+
+  test('keeps GITHUB_TOKEN available to commands without forwarding it in the handshake', async () => {
+    const result = await runRunnerProcess(commands('printf "%s" "$GITHUB_TOKEN"'), undefined, 'command-github-token')
+    expect(result.messages.at(-1)).toMatchObject({
+      type: 'pending_tools_response',
+      responses: [{ response: { stdout: 'command-github-token', exitCode: 0 } }],
+    })
+    expect(result.exitCode).toBe(0)
+  })
+
+  test('authenticates reconnects with only the session token', async () => {
+    const result = await runRunnerProcess('reconnect')
+    expect(result.connections).toHaveLength(2)
+    expect(result.messages).toEqual([{ type: 'connected' }, { type: 'connected' }])
     expect(result.exitCode).toBe(0)
   })
 

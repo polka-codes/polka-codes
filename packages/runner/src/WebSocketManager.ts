@@ -29,7 +29,6 @@ export function normalizeRunnerApiUrl(apiUrl: string): string {
 export interface WebSocketManagerOptions {
   taskId: string
   sessionToken: string
-  githubToken?: string
   apiUrl: string
   onMessage: (message: WsIncomingMessage) => Promise<void>
   onOpen?: () => void
@@ -65,7 +64,6 @@ export class WebSocketManager {
     this.ws = new WebSocket(`${apiUrl}/${taskId}`, {
       headers: {
         'x-session-token': this.options.sessionToken,
-        'x-github-token': this.options.githubToken,
       },
     })
 

@@ -92,7 +92,6 @@ export function formatRunnerToolResponse(tool: string, result: ToolResponseResul
 export interface RunnerOptions {
   taskId: string
   sessionToken: string
-  githubToken: string
   api: string
 }
 
@@ -145,7 +144,6 @@ export class Runner {
     this.wsManager = new WebSocketManager({
       taskId: options.taskId,
       sessionToken: options.sessionToken,
-      githubToken: options.githubToken,
       apiUrl: options.api,
       onMessage: this.handleMessage.bind(this),
     })
@@ -418,10 +416,6 @@ export async function runRunner(options: RunnerOptions): Promise<void> {
   // Validate required options
   if (!options.taskId) {
     console.error('Error: Task ID is required.')
-    process.exit(1)
-  }
-  if (!options.githubToken) {
-    console.error('Error: GitHub token is required. Provide it via --github-token or GITHUB_TOKEN environment variable.')
     process.exit(1)
   }
   if (!options.api) {

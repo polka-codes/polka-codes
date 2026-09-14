@@ -83,6 +83,8 @@ describe('WebSocketManager protocol handshake', () => {
         server.once('connection', (socket, request) => {
           try {
             expect(request.url).toBe('/api/ws/runner/task-1')
+            expect(request.headers['x-session-token']).toBe('session-token')
+            expect(request.headers['x-github-token']).toBeUndefined()
           } catch (error) {
             clearTimeout(timeout)
             reject(error)
@@ -113,7 +115,6 @@ describe('WebSocketManager protocol handshake', () => {
       manager = new WebSocketManager({
         taskId: 'task-1',
         sessionToken: 'session-token',
-        githubToken: 'github-token',
         apiUrl: `http://127.0.0.1:${port}`,
         onMessage: async () => {},
       })
