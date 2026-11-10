@@ -13,7 +13,7 @@ function endTaskEvents(events: TaskEvent[]): TaskEventEndTask[] {
   return events.filter((event): event is TaskEventEndTask => event.kind === TaskEventKind.EndTask)
 }
 
-const OUTPUT_SCHEMA_PROMPT_PREFIX = 'When finished, return one JSON value matching this schema:\n'
+const OUTPUT_CONTRACT_MARKER = 'type Output = {'
 
 function createModelRound(input: AgentToolRegistry['generateText']['input'], responseMessages: JsonResponseMessage[]): AgentModelRound {
   const requestMessages: JsonModelMessage[] = input.systemPrompt
@@ -137,7 +137,7 @@ test('should pass system prompts separately from ordinary model messages', async
   expect(result.messages[0]).toEqual({ role: 'system', content: 'Use the dedicated system channel.' })
 })
 
-test('should include the output schema once in every model request across tool round trips', async () => {
+test('should include the output contract once in the initial instructions across tool round trips', async () => {
   const mockResponses: ModelMessage[] = [
     {
       role: 'assistant',
@@ -159,7 +159,7 @@ test('should include the output schema once in every model request across tool r
 
   const tools: WorkflowTools<AgentToolRegistry> = {
     generateText: async (input) => {
-      requests.push({ messages: [...input.messages], systemPrompt: input.systemPrompt })
+      requests.push({ messages: structuredClone(input.messages), systemPrompt: input.systemPrompt })
       return createModelRound(input, [mockResponses.shift()!] as JsonResponseMessage[])
     },
     invokeTool: async ({ toolName, input }) => {
@@ -189,14 +189,10 @@ test('should include the output schema once in every model request across tool r
   if (!requestSystemPrompt) {
     throw new Error('Expected a system prompt')
   }
-  expect(requestSystemPrompt.split(OUTPUT_SCHEMA_PROMPT_PREFIX)).toHaveLength(2)
-
-  const advertisedSchema = JSON.parse(requestSystemPrompt.split(OUTPUT_SCHEMA_PROMPT_PREFIX)[1])
-  expect(advertisedSchema).toMatchObject({
-    type: 'object',
-    properties: { answer: { type: 'string' } },
-    required: ['answer'],
-  })
+  expect(requestSystemPrompt.split(OUTPUT_CONTRACT_MARKER)).toHaveLength(2)
+  expect(requestSystemPrompt).toContain('answer: string')
+  expect(requestSystemPrompt).toContain('<output_contract>')
+  expect(requestSystemPrompt).not.toContain('matching this schema:')
   expect(requests.every((request) => request.messages.every((message) => message.role !== 'system'))).toBe(true)
 })
 
@@ -214,7 +210,7 @@ test('should preserve JSON repair and Zod validation for transformed output sche
 
   const tools: WorkflowTools<AgentToolRegistry> = {
     generateText: async (input) => {
-      requests.push({ messages: [...input.messages], systemPrompt: input.systemPrompt })
+      requests.push({ messages: structuredClone(input.messages), systemPrompt: input.systemPrompt })
       return createModelRound(input, [mockResponses.shift()!] as JsonResponseMessage[])
     },
     invokeTool: async () => {
@@ -234,27 +230,21 @@ test('should preserve JSON repair and Zod validation for transformed output sche
   )
 
   expect(requests).toHaveLength(3)
-  expect(requests[1].messages.at(-1)).toMatchObject({
-    role: 'user',
-    content: expect.stringContaining('Invalid JSON:'),
-  })
-  expect(requests[2].messages.at(-1)).toMatchObject({
-    role: 'user',
-    content: expect.stringContaining('JSON does not match the required schema:'),
-  })
+  const firstRepairMessage = String(requests[1].messages.at(-1)?.content)
+  const secondRepairMessage = String(requests[2].messages.at(-1)?.content)
+  expect(firstRepairMessage).toContain('Invalid JSON:')
+  expect(firstRepairMessage.split(OUTPUT_CONTRACT_MARKER)).toHaveLength(2)
+  expect(secondRepairMessage).toContain('JSON does not match the required schema:')
+  expect(secondRepairMessage.split(OUTPUT_CONTRACT_MARKER)).toHaveLength(2)
   expect(requests.every((request) => request.systemPrompt === requests[0].systemPrompt)).toBe(true)
 
   const requestSystemPrompt = requests[0].systemPrompt
   if (!requestSystemPrompt) {
     throw new Error('Expected a system prompt')
   }
-  const advertisedSchema = JSON.parse(requestSystemPrompt.split(OUTPUT_SCHEMA_PROMPT_PREFIX)[1])
-  expect(advertisedSchema).toMatchObject({
-    properties: {
-      answer: { type: 'string' },
-      generatedAt: { description: 'ISO timestamp' },
-    },
-  })
+  expect(requestSystemPrompt).toContain('generatedAt: unknown')
+  expect(requestSystemPrompt).toContain('<output_instructions>')
+  expect(requestSystemPrompt).not.toContain('"properties"')
 
   if (result.type !== 'Exit') {
     throw new Error(`Expected Exit, received ${result.type}`)
@@ -289,19 +279,149 @@ test('should stop after the configured structured output repair attempts', async
 
   expect(result).toMatchObject({
     type: 'Error',
-    error: { message: 'Structured output remained invalid after 1 repair attempts.' },
+    error: {
+      code: 'structured_output_repair_exhausted',
+      message: expect.stringContaining('Last failure (invalid_json):'),
+    },
   })
   expect(generateAttempts).toBe(2)
+})
+
+test('should bound schema diagnostics', async () => {
+  const outputSchema = z.object({
+    alpha: z.string(),
+    bravo: z.string(),
+    charlie: z.string(),
+    delta: z.string(),
+    echo: z.string(),
+    foxtrot: z.string(),
+    golf: z.string(),
+  })
+  const requests: AgentToolRegistry['generateText']['input'][] = []
+  const tools: WorkflowTools<AgentToolRegistry> = {
+    generateText: async (input) => {
+      requests.push(structuredClone(input))
+      const response =
+        requests.length === 1
+          ? { role: 'assistant' as const, content: JSON.stringify({ extra: true }) }
+          : {
+              role: 'assistant' as const,
+              content: JSON.stringify({ alpha: 'a', bravo: 'b', charlie: 'c', delta: 'd', echo: 'e', foxtrot: 'f', golf: 'g' }),
+            }
+      return createModelRound(input, [response])
+    },
+    invokeTool: async () => {
+      throw new Error('No tools should be invoked')
+    },
+    taskEvent: async () => {},
+  }
+
+  const result = await agentWorkflow(
+    {
+      userMessage: [{ role: 'user', content: 'Return the structured result.' }],
+      tools: [],
+      systemPrompt: 'Use the dedicated system channel.',
+      outputSchema,
+    },
+    createContext(tools),
+  )
+
+  expect(result).toMatchObject({ type: 'Exit' })
+  const repairMessage = String(requests[1].messages.at(-1)?.content)
+  expect(repairMessage).toContain('JSON does not match the required schema:')
+  expect(repairMessage).toContain('additional issue(s)')
+  expect(repairMessage.split('\n').filter((line) => line.startsWith('- '))).toHaveLength(6)
+})
+
+test('should reject extra properties with a strict output schema', async () => {
+  const requests: AgentToolRegistry['generateText']['input'][] = []
+  const tools: WorkflowTools<AgentToolRegistry> = {
+    generateText: async (input) => {
+      requests.push(structuredClone(input))
+      const response =
+        requests.length === 1
+          ? { role: 'assistant' as const, content: JSON.stringify({ answer: 'Done.', extra: true }) }
+          : { role: 'assistant' as const, content: JSON.stringify({ answer: 'Done.' }) }
+      return createModelRound(input, [response])
+    },
+    invokeTool: async () => {
+      throw new Error('No tools should be invoked')
+    },
+    taskEvent: async () => {},
+  }
+
+  const result = await agentWorkflow(
+    {
+      userMessage: [{ role: 'user', content: 'Return the structured result.' }],
+      tools: [],
+      systemPrompt: 'Use the dedicated system channel.',
+      outputSchema: z.strictObject({ answer: z.string() }),
+    },
+    createContext(tools),
+  )
+
+  expect(result).toMatchObject({ type: 'Exit', object: { answer: 'Done.' } })
+  expect(requests).toHaveLength(2)
+  expect(String(requests[1].messages.at(-1)?.content)).toContain('Unrecognized key')
+})
+
+test('should reset repair attempts after a tool call', async () => {
+  const responses: JsonResponseMessage[] = [
+    { role: 'assistant', content: 'not JSON' },
+    {
+      role: 'assistant',
+      content: [
+        {
+          type: 'tool-call',
+          toolCallId: 'reset-tool-call',
+          toolName: 'listFiles',
+          input: { path: './src' },
+        },
+      ],
+    },
+    { role: 'assistant', content: 'still not JSON' },
+    { role: 'assistant', content: JSON.stringify({ answer: 'Done.' }) },
+  ]
+  let generateAttempts = 0
+  const tools: WorkflowTools<AgentToolRegistry> = {
+    generateText: async (input) => {
+      generateAttempts++
+      return createModelRound(input, [responses.shift()!])
+    },
+    invokeTool: async ({ toolName, input }) => {
+      if (toolName !== listFilesTool.name) {
+        throw new Error(`Tool not found: ${toolName}`)
+      }
+      return await listFilesTool.handler({} as any, input as any)
+    },
+    taskEvent: async () => {},
+  }
+
+  const result = await agentWorkflow(
+    {
+      userMessage: [{ role: 'user', content: 'Inspect, then answer.' }],
+      tools: [listFilesTool],
+      systemPrompt: 'Use the dedicated system channel.',
+      outputSchema: z.object({ answer: z.string() }),
+      maxStructuredOutputRepairAttempts: 1,
+    },
+    createContext(tools),
+  )
+
+  expect(result).toMatchObject({ type: 'Exit', object: { answer: 'Done.' } })
+  expect(generateAttempts).toBe(4)
 })
 
 test('should adopt the canonical request transcript returned by the model adapter', async () => {
   const originalRequest = 'Inspect every historical message.'
   const compactedRequest = 'Continue from this compacted summary.'
   const requests: JsonModelMessage[][] = []
+  const systemPrompts: string[] = []
   let generateAttempts = 0
   const tools: WorkflowTools<AgentToolRegistry> = {
     generateText: async (input) => {
       requests.push(structuredClone(input.messages))
+      systemPrompts.push(input.systemPrompt ?? '')
       generateAttempts++
       if (generateAttempts === 1) {
         return {
@@ -324,7 +444,7 @@ test('should adopt the canonical request transcript returned by the model adapte
           ],
         }
       }
-      return createModelRound(input, [{ role: 'assistant', content: 'Done.' }])
+      return createModelRound(input, [{ role: 'assistant', content: JSON.stringify({ answer: 'Done.' }) }])
     },
     invokeTool: async ({ input }) => await listFilesTool.handler({} as any, input as any),
     taskEvent: async () => {},
@@ -335,6 +455,7 @@ test('should adopt the canonical request transcript returned by the model adapte
       userMessage: [{ role: 'user', content: originalRequest }],
       tools: [listFilesTool],
       systemPrompt: 'Use the dedicated system channel.',
+      outputSchema: z.object({ answer: z.string() }),
     },
     createContext(tools),
   )
@@ -343,6 +464,7 @@ test('should adopt the canonical request transcript returned by the model adapte
   expect(requests[1]).toContainEqual({ role: 'user', content: compactedRequest })
   expect(requests[1]).not.toContainEqual({ role: 'user', content: originalRequest })
   expect(result.messages).not.toContainEqual({ role: 'user', content: originalRequest })
+  expect(systemPrompts.every((prompt) => prompt.split(OUTPUT_CONTRACT_MARKER).length === 2)).toBe(true)
 })
 
 test('should continue tool work beyond the former default round limit', async () => {

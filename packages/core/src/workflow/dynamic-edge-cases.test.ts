@@ -626,8 +626,8 @@ workflows:
     })
   })
 
-  describe('agent step prompt contract', () => {
-    it('sends structured context and advertises the output schema', async () => {
+  describe('agent step output prompting', () => {
+    it('sends structured context with a generated output contract', async () => {
       const workflowDef: WorkflowFile = {
         workflows: {
           main: {
@@ -690,18 +690,10 @@ workflows:
         state: { seedResult: { status: 'ready' } },
       })
 
-      const schemaPromptPrefix = 'When finished, return one JSON value matching this schema:\n'
-      const schemaPromptParts = targetRequest.systemPrompt?.split(schemaPromptPrefix)
-      expect(schemaPromptParts).toHaveLength(2)
-      const advertisedSchema = JSON.parse(schemaPromptParts?.[1] ?? '')
-      expect(advertisedSchema).toMatchObject({
-        type: 'object',
-        properties: {
-          summary: { type: 'string' },
-          count: { type: 'number' },
-        },
-        required: ['summary', 'count'],
-      })
+      expect(targetRequest.systemPrompt).toContain('<output_contract>')
+      expect(targetRequest.systemPrompt).toContain('summary: string')
+      expect(targetRequest.systemPrompt).toContain('count: number')
+      expect(targetRequest.systemPrompt).not.toContain('JSON Schema')
     })
 
     it('preserves stepSystemPrompt as a full override', async () => {

@@ -2,10 +2,11 @@
 
 import type { ToolResultOutput } from '@ai-sdk/provider-utils'
 import { jsonSchema, type ToolCallPart, type ToolSet } from 'ai'
-import { toJSONSchema, z } from 'zod'
+import { toJSONSchema, type z } from 'zod'
 import { parseJsonFromMarkdown } from '../Agent/parseJsonFromMarkdown.js'
 import type { FullToolInfo, ToolResponse } from '../tool.js'
 import { type JsonModelMessage, type JsonResponseMessage, type JsonUserModelMessage, toJsonModelMessage } from './json-ai-types.js'
+import { buildStructuredOutputContract } from './structured-output-contract.js'
 import { type ExitReason, type ExitReasonErrorDetails, type TaskEvent, TaskEventKind } from './types.js'
 import type { WorkflowFn } from './workflow.js'
 
@@ -25,6 +26,13 @@ export type AgentWorkflowInput = {
 )
 
 export const STRUCTURED_OUTPUT_REPAIR_EXHAUSTED_CODE = 'structured_output_repair_exhausted'
+
+const MAX_STRUCTURED_OUTPUT_DIAGNOSTICS = 5
+
+type StructuredOutputDiagnostic = {
+  kind: 'invalid_json' | 'schema_mismatch'
+  details: string
+}
 
 export type AgentModelRound = {
   requestMessages: JsonModelMessage[]
@@ -69,10 +77,37 @@ function isToolInput(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-function createStructuredOutputRepairError(attempts: number): Error & { code: string } {
-  return Object.assign(new Error(`Structured output remained invalid after ${attempts} repair attempts.`), {
-    code: STRUCTURED_OUTPUT_REPAIR_EXHAUSTED_CODE,
-  })
+class StructuredOutputRepairError extends Error {
+  readonly code = STRUCTURED_OUTPUT_REPAIR_EXHAUSTED_CODE
+
+  constructor(attempts: number, diagnostic: StructuredOutputDiagnostic) {
+    super(
+      `Structured output remained invalid after ${attempts} repair attempts.\n` +
+        `Last failure (${diagnostic.kind}):\n${diagnostic.details}`,
+    )
+  }
+}
+
+function formatZodIssuePath(path: PropertyKey[]): string {
+  return path.length === 0 ? '<root>' : path.map(String).join('.')
+}
+
+function formatZodDiagnostics(error: z.ZodError): string {
+  const issues = error.issues.slice(0, MAX_STRUCTURED_OUTPUT_DIAGNOSTICS)
+  const lines = issues.map((issue) => `- ${formatZodIssuePath(issue.path)}: ${issue.message}`)
+  const remaining = error.issues.length - issues.length
+  if (remaining > 0) {
+    lines.push(`- ... ${remaining} additional issue(s)`)
+  }
+  return lines.join('\n')
+}
+
+function createStructuredOutputRepairMessage(diagnostic: StructuredOutputDiagnostic, outputContract: string): string {
+  const failure =
+    diagnostic.kind === 'invalid_json'
+      ? `Invalid JSON: ${diagnostic.details}`
+      : `JSON does not match the required schema:\n${diagnostic.details}`
+  return [failure, `Output contract:\n${outputContract}`, 'Return one corrected JSON value only.'].join('\n\n')
 }
 
 export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentToolRegistry> = async (
@@ -87,14 +122,10 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
   const { tools: toolInfo, maxStructuredOutputRepairAttempts = 2 } = input
 
   const systemPrompt = 'systemPrompt' in input ? input.systemPrompt : undefined
-  const outputSchemaInstruction = input.outputSchema
-    ? `When finished, return one JSON value matching this schema:\n${JSON.stringify(
-        toJSONSchema(input.outputSchema, { io: 'input', unrepresentable: 'any' }),
-      )}`
-    : undefined
+  const outputContract = input.outputSchema ? buildStructuredOutputContract(input.outputSchema) : ''
   let messages: JsonModelMessage[] = 'systemPrompt' in input ? [{ role: 'system', content: input.systemPrompt }] : [...input.messages]
-  if (outputSchemaInstruction) {
-    messages.push({ role: 'system', content: outputSchemaInstruction })
+  if (outputContract) {
+    messages.push({ role: 'system', content: outputContract })
   }
 
   await event('start-task', { kind: TaskEventKind.StartTask, systemPrompt: systemPrompt ?? '' })
@@ -192,23 +223,29 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
 
       const parsed = parseJsonFromMarkdown(textContent)
       if (!parsed.success) {
+        const diagnostic: StructuredOutputDiagnostic = {
+          kind: 'invalid_json',
+          details: parsed.error ?? 'No JSON object found in the string.',
+        }
         if (structuredOutputRepairAttempts >= maxStructuredOutputRepairAttempts) {
-          return await endWithError(createStructuredOutputRepairError(structuredOutputRepairAttempts))
+          return await endWithError(new StructuredOutputRepairError(structuredOutputRepairAttempts, diagnostic))
         }
         structuredOutputRepairAttempts += 1
-        const errorMessage = `Invalid JSON: ${parsed.error}\nReturn corrected JSON only.`
-        nextMessage = [{ role: 'user', content: errorMessage }]
+        nextMessage = [{ role: 'user', content: createStructuredOutputRepairMessage(diagnostic, outputContract) }]
         continue
       }
 
       const validated = input.outputSchema.safeParse(parsed.data)
       if (!validated.success) {
+        const diagnostic: StructuredOutputDiagnostic = {
+          kind: 'schema_mismatch',
+          details: formatZodDiagnostics(validated.error),
+        }
         if (structuredOutputRepairAttempts >= maxStructuredOutputRepairAttempts) {
-          return await endWithError(createStructuredOutputRepairError(structuredOutputRepairAttempts))
+          return await endWithError(new StructuredOutputRepairError(structuredOutputRepairAttempts, diagnostic))
         }
         structuredOutputRepairAttempts += 1
-        const errorMessage = `JSON does not match the required schema:\n${z.prettifyError(validated.error)}\nReturn corrected JSON only.`
-        nextMessage = [{ role: 'user', content: errorMessage }]
+        nextMessage = [{ role: 'user', content: createStructuredOutputRepairMessage(diagnostic, outputContract) }]
         continue
       }
       const exitReason: ExitReason = { type: 'Exit', message: textContent, object: validated.data, messages }
