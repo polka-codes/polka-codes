@@ -1,10 +1,6 @@
 import { toJSONSchema, type z } from 'zod'
 import type { JSONSchema } from 'zod/v4/core'
 
-function jsonLiteral(value: string | number | boolean | null): string {
-  return JSON.stringify(value)
-}
-
 function schemaDescription(schema: JSONSchema.BaseSchema): string | undefined {
   const descriptions = [schema.description]
   if (schema.format) descriptions.push(`Format: ${schema.format}.`)
@@ -29,29 +25,19 @@ function formatPropertyName(name: string): string {
   return /^[A-Za-z_$][\w$]*$/u.test(name) ? name : JSON.stringify(name)
 }
 
-type ContractContext = {
-  definitionNames: ReadonlyMap<string, string>
-}
-
-function schemaToType(schema: JSONSchema._JSONSchema, indent = '', context: ContractContext): string {
+function schemaToType(schema: JSONSchema._JSONSchema, references: ReadonlyMap<string, string>, indent = ''): string {
   if (typeof schema === 'boolean') return schema ? 'unknown' : 'never'
-  if (schema.$ref) {
-    if (schema.$ref === '#') return 'Output'
-    if (!schema.$ref.startsWith('#/$defs/')) return 'unknown'
-    return context.definitionNames.get(schema.$ref.slice('#/$defs/'.length)) ?? 'unknown'
-  }
-  if (schema.const !== undefined) return jsonLiteral(schema.const)
-  if (schema.enum) return schema.enum.map((value) => jsonLiteral(value)).join(' | ')
+  if (schema.$ref) return references.get(schema.$ref) ?? 'unknown'
+  if (schema.const !== undefined) return JSON.stringify(schema.const)
+  if (schema.enum) return schema.enum.map((value) => JSON.stringify(value)).join(' | ')
 
   const alternatives = [...(schema.anyOf ?? []), ...(schema.oneOf ?? [])]
   if (alternatives.length > 0) {
-    return [...new Set(alternatives.map((alternative) => schemaToType(alternative, indent, context)))].join(' | ')
+    return [...new Set(alternatives.map((alternative) => schemaToType(alternative, references, indent)))].join(' | ')
   }
   if (schema.allOf && schema.allOf.length > 0) {
-    return schema.allOf.map((part) => schemaToType(part, indent, context)).join(' & ')
+    return schema.allOf.map((part) => `(${schemaToType(part, references, indent)})`).join(' & ')
   }
-
-  if (Array.isArray(schema.type)) return schema.type.map((type) => schemaToType({ type }, indent, context)).join(' | ')
 
   switch (schema.type) {
     case 'object': {
@@ -61,23 +47,25 @@ function schemaToType(schema: JSONSchema._JSONSchema, indent = '', context: Cont
         const description = typeof property === 'boolean' ? undefined : schemaDescription(property)
         const comment = description ? [formatComment(description, `${indent}  `)] : []
         const optional = required.has(name) ? '' : '?'
-        return [...comment, `${indent}  ${formatPropertyName(name)}${optional}: ${schemaToType(property, `${indent}  `, context)}`]
+        return [...comment, `${indent}  ${formatPropertyName(name)}${optional}: ${schemaToType(property, references, `${indent}  `)}`]
       })
       if (lines.length === 0) {
         if (schema.additionalProperties === false) return '{}'
-        return `Record<string, ${schemaToType(schema.additionalProperties ?? {}, indent, context)}>`
+        return `Record<string, ${schemaToType(schema.additionalProperties ?? {}, references, indent)}>`
       }
       if (schema.additionalProperties !== undefined && schema.additionalProperties !== false) {
-        lines.push(`${indent}  [key: string]: ${schemaToType(schema.additionalProperties, `${indent}  `, context)}`)
+        lines.push(`${indent}  [key: string]: ${schemaToType(schema.additionalProperties, references, `${indent}  `)}`)
       }
       return ['{', ...lines, `${indent}}`].join('\n')
     }
     case 'array': {
-      if (Array.isArray(schema.prefixItems)) {
-        return `[${schema.prefixItems.map((item) => schemaToType(item, indent, context)).join(', ')}]`
-      }
       const items = Array.isArray(schema.items) ? schema.items[0] : schema.items
-      return `Array<${schemaToType(items ?? {}, indent, context)}>`
+      if (schema.prefixItems) {
+        const elements = schema.prefixItems.map((item) => schemaToType(item, references, indent))
+        if (items) elements.push(`...Array<${schemaToType(items, references, indent)}>`)
+        return `[${elements.join(', ')}]`
+      }
+      return `Array<${schemaToType(items ?? {}, references, indent)}>`
     }
     case 'string':
       return 'string'
@@ -94,32 +82,29 @@ function schemaToType(schema: JSONSchema._JSONSchema, indent = '', context: Cont
 }
 
 export function buildStructuredOutputContract(schema: z.ZodType): string {
-  const jsonSchema = toJSONSchema(schema, { io: 'input', unrepresentable: 'any', reused: 'inline' }) as JSONSchema.BaseSchema
+  const jsonSchema = toJSONSchema(schema, { io: 'input', unrepresentable: 'any', reused: 'inline' })
   const definitions = Object.entries(jsonSchema.$defs ?? {}).map(([key, schema], index) => ({
     key,
     name: `Definition${index + 1}`,
     schema,
   }))
-  const definitionNames = new Map(definitions.map(({ key, name }) => [key, name]))
-  const context: ContractContext = { definitionNames }
+  const references = new Map([['#', 'Output'], ...definitions.map(({ key, name }) => [`#/$defs/${key}`, name] as const)])
   const description = schemaDescription(jsonSchema)
   const declarations = [
-    `type Output = ${schemaToType(jsonSchema, '', context)}`,
-    ...definitions.map(({ name, schema: definition }) => `type ${name} = ${schemaToType(definition, '', context)}`),
-  ]
+    `type Output = ${schemaToType(jsonSchema, references)}`,
+    ...definitions.map(({ name, schema: definition }) => `type ${name} = ${schemaToType(definition, references)}`),
+  ].join('\n')
 
   return [
     'The model output must be one JSON value described by this contract.',
     '<output_contract>',
     '```typescript',
-    description ? `${formatComment(description, '')}\n${declarations.join('\n')}` : declarations.join('\n'),
+    description ? `${formatComment(description, '')}\n${declarations}` : declarations,
     '```',
     '</output_contract>',
     '<output_instructions>',
-    'Return exactly one JSON value.',
-    'Use only declared properties. Do not return TypeScript, Markdown fences, commentary, or surrounding prose.',
-    'Use null only where the contract declares a nullable value. Do not invent facts, identifiers, files, commands, or permissions.',
-    'Validate the value against the contract before returning it.',
+    'When finished, return exactly one JSON value matching the contract.',
+    'Do not return TypeScript, Markdown fences, commentary, or surrounding prose.',
     '</output_instructions>',
   ].join('\n')
 }

@@ -222,35 +222,25 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
       }
 
       const parsed = parseJsonFromMarkdown(textContent)
-      if (!parsed.success) {
-        const diagnostic: StructuredOutputDiagnostic = {
-          kind: 'invalid_json',
-          details: parsed.error ?? 'No JSON object found in the string.',
+      let diagnostic: StructuredOutputDiagnostic
+      if (parsed.success) {
+        const validated = input.outputSchema.safeParse(parsed.data)
+        if (validated.success) {
+          const exitReason: ExitReason = { type: 'Exit', message: textContent, object: validated.data, messages }
+          await event('end-task', { kind: TaskEventKind.EndTask, exitReason })
+          return exitReason
         }
-        if (structuredOutputRepairAttempts >= maxStructuredOutputRepairAttempts) {
-          return await endWithError(new StructuredOutputRepairError(structuredOutputRepairAttempts, diagnostic))
-        }
-        structuredOutputRepairAttempts += 1
-        nextMessage = [{ role: 'user', content: createStructuredOutputRepairMessage(diagnostic, outputContract) }]
-        continue
+        diagnostic = { kind: 'schema_mismatch', details: formatZodDiagnostics(validated.error) }
+      } else {
+        diagnostic = { kind: 'invalid_json', details: parsed.error ?? 'No JSON value found in the response.' }
       }
 
-      const validated = input.outputSchema.safeParse(parsed.data)
-      if (!validated.success) {
-        const diagnostic: StructuredOutputDiagnostic = {
-          kind: 'schema_mismatch',
-          details: formatZodDiagnostics(validated.error),
-        }
-        if (structuredOutputRepairAttempts >= maxStructuredOutputRepairAttempts) {
-          return await endWithError(new StructuredOutputRepairError(structuredOutputRepairAttempts, diagnostic))
-        }
-        structuredOutputRepairAttempts += 1
-        nextMessage = [{ role: 'user', content: createStructuredOutputRepairMessage(diagnostic, outputContract) }]
-        continue
+      if (structuredOutputRepairAttempts >= maxStructuredOutputRepairAttempts) {
+        return await endWithError(new StructuredOutputRepairError(structuredOutputRepairAttempts, diagnostic))
       }
-      const exitReason: ExitReason = { type: 'Exit', message: textContent, object: validated.data, messages }
-      await event('end-task', { kind: TaskEventKind.EndTask, exitReason })
-      return exitReason
+      structuredOutputRepairAttempts += 1
+      nextMessage = [{ role: 'user', content: createStructuredOutputRepairMessage(diagnostic, outputContract) }]
+      continue
     }
 
     structuredOutputRepairAttempts = 0

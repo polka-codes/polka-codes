@@ -21,7 +21,7 @@ describe('buildStructuredOutputContract', () => {
     expect(contract).toContain('Maximum array length: 3.')
     expect(contract).toContain('<output_contract>')
     expect(contract).toContain('<output_instructions>')
-    expect(contract).toContain('Use only declared properties.')
+    expect(contract).toContain('When finished, return exactly one JSON value matching the contract.')
     expect(contract).not.toContain('JSON Schema')
   })
 
@@ -41,6 +41,18 @@ describe('buildStructuredOutputContract', () => {
     expect(contract).toContain('pair: [string, number]')
     expect(contract).toContain('kind: "success"')
     expect(contract).toContain('kind: "failure"')
+  })
+
+  test('preserves tuple rest elements and intersection grouping', () => {
+    const contract = buildStructuredOutputContract(
+      z.object({
+        values: z.tuple([z.string()], z.number()),
+        choice: z.intersection(z.union([z.literal('a'), z.literal('b')]), z.union([z.literal('b'), z.literal('c')])),
+      }),
+    )
+
+    expect(contract).toContain('values: [string, ...Array<number>]')
+    expect(contract).toContain('choice: ("a" | "b") & ("b" | "c")')
   })
 
   test('renders input types for transforms and preserves unsupported descriptions', () => {
@@ -64,12 +76,12 @@ describe('buildStructuredOutputContract', () => {
   })
 
   test('renders recursive root references using the generated output name', () => {
-    const node: z.ZodType<{ value: string; children: Array<{ value: string; children: unknown[] }> }> = z.lazy(() =>
-      z.object({
-        value: z.string(),
-        children: z.array(node),
-      }),
-    )
+    const node = z.object({
+      value: z.string(),
+      get children() {
+        return z.array(node)
+      },
+    })
 
     const contract = buildStructuredOutputContract(node)
 
@@ -78,10 +90,11 @@ describe('buildStructuredOutputContract', () => {
   })
 
   test('renders recursive definitions nested inside the output', () => {
-    let node: z.ZodTypeAny
-    node = z.object({
+    const node = z.object({
       value: z.string(),
-      children: z.array(z.lazy(() => node)),
+      get children() {
+        return z.array(node)
+      },
     })
 
     const contract = buildStructuredOutputContract(z.object({ tree: node }))

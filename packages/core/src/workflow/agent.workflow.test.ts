@@ -253,12 +253,15 @@ test('should preserve JSON repair and Zod validation for transformed output sche
   expect(result.object.generatedAt).toBeInstanceOf(Date)
 })
 
-test('should stop after the configured structured output repair attempts', async () => {
+test.each([
+  ['not JSON', 'invalid_json'],
+  ['{"answer":42}', 'schema_mismatch'],
+])('should stop after the configured repair attempts for %s', async (content, kind) => {
   let generateAttempts = 0
   const tools: WorkflowTools<AgentToolRegistry> = {
     generateText: async (input) => {
       generateAttempts++
-      return createModelRound(input, [{ role: 'assistant', content: 'not JSON' }])
+      return createModelRound(input, [{ role: 'assistant', content }])
     },
     invokeTool: async () => {
       throw new Error('No tools should be invoked')
@@ -281,7 +284,7 @@ test('should stop after the configured structured output repair attempts', async
     type: 'Error',
     error: {
       code: 'structured_output_repair_exhausted',
-      message: expect.stringContaining('Last failure (invalid_json):'),
+      message: expect.stringContaining(`Last failure (${kind}):`),
     },
   })
   expect(generateAttempts).toBe(2)
