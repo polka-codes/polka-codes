@@ -22,8 +22,9 @@ type WorkspacePackage = {
 const projectRoot = resolve(import.meta.dir, '..')
 const shell = $.cwd(projectRoot)
 const registryUrl = 'https://registry.npmjs.org/'
-const publishVisibilityRetryCount = 12
-const publishVisibilityRetryDelayMs = 5_000
+// npm can accept a publish several minutes before the version becomes installable.
+const publishVisibilityRetryCount = 21
+const publishVisibilityRetryDelayMs = 15_000
 
 async function readPackageJson(packageJsonPath: string): Promise<PackageJson> {
   return (await Bun.file(packageJsonPath).json()) as PackageJson
