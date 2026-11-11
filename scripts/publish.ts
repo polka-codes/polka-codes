@@ -20,11 +20,10 @@ type WorkspacePackage = {
 }
 
 const projectRoot = resolve(import.meta.dir, '..')
-const shell = $.cwd(projectRoot)
 const registryUrl = 'https://registry.npmjs.org/'
-// npm can accept a publish several minutes before the version becomes installable.
-const publishVisibilityRetryCount = 21
-const publishVisibilityRetryDelayMs = 15_000
+const publishVisibilityTimeoutMs = 30 * 60 * 1_000
+const publishVisibilityInitialDelayMs = 15_000
+const publishVisibilityMaxDelayMs = 60_000
 
 async function readPackageJson(packageJsonPath: string): Promise<PackageJson> {
   return (await Bun.file(packageJsonPath).json()) as PackageJson
@@ -34,26 +33,48 @@ async function sleep(milliseconds: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, milliseconds))
 }
 
+export function packageTarballUrl(packageName: string, version: string): string {
+  const packageBasename = packageName.slice(packageName.lastIndexOf('/') + 1)
+  return `${registryUrl}${packageName}/-/${packageBasename}-${version}.tgz`
+}
+
 async function isVersionPublished(packageName: string, version: string): Promise<boolean> {
-  const publishedVersion = await shell`npm view ${`${packageName}@${version}`} version --registry=${registryUrl}`.quiet().nothrow()
-  return publishedVersion.exitCode === 0 && publishedVersion.stdout.toString().trim() === version
+  try {
+    const response = await fetch(packageTarballUrl(packageName, version), {
+      method: 'HEAD',
+      signal: AbortSignal.timeout(10_000),
+    })
+    return response.ok
+  } catch {
+    return false
+  }
+}
+
+export function isStagedPublishConflict(output: string): boolean {
+  return /cannot publish over previously staged version/i.test(output)
 }
 
 async function waitForPublishedVersion(packageName: string, version: string): Promise<void> {
-  for (let attempt = 1; attempt <= publishVisibilityRetryCount; attempt += 1) {
+  const startedAt = Date.now()
+  let delayMs = publishVisibilityInitialDelayMs
+
+  while (true) {
     if (await isVersionPublished(packageName, version)) {
       return
     }
 
-    if (attempt < publishVisibilityRetryCount) {
-      console.log(
-        `Waiting for ${packageName}@${version} to become visible in the npm registry (${attempt}/${publishVisibilityRetryCount})...`,
+    const elapsedMs = Date.now() - startedAt
+    if (elapsedMs + delayMs > publishVisibilityTimeoutMs) {
+      throw new Error(
+        `Timed out waiting for ${packageName}@${version} to become installable after ${Math.round(elapsedMs / 1_000)} seconds. ` +
+          'The package may still be staged by npm; rerun the release workflow after registry propagation completes.',
       )
-      await sleep(publishVisibilityRetryDelayMs)
     }
-  }
 
-  throw new Error(`Timed out waiting for ${packageName}@${version} to become visible in ${registryUrl}`)
+    console.log(`Waiting for ${packageName}@${version} to become installable on npm; retrying in ${delayMs / 1_000}s...`)
+    await sleep(delayMs)
+    delayMs = Math.min(delayMs * 2, publishVisibilityMaxDelayMs)
+  }
 }
 
 async function listPublishablePackages(packagesRoot = resolve('packages')): Promise<WorkspacePackage[]> {
@@ -140,6 +161,13 @@ async function main(): Promise<void> {
       const stderr = publishResult.stderr.toString().trim()
       const stdout = publishResult.stdout.toString().trim()
       const output = stderr || stdout
+
+      if (isStagedPublishConflict(output)) {
+        console.log(`${packageJson.name}@${releaseVersion} is already staged by npm; waiting for it to become installable.`)
+        await waitForPublishedVersion(packageJson.name, releaseVersion)
+        continue
+      }
+
       throw new Error(`Failed to publish ${packageJson.name}@${releaseVersion}.${output ? ` ${output}` : ''}`)
     }
 
@@ -147,12 +175,14 @@ async function main(): Promise<void> {
   }
 }
 
-await main().catch((error: unknown) => {
-  if (error instanceof Error) {
-    console.error(`Error: ${error.message}`)
-  } else {
-    console.error('Error: Unknown publish failure')
-  }
+if (import.meta.main) {
+  await main().catch((error: unknown) => {
+    if (error instanceof Error) {
+      console.error(`Error: ${error.message}`)
+    } else {
+      console.error('Error: Unknown publish failure')
+    }
 
-  process.exit(1)
-})
+    process.exit(1)
+  })
+}
