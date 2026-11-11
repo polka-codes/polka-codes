@@ -16,8 +16,8 @@ workflows:
         outputSchema: &plan
           type: object
           properties:
-            hasIncompleteTasks: {type: boolean}
-            details: {type: string}
+            hasIncompleteTasks: { type: boolean }
+            details: { type: string }
           required: [hasIncompleteTasks, details]
       - id: validate
         task: Validate state.plan for parseable task checkboxes, acceptance criteria, and acyclic dependencies. Return valid and a reason.
@@ -26,8 +26,8 @@ workflows:
         outputSchema:
           type: object
           properties:
-            valid: {type: boolean}
-            reason: {type: string}
+            valid: { type: boolean }
+            reason: { type: string }
           required: [valid, reason]
       - id: execution-loop
         while:
@@ -40,8 +40,8 @@ workflows:
               outputSchema:
                 type: object
                 properties:
-                  found: {type: boolean}
-                  description: {type: string}
+                  found: { type: boolean }
+                  description: { type: string }
                 required: [found, description]
             - id: stop-if-blocked
               if:
@@ -59,8 +59,8 @@ workflows:
               outputSchema:
                 type: object
                 properties:
-                  passed: {type: boolean}
-                  details: {type: string}
+                  passed: { type: boolean }
+                  details: { type: string }
                 required: [passed, details]
             - id: handle-verification
               if:

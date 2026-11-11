@@ -29,14 +29,13 @@ providers:
     apiKey: "sk-..." # Your OpenAI API key
     defaultModel: "gpt-4o"
     # baseUrl: "https://your-azure-openai-endpoint.openai.azure.com/openai/deployments/your-deployment" # Optional: For Azure OpenAI or custom endpoints
-
   # OpenAI-compatible provider configuration
   # Use this for any OpenAI-compatible API (e.g., Together AI, Anyscale, Groq, etc.)
   openai-compatible:
     apiKey: "your-api-key"
     defaultModel: "gpt-4o"
-    name: "Together AI"  # Optional: Custom name for the provider
-    baseUrl: "https://api.together.xyz/v1"  # Replace with your provider's base URL
+    name: "Together AI" # Optional: Custom name for the provider
+    baseUrl: "https://api.together.xyz/v1" # Replace with your provider's base URL
     # For reasoning models supported by your provider:
     # defaultParameters:
     #   reasoningEffort: "high"
@@ -47,7 +46,6 @@ providers:
     # baseUrl: "https://api.groq.com/openai/v1"
     # name: "Custom Provider"
     # baseUrl: "https://your-custom-endpoint.com/v1"
-
   # OpenRouter configuration (access to many models)
   openrouter:
     apiKey: "sk-or-..." # Your OpenRouter API key
@@ -283,9 +281,9 @@ agent:
 
   # Continuous improvement settings
   continuousImprovement:
-    sleepTimeOnNoTasks: 60000      # Wait 1 minute when no tasks found
-    sleepTimeBetweenTasks: 5000    # Wait 5 seconds between tasks
-    maxCycles: 0                   # 0 = infinite cycles
+    sleepTimeOnNoTasks: 60000 # Wait 1 minute when no tasks found
+    sleepTimeBetweenTasks: 5000 # Wait 5 seconds between tasks
+    maxCycles: 0 # 0 = infinite cycles
 
   # Task discovery settings
   discovery:
@@ -294,19 +292,19 @@ agent:
       - "failing-tests"
       - "type-errors"
       - "lint-issues"
-      - "working-dir"              # Monitor working directory for plans
-    checkChanges: true             # Check for git changes
+      - "working-dir" # Monitor working directory for plans
+    checkChanges: true # Check for git changes
 
   # Safety checks
   safety:
     enabledChecks: []
     blockDestructive: true
-    maxFileSize: 10485760          # 10MB
+    maxFileSize: 10485760 # 10MB
 
   # Health monitoring
   healthCheck:
     enabled: false
-    interval: 60000                # Check every minute
+    interval: 60000 # Check every minute
 
 #============================================================================
 # Pricing Information

@@ -26,74 +26,76 @@ bun add @polka-codes/core
 The core of `@polka-codes/core` is the `agentWorkflow`. You can use it to create a workflow that interacts with an AI model.
 
 ```typescript
-import {
-  agentWorkflow,
-  createContext,
-  makeStepFn,
-  type ToolResponse,
-} from '@polka-codes/core';
-import { z } from 'zod';
+import { agentWorkflow, createContext, makeStepFn, type ToolResponse } from '@polka-codes/core'
+import { z } from 'zod'
 
 // Define a tool
 const getCurrentWeather = {
   name: 'getCurrentWeather',
   description: 'Get the current weather in a given location',
   parameters: z.object({
-    location: z.string().describe("The city and state, e.g. San Francisco, CA"),
+    location: z.string().describe('The city and state, e.g. San Francisco, CA'),
   }),
-};
+}
 
 async function main() {
   // Create a context for the workflow
-  const context = createContext({
-    // Implement the tool
-    invokeTool: async ({ toolName, input }) => {
-      if (toolName === 'getCurrentWeather') {
-        const { location } = input as z.infer<typeof getCurrentWeather.parameters>;
-        // In a real app, you would call a weather API here
-        const weather = `The weather in ${location} is 70°F and sunny.`;
-        const response: ToolResponse = { success: true, message: { type: 'text', value: weather } };
-        return response;
-      }
-      const response: ToolResponse = { success: false, message: { type: 'error-text', value: 'Tool not found' } };
-      return response;
-    },
-    // A simple text generation function
-    generateText: async ({ messages }) => {
+  const context = createContext(
+    {
+      // Implement the tool
+      invokeTool: async ({ toolName, input }) => {
+        if (toolName === 'getCurrentWeather') {
+          const { location } = input as z.infer<typeof getCurrentWeather.parameters>
+          // In a real app, you would call a weather API here
+          const weather = `The weather in ${location} is 70°F and sunny.`
+          const response: ToolResponse = { success: true, message: { type: 'text', value: weather } }
+          return response
+        }
+        const response: ToolResponse = { success: false, message: { type: 'error-text', value: 'Tool not found' } }
+        return response
+      },
+      // A simple text generation function
+      generateText: async ({ messages }) => {
         // In a real app, you would call an AI provider here (e.g. Anthropic, OpenAI)
-        console.log('--- Assistant Turn ---');
-        console.log(messages);
+        console.log('--- Assistant Turn ---')
+        console.log(messages)
         // This is a mock response for demonstration purposes
-        return [{
-          role: 'assistant',
-          content: [{
-            type: 'tool-call',
-            toolName: 'getCurrentWeather',
-            toolCallId: '123',
-            input: { location: 'San Francisco, CA' }
-          }]
-        }];
+        return [
+          {
+            role: 'assistant',
+            content: [
+              {
+                type: 'tool-call',
+                toolName: 'getCurrentWeather',
+                toolCallId: '123',
+                input: { location: 'San Francisco, CA' },
+              },
+            ],
+          },
+        ]
+      },
+      taskEvent: async (event) => {
+        console.log('Task Event:', event.kind)
+      },
     },
-    taskEvent: async (event) => {
-      console.log('Task Event:', event.kind);
-    }
-  }, makeStepFn());
+    makeStepFn(),
+  )
 
   // Run the agent workflow
   const result = await agentWorkflow(
     {
       tools: [getCurrentWeather],
-      systemPrompt: "You are a helpful assistant.",
+      systemPrompt: 'You are a helpful assistant.',
       userMessage: [{ role: 'user', content: "What's the weather in San Francisco, CA?" }],
     },
-    context
-  );
+    context,
+  )
 
-  console.log('--- Workflow Result ---');
-  console.log(result);
+  console.log('--- Workflow Result ---')
+  console.log(result)
 }
 
-main();
+main()
 ```
 
 ### Structured output
@@ -101,15 +103,18 @@ main();
 Use `outputSchema` for both the model-facing contract and local validation:
 
 ```typescript
-const result = await agentWorkflow({
-  tools: [],
-  systemPrompt: 'Return the requested result.',
-  userMessage: [{ role: 'user', content: 'Summarize the change.' }],
-  outputSchema: z.object({ summary: z.string() }),
-}, context);
+const result = await agentWorkflow(
+  {
+    tools: [],
+    systemPrompt: 'Return the requested result.',
+    userMessage: [{ role: 'user', content: 'Summarize the change.' }],
+    outputSchema: z.object({ summary: z.string() }),
+  },
+  context,
+)
 
 if (result.type === 'Exit') {
-  console.log(result.object);
+  console.log(result.object)
 }
 ```
 
@@ -150,11 +155,11 @@ You can read specific sections of a file using `offset` and `limit` parameters:
 // Read lines 100-150 of a large file
 await readFile.handler(provider, {
   path: 'large-file.ts',
-  offset: 100,  // Skip first 100 lines
-  limit: 50     // Read 50 lines
-});
+  offset: 100, // Skip first 100 lines
+  limit: 50, // Read 50 lines
+})
 ```
 
 ---
 
-*This README was generated by polka.codes*
+_This README was generated by polka.codes_

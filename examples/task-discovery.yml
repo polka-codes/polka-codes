@@ -16,8 +16,8 @@ workflows:
         outputSchema: &issues
           type: object
           properties:
-            count: {type: integer}
-            descriptions: {type: array, items: {type: string}}
+            count: { type: integer }
+            descriptions: { type: array, items: { type: string } }
           required: [count, descriptions]
       - id: fix-loop
         while:

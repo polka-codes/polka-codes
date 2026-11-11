@@ -25,12 +25,12 @@
     "build": "rm -rf dist && tsc --build --force && bun run ../../scripts/fix-declaration-imports.ts dist && bun build src/index.ts --outdir dist --target node --format esm --packages external --loader .gql:text"
   },
   "dependencies": {
-    "@octokit/core": "^7.0.6",
+    "@octokit/core": "^7.0.8",
     "remark-gfm": "^4.0.1",
     "remark-parse": "^11.0.0",
     "remark-stringify": "^11.0.0",
     "unified": "^11.0.5",
-    "unist-util-visit": "^5.1.0"
+    "unist-util-visit": "^5.2.0"
   },
   "devDependencies": {
     "@types/mdast": "^4.0.4"

@@ -16,8 +16,8 @@ workflows:
         outputSchema:
           type: object
           properties:
-            count: {type: integer}
-            descriptions: {type: array, items: {type: string}}
+            count: { type: integer }
+            descriptions: { type: array, items: { type: string } }
           required: [count, descriptions]
       - id: improve-if-needed
         if:
@@ -45,7 +45,7 @@ workflows:
         output: remaining
         outputSchema: &tasks
           type: array
-          items: {type: string}
+          items: { type: string }
       - id: execute-tasks
         while:
           condition: state.remaining.length > 0
@@ -57,8 +57,8 @@ workflows:
               outputSchema:
                 type: object
                 properties:
-                  completed: {type: boolean}
-                  details: {type: string}
+                  completed: { type: boolean }
+                  details: { type: string }
                 required: [completed, details]
             - id: stop-if-incomplete
               if:

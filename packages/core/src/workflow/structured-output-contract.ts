@@ -30,6 +30,9 @@ function schemaToType(schema: JSONSchema._JSONSchema, references: ReadonlyMap<st
   if (schema.$ref) return references.get(schema.$ref) ?? 'unknown'
   if (schema.const !== undefined) return JSON.stringify(schema.const)
   if (schema.enum) return schema.enum.map((value) => JSON.stringify(value)).join(' | ')
+  if (Array.isArray(schema.type)) {
+    return [...new Set(schema.type.map((type) => schemaToType({ ...schema, type }, references, indent)))].join(' | ')
+  }
 
   const alternatives = [...(schema.anyOf ?? []), ...(schema.oneOf ?? [])]
   if (alternatives.length > 0) {

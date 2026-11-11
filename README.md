@@ -83,6 +83,7 @@ polka review --pr 123 --loop 3
 ### Reviewing Local Changes
 
 To review local changes, run the `review` command without any arguments. It will automatically detect changes in the following order:
+
 1. Staged changes (`git diff --staged`)
 2. Unstaged changes (`git diff`)
 
@@ -137,7 +138,7 @@ scripts:
   deploy:
     script: .polka-scripts/deploy.ts
     description: Deploy to production
-    timeout: 300000  # 5 minutes
+    timeout: 300000 # 5 minutes
     permissions:
       fs: write
       network: true
@@ -197,11 +198,11 @@ scripts:
   risky-script:
     script: .polka-scripts/risky.ts
     permissions:
-      fs: write        # read, write, or none
-      network: true     # true or false
-      subprocess: true  # true or false
-    timeout: 60000      # Execution timeout in milliseconds
-    memory: 512         # Memory limit in MB (64-8192)
+      fs: write # read, write, or none
+      network: true # true or false
+      subprocess: true # true or false
+    timeout: 60000 # Execution timeout in milliseconds
+    memory: 512 # Memory limit in MB (64-8192)
 ```
 
 **Important**: TypeScript scripts currently run in-process with full permissions. Permission declarations are advisory only for future sandboxing implementation.
@@ -209,6 +210,7 @@ scripts:
 ### Built-in Commands
 
 The following command names are reserved and cannot be used for custom scripts:
+
 - `code`, `commit`, `pr`, `review`, `fix`, `plan`, `workflow`, `run`, `init`, `meta`
 
 ## Checkpoint & Resume
@@ -224,6 +226,7 @@ polka checkpoints
 ```
 
 Output example:
+
 ```
 Found 2 checkpoint(s):
 
@@ -259,6 +262,7 @@ polka continue feature-complete
 ```
 
 The continue command will show you:
+
 - What tasks were completed
 - What tasks failed
 - What tasks are pending
@@ -269,6 +273,7 @@ The continue command will show you:
 ### Working Directory
 
 Checkpoints are stored in your project's `.polka/agent-state/checkpoints/` directory. Each checkpoint contains:
+
 - Session ID and timestamp
 - Task queue status
 - Completed and failed tasks
@@ -314,6 +319,7 @@ polka mcp-server
 ```
 
 The server exposes these workflow tools:
+
 - `code`: Execute coding tasks
 - `review`: Review code changes
 - `plan`: Create implementation plans
@@ -347,13 +353,13 @@ For detailed MCP usage instructions and configuration options, see [MCP_GUIDE.md
 
 The project is organized as a monorepo with the following packages:
 
-| Package | Description |
-|---|---|
-| [`core`](/packages/core) | Core AI services, agent implementations, and tooling. |
-| [`cli`](/packages/cli) | Command-line interface for interacting with AI services. |
-| [`cli-shared`](/packages/cli-shared) | Shared utilities and types for CLI packages. |
-| [`github`](/packages/github) | GitHub integration, including the GitHub Action. |
-| [`runner`](/packages/runner) | Service for running agents and managing tasks. |
+| Package                              | Description                                              |
+| ------------------------------------ | -------------------------------------------------------- |
+| [`core`](/packages/core)             | Core AI services, agent implementations, and tooling.    |
+| [`cli`](/packages/cli)               | Command-line interface for interacting with AI services. |
+| [`cli-shared`](/packages/cli-shared) | Shared utilities and types for CLI packages.             |
+| [`github`](/packages/github)         | GitHub integration, including the GitHub Action.         |
+| [`runner`](/packages/runner)         | Service for running agents and managing tasks.           |
 
 ### Runner Authentication
 
@@ -416,6 +422,7 @@ bun install
 ## Contributing
 
 If you're contributing to this project, please refer to [AGENTS.md](AGENTS.md) for:
+
 - Comprehensive project architecture and workflow system documentation
 - Code conventions and development guidelines
 - Tool system patterns and multi-agent architecture
@@ -448,6 +455,7 @@ You can specify the format for tool integration using the `toolFormat` option in
 You can set the `toolFormat` globally or for specific agents or commands.
 
 Example:
+
 ```yaml
 # .polkacodes.yml
 toolFormat: "native"
@@ -457,16 +465,16 @@ toolFormat: "native"
 
 The following environment variables can be used to configure Polka Codes. Note that command line options take precedence over environment variables, which in turn take precedence over the configuration file.
 
-| Variable | Description |
-|---|---|
-| `POLKA_API_PROVIDER` | Specify the default AI service provider. |
-| `POLKA_MODEL` | Specify the default AI model to use. |
-| `POLKA_API_KEY` | Default API key for the selected provider. |
-| `POLKA_BASE_URL` | Base URL for the selected provider, including OpenAI-compatible APIs. |
-| `POLKA_BUDGET` | Set the budget limit for AI service usage (defaults to 1000). |
-| `ANTHROPIC_API_KEY` | API key for Anthropic Claude service. |
-| `OPENROUTER_API_KEY` | API key for OpenRouter service. |
-| `DEEPSEEK_API_KEY` | API key for DeepSeek service. |
+| Variable             | Description                                                           |
+| -------------------- | --------------------------------------------------------------------- |
+| `POLKA_API_PROVIDER` | Specify the default AI service provider.                              |
+| `POLKA_MODEL`        | Specify the default AI model to use.                                  |
+| `POLKA_API_KEY`      | Default API key for the selected provider.                            |
+| `POLKA_BASE_URL`     | Base URL for the selected provider, including OpenAI-compatible APIs. |
+| `POLKA_BUDGET`       | Set the budget limit for AI service usage (defaults to 1000).         |
+| `ANTHROPIC_API_KEY`  | API key for Anthropic Claude service.                                 |
+| `OPENROUTER_API_KEY` | API key for OpenRouter service.                                       |
+| `DEEPSEEK_API_KEY`   | API key for DeepSeek service.                                         |
 
 ## License
 
@@ -477,4 +485,5 @@ This project is licensed under the [AGPL-3.0 License](LICENSE).
 This project is heavily inspired by the [Cline](https://github.com/cline/cline) project.
 
 ---
-*Generated by polka.codes*
+
+_Generated by polka.codes_

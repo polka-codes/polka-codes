@@ -21,7 +21,7 @@ workflows:
         outputSchema: &iteration
           type: object
           properties:
-            count: {type: integer}
+            count: { type: integer }
           required: [count]
       - id: review-commit-loop
         while:
@@ -39,7 +39,7 @@ workflows:
               outputSchema:
                 type: object
                 properties:
-                  hasChanges: {type: boolean}
+                  hasChanges: { type: boolean }
                 required: [hasChanges]
             - id: no-changes-exit
               if:
@@ -53,8 +53,8 @@ workflows:
               outputSchema:
                 type: object
                 properties:
-                  hasCriticalOrMajorIssues: {type: boolean}
-                  details: {type: string}
+                  hasCriticalOrMajorIssues: { type: boolean }
+                  details: { type: string }
                 required: [hasCriticalOrMajorIssues, details]
             - id: commit-or-stop
               if:

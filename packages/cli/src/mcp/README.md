@@ -58,6 +58,7 @@ mcpServers:
 ### Automatic Tool Registration
 
 When MCP servers are configured, polka-codes automatically:
+
 1. Connects to all configured servers at workflow startup
 2. Lists available tools from each server
 3. Registers enabled tools with the format `<server-name>/<tool-name>`
@@ -66,19 +67,21 @@ When MCP servers are configured, polka-codes automatically:
 ### Tool Calling
 
 MCP tools are called automatically by the AI agent when needed. The tool naming convention is:
+
 - `<server-name>/<tool-name>` (e.g., `filesystem/read_file`)
 
 ### Tool-Level Configuration
 
 Individual tools can be enabled/disabled:
+
 ```yaml
 mcpServers:
   myserver:
     command: "npx"
     args: ["-y", "@modelcontextprotocol/server-example"]
     tools:
-      specific_tool: true          # enabled
-      another_tool: false         # disabled
+      specific_tool: true # enabled
+      another_tool: false # disabled
 ```
 
 Tools set to `false` are neither exposed nor callable. Unspecified tools remain enabled.
@@ -87,6 +90,7 @@ Read-only tasks exclude external MCP tools because no trusted read-only policy i
 ## Error Handling
 
 MCP integration includes comprehensive error handling:
+
 - Connection failures are logged but don't prevent other servers from connecting
 - Tool execution errors are reported to the user with actionable messages
 - Timeouts and retries are handled appropriately
@@ -114,6 +118,7 @@ MCP integration includes comprehensive error handling:
 ## Example MCP Servers
 
 Official MCP servers from the community:
+
 - `@modelcontextprotocol/server-filesystem` - File system operations
 - `@modelcontextprotocol/server-github` - GitHub integration
 - `@modelcontextprotocol/server-postgres` - PostgreSQL database
@@ -123,6 +128,7 @@ Official MCP servers from the community:
 ## Testing
 
 Run MCP-specific tests:
+
 ```bash
 bun test packages/cli/src/mcp/manager.test.ts
 ```

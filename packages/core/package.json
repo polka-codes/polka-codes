@@ -25,10 +25,10 @@
     "build": "rm -rf dist && tsc --build --force && bun run ../../scripts/fix-declaration-imports.ts dist && bun build src/index.ts --outdir dist --target node --format esm --packages external"
   },
   "dependencies": {
-    "@ai-sdk/provider": "^4.0.3",
-    "@ai-sdk/provider-utils": "^5.0.10",
-    "ai": "^7.0.28",
-    "yaml": "^2.9.0",
-    "zod": "^4.4.3"
+    "@ai-sdk/provider": "^4.0.37",
+    "@ai-sdk/provider-utils": "^5.0.79",
+    "ai": "^7.0.169",
+    "yaml": "^2.9.1",
+    "zod": "^4.6.7"
   }
 }

@@ -20,12 +20,12 @@ workflows:
         task: Use input.goal, input.priority, and state.analysis to produce a Markdown plan. Include ordered task checkboxes, descriptions, dependencies, and acceptance criteria. Return the Markdown text.
         tools: []
         output: markdown
-        outputSchema: {type: string}
+        outputSchema: { type: string }
       - id: write-plan
         task: Use writeToFile to save state.markdown under plans/active/ with input.planName as the filename and .md as its extension. Return the saved path.
         tools: [writeToFile]
         output: planPath
-        outputSchema: {type: string}
+        outputSchema: { type: string }
       - id: summary
         task: Report state.planPath. Explain that it can be reviewed and then passed as the positional argument to polka workflow -f examples/worker.yml.
         tools: []

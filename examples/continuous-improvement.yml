@@ -19,7 +19,7 @@ workflows:
         outputSchema: &iteration
           type: object
           properties:
-            count: {type: integer}
+            count: { type: integer }
           required: [count]
       - id: improvement-loop
         while:
@@ -37,8 +37,8 @@ workflows:
               outputSchema: &check
                 type: object
                 properties:
-                  failed: {type: boolean}
-                  details: {type: string}
+                  failed: { type: boolean }
+                  details: { type: string }
                 required: [failed, details]
             - id: check-tests
               task: Run bun test and report whether it failed, including the output.
