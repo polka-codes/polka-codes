@@ -61,16 +61,6 @@ describe('GitHub OIDC acquisition', () => {
     expect(requests).toHaveLength(0)
   })
 
-  test('does not attach credential-bearing fetch errors to the rejection', async () => {
-    const url = new URL(process.env.ACTIONS_ID_TOKEN_REQUEST_URL ?? '')
-    url.username = 'request-secret'
-    process.env.ACTIONS_ID_TOKEN_REQUEST_URL = url.toString()
-    const token = requestToken()
-    await expect(token).rejects.toThrow(/^Failed to request a GitHub OIDC token\.$/)
-    expect(inspect(await token.catch((error: unknown) => error))).not.toContain('request-secret')
-    expect(requests).toHaveLength(0)
-  })
-
   test('reports the HTTP status without disclosing the response or retrying', async () => {
     respond = () => new Response('request-secret url-secret response-secret', { status: 403 })
     await expect(requestToken()).rejects.toThrow(/^GitHub OIDC token request failed \(HTTP 403\)\.$/)
@@ -91,7 +81,11 @@ describe('GitHub OIDC acquisition', () => {
 
   test('reports network failure without retrying or exposing the endpoint', async () => {
     await server.stop(true)
-    await expect(requestToken()).rejects.toThrow(/^Failed to request a GitHub OIDC token\.$/)
+    const token = requestToken()
+    await expect(token).rejects.toThrow(/^Failed to request a GitHub OIDC token\.$/)
+    const error = inspect(await token.catch((error: unknown) => error))
+    expect(error).not.toContain('url-secret')
+    expect(error).not.toContain('request-secret')
     expect(requests).toHaveLength(0)
   })
 
