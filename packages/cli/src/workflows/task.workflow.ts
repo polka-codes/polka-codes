@@ -3,6 +3,7 @@
 import {
   type AgentToolRegistry,
   agentWorkflow,
+  buildStructuredOutputContract,
   type ExitReason,
   executeCommand,
   type FullToolInfo,
@@ -74,6 +75,7 @@ Running generic agent${readonly ? ' in READ-ONLY mode' : ''}...
         tools: agentTools,
         // In JSON mode, use outputSchema to ensure the agent returns JSON
         outputSchema: jsonMode ? TaskOutputSchema : undefined,
+        outputContract: jsonMode ? buildStructuredOutputContract(TaskOutputSchema) : undefined,
       },
       context,
     )

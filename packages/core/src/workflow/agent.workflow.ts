@@ -6,7 +6,6 @@ import { toJSONSchema, type z } from 'zod'
 import { parseJsonFromMarkdown } from '../Agent/parseJsonFromMarkdown.js'
 import type { FullToolInfo, ToolResponse } from '../tool.js'
 import { type JsonModelMessage, type JsonResponseMessage, type JsonUserModelMessage, toJsonModelMessage } from './json-ai-types.js'
-import { buildStructuredOutputContract } from './structured-output-contract.js'
 import { type ExitReason, type ExitReasonErrorDetails, type TaskEvent, TaskEventKind } from './types.js'
 import type { WorkflowFn } from './workflow.js'
 
@@ -15,6 +14,7 @@ export type AgentWorkflowInput = {
   maxStructuredOutputRepairAttempts?: number
   userMessage: readonly JsonUserModelMessage[]
   outputSchema?: z.ZodSchema
+  outputContract?: string
   model?: string
 } & (
   | {
@@ -122,7 +122,10 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
   const { tools: toolInfo, maxStructuredOutputRepairAttempts = 2 } = input
 
   const systemPrompt = 'systemPrompt' in input ? input.systemPrompt : undefined
-  const outputContract = input.outputSchema ? buildStructuredOutputContract(input.outputSchema) : ''
+  if (input.outputSchema && !input.outputContract) {
+    throw new Error('Structured output requires an explicit outputContract.')
+  }
+  const outputContract = input.outputContract ?? ''
   let messages: JsonModelMessage[] = 'systemPrompt' in input ? [{ role: 'system', content: input.systemPrompt }] : [...input.messages]
   if (outputContract) {
     messages.push({ role: 'system', content: outputContract })

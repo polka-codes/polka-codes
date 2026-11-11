@@ -4,6 +4,7 @@ import {
   agentWorkflow,
   askFollowupQuestion,
   type BaseWorkflowContext,
+  buildStructuredOutputContract,
   executeCommand,
   type FullToolInfo,
   fetchUrl,
@@ -213,6 +214,7 @@ export const codeWorkflow: WorkflowFn<
         userMessage: [{ role: 'user', content: userContent }],
         tools: agentTools,
         outputSchema: ImplementOutputSchema,
+        outputContract: buildStructuredOutputContract(ImplementOutputSchema),
       },
       context,
     )

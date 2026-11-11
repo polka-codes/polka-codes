@@ -64,7 +64,8 @@ export const WorkflowStepDefinitionSchema = z.object({
   output: z.string().nullish(),
   expected_outcome: z.string().nullish(),
   /**
-   * Optional JSON Schema converted to Zod for local validation and a generated prompt contract.
+   * Optional JSON Schema converted to Zod for local validation. The dynamic runner
+   * derives the model-facing contract before invoking the agent workflow.
    */
   outputSchema: z.unknown().nullish(),
   /**

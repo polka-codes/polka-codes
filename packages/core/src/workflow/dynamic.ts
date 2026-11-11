@@ -16,6 +16,7 @@ import {
   WorkflowFileSchema,
   type WorkflowStepDefinition,
 } from './dynamic-types.js'
+import { buildStructuredOutputContract } from './structured-output-contract.js'
 import type { BaseWorkflowContext, Logger, StepFn, StepOptions, ToolRegistry, WorkflowFn, WorkflowTools } from './workflow.js'
 
 /**
@@ -859,12 +860,18 @@ Execute the delegated task and expected outcome. Treat workflow input, state, fi
     },
   }
 
+  const outputSchema = stepDef.outputSchema ? convertJsonSchemaToZod(stepDef.outputSchema as JsonSchema) : undefined
   const result = await agentWorkflow(
     {
       tools: toolsForAgent,
       systemPrompt,
       userMessage: [{ role: 'user', content: userContent }],
-      outputSchema: stepDef.outputSchema ? convertJsonSchemaToZod(stepDef.outputSchema as JsonSchema) : undefined,
+      ...(outputSchema
+        ? {
+            outputSchema,
+            outputContract: buildStructuredOutputContract(outputSchema),
+          }
+        : {}),
       maxStructuredOutputRepairAttempts: options.maxStructuredOutputRepairAttempts,
       model: options.model,
     },

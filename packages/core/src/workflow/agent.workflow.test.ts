@@ -6,6 +6,7 @@ import { z } from 'zod'
 import type { FullToolInfo, ToolResponse } from '../'
 import { type AgentModelRound, type AgentToolRegistry, agentWorkflow } from './agent.workflow'
 import type { JsonModelMessage, JsonResponseMessage, JsonUserModelMessage } from './json-ai-types'
+import { buildStructuredOutputContract } from './structured-output-contract'
 import { type TaskEvent, type TaskEventEndTask, TaskEventKind } from './types'
 import { createContext, type WorkflowTools } from './workflow'
 
@@ -14,6 +15,10 @@ function endTaskEvents(events: TaskEvent[]): TaskEventEndTask[] {
 }
 
 const OUTPUT_CONTRACT_MARKER = 'type Output = {'
+
+function structuredOutput(schema: z.ZodSchema, contract = buildStructuredOutputContract(schema)) {
+  return { outputSchema: schema, outputContract: contract }
+}
 
 function createModelRound(input: AgentToolRegistry['generateText']['input'], responseMessages: JsonResponseMessage[]): AgentModelRound {
   const requestMessages: JsonModelMessage[] = input.systemPrompt
@@ -171,12 +176,13 @@ test('should include the output contract once in the initial instructions across
     taskEvent: async () => {},
   }
 
+  const outputSchema = z.object({ answer: z.string() })
   const result = await agentWorkflow(
     {
       userMessage: [{ role: 'user', content: 'Inspect the project, then answer.' }],
       tools: [listFilesTool],
       systemPrompt: 'Use the dedicated system channel.',
-      outputSchema: z.object({ answer: z.string() }),
+      ...structuredOutput(outputSchema, '<output_contract>\\ntype Output = { answer: string }\\n</output_contract>'),
     },
     createContext(tools),
   )
@@ -224,7 +230,7 @@ test('should preserve JSON repair and Zod validation for transformed output sche
       userMessage: [{ role: 'user', content: 'Return a structured result.' }],
       tools: [],
       systemPrompt: 'Use the dedicated system channel.',
-      outputSchema,
+      ...structuredOutput(outputSchema),
     },
     createContext(tools),
   )
@@ -274,7 +280,7 @@ test.each([
       userMessage: [{ role: 'user', content: 'Return a structured result.' }],
       tools: [],
       systemPrompt: 'Use the dedicated system channel.',
-      outputSchema: z.object({ answer: z.string() }),
+      ...structuredOutput(z.object({ answer: z.string() })),
       maxStructuredOutputRepairAttempts: 1,
     },
     createContext(tools),
@@ -324,7 +330,7 @@ test('should bound schema diagnostics', async () => {
       userMessage: [{ role: 'user', content: 'Return the structured result.' }],
       tools: [],
       systemPrompt: 'Use the dedicated system channel.',
-      outputSchema,
+      ...structuredOutput(outputSchema),
     },
     createContext(tools),
   )
@@ -358,7 +364,7 @@ test('should reject extra properties with a strict output schema', async () => {
       userMessage: [{ role: 'user', content: 'Return the structured result.' }],
       tools: [],
       systemPrompt: 'Use the dedicated system channel.',
-      outputSchema: z.strictObject({ answer: z.string() }),
+      ...structuredOutput(z.strictObject({ answer: z.string() })),
     },
     createContext(tools),
   )
@@ -405,7 +411,7 @@ test('should reset repair attempts after a tool call', async () => {
       userMessage: [{ role: 'user', content: 'Inspect, then answer.' }],
       tools: [listFilesTool],
       systemPrompt: 'Use the dedicated system channel.',
-      outputSchema: z.object({ answer: z.string() }),
+      ...structuredOutput(z.object({ answer: z.string() })),
       maxStructuredOutputRepairAttempts: 1,
     },
     createContext(tools),
@@ -458,7 +464,7 @@ test('should adopt the canonical request transcript returned by the model adapte
       userMessage: [{ role: 'user', content: originalRequest }],
       tools: [listFilesTool],
       systemPrompt: 'Use the dedicated system channel.',
-      outputSchema: z.object({ answer: z.string() }),
+      ...structuredOutput(z.object({ answer: z.string() })),
     },
     createContext(tools),
   )

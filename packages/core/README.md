@@ -100,15 +100,17 @@ main()
 
 ### Structured output
 
-Use `outputSchema` for both the model-facing contract and local validation:
+Pass `outputSchema` for local validation and an explicit `outputContract` for the model-facing prompt:
 
 ```typescript
+const outputSchema = z.object({ summary: z.string() })
 const result = await agentWorkflow(
   {
     tools: [],
     systemPrompt: 'Return the requested result.',
     userMessage: [{ role: 'user', content: 'Summarize the change.' }],
-    outputSchema: z.object({ summary: z.string() }),
+    outputSchema,
+    outputContract: 'type Output = { summary: string }',
   },
   context,
 )
@@ -118,7 +120,7 @@ if (result.type === 'Exit') {
 }
 ```
 
-The workflow derives a TypeScript-shaped contract from the schema, sends it as ordinary prompt text, parses the model response as JSON, and returns the Zod-transformed value only after validation succeeds. Invalid JSON and schema mismatches receive bounded repair instructions; exhausted repairs return `structured_output_repair_exhausted`.
+The workflow sends the supplied contract as ordinary prompt text, parses the model response as JSON, and returns the Zod-transformed value only after validation succeeds. Invalid JSON and schema mismatches receive bounded repair instructions; exhausted repairs return `structured_output_repair_exhausted`.
 
 ## Development
 

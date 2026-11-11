@@ -2,6 +2,7 @@ import type { FullToolInfo, JsonModelMessage } from '@polka-codes/core'
 import {
   agentWorkflow,
   askFollowupQuestion,
+  buildStructuredOutputContract,
   fetchUrl,
   listFiles,
   readBinaryFile,
@@ -80,6 +81,7 @@ export async function runAgentWithSchema<T extends z.ZodSchema>(
       userMessage: [{ role: 'user', content: options.userMessage }],
       tools,
       outputSchema: options.schema,
+      outputContract: buildStructuredOutputContract(options.schema),
       maxStructuredOutputRepairAttempts: options.maxStructuredOutputRepairAttempts,
       model: options.model,
     },

@@ -5,6 +5,7 @@ import {
   agentWorkflow,
   askFollowupQuestion,
   type BaseWorkflowContext,
+  buildStructuredOutputContract,
   type FullToolInfo,
   fetchUrl,
   type JsonModelMessage,
@@ -104,6 +105,7 @@ async function createPlan(input: CreatePlanInput, context: BaseWorkflowContext<C
         ...inputMessages,
         tools: agentTools,
         outputSchema: PlanSchema,
+        outputContract: buildStructuredOutputContract(PlanSchema),
       },
       context,
     )

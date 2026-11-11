@@ -5,6 +5,7 @@ import { parseGitPorcelain } from '@polka-codes/cli-shared'
 import {
   type AgentToolRegistry,
   agentWorkflow,
+  buildStructuredOutputContract,
   listFiles,
   readBinaryFile,
   readFile,
@@ -449,6 +450,7 @@ export const reviewWorkflow: WorkflowFn<ReviewWorkflowInput & BaseWorkflowInput,
         ],
         tools: reviewTools,
         outputSchema: reviewOutputSchema,
+        outputContract: buildStructuredOutputContract(reviewOutputSchema),
       },
       { ...context, tools: agentTools },
     )
