@@ -26,7 +26,7 @@ export async function executeRunnerCommands(
         stdout: stdout.text,
         stderr: stderr.text,
         exitCode: response.exitCode,
-        outputTruncated: stdout.truncated || stderr.truncated,
+        ...(stdout.truncated || stderr.truncated ? { outputTruncated: true } : {}),
       },
     })
     if (response.exitCode !== 0) failed = true

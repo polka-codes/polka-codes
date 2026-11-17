@@ -18,14 +18,14 @@ describe('runner command protocol', () => {
     )
     expect(wsOutgoingMessageSchema.parse({ type: 'pending_tools_response', step: 1, responses })).toMatchObject({
       responses: [
-        { index: 0, response: { stdout: 'ok', stderr: '', exitCode: 0, outputTruncated: false } },
-        { index: 1, response: { stdout: '', stderr: 'failed', exitCode: 7, outputTruncated: false } },
-        {
-          index: 2,
-          response: { stdout: '', stderr: 'Skipped because an earlier command failed.', exitCode: null, outputTruncated: false },
-        },
+        { index: 0, response: { stdout: 'ok', stderr: '', exitCode: 0 } },
+        { index: 1, response: { stdout: '', stderr: 'failed', exitCode: 7 } },
+        { index: 2, response: { stdout: '', stderr: 'Skipped because an earlier command failed.', exitCode: null } },
       ],
     })
+    for (const { response } of responses) {
+      expect(response).not.toHaveProperty('outputTruncated')
+    }
   })
 
   test.each(['stdout', 'stderr'] as const)('marks the result when only %s is truncated', async (stream) => {

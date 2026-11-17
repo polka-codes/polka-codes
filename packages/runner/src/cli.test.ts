@@ -157,7 +157,7 @@ describe('runner process completion', () => {
       type: 'pending_tools_response',
       responses: [
         { index: 0, response: { exitCode, outputTruncated: true } },
-        { index: 1, response: { exitCode: exitCode === 0 ? 0 : null, outputTruncated: false } },
+        { index: 1, response: { exitCode: exitCode === 0 ? 0 : null } },
       ],
     })
     if (message?.type !== 'pending_tools_response') throw new Error('Expected command results before completion')
