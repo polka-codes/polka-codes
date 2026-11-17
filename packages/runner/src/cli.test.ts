@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { z } from 'zod'
+import { RUNNER_OUTPUT_MAX_JSON_BYTES } from './output'
 import { type WsIncomingMessage, wsOutgoingMessageSchema } from './types'
 
 let runnerCli: string
@@ -139,6 +140,39 @@ function commands(...commands: string[]): WsIncomingMessage {
 }
 
 describe('runner process completion', () => {
+  test.each([0, 7])('bounds noisy command responses while retaining complete console output and exit %i', async (exitCode) => {
+    const stdout = `stdout-start\n${'🙂out\n'.repeat(10_000)}stdout-end\n`
+    const stderr = `stderr-start\n${'diagnostic\n'.repeat(10_000)}stderr-end\n`
+    const result = await runRunnerProcess(commands('node noisy.cjs', 'printf next-command'), async (directory) => {
+      await writeFile(
+        join(directory, 'noisy.cjs'),
+        `process.stdout.write(${JSON.stringify(stdout)}); process.stderr.write(${JSON.stringify(stderr)}); process.exitCode = ${exitCode};`,
+      )
+    })
+    expect(result.stdout).toContain(stdout)
+    expect(result.stderr).toContain(stderr)
+    expect(result.exitCode).toBe(exitCode === 0 ? 0 : 1)
+    const message = result.messages.at(-1)
+    expect(message).toMatchObject({
+      type: 'pending_tools_response',
+      responses: [
+        { index: 0, response: { exitCode, outputTruncated: true } },
+        { index: 1, response: { exitCode: exitCode === 0 ? 0 : null, outputTruncated: false } },
+      ],
+    })
+    if (message?.type !== 'pending_tools_response') throw new Error('Expected command results before completion')
+    const response = message.responses[0].response
+    if (typeof response !== 'object' || Array.isArray(response)) throw new Error('Expected structured command output')
+    expect(Buffer.byteLength(JSON.stringify(response.stdout))).toBeLessThanOrEqual(RUNNER_OUTPUT_MAX_JSON_BYTES)
+    expect(Buffer.byteLength(JSON.stringify(response.stderr))).toBeLessThanOrEqual(RUNNER_OUTPUT_MAX_JSON_BYTES)
+    expect(response.stdout).toStartWith('[runner output truncated:')
+    expect(response.stdout).toContain('stdout-start\n')
+    expect(response.stdout).toEndWith('stdout-end\n')
+    expect(response.stderr).toContain('stderr-start\n')
+    expect(response.stderr).toEndWith('stderr-end\n')
+    expect(result.stdout.includes('$ >>>> $ printf next-command')).toBe(exitCode === 0)
+  })
+
   test('runs without GITHUB_TOKEN and reports successful command results before exiting zero', async () => {
     const result = await runRunnerProcess(commands('test -z "$GITHUB_TOKEN" && printf ok && printf diagnostic >&2'))
     expect(result.messages.at(-1)).toMatchObject({

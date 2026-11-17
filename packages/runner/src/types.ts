@@ -76,6 +76,15 @@ export const userContentSchema = z.union([
 
 export type UserContent = z.infer<typeof userContentSchema>
 
+export const runnerCommandResponseSchema = z.object({
+  stdout: z.string(),
+  stderr: z.string(),
+  exitCode: z.number().int().nullable(),
+  outputTruncated: z.boolean().optional(),
+})
+
+export type RunnerCommandResponse = z.infer<typeof runnerCommandResponseSchema>
+
 export const wsOutgoingMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('connected') }),
   z.object({
@@ -85,7 +94,7 @@ export const wsOutgoingMessageSchema = z.discriminatedUnion('type', [
       z.object({
         index: z.number(),
         tool: z.string(),
-        response: z.union([userContentSchema, z.object({ stdout: z.string(), stderr: z.string(), exitCode: z.number().int().nullable() })]),
+        response: z.union([userContentSchema, runnerCommandResponseSchema]),
       }),
     ),
   }),

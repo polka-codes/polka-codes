@@ -1,5 +1,6 @@
 import { executeCommand } from '@polka-codes/core'
-import type { WsIncomingMessage } from './types'
+import { boundRunnerOutput } from './output'
+import type { RunnerCommandResponse, WsIncomingMessage } from './types'
 
 type CommandResult = { stdout: string; stderr: string; exitCode: number }
 type CommandExecutor = (command: string, requiresApproval: boolean) => Promise<CommandResult>
@@ -10,13 +11,24 @@ export async function executeRunnerCommands(
   execute: CommandExecutor,
 ) {
   const commands = requests.map((request) => ({ index: request.index, ...executeCommand.parameters.parse(request.params) }))
-  const responses: Array<{ index: number; tool: string; response: { stdout: string; stderr: string; exitCode: number | null } }> = []
+  const responses: Array<{ index: number; tool: string; response: RunnerCommandResponse }> = []
   let failed = false
   for (const command of commands) {
     const response = failed
       ? { stdout: '', stderr: 'Skipped because an earlier command failed.', exitCode: null }
       : await execute(command.command, command.requiresApproval ?? false)
-    responses.push({ index: command.index, tool: 'executeCommand', response })
+    const stdout = boundRunnerOutput(response.stdout)
+    const stderr = boundRunnerOutput(response.stderr)
+    responses.push({
+      index: command.index,
+      tool: 'executeCommand',
+      response: {
+        stdout: stdout.text,
+        stderr: stderr.text,
+        exitCode: response.exitCode,
+        outputTruncated: stdout.truncated || stderr.truncated,
+      },
+    })
     if (response.exitCode !== 0) failed = true
   }
   return responses
