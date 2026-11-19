@@ -1,4 +1,5 @@
 const { spawn } = require('node:child_process')
+const { writeFileSync } = require('node:fs')
 const { createServer } = require('node:http')
 const { join } = require('node:path')
 const { WebSocketServer } = require('ws')
@@ -12,6 +13,8 @@ const {
   upgradeStatus,
   upgradeFailureAt = 1,
   policyRejectAt,
+  disconnectBatch,
+  nextBatch,
 } = JSON.parse(encodedScenario)
 const messages = []
 const connections = []
@@ -62,6 +65,8 @@ server.on('upgrade', (request, socket, head) => {
 let child
 let stdout = ''
 let stderr = ''
+let disconnectDuringCommand
+let sentNextBatch = false
 const deadline = setTimeout(() => child?.kill('SIGKILL'), 8000)
 sockets.on('connection', (socket, request) => {
   connections.push({
@@ -77,12 +82,30 @@ sockets.on('connection', (socket, request) => {
       else if (onConnected === 'reconnect') {
         if (connections.length === 1) socket.terminate()
         else socket.send(JSON.stringify({ type: 'done' }))
-      } else socket.send(JSON.stringify(onConnected))
+      } else if (disconnectBatch === 'before-receipt') {
+        // The server has marked the batch running, but the runner never sees its frame.
+        if (connections.length === 1) socket.terminate()
+        else socket.close(1008, 'No matching command batch')
+      } else if (connections.length === 1) {
+        if (disconnectBatch === 'executing') disconnectDuringCommand = () => socket.terminate()
+        socket.send(JSON.stringify(onConnected))
+      } else if (disconnectBatch === 'executing') {
+        socket.send(JSON.stringify(onConnected))
+        writeFileSync(join(directory, 'release'), '')
+      } else if (disconnectBatch === 'applied-result') {
+        sentNextBatch = true
+        socket.send(JSON.stringify(nextBatch))
+      }
     } else if (
       message.type === 'pending_tools_response' ||
       (onConnected.type === 'get_files' && (message.type === 'get_files_completed' || message.type === 'error'))
     ) {
-      socket.send(JSON.stringify({ type: 'done' }))
+      if ((disconnectBatch === 'result' || disconnectBatch === 'applied-result') && connections.length === 1) {
+        socket.terminate()
+      } else if (nextBatch && !sentNextBatch) {
+        sentNextBatch = true
+        socket.send(JSON.stringify(nextBatch))
+      } else socket.send(JSON.stringify({ type: 'done' }))
     }
   })
 })
@@ -97,6 +120,10 @@ server.on('listening', () => {
   })
   child.stdout.on('data', (data) => {
     stdout += data
+    if (disconnectDuringCommand && stdout.includes('command started\n')) {
+      disconnectDuringCommand()
+      disconnectDuringCommand = undefined
+    }
   })
   child.stderr.on('data', (data) => {
     stderr += data

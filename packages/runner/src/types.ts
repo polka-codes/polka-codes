@@ -19,6 +19,8 @@ export const wsIncomingMessageSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('pending_tools'),
     step: z.number(),
+    // Opt in only when the server can reconcile and deduplicate replayed command results.
+    replayCommandResults: z.boolean().optional(),
     requests: z.array(
       z.object({
         index: z.number(),
@@ -85,11 +87,21 @@ export const runnerCommandResponseSchema = z.object({
 
 export type RunnerCommandResponse = z.infer<typeof runnerCommandResponseSchema>
 
+export const batchIndexSchema = z.number().int().nonnegative()
+const commandBatchStateSchema = z.discriminatedUnion('status', [
+  z.object({ status: z.literal('idle') }),
+  z.object({ status: z.literal('executing'), batchIndex: batchIndexSchema }),
+  z.object({ status: z.literal('result'), batchIndex: batchIndexSchema }),
+])
+
+export type CommandBatchState = z.infer<typeof commandBatchStateSchema>
+
 export const wsOutgoingMessageSchema = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('connected') }),
+  z.object({ type: z.literal('connected'), commandBatch: commandBatchStateSchema.optional() }),
   z.object({
     type: z.literal('pending_tools_response'),
     step: z.number(),
+    batchIndex: batchIndexSchema.optional(),
     responses: z.array(
       z.object({
         index: z.number(),
@@ -123,3 +135,4 @@ export const wsOutgoingMessageSchema = z.discriminatedUnion('type', [
 ])
 
 export type WsOutgoingMessage = z.infer<typeof wsOutgoingMessageSchema>
+export type PendingToolsResponse = Extract<WsOutgoingMessage, { type: 'pending_tools_response' }>

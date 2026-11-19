@@ -17,10 +17,14 @@ import {
   writeToFile,
 } from '@polka-codes/core'
 import { executeRunnerCommands } from './commands'
-import type { UserContent, WsIncomingMessage } from './types'
+import { batchIndexSchema, type PendingToolsResponse, type UserContent, type WsIncomingMessage } from './types'
 import { WebSocketManager } from './WebSocketManager'
 
 type RunnerMediaSource = { type: 'base64'; data: string } | { type: 'url'; url: string }
+type CommandBatch = {
+  batchIndex: number
+  result?: PendingToolsResponse
+}
 
 function submoduleCommits(directory: string, commit?: string, paths?: string[]): Map<string, string> {
   const commits = new Map<string, string>()
@@ -97,6 +101,7 @@ export interface RunnerOptions {
 
 export class Runner {
   #commandFailed = false
+  #commandBatch?: CommandBatch | 'legacy'
   private wsManager: WebSocketManager
   private provider: ReturnType<typeof getProvider>
   private availableTools: Record<string, FullToolInfo>
@@ -146,6 +151,15 @@ export class Runner {
       sessionToken: options.sessionToken,
       apiUrl: options.api,
       onMessage: this.handleMessage.bind(this),
+      getHandshake: () => {
+        const batch = this.#commandBatch
+        if (batch === 'legacy') return {}
+        if (!batch) return { commandBatch: { status: 'idle' } }
+        return {
+          commandBatch: { status: batch.result ? 'result' : 'executing', batchIndex: batch.batchIndex },
+          result: batch.result,
+        }
+      },
     })
   }
 
@@ -187,12 +201,9 @@ export class Runner {
       message.requests.map((r) => r.tool),
     )
 
-    if (message.requests.every((request) => request.tool === 'executeCommand')) {
-      const execute = this.provider.executeCommand
-      if (!execute) throw new Error('Runner command execution is unavailable.')
-      const responses = await executeRunnerCommands(message.requests, execute)
-      this.#commandFailed ||= responses.some(({ response }) => response.exitCode !== 0)
-      this.wsManager.sendMessage({ type: 'pending_tools_response', step: message.step, responses })
+    const firstRequest = message.requests[0]
+    if (firstRequest && message.requests.every((request) => request.tool === 'executeCommand')) {
+      await this.#executeCommandBatch(message, firstRequest.index)
       return
     }
 
@@ -305,6 +316,26 @@ export class Runner {
     })
   }
 
+  async #executeCommandBatch(message: Extract<WsIncomingMessage, { type: 'pending_tools' }>, firstIndex: number): Promise<void> {
+    const batch: CommandBatch | undefined = message.replayCommandResults ? { batchIndex: batchIndexSchema.parse(firstIndex) } : undefined
+    const previous = this.#commandBatch
+    if (previous && previous !== 'legacy') {
+      // The app dispatches batches in index order. Ignore duplicate and stale deliveries.
+      if (firstIndex <= previous.batchIndex) return
+      if (!previous.result) throw new Error('Received a new command batch while another batch was executing.')
+    }
+
+    const execute = this.provider.executeCommand
+    if (!execute) throw new Error('Runner command execution is unavailable.')
+    this.#commandBatch = batch ?? 'legacy'
+    const responses = await executeRunnerCommands(message.requests, execute)
+    this.#commandFailed ||= responses.some(({ response }) => response.exitCode !== 0)
+    const result: PendingToolsResponse = { type: 'pending_tools_response', step: message.step, batchIndex: batch?.batchIndex, responses }
+    if (batch) batch.result = result
+    // The queue delivers legacy results. Replay-enabled results are sent from the retained batch.
+    this.wsManager.sendMessage(result, { queueIfDisconnected: !batch })
+  }
+
   /**
    * Handle get files message
    */
@@ -356,6 +387,7 @@ export class Runner {
    */
   private handleDone(): void {
     console.log('Received done message. Closing connection.')
+    this.#commandBatch = undefined
     this.wsManager.close(true)
     // Ensure exit happens after potential close event processing
     setImmediate(() => process.exit(this.#commandFailed ? 1 : 0))

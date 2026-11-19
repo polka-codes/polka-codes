@@ -4,7 +4,13 @@
 import WebSocket from 'ws'
 
 import { requestGitHubOidcToken } from './github-oidc'
-import { type WsIncomingMessage, type WsOutgoingMessage, wsIncomingMessageSchema } from './types'
+import {
+  type CommandBatchState,
+  type PendingToolsResponse,
+  type WsIncomingMessage,
+  type WsOutgoingMessage,
+  wsIncomingMessageSchema,
+} from './types'
 
 export function normalizeRunnerApiUrl(apiUrl: string): string {
   const url = new URL(apiUrl)
@@ -32,7 +38,7 @@ export interface WebSocketManagerOptions {
   sessionToken: string
   apiUrl: string
   onMessage: (message: WsIncomingMessage) => Promise<void>
-  onOpen?: () => void
+  getHandshake?: () => { commandBatch?: CommandBatchState; result?: PendingToolsResponse }
 }
 
 export class WebSocketManager {
@@ -89,9 +95,9 @@ export class WebSocketManager {
   /**
    * Sends a message to the WebSocket server
    */
-  public sendMessage(message: WsOutgoingMessage): void {
+  public sendMessage(message: WsOutgoingMessage, { queueIfDisconnected = true } = {}): void {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      this.#queuedMessages.push(message)
+      if (queueIfDisconnected) this.#queuedMessages.push(message)
       return
     }
 
@@ -161,11 +167,9 @@ export class WebSocketManager {
     this.initialConnectionEstablished = true
     this.reconnectAttempts = 0 // Reset attempts on successful connection
 
-    this.sendMessage({ type: 'connected' })
-
-    if (this.options.onOpen) {
-      this.options.onOpen()
-    }
+    const handshake = this.options.getHandshake?.()
+    this.sendMessage({ type: 'connected', commandBatch: handshake?.commandBatch })
+    if (handshake?.result) this.sendMessage(handshake.result, { queueIfDisconnected: false })
 
     // Clear first so messages are safely re-queued if the connection closes while flushing.
     const queuedMessages = this.#queuedMessages

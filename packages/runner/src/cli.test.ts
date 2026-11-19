@@ -5,10 +5,11 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { z } from 'zod'
 import { RUNNER_OUTPUT_MAX_JSON_BYTES } from './output'
-import { type WsIncomingMessage, wsOutgoingMessageSchema } from './types'
+import { type WsIncomingMessage, type WsOutgoingMessage, wsOutgoingMessageSchema } from './types'
 
 let runnerCli: string
 let buildDirectory: string
+const idleConnection = { type: 'connected', commandBatch: { status: 'idle' } } satisfies WsOutgoingMessage
 
 beforeAll(async () => {
   buildDirectory = await mkdtemp(join(tmpdir(), 'runner-cli-build-'))
@@ -26,19 +27,21 @@ afterAll(async () => {
   await rm(buildDirectory, { recursive: true, force: true })
 })
 
-interface AuthScenario {
+interface RunnerScenario {
   tokenFailure?: 'missing-url' | 'missing-token' | 'http' | 'json' | 'empty'
   tokenFailureAt?: number
   upgradeStatus?: number
   upgradeFailureAt?: number
   policyRejectAt?: number
+  disconnectBatch?: 'before-receipt' | 'executing' | 'result' | 'applied-result'
+  nextBatch?: Extract<WsIncomingMessage, { type: 'pending_tools' }>
 }
 
 async function runRunnerProcess(
   onConnected: WsIncomingMessage | 'reject' | 'reconnect',
   setup?: (directory: string) => Promise<void>,
   githubToken?: string,
-  scenario: AuthScenario = {},
+  scenario: RunnerScenario = {},
 ) {
   const directory = await mkdtemp(join(tmpdir(), 'runner-lifecycle-'))
   let fixture: Bun.Subprocess<'ignore', 'pipe', 'pipe'> | undefined
@@ -131,7 +134,7 @@ test('cleans up the runner workspace when setup fails', async () => {
   }
 })
 
-function commands(...commands: string[]): WsIncomingMessage {
+function commands(...commands: string[]): Extract<WsIncomingMessage, { type: 'pending_tools' }> {
   return {
     type: 'pending_tools',
     step: 1,
@@ -195,7 +198,7 @@ describe('runner process completion', () => {
     const result = await runRunnerProcess('reconnect')
     expect(result.connections).toHaveLength(2)
     expect(result.tokenRequests).toHaveLength(2)
-    expect(result.messages).toEqual([{ type: 'connected' }, { type: 'connected' }])
+    expect(result.messages).toEqual([idleConnection, idleConnection])
     expect(result.exitCode).toBe(0)
   })
 
@@ -220,9 +223,134 @@ describe('runner process completion', () => {
 
   test('does not reconnect after a protocol rejection', async () => {
     const result = await runRunnerProcess('reject')
-    expect(result.messages).toEqual([{ type: 'connected' }])
+    expect(result.messages).toEqual([idleConnection])
     expect(result.exitCode).toBe(1)
     expect(result.stdout).not.toContain('Attempting to reconnect')
+  })
+})
+
+describe('runner command batch reconnects', () => {
+  test('rejects an invalid replay batch index before executing commands', async () => {
+    const result = await runRunnerProcess({
+      type: 'pending_tools',
+      step: 1,
+      replayCommandResults: true,
+      requests: [{ index: -1, tool: 'executeCommand', params: { command: 'echo command started' } }],
+    })
+    expect(result.messages.at(-1)).toMatchObject({ type: 'error', message: 'Failed to process message' })
+    expect(result.stdout.split('\n').filter((line) => line === 'command started')).toEqual([])
+    expect(result.exitCode).toBe(1)
+  })
+
+  test('announces idle when a dispatched batch never arrived', async () => {
+    const result = await runRunnerProcess({ ...commands('echo command started'), replayCommandResults: true }, undefined, undefined, {
+      disconnectBatch: 'before-receipt',
+    })
+    expect(result.messages).toEqual([idleConnection, idleConnection])
+    expect(result.stdout.split('\n').filter((line) => line === 'command started')).toEqual([])
+    expect(result.exitCode).toBe(1)
+  })
+
+  test('finishes an executing batch once after reconnect and accepts a new batch at the same step', async () => {
+    const result = await runRunnerProcess(
+      { ...commands('node gated.cjs'), replayCommandResults: true },
+      async (directory) => {
+        await writeFile(
+          join(directory, 'gated.cjs'),
+          `const { existsSync } = require('node:fs')
+console.log('command started')
+const timer = setInterval(() => {
+  if (existsSync('release')) {
+    clearInterval(timer)
+    process.stdout.write('command finished')
+  }
+}, 10)
+`,
+        )
+      },
+      undefined,
+      {
+        disconnectBatch: 'executing',
+        nextBatch: {
+          type: 'pending_tools',
+          step: 1,
+          replayCommandResults: true,
+          requests: [{ index: 1, tool: 'executeCommand', params: { command: 'printf next' } }],
+        },
+      },
+    )
+    expect(result.messages).toEqual([
+      idleConnection,
+      { type: 'connected', commandBatch: { status: 'executing', batchIndex: 0 } },
+      {
+        type: 'pending_tools_response',
+        step: 1,
+        batchIndex: 0,
+        responses: [
+          { index: 0, tool: 'executeCommand', response: { stdout: 'command started\ncommand finished', stderr: '', exitCode: 0 } },
+        ],
+      },
+      {
+        type: 'pending_tools_response',
+        step: 1,
+        batchIndex: 1,
+        responses: [{ index: 1, tool: 'executeCommand', response: { stdout: 'next', stderr: '', exitCode: 0 } }],
+      },
+    ])
+    expect(result.stdout.split('\n').filter((line) => line === 'command started')).toEqual(['command started'])
+    expect(result.exitCode).toBe(0)
+  })
+
+  test('replays the exact dropped result, including failed and skipped commands', async () => {
+    const result = await runRunnerProcess(
+      { ...commands('echo command started; exit 7', 'echo command started'), replayCommandResults: true },
+      undefined,
+      undefined,
+      { disconnectBatch: 'result' },
+    )
+    const retainedResult = {
+      type: 'pending_tools_response',
+      step: 1,
+      batchIndex: 0,
+      responses: [
+        { index: 0, tool: 'executeCommand', response: { stdout: 'command started\n', stderr: '', exitCode: 7 } },
+        {
+          index: 1,
+          tool: 'executeCommand',
+          response: { stdout: '', stderr: 'Skipped because an earlier command failed.', exitCode: null },
+        },
+      ],
+    } satisfies WsOutgoingMessage
+    expect(result.messages).toEqual([
+      idleConnection,
+      retainedResult,
+      { type: 'connected', commandBatch: { status: 'result', batchIndex: 0 } },
+      retainedResult,
+    ])
+    expect(result.stdout.split('\n').filter((line) => line === 'command started')).toEqual(['command started'])
+    expect(result.exitCode).toBe(1)
+  })
+
+  test('advances on a legacy server without replaying an applied result into the next batch', async () => {
+    const result = await runRunnerProcess(commands('printf first'), undefined, undefined, {
+      disconnectBatch: 'applied-result',
+      nextBatch: { type: 'pending_tools', step: 1, requests: [{ index: 1, tool: 'executeCommand', params: { command: 'printf next' } }] },
+    })
+    expect(result.messages).toEqual([
+      idleConnection,
+      {
+        type: 'pending_tools_response',
+        step: 1,
+        responses: [{ index: 0, tool: 'executeCommand', response: { stdout: 'first', stderr: '', exitCode: 0 } }],
+      },
+      { type: 'connected' },
+      {
+        type: 'pending_tools_response',
+        step: 1,
+        responses: [{ index: 1, tool: 'executeCommand', response: { stdout: 'next', stderr: '', exitCode: 0 } }],
+      },
+    ])
+    expect(result.exitCode).toBe(0)
   })
 })
 
@@ -283,7 +411,7 @@ describe('runner authentication failures', () => {
     expect(result.tokenRequests).toHaveLength(3)
     expect(result.upgrades).toHaveLength(3)
     expect(result.connections).toHaveLength(2)
-    expect(result.messages).toEqual([{ type: 'connected' }, { type: 'connected' }])
+    expect(result.messages).toEqual([idleConnection, idleConnection])
     expect(result.stderr).toContain('WebSocket upgrade failed (HTTP 503)')
     expect(result.stderr).not.toContain('WebSocket was closed before the connection was established')
   }, 10000)

@@ -199,7 +199,7 @@ describe('WebSocketManager protocol handshake', () => {
 })
 
 describe('OIDC connection lifecycle', () => {
-  test('reacquires a token and sends connected before messages queued during acquisition', async () => {
+  test('announces and replays a retained result before flushing queued messages on reconnect', async () => {
     const acquiring = Promise.withResolvers<void>()
     const token = Promise.withResolvers<Response>()
     tokenResponse = () => {
@@ -212,12 +212,20 @@ describe('OIDC connection lifecycle', () => {
     const server = new WebSocketServer({ port: 0 })
     const received: unknown[] = []
     const flushed = Promise.withResolvers<void>()
+    const commandResult = {
+      type: 'pending_tools_response',
+      step: 1,
+      batchIndex: 7,
+      responses: [{ index: 7, tool: 'executeCommand', response: { stdout: 'ok', stderr: '', exitCode: 0 } }],
+    } satisfies WsOutgoingMessage
+    let resultReady = false
     server.on('connection', (socket, request) => {
       expect(request.headers['x-github-oidc-token']).toBe(audiences.length === 1 ? 'first-token' : 'second-token')
       socket.on('message', (data) => {
-        received.push(JSON.parse(data.toString()))
+        const message = JSON.parse(data.toString())
+        received.push(message)
         if (received.length === 1) socket.terminate()
-        if (received.length === 4) flushed.resolve()
+        if (message.type === 'get_files_completed') flushed.resolve()
       })
     })
     let manager: WebSocketManager | undefined
@@ -228,15 +236,24 @@ describe('OIDC connection lifecycle', () => {
         sessionToken: 'session',
         apiUrl: `http://127.0.0.1:${port}`,
         onMessage: async () => {},
+        getHandshake: () =>
+          resultReady ? { commandBatch: { status: 'result', batchIndex: 7 }, result: commandResult } : { commandBatch: { status: 'idle' } },
       })
       await manager.connect()
       await acquiring.promise
+      resultReady = true
+      manager.sendMessage(commandResult, { queueIfDisconnected: false })
       const queued: WsOutgoingMessage[] = [{ type: 'file_deleted', path: 'queued.txt' }, { type: 'get_files_completed' }]
       for (const message of queued) manager.sendMessage(message)
       token.resolve(Response.json({ value: 'second-token' }))
       await flushed.promise
       expect(audiences).toHaveLength(2)
-      expect(received).toEqual([{ type: 'connected' }, { type: 'connected' }, ...queued])
+      expect(received).toEqual([
+        { type: 'connected', commandBatch: { status: 'idle' } },
+        { type: 'connected', commandBatch: { status: 'result', batchIndex: 7 } },
+        commandResult,
+        ...queued,
+      ])
     } finally {
       manager?.close()
       token.resolve(Response.json({ value: 'second-token' }))
