@@ -84,7 +84,7 @@ function schemaToType(schema: JSONSchema._JSONSchema, references: ReadonlyMap<st
   }
 }
 
-export function buildStructuredOutputContract(schema: z.ZodType): string {
+export function buildStructuredOutputDeclaration(schema: z.ZodType): string {
   const jsonSchema = toJSONSchema(schema, { io: 'input', unrepresentable: 'any', reused: 'inline' })
   const definitions = Object.entries(jsonSchema.$defs ?? {}).map(([key, schema], index) => ({
     key,
@@ -97,12 +97,15 @@ export function buildStructuredOutputContract(schema: z.ZodType): string {
     `type Output = ${schemaToType(jsonSchema, references)}`,
     ...definitions.map(({ name, schema: definition }) => `type ${name} = ${schemaToType(definition, references)}`),
   ].join('\n')
+  return description ? `${formatComment(description, '')}\n${declarations}` : declarations
+}
 
+export function buildStructuredOutputContract(schema: z.ZodType): string {
   return [
     'The model output must be one JSON value described by this contract.',
     '<output_contract>',
     '```typescript',
-    description ? `${formatComment(description, '')}\n${declarations}` : declarations,
+    buildStructuredOutputDeclaration(schema),
     '```',
     '</output_contract>',
     '<output_instructions>',

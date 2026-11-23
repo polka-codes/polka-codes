@@ -94,7 +94,10 @@ function formatZodIssuePath(path: PropertyKey[]): string {
 
 function formatZodDiagnostics(error: z.ZodError): string {
   const issues = error.issues.slice(0, MAX_STRUCTURED_OUTPUT_DIAGNOSTICS)
-  const lines = issues.map((issue) => `- ${formatZodIssuePath(issue.path)}: ${issue.message}`)
+  const lines = issues.map((issue) => {
+    const message = issue.code === 'unrecognized_keys' ? 'Remove fields outside the output contract.' : issue.message
+    return `- ${formatZodIssuePath(issue.path)}: ${message}`
+  })
   const remaining = error.issues.length - issues.length
   if (remaining > 0) {
     lines.push(`- ... ${remaining} additional issue(s)`)
@@ -147,7 +150,7 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
   for (const tool of toolInfo) {
     toolSet[tool.name] = {
       description: tool.description,
-      inputSchema: jsonSchema(toJSONSchema(tool.parameters)),
+      inputSchema: jsonSchema(toJSONSchema(tool.parameters, { io: 'input' })),
     }
   }
 
@@ -169,7 +172,7 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
         const result = await tools.generateText({
           messages: requestMessages,
           systemPrompt: requestSystemPrompt,
-          tools: toolSet,
+          tools: structuredOutputRepairAttempts > 0 ? {} : toolSet,
           model: input.model,
           signal,
         })
@@ -246,7 +249,14 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
       continue
     }
 
-    structuredOutputRepairAttempts = 0
+    if (structuredOutputRepairAttempts > 0) {
+      return await endWithError(
+        new StructuredOutputRepairError(structuredOutputRepairAttempts, {
+          kind: 'invalid_json',
+          details: 'The repair response requested a tool instead of returning a JSON value.',
+        }),
+      )
+    }
 
     const toolResults: { toolCallId: string; toolName: string; output: ToolResultOutput }[] = []
     for (const toolCall of toolCalls) {

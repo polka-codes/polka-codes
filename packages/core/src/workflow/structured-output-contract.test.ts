@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { z } from 'zod'
-import { buildStructuredOutputContract } from './structured-output-contract'
+import { buildStructuredOutputContract, buildStructuredOutputDeclaration } from './structured-output-contract'
 
 describe('buildStructuredOutputContract', () => {
   test('renders object structure, descriptions, limits, and JSON instructions', () => {
@@ -89,18 +89,22 @@ describe('buildStructuredOutputContract', () => {
     expect(contract).not.toContain('Array<#>')
   })
 
-  test('renders recursive definitions nested inside the output', () => {
+  test('renders a standalone declaration with descriptions and recursive definitions', () => {
     const node = z.object({
-      value: z.string(),
+      value: z.string().describe('Node label.'),
       get children() {
         return z.array(node)
       },
     })
 
-    const contract = buildStructuredOutputContract(z.object({ tree: node }))
+    const schema = z.object({ tree: node }).describe('A labeled tree.')
+    const declaration = buildStructuredOutputDeclaration(schema)
+    const contract = buildStructuredOutputContract(schema)
 
-    expect(contract).toContain('tree: Definition1')
-    expect(contract).toContain('type Definition1 = {')
-    expect(contract).toContain('children: Array<Definition1>')
+    expect(declaration).toStartWith('// A labeled tree.\ntype Output = {')
+    expect(declaration).toContain('tree: Definition1')
+    expect(declaration).toContain('type Definition1 = {\n  // Node label.\n  value: string')
+    expect(declaration).toContain('children: Array<Definition1>')
+    expect(contract.split('```')[1]).toBe(`typescript\n${declaration}\n`)
   })
 })
