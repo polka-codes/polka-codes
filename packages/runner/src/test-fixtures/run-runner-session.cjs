@@ -118,6 +118,7 @@ server.on('listening', () => {
     env,
     stdio: ['ignore', 'pipe', 'pipe'],
   })
+  child.stdout.setEncoding('utf8')
   child.stdout.on('data', (data) => {
     stdout += data
     if (disconnectDuringCommand && stdout.includes('command started\n')) {
@@ -125,6 +126,7 @@ server.on('listening', () => {
       disconnectDuringCommand = undefined
     }
   })
+  child.stderr.setEncoding('utf8')
   child.stderr.on('data', (data) => {
     stderr += data
   })
