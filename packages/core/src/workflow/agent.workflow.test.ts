@@ -223,11 +223,13 @@ test('should preserve JSON repair and Zod validation for transformed output sche
     { role: 'assistant', content: JSON.stringify({ answer: 42, generatedAt: '2026-07-27T00:00:00.000Z' }) },
     { role: 'assistant', content: JSON.stringify({ answer: 'Done', generatedAt: '2026-07-27T00:00:00.000Z' }) },
   ]
-  const requests: Array<Pick<AgentToolRegistry['generateText']['input'], 'messages' | 'systemPrompt'>> = []
+  const output = structuredOutput(outputSchema)
+  const userMessage: JsonUserModelMessage = { role: 'user', content: 'Return a structured result.' }
+  const requests: Array<{ messages: JsonModelMessage[]; systemPrompt?: string; toolNames: string[] }> = []
 
   const tools: WorkflowTools<AgentToolRegistry> = {
     generateText: async (input) => {
-      requests.push({ messages: structuredClone(input.messages), systemPrompt: input.systemPrompt })
+      requests.push({ messages: structuredClone(input.messages), systemPrompt: input.systemPrompt, toolNames: Object.keys(input.tools) })
       return createModelRound(input, [mockResponses.shift()!] as JsonResponseMessage[])
     },
     invokeTool: async () => {
@@ -238,21 +240,26 @@ test('should preserve JSON repair and Zod validation for transformed output sche
 
   const result = await agentWorkflow(
     {
-      userMessage: [{ role: 'user', content: 'Return a structured result.' }],
-      tools: [],
+      userMessage: [userMessage],
+      tools: [listFilesTool],
       systemPrompt: 'Use the dedicated system channel.',
-      ...structuredOutput(outputSchema),
+      ...output,
     },
     createContext(tools),
   )
 
-  expect(requests).toHaveLength(3)
+  expect(requests.map((request) => request.toolNames)).toEqual([[listFilesTool.name], [], []])
+  for (const { systemPrompt, messages } of requests) {
+    expect(systemPrompt?.split(output.outputContract)).toHaveLength(2)
+    expect(messages).toContainEqual(userMessage)
+    for (const message of messages) {
+      expect(message.content).not.toContain(output.outputContract)
+    }
+  }
   const firstRepairMessage = String(requests[1].messages.at(-1)?.content)
   const secondRepairMessage = String(requests[2].messages.at(-1)?.content)
   expect(firstRepairMessage).toContain('Invalid JSON:')
-  expect(firstRepairMessage.split(OUTPUT_CONTRACT_MARKER)).toHaveLength(2)
   expect(secondRepairMessage).toContain('JSON does not match the required schema:')
-  expect(secondRepairMessage.split(OUTPUT_CONTRACT_MARKER)).toHaveLength(2)
   expect(requests.every((request) => request.systemPrompt === requests[0].systemPrompt)).toBe(true)
 
   const requestSystemPrompt = requests[0].systemPrompt
@@ -266,8 +273,7 @@ test('should preserve JSON repair and Zod validation for transformed output sche
   if (result.type !== 'Exit') {
     throw new Error(`Expected Exit, received ${result.type}`)
   }
-  expect(result.object).toMatchObject({ answer: 4 })
-  expect(result.object.generatedAt).toBeInstanceOf(Date)
+  expect(result.object).toEqual({ answer: 4, generatedAt: new Date('2026-07-27T00:00:00.000Z') })
 })
 
 test.each([
