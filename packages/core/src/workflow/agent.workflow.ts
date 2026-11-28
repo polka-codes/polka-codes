@@ -105,12 +105,12 @@ function formatZodDiagnostics(error: z.ZodError): string {
   return lines.join('\n')
 }
 
-function createStructuredOutputRepairMessage(diagnostic: StructuredOutputDiagnostic, outputContract: string): string {
+function createStructuredOutputRepairMessage(diagnostic: StructuredOutputDiagnostic): string {
   const failure =
     diagnostic.kind === 'invalid_json'
       ? `Invalid JSON: ${diagnostic.details}`
       : `JSON does not match the required schema:\n${diagnostic.details}`
-  return [failure, `Output contract:\n${outputContract}`, 'Return one corrected JSON value only.'].join('\n\n')
+  return `${failure}\n\nFollow the output contract in the system prompt. Return one corrected JSON value only.`
 }
 
 export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentToolRegistry> = async (
@@ -245,7 +245,7 @@ export const agentWorkflow: WorkflowFn<AgentWorkflowInput, ExitReason, AgentTool
         return await endWithError(new StructuredOutputRepairError(structuredOutputRepairAttempts, diagnostic))
       }
       structuredOutputRepairAttempts += 1
-      nextMessage = [{ role: 'user', content: createStructuredOutputRepairMessage(diagnostic, outputContract) }]
+      nextMessage = [{ role: 'user', content: createStructuredOutputRepairMessage(diagnostic) }]
       continue
     }
 
